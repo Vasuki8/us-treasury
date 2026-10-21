@@ -114,8 +114,7 @@ export function transformSeries(s, mode = 'level', range = 12) {
   if (!s) return { series: s, observations: [], unit: '' };
   if (!['level', 'change'].includes(mode)) throw new RangeError(`Unknown transform: ${mode}`);
   const observations = s.observations.map((o, index, all) => ({
-    date: o.date,
-    publishedAt: o.publishedAt,
+    ...o,
     value: mode === 'change'
       ? changeValue(s, o.value, all[index - 1]?.value)
       : finite(o.value) ? o.value : null,
@@ -149,9 +148,10 @@ export function compareSeries(ids, mode = 'native', range = 12) {
     panels: panels.map((panel, index) => ({
       series: panel.series,
       unit: 'Index (common baseline = 100)',
+      baselineDate: baseline.date,
+      baselineValue: byDate[index].get(baseline.date),
       observations: panel.observations.filter((o) => o.date >= baseline.date).map((o) => ({
-        date: o.date,
-        publishedAt: o.publishedAt,
+        ...o,
         value: finite(o.value) ? clean(o.value / byDate[index].get(baseline.date) * 100) : null,
       })),
     })),
@@ -160,10 +160,11 @@ export function compareSeries(ids, mode = 'native', range = 12) {
 }
 
 /** Escape RFC 4180 cells and neutralize formula-like text without altering numeric values. */
-function csvCell(value) {
+function csvCell(value, numericSource = false) {
   if (value === null || value === undefined) return '';
   let text = String(value);
-  if (typeof value === 'string' && /^[\s]*[=+\-@]/.test(text)) text = `'${text}`;
+  const validatedNumber=numericSource && /^[+-]?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(text.trim());
+  if (typeof value === 'string' && !validatedNumber && /^[\s]*[=+\-@]/.test(text)) text = `'${text}`;
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
@@ -175,14 +176,14 @@ export function toCsv(ids, { transform = 'level', range = 12, comparison = 'nati
     throw new RangeError('Indexed comparisons export indexed levels; choose native panels to export changes.');
   }
   const panels = comparison === 'indexed' ? result.panels : result.panels.map((panel) => transformSeries(panel.series, transform, range));
-  const rows = [['series_id', 'name', 'date', 'value', 'unit', 'frequency', 'adjustment', 'source', 'publication_date', 'transform', 'data_status']];
+  const rows = [['series_id', 'name', 'date', 'value', 'unit', 'frequency', 'adjustment', 'source', 'publication_date', 'transform', 'data_status','retrieved_at','source_url','source_series','calculation','source_value','source_baseline_date','source_baseline_value','index_baseline_date','index_baseline_value']];
   for (const panel of panels) {
     const s = panel.series;
     const publications = new Map(s.observations.map((o) => [o.date, o.publishedAt]));
     for (const observation of panel.observations) {
       rows.push([s.id, s.name, observation.date, observation.value, panel.unit, s.frequency, s.adjustment,
-        s.source.name, publications.get(observation.date), comparison === 'indexed' ? 'indexed' : transform, 'synthetic']);
+        s.source.name, publications.get(observation.date), comparison === 'indexed' ? 'indexed' : transform, s.dataStatus||'unknown',s.fetchedAt,s.sourceUrl||s.source.url,(s.source.seriesIds||[]).join('; '),s.calculation,observation.sourceValue,observation.baseDate|| (observation.yearAgoSourceValue!=null?`${Number(observation.date.slice(0,4))-1}${observation.date.slice(4)}`:null),observation.baseValue??observation.yearAgoSourceValue,panel.baselineDate,panel.baselineValue]);
     }
   }
-  return `${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}\r\n`;
+  return `${rows.map((row) => row.map((cell,index)=>csvCell(cell,index===15||index===17)).join(',')).join('\r\n')}\r\n`;
 }

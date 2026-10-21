@@ -1,4 +1,4 @@
-import { yieldCurve } from './data.js';
+import { yieldCurve, dataStatus } from './data.js';
 import { getSeries, compareSeries, transformSeries, formatValue, periodLabel } from './model.js';
 
 const ns = 'http://www.w3.org/2000/svg';
@@ -19,7 +19,9 @@ function svgElement(name, attributes, parent, text) {
 function draw(container, panels, {height = 180, bars = false, curve = false, transformed = false} = {}) {
   container.replaceChildren();
   const width = Math.max(300, Math.round(container.clientWidth));
-  const h = Math.max(120,height), left = 54, right = 20, top = 28, bottom = 30;
+  const h = Math.max(120,height), left = 54, right = 20, top = 28;
+  const staggerCurveLabels = curve && (width-left-right) / Math.max(1,yieldCurve.length-1) < 32;
+  const bottom = staggerCurveLabels ? 46 : 30;
   const pw = width-left-right, ph = h-top-bottom;
   const values = panels.flatMap(panel => panel.observations.map(o => o.value)).filter(finite);
   if (!values.length) { container.textContent = 'No observations available for this chart.'; return; }
@@ -37,8 +39,8 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const y = value => top+(hi-value)/(hi-lo)*ph;
   const id = `chart-readout-${++chartId}`;
   const title = curve ? 'Treasury par yield curve' : panels.map(panel => panel.series.name).join(' and ');
-  const svg = svgElement('svg',{viewBox:`0 0 ${width} ${h}`,tabindex:0,role:'group','aria-label':`${title}. Synthetic observations. Use left and right arrow keys for exact values.`,'aria-describedby':id},container);
-  svgElement('title',{},svg,`${title} · ${panels[0].unit} · synthetic data`);
+  const svg = svgElement('svg',{viewBox:`0 0 ${width} ${h}`,tabindex:0,role:'group','aria-label':`${title}. Official snapshot. Use left and right arrow keys for exact values.`,'aria-describedby':id},container);
+  svgElement('title',{},svg,`${title} · ${panels[0].unit} · official snapshot`);
   svgElement('text',{x:left,y:14},svg,panels[0].unit);
   for (let index=0;index<4;index++) {
     const value = lo+(hi-lo)*index/3;
@@ -51,7 +53,7 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
     const date = orderedDates[index];
     let label = curve ? date : chartDateLabel(panels,date);
     if (!curve && panels[0].series.frequency === 'Weekly') label = label.replace('Week of ','');
-    svgElement('text',{x:xIndex(index),y:h-8,'text-anchor':index===0?'start':index===orderedDates.length-1?'end':'middle'},svg,label);
+    svgElement('text',{x:xIndex(index),y:h-(staggerCurveLabels && index%2===0 ? 24 : 8),'text-anchor':index===0?'start':index===orderedDates.length-1?'end':'middle'},svg,label);
   });
   panels.forEach((panel,index) => {
     const className = curve && index>0 ? ' previous' : ['', ' secondary', ' tertiary', ' quaternary'][index];
@@ -90,14 +92,14 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
       dots[panelIndex].setAttribute('cy',finite(value)?y(value):top);
       dots[panelIndex].setAttribute('visibility',finite(value)?'visible':'hidden');
       const span=document.createElement('span');
-      const label=curve?(panelIndex?'Prior':'Latest'):panel.series.short;
+      const label=curve?panel.label:panel.series.short;
       const isIndex = panel.unit.startsWith('Index');
       const display = !finite(value)?'—':isIndex?value.toFixed(2):transformed?`${value.toFixed(panel.series.precision)} ${panel.unit}`:formatValue(panel.series,value);
       span.className = `readout-series series-${panelIndex}`;
       span.append(`${label} `);
       const strong=document.createElement('strong'); strong.textContent=display; span.append(strong); readout.append(span);
     });
-    if (announce) svg.setAttribute('aria-label',`${title}. ${readout.textContent}. Use left and right arrow keys.`);
+    if (announce) svg.setAttribute('aria-label',`${title}. Official snapshot. ${readout.textContent}. Use left and right arrow keys.`);
   }
   function pointer(event) {
     const box = svg.getBoundingClientRect();
@@ -124,8 +126,8 @@ export function renderCharts(root) {
     if (kind === 'curve') {
       const reference=getSeries('yield');
       draw(container,[
-        {series:reference,unit:'Yield · %',observations:yieldCurve.map(p=>({date:p.tenor,value:p.value}))},
-        {series:reference,unit:'Yield · %',observations:yieldCurve.map(p=>({date:p.tenor,value:p.previous}))},
+        {series:reference,label:`Latest (${dataStatus.curveDate ?? 'date unavailable'})`,unit:'Yield · %',observations:yieldCurve.map(p=>({date:p.tenor,value:p.value}))},
+        {series:reference,label:`Prior (${dataStatus.previousCurveDate ?? 'date unavailable'})`,unit:'Yield · %',observations:yieldCurve.map(p=>({date:p.tenor,value:p.previous}))},
       ],{height,curve:true});
       return;
     }

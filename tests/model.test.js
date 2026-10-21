@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { series, releases, yieldCurve } from '../src/data.js';
+import { series, releases, yieldCurve, dataStatus } from '../src/data.js';
+import { parseCsv } from '../scripts/sources/http.mjs';
 import {
   getSeries, filterSeries, latest, formatValue, formatChange,
   periodLabel, transformSeries, compareSeries, toCsv,
@@ -11,97 +12,90 @@ const fixture = (values, extra = {}) => ({
   id: 'fixture', code: 'FIX', name: 'Example', short: 'Example', topic: 'Labor',
   frequency: 'Monthly', unit: 'Percent', precision: 1, format: 'percent',
   adjustment: 'Seasonally adjusted', source: { name: 'Synthetic agency', url: 'https://example.com' },
-  definition: 'Test observations.', revisions: [],
+  definition: 'Test observations.', revisions: [], dataStatus:'test',
   observations: values.map((value, i) => ({
     date: `2026-0${i + 1}-01`, value, publishedAt: `2026-0${i + 2}-01`,
   })), ...extra,
 });
 
-test('the fixture catalog supplies twelve complete synthetic series', () => {
+test('official catalog has traced observations and explicitly unavailable out-of-scope series', () => {
   assert.deepEqual(Object.keys(series).sort(), [...ids].sort());
   for (const [id, s] of Object.entries(series)) {
-    assert.equal(s.id, id);
-    assert.equal(s.observations.length, 12);
-    for (const key of ['code', 'name', 'short', 'topic', 'frequency', 'unit', 'adjustment', 'definition']) {
-      assert.equal(typeof s[key], 'string', `${id}.${key}`);
-      assert.ok(s[key].length > 0, `${id}.${key}`);
-    }
-    assert.match(s.source.name, /synthetic/i);
-    assert.match(s.source.url, /^https:\/\//);
+    assert.equal(s.id,id);
+    assert.doesNotMatch(s.source.name,/synthetic/i);
+    assert.match(s.source.url,/^https:\/\//);
     assert.ok(Number.isInteger(s.precision));
-    for (const [i, observation] of s.observations.entries()) {
-      assert.match(observation.date, /^\d{4}-\d{2}-\d{2}$/);
-      assert.match(observation.publishedAt, /^\d{4}-\d{2}-\d{2}$/);
-      assert.ok(observation.value === null || Number.isFinite(observation.value));
-      assert.ok(observation.publishedAt >= observation.date);
-      if (i) assert.ok(observation.date > s.observations[i - 1].date);
+    assert.deepEqual(s.revisions,[], 'no invented revision history');
+    if (['claims','retail'].includes(id)) {
+      assert.equal(s.dataStatus,'unavailable');
+      assert.deepEqual(s.observations,[]);
+      continue;
     }
-    for (const revision of s.revisions) {
-      const observation = s.observations.find((o) => o.date === revision.period);
-      assert.ok(observation);
-      assert.ok(Number.isFinite(revision.initial));
-      assert.ok(Number.isFinite(revision.revised));
-      assert.match(revision.publishedAt, /^\d{4}-\d{2}-\d{2}$/);
-      assert.equal(observation.value, revision.revised);
-      assert.ok(observation.publishedAt >= revision.publishedAt);
+    assert.equal(s.dataStatus,'official',id);
+    assert.ok(s.observations.filter(o=>Number.isFinite(o.value)).length>=12,id);
+    assert.match(s.fetchedAt,/^\d{4}-\d{2}-\d{2}T/);
+    assert.ok(s.source.seriesIds.length);
+    for (const [i,o] of s.observations.entries()) {
+      assert.match(o.date,/^\d{4}-\d{2}-\d{2}$/);
+      assert.equal(o.publishedAt,null,'retrieval is not a publication date');
+      assert.ok(o.value===null || Number.isFinite(o.value));
+      if(i)assert.ok(o.date>s.observations[i-1].date);
     }
   }
 });
 
-test('fixture periods follow monthly, quarterly, daily, and weekly frequencies', () => {
-  assert.equal(series.gdp.frequency, 'Quarterly');
-  assert.equal(series.gdp.observations[0].date, '2023-07-01');
-  assert.equal(latest(series.gdp).date, '2026-04-01');
-  for (const s of Object.values(series).filter((s) => s.frequency === 'Monthly')) {
-    const endMonth = ['pce', 'openings'].includes(s.id) ? '2026-08-01' : '2026-09-01';
-    assert.equal(latest(s).date, endMonth, s.id);
-    for (let i = 1; i < s.observations.length; i++) {
-      const before = new Date(`${s.observations[i - 1].date}T00:00:00Z`);
-      const after = new Date(`${s.observations[i].date}T00:00:00Z`);
-      assert.equal((after.getUTCFullYear() - before.getUTCFullYear()) * 12 + after.getUTCMonth() - before.getUTCMonth(), 1);
+test('official observations follow their real frequencies and maintain source provenance', () => {
+  assert.equal(series.gdp.frequency,'Quarterly');
+  assert.ok(series.gdp.observations.every(o=>/^\d{4}-(01|04|07|10)-01$/.test(o.date)));
+  for (const s of Object.values(series).filter(s=>s.frequency==='Monthly')) {
+    assert.ok(s.observations.every(o=>o.date.endsWith('-01')));
+  }
+  assert.equal(series.cpi.adjustment,'Not seasonally adjusted');
+  for(const id of ['treasury','bls','bea']) {
+    assert.equal(dataStatus.sources[id].status,'ok');
+    assert.ok(dataStatus.sources[id].provenance.length);
+    for(const source of dataStatus.sources[id].provenance) {
+      assert.match(source.sha256,/^[a-f0-9]{64}$/);
+      assert.match(source.url,/^https:\/\//);
     }
   }
-  for (const id of ['yield', 'debt']) {
-    assert.equal(series[id].frequency, 'Daily');
-    assert.equal(latest(series[id]).date, '2026-10-20');
-    assert.ok(series[id].observations.every((o) => ![0, 6].includes(new Date(`${o.date}T00:00:00Z`).getUTCDay())));
-  }
-  assert.equal(series.claims.frequency, 'Weekly');
-  assert.equal(latest(series.claims).date, '2026-10-10');
-  for (let i = 1; i < series.claims.observations.length; i++) {
-    assert.equal(Date.parse(series.claims.observations[i].date) - Date.parse(series.claims.observations[i - 1].date), 7 * 86400000);
-  }
 });
 
-test('sample releases distinguish actuals, priors, revisions, and unavailable consensus', () => {
-  assert.ok(releases.length >= 5);
-  for (const release of releases) {
-    assert.ok(release.date >= '2026-10-19' && release.date <= '2026-10-23');
-    assert.ok(series[release.seriesId]);
-    assert.equal(release.consensus, null);
-    assert.match(release.time, /^\d{2}:\d{2}$/);
-    assert.match(release.period, /^\d{4}-\d{2}-\d{2}$/);
-    assert.ok(['released', 'scheduled'].includes(release.status));
-    if (release.status === 'scheduled') assert.equal(release.actual, null);
-    for (const field of ['actual', 'prior', 'revised']) {
-      assert.ok(release[field] === null || Number.isFinite(release[field]));
+test('production calendar has no invented releases, consensus or revision snapshots', () => {
+  assert.deepEqual(releases,[]);
+  assert.equal(dataStatus.calendar.status,'unavailable');
+  assert.ok(dataStatus.calendar.links.some(link=>link.url.includes('bls.gov')));
+  assert.ok(dataStatus.calendar.links.some(link=>link.url.includes('bea.gov')));
+});
+
+test('official Treasury curve preserves exact dated snapshots and unavailable tenors', () => {
+  assert.match(dataStatus.curveDate,/^\d{4}-\d{2}-\d{2}$/);
+  assert.ok(dataStatus.previousCurveDate<dataStatus.curveDate);
+  assert.ok(yieldCurve.length>=6);
+  for(const [i,point] of yieldCurve.entries()) {
+    assert.ok(point.value===null || Number.isFinite(point.value));
+    assert.ok(point.previous===null || Number.isFinite(point.previous));
+    if(i)assert.ok(point.years>yieldCurve[i-1].years);
+  }
+  assert.equal(yieldCurve.find(point=>point.tenor==='10Y').value,latest(series.yield).value);
+});
+
+test('captured official measures reconcile with their retained source values and exact baselines',()=>{
+  for(const [id,s] of Object.entries(series)) {
+    if(['claims','retail','yield'].includes(id))continue;
+    for(const o of s.observations) {
+      if(o.value===null)continue;
+      const raw=Number(String(o.sourceValue).replaceAll(',',''));
+      let expected=raw;
+      if(id==='debt')expected=raw/1e12;
+      else if(id==='openings')expected=raw/1000;
+      else if(id==='payroll')expected=raw-Number(o.baseValue);
+      else if(['cpi','wages','pce'].includes(id))expected=100*(raw/Number(o.baseValue??o.yearAgoSourceValue)-1);
+      assert.ok(Number.isFinite(expected),`${id} ${o.date} source inputs`);
+      assert.ok(Math.abs(o.value-expected)<1e-9,`${id} ${o.date} calculation`);
     }
   }
-  assert.ok(releases.some((r) => r.status === 'released' && r.actual !== null));
-  assert.ok(releases.some((r) => r.status === 'scheduled'));
 });
-
-test('the synthetic yield curve has ordered tenors and separate previous values', () => {
-  assert.ok(yieldCurve.length >= 6);
-  for (let i = 0; i < yieldCurve.length; i++) {
-    const point = yieldCurve[i];
-    assert.equal(typeof point.tenor, 'string');
-    assert.ok(Number.isFinite(point.value));
-    assert.ok(Number.isFinite(point.previous));
-    if (i) assert.ok(point.years > yieldCurve[i - 1].years);
-  }
-});
-
 test('search recognizes ordinary-language aliases, source names, and codes', () => {
   assert.equal(getSeries('missing'), undefined);
   assert.deepEqual(filterSeries({ query: 'jobs' }).map((s) => s.id).sort(), ['payroll', 'unrate']);
@@ -178,17 +172,22 @@ test('transformed observations retain the publication dates of their underlying 
   assert.equal(transformSeries(s, 'level', 1).observations[0].publishedAt, '2026-04-01');
   assert.equal(transformSeries(s, 'change', 1).observations[0].publishedAt, '2026-04-01');
   const indexed = compareSeries(['cpi', 'unrate'], 'indexed', 2);
-  assert.equal(indexed.panels[0].observations[1].publishedAt, '2026-10-14');
+  assert.equal(indexed.panels[0].observations[1].publishedAt, latest(series.cpi).publishedAt);
 });
 
 test('indexed panels retain their original post-baseline dates instead of intersecting calendars', () => {
-  const result = compareSeries(['cpi', 'gdp'], 'indexed', 12);
+  const monthly=fixture([], {id:'monthly-calendar',observations:Array.from({length:12},(_,i)=>({date:new Date(Date.UTC(2025,9+i,1)).toISOString().slice(0,10),value:i+1,publishedAt:null}))});
+  const quarterly=fixture([], {id:'quarterly-calendar',frequency:'Quarterly',observations:Array.from({length:12},(_,i)=>({date:new Date(Date.UTC(2023,6+3*i,1)).toISOString().slice(0,10),value:i+1,publishedAt:null}))});
+  series[monthly.id]=monthly;series[quarterly.id]=quarterly;
+  try {
+  const result = compareSeries([monthly.id,quarterly.id], 'indexed', 12);
   assert.equal(result.error, null);
   assert.deepEqual(result.panels[0].observations.map((o) => o.date), [
     '2025-10-01', '2025-11-01', '2025-12-01', '2026-01-01', '2026-02-01', '2026-03-01',
     '2026-04-01', '2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01',
   ]);
   assert.deepEqual(result.panels[1].observations.map((o) => o.date), ['2025-10-01', '2026-01-01', '2026-04-01']);
+  } finally { delete series[monthly.id];delete series[quarterly.id]; }
 });
 
 test('changes use observations before the displayed range and preserve missing gaps', () => {
@@ -209,8 +208,8 @@ test('native comparisons keep mixed-frequency series in separate panels', () => 
   assert.equal(result.error, null);
   assert.equal(result.panels.length, 2);
   assert.equal(result.panels[0].unit, series.cpi.unit);
-  assert.deepEqual(result.panels[0].observations.map((o) => o.date), ['2026-08-01', '2026-09-01']);
-  assert.deepEqual(result.panels[1].observations.map((o) => o.date), ['2026-01-01', '2026-04-01']);
+  assert.deepEqual(result.panels[0].observations.map((o) => o.date), series.cpi.observations.slice(-2).map(o=>o.date));
+  assert.deepEqual(result.panels[1].observations.map((o) => o.date), series.gdp.observations.slice(-2).map(o=>o.date));
 });
 
 test('indexed comparisons use the earliest common date in the displayed ranges', () => {
@@ -218,7 +217,7 @@ test('indexed comparisons use the earliest common date in the displayed ranges',
   assert.equal(result.error, null);
   assert.equal(result.panels.length, 2);
   for (const panel of result.panels) {
-    assert.equal(panel.observations[0].date, '2026-07-01');
+    assert.equal(panel.observations[0].date, series.unrate.observations.at(-3).date);
     assert.equal(panel.observations[0].value, 100);
     assert.equal(panel.unit, 'Index (common baseline = 100)');
   }
@@ -253,15 +252,21 @@ test('empty and unknown comparisons fail safely without inventing series', () =>
   assert.match(compareSeries(['unknown']).error, /unknown|unavailable/i);
 });
 
-test('CSV exports the displayed range with metadata and explicit synthetic status', () => {
+test('CSV exports the displayed range with official provenance and an unknown release date', () => {
   const csv = toCsv(['cpi'], { range: 1 });
   const lines = csv.trim().split('\r\n');
   assert.equal(lines.length, 2);
-  assert.equal(lines[0], 'series_id,name,date,value,unit,frequency,adjustment,source,publication_date,transform,data_status');
+  assert.ok(lines[0].includes('publication_date,transform,data_status,retrieved_at,source_url,source_series,calculation'));
   assert.match(lines[1], /^cpi,/);
-  assert.ok(lines[1].includes(',2026-09-01,2.9,'));
-  assert.ok(lines[1].includes(`,${latest(series.cpi).publishedAt},level,synthetic`));
-  assert.ok(!csv.includes('2026-08-01'));
+  const [header,values]=parseCsv(csv);
+  const row=Object.fromEntries(header.map((key,index)=>[key,values[index]]));
+  assert.equal(row.date,latest(series.cpi).date);
+  assert.equal(Number(row.value),latest(series.cpi).value);
+  assert.equal(row.publication_date,'');
+  assert.equal(row.data_status,'official');
+  assert.equal(row.retrieved_at,series.cpi.fetchedAt);
+  assert.equal(row.source_series,'CUUR0000SA0');
+  assert.match(row.source_url,/api.bls.gov/);
 });
 
 test('CSV exports transformed and indexed values exactly as displayed', () => {
@@ -270,11 +275,11 @@ test('CSV exports transformed and indexed values exactly as displayed', () => {
   try {
     const change = toCsv([s.id], { range: 1, transform: 'change' });
     assert.ok(change.includes(',2026-03-01,3,Percentage points,'));
-    assert.ok(change.includes(',change,synthetic'));
+    assert.ok(change.includes(',change,test'));
     const indexed = toCsv([s.id], { comparison: 'indexed', range: 2 });
     assert.ok(indexed.includes(',2026-02-01,100,Index (common baseline = 100),'));
     assert.ok(indexed.includes(',2026-03-01,200,Index (common baseline = 100),'));
-    assert.ok(indexed.includes(',indexed,synthetic'));
+    assert.ok(indexed.includes(',indexed,test'));
     assert.throws(() => toCsv(['cpi', 'gdp'], { comparison: 'indexed', range: 2 }), /common|frequency/i);
   } finally {
     delete series[s.id];
@@ -292,4 +297,13 @@ test('CSV escapes quotes and newlines, neutralizes formula text, and leaves miss
   } finally {
     delete series[s.id];
   }
+});
+
+test('CSV preserves validated negative numeric source strings without a formula-escape apostrophe',()=>{
+  const example=fixture([-28],{id:'negative-source',observations:[{date:'2020-04-01',value:-28,publishedAt:null,sourceValue:'-28.0'}]});
+  series[example.id]=example;
+  try {
+    const [headers,row]=parseCsv(toCsv([example.id]));
+    assert.equal(row[headers.indexOf('source_value')],'-28.0');
+  } finally {delete series[example.id];}
 });

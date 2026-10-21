@@ -33,7 +33,7 @@ export function parseRoute(hash = '') {
     if (p.has('selected')) state.selected = validIds(p.get('selected').split(','));
     state.exploreMode = p.get('mode') === 'compare' ? 'compare' : 'catalog';
     state.comparison = p.get('comparison') === 'indexed' ? 'indexed' : 'native';
-    state.day = /^2026-10-(19|20|21|22|23)$/.test(p.get('day')) ? p.get('day') : 'all';
+    state.day = releases.some(event=>event.date===p.get('day')) ? p.get('day') : 'all';
     state.calendarTopic = topics.includes(p.get('calendarTopic')) ? p.get('calendarTopic') : 'All topics';
     state.watchOnly = p.get('watch') === '1';
     state.eventId = releases.some(event => event.id === p.get('event')) ? p.get('event') : defaults.eventId;

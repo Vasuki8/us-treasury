@@ -1,0 +1,19 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { parseCsv, requestText } from '../scripts/sources/http.mjs';
+
+test('official CSV handles quoted delimiters, escaped quotes, CRLF and embedded lines', () => {
+  assert.deepEqual(parseCsv('\ufeffCode,Value,Note\r\na,0,"quoted, value"\r\nb,,"two\nlines and ""quotes"""\r\n'),[
+    ['Code','Value','Note'],['a','0','quoted, value'],['b','','two\nlines and "quotes"'],
+  ]);
+  assert.throws(()=>parseCsv('a,"broken'),/unterminated/i);
+});
+
+test('source fetch rejects unsuccessful HTTP and records a hash without the body', async () => {
+  await assert.rejects(requestText('https://example.test/data',{fetchImpl:async()=>new Response('blocked',{status:403})}),/403/);
+  const result=await requestText('https://example.test/data',{fetchImpl:async()=>new Response('official',{headers:{'last-modified':'Wed, 21 Oct 2026 12:00:00 GMT'}})});
+  assert.equal(result.text,'official');
+  assert.match(result.sha256,/^[a-f0-9]{64}$/);
+  assert.match(result.retrievedAt,/^\d{4}-\d{2}-\d{2}T/);
+  assert.equal(result.url,'https://example.test/data');
+});

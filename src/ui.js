@@ -20,7 +20,7 @@ export function panel(index, title, body, actions = '', note = '', extraClass = 
 
 export function chart(ids, { height = 180, kind = 'line', transform = 'level', range = 12, comparison = 'native' } = {}) {
   const names = ids.map(id => getSeries(id)?.name).filter(Boolean).join(', ');
-  return `<div class="chart" data-chart data-series="${escapeHtml(ids.join(','))}" data-kind="${escapeHtml(kind)}" data-transform="${escapeHtml(transform)}" data-range="${escapeHtml(range)}" data-comparison="${escapeHtml(comparison)}" data-height="${escapeHtml(height)}"><p class="chart-fallback muted">${escapeHtml(kind === 'curve' ? 'Synthetic Treasury yield curve' : names)} chart · synthetic observations</p></div>`;
+  return `<div class="chart" data-chart data-series="${escapeHtml(ids.join(','))}" data-kind="${escapeHtml(kind)}" data-transform="${escapeHtml(transform)}" data-range="${escapeHtml(range)}" data-comparison="${escapeHtml(comparison)}" data-height="${escapeHtml(height)}"><p class="chart-fallback muted">${escapeHtml(kind === 'curve' ? 'Treasury yield curve' : names)} chart · official snapshot</p></div>`;
 }
 
 export function seriesLink(id, label, className = '') {
@@ -34,7 +34,7 @@ export function metrics(ids) {
     const series = getSeries(id);
     if (!series) return '';
     const observation = latest(series);
-    return `<a class="metric" href="#/series/${encodeURIComponent(id)}"><span class="metric-name">${escapeHtml(series.short)}</span><strong class="metric-value">${escapeHtml(formatValue(series, observation?.value))}</strong><span class="metric-change">${escapeHtml(formatChange(series))}</span><span class="metric-period">${escapeHtml(observation ? periodLabel(series, observation.date) : 'No observations')}</span></a>`;
+    return `<a class="metric" href="#/series/${encodeURIComponent(id)}"${series.error ? ` title="${escapeHtml(series.error)}"` : ''}><span class="metric-name">${escapeHtml(series.short)}</span><strong class="metric-value">${escapeHtml(formatValue(series, observation?.value))}</strong><span class="metric-change">${escapeHtml(formatChange(series))}</span><span class="metric-period">${escapeHtml(observation ? periodLabel(series, observation.date) : 'Unavailable')}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span></a>`;
   }).join('')}</section>`;
 }
 
@@ -47,9 +47,9 @@ export function seriesTable(ids) {
     const series = getSeries(id);
     if (!series) return '';
     const observation = latest(series);
-    return `<tr><th scope="row">${seriesLink(id)}<span class="table-code mono muted">${escapeHtml(series.code)}</span></th><td class="num">${escapeHtml(formatValue(series, observation?.value))}</td><td class="num muted">${escapeHtml(formatChange(series))}</td><td class="mono">${escapeHtml(observation ? periodLabel(series, observation.date) : '—')}</td></tr>`;
+    return `<tr><th scope="row">${seriesLink(id)}<span class="table-code mono muted">${escapeHtml(series.code)}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span>${!observation && series.error ? `<span class="table-code muted">${escapeHtml(series.error)}</span>` : ''}</th><td class="num">${escapeHtml(formatValue(series, observation?.value))}</td><td class="num muted">${escapeHtml(formatChange(series))}</td><td class="mono">${escapeHtml(observation ? periodLabel(series, observation.date) : '—')}</td></tr>`;
   }).join('');
-  return table(['INDICATOR', 'LATEST', 'PERIOD CHANGE', 'OBSERVATION'], rows, 'Synthetic macroeconomic observations');
+  return table(['INDICATOR', 'LATEST', 'PERIOD CHANGE', 'OBSERVATION'], rows, 'Official macroeconomic snapshot; unavailable observations appear as a dash');
 }
 
 export function emptyState(message, detail = '', action = '') {
@@ -60,4 +60,23 @@ export function sourceLink(series) {
   const url = series.source?.url ?? '';
   const name = series.source?.name ?? 'Source unavailable';
   return /^https:\/\//i.test(url) ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)} ↗</a>` : escapeHtml(name);
+}
+
+export function seriesStatus(series) {
+  return series.dataStatus === 'cached' ? 'Cached official snapshot' : series.dataStatus === 'official' ? 'Official snapshot' : 'Unavailable';
+}
+
+/** Last successful retrieval and latest attempt remain separate after failures. */
+export function sourceStatusList(sources = {}, { compact = false } = {}) {
+  const names = { treasury: 'TREASURY', bls: 'BLS', bea: 'BEA' };
+  const entries = Object.entries(sources);
+  if (!entries.length) return '<p class="panel-note">Source retrieval metadata is unavailable.</p>';
+  return entries.map(([id, source]) => {
+    const label = source.status === 'ok' ? 'Official snapshot' : source.fetchedAt ? 'Cached · refresh failed' : 'Unavailable';
+    if (compact) {
+      const timestamp = value => value ? `<time datetime="${escapeHtml(value)}">${escapeHtml(value.slice(0,10))}<br>${escapeHtml(value.slice(11))}</time>` : 'Unavailable';
+      return `<div class="definition"><h3>${escapeHtml(names[id] ?? id.toUpperCase())}</h3><p>${escapeHtml(label)}</p><p>Retrieved<br><span class="mono">${timestamp(source.fetchedAt)}</span></p><p>Last attempt<br><span class="mono">${timestamp(source.lastAttemptAt)}</span></p>${source.error ? `<p class="amber">${escapeHtml(source.error)}</p>` : ''}</div>`;
+    }
+    return `<div class="definition"><h3>${escapeHtml(names[id] ?? id.toUpperCase())} · ${escapeHtml(label)}</h3><dl class="facts"><dt>Retrieved</dt><dd class="mono">${escapeHtml(source.fetchedAt ?? 'No successful retrieval')}</dd><dt>Last attempt</dt><dd class="mono">${escapeHtml(source.lastAttemptAt ?? 'Not attempted')}</dd></dl>${source.error ? `<p class="amber">${escapeHtml(source.error)}</p>` : ''}${(source.warnings ?? []).map(warning => `<p class="muted">${escapeHtml(warning)}</p>`).join('')}</div>`;
+  }).join('');
 }

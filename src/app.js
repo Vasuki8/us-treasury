@@ -1,7 +1,7 @@
-import { series, releases } from './data.js';
+import { releases, dataStatus } from './data.js';
 import { filterSeries, getSeries, latest, formatValue, formatChange, toCsv } from './model.js';
 import { renderPage } from './pages.js';
-import { escapeHtml as esc } from './ui.js';
+import { escapeHtml as esc, sourceStatusList } from './ui.js';
 import { renderCharts } from './charts.js';
 import { parseRoute, routeFor } from './router.js';
 import { readPreferences, writePreferences } from './storage.js';
@@ -61,6 +61,8 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   }).join('');
   document.getElementById('saved-count').textContent=state.saved.length;
   document.getElementById('saved-list').innerHTML=state.saved.length?state.saved.map(id=>`<div class="saved-item"><a href="#/series/${id}">${esc(getSeries(id).short)}</a><button type="button" data-save="${id}" aria-label="Remove ${esc(getSeries(id).name)} from watchlist">×</button></div>`).join(''):'<p class="rail-note">No saved series.<br>Open an indicator to save it.</p>';
+  document.getElementById('source-status').innerHTML=sourceStatusList(dataStatus.sources,{compact:true});
+  document.getElementById('snapshot-time').textContent=`OFFICIAL SNAPSHOT · ASSEMBLED ${dataStatus.generatedAt ?? 'UNAVAILABLE'}`;
   document.title=`${state.page==='indicator'?getSeries(state.seriesId).name:pageNames[state.page]} — Meridian`;
   renderCharts(main);
   if(focusHeading) {
@@ -104,9 +106,9 @@ function exportCsv() {
     const content=toCsv(ids,{transform:state.page==='indicator'?state.transform:'level',range:state.range,comparison});
     const url=URL.createObjectURL(new Blob(['\ufeff',content],{type:'text/csv;charset=utf-8'}));
     const anchor=document.createElement('a');
-    anchor.href=url;anchor.download=`meridian-sample-${ids.join('-')}.csv`;anchor.click();
+    anchor.href=url;anchor.download=`meridian-${ids.join('-')}.csv`;anchor.click();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
-    announce('CSV downloaded with displayed observations, units, publication dates and synthetic-data labels.');
+    announce('CSV downloaded with displayed observations, units, official source identifiers, retrieval times and per-series data status. Unknown publication dates remain empty.');
   } catch(error) {announce(`Export unavailable: ${error.message}`);}
 }
 

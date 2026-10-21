@@ -29,11 +29,11 @@ test('malformed paths, unknown ids and invalid settings resolve safely', () => {
   assert.deepEqual(parseRoute('#/explore?selected=bad,cpi,cpi,unrate').selected, ['cpi', 'unrate']);
 });
 
-test('calendar deep links retain filters and watchlist mode', () => {
+test('calendar deep links retain watchlist mode and reject unverified event and day values', () => {
   const state = parseRoute(routeFor({page:'calendar',day:'2026-10-22',calendarTopic:'Labor',watchOnly:true,eventId:'claims-oct22'}));
-  assert.equal(state.day, '2026-10-22');
+  assert.equal(state.day, 'all');
   assert.equal(state.watchOnly, true);
-  assert.equal(state.eventId, 'claims-oct22');
+  assert.equal(state.eventId, 'cpi');
   assert.equal(state.calendarTopic, 'Labor');
 });
 
@@ -41,10 +41,10 @@ test('explicit empty comparison selection survives a link round trip', () => {
   assert.deepEqual(parseRoute(routeFor({page:'explore',selected:[]})).selected, []);
 });
 
-test('every real release selection survives refresh and back navigation', () => {
-  for (const release of releases) {
-    assert.equal(parseRoute(routeFor({page:'calendar',eventId:release.id})).eventId,release.id);
-  }
+test('empty official calendar does not retain previously invented schedule links', () => {
+  assert.deepEqual(releases,[]);
+  assert.equal(parseRoute('#/calendar?event=payroll-oct20&day=2026-10-20').day,'all');
+  assert.equal(parseRoute('#/calendar?event=payroll-oct20').eventId,'cpi');
 });
 
 test('deep linked comparisons respect the same four-series limit as the catalog', () => {

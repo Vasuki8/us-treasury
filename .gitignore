@@ -2,6 +2,7 @@ node_modules/
 dist/
 .DS_Store
 *.log
+src/.official-snapshot.tmp
 test-results/
 
 # Local configuration and credentials
