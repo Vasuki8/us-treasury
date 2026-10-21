@@ -72,7 +72,7 @@ test('BLS parser rejects repeated release periods and empty relevant coverage', 
 test('BLS calendar collection keeps checked provenance and describes uneven program coverage', async () => {
   const current=page([row(),row('Tuesday, December 1, 2026','10:00 AM','Job Openings and Labor Turnover Survey','October 2026')]);
   const next=page([row('Friday, January 8, 2027','08:30 AM','Employment Situation','December 2026'),row('Wednesday, January 13, 2027','08:30 AM','Consumer Price Index','December 2026')],2027);
-  const result=await bls().collectBlsCalendar({now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async url=>new Response(url===annual(2026)?current:next,{headers:{'last-modified':'Wed, 21 Oct 2026 12:00:00 GMT'}})});
+  const result=await bls().collectBlsCalendar({pause:async()=>{},now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async url=>new Response(url===annual(2026)?current:next,{headers:{'last-modified':'Wed, 21 Oct 2026 12:00:00 GMT'}})});
   assert.equal(result.id,'bls');
   assert.equal(result.agency,'U.S. Bureau of Labor Statistics');
   assert.equal(result.events.length,4);
@@ -87,7 +87,7 @@ test('BLS calendar collection keeps checked provenance and describes uneven prog
 });
 
 test('BLS next-year unavailability preserves current rows and explicitly reports the missing year', async () => {
-  const result=await bls().collectBlsCalendar({now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async url=>url===annual(2026)?new Response(page([row()])):new Response('Not found',{status:404})});
+  const result=await bls().collectBlsCalendar({pause:async()=>{},now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async url=>url===annual(2026)?new Response(page([row()])):new Response('Not found',{status:404})});
   assert.equal(result.events.length,1);
   assert.deepEqual(result.coveredYears,[2026]);
   assert.deepEqual(result.failedYears,[2027]);
@@ -96,8 +96,50 @@ test('BLS next-year unavailability preserves current rows and explicitly reports
 });
 
 test('BLS current-year source failure prevents treating partial or redirected content as a verified schedule', async () => {
-  await assert.rejects(bls().collectBlsCalendar({now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async()=>new Response('Unavailable',{status:503})}),/HTTP.*503/i);
-  await assert.rejects(bls().collectBlsCalendar({now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async()=>new Response('<html>Challenge</html>')}),/BLS|schema|calendar/i);
-  await assert.rejects(bls().collectBlsCalendar({now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async()=>{const response=new Response(page([row()]));Object.defineProperty(response,'url',{value:'https://vendor.example/calendar'});return response;}}),/URL|source|redirect/i);
-  await assert.rejects(bls().collectBlsCalendar({now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async()=>new Response(' '.repeat(2*1024*1024+1))}),/limit/i);
+  await assert.rejects(bls().collectBlsCalendar({pause:async()=>{},now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async()=>new Response('Unavailable',{status:503})}),/HTTP.*503/i);
+  await assert.rejects(bls().collectBlsCalendar({pause:async()=>{},now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async()=>new Response('<html>Challenge</html>')}),/BLS|schema|calendar/i);
+  await assert.rejects(bls().collectBlsCalendar({pause:async()=>{},now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async()=>{const response=new Response(page([row()]));Object.defineProperty(response,'url',{value:'https://vendor.example/calendar'});return response;}}),/URL|source|redirect/i);
+  await assert.rejects(bls().collectBlsCalendar({pause:async()=>{},now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async()=>new Response(' '.repeat(2*1024*1024+1))}),/limit/i);
+});
+
+test('BLS calendar requests identify the bot and an owner contact URL', async () => {
+  const requests=[];
+  await bls().collectBlsCalendar({pause:async()=>{},now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async(url,options)=>{
+    requests.push({url,headers:options.headers});
+    return new Response(url===annual(2026)?page([row()]):page([row('Friday, January 8, 2027','08:30 AM','Employment Situation','December 2026')],2027));
+  }});
+  assert.equal(requests.length,2);
+  for(const request of requests) {
+    assert.equal(request.headers['User-Agent'],'us-treasury-data-refresh/1.0 (+https://github.com/Vasuki8/us-treasury/issues)');
+    assert.equal(request.headers.Accept,'text/html');
+  }
+});
+
+test('BLS calendar waits at least one second after the current schedule before requesting the next year', async () => {
+  const order=[];
+  await bls().collectBlsCalendar({now:new Date('2026-10-21T12:00:00Z'),pause:async milliseconds=>{
+    assert.ok(milliseconds>=1000);
+    order.push('pause');
+    await Promise.resolve();
+    order.push('pause-complete');
+  },fetchImpl:async url=>{
+    order.push(url);
+    if(url===annual(2026)) {
+      await Promise.resolve();
+      order.push('current-response');
+      return new Response(page([row()]));
+    }
+    return new Response(page([row('Friday, January 8, 2027','08:30 AM','Employment Situation','December 2026')],2027));
+  }});
+  assert.deepEqual(order,[annual(2026),'current-response','pause','pause-complete',annual(2027)]);
+});
+
+test('BLS current-year access denial stops before waiting or making another request', async () => {
+  const requests=[],pauses=[];
+  await assert.rejects(bls().collectBlsCalendar({now:new Date('2026-10-21T12:00:00Z'),pause:async milliseconds=>pauses.push(milliseconds),fetchImpl:async url=>{
+    requests.push(url);
+    return new Response('Access Denied',{status:403});
+  }}),/HTTP.*403/i);
+  assert.deepEqual(requests,[annual(2026)]);
+  assert.deepEqual(pauses,[]);
 });

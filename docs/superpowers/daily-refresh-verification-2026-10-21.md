@@ -13,7 +13,7 @@ Both Node 22/24 verification jobs and hosting configuration use that exact emitt
 ## Local evidence
 
 - `npm run data:refresh -- --require-all` succeeded against every live official source at approximately 22:48 UTC. All five statistical sources and all six calendar/timing sources reported successful captures. The result contains 218 dated calendar entries plus separate ongoing Treasury yield timing.
-- `npm test`: **241 passed, 0 failed**, including nine real-Git publisher tests and strict/default CLI integration tests in disposable workspace directories.
+- `npm test`: initially **241 passed, 0 failed**; after adding BLS bot-identification and request-pacing coverage, **244 passed, 0 failed**. This includes nine real-Git publisher tests and strict/default CLI integration tests in disposable workspace directories.
 - Real-Git tests cover snapshot-only publication, ignored untracked files, unchanged snapshots, unrelated and pre-staged edits, invalid/mismatched starting SHAs, stale remote rejection, a competing push injected between the remote check and push, and success/failure CLI outputs.
 - Real strict CLI execution with mocked HTTP 503 responses exited unsuccessfully and preserved the snapshot byte for byte without creating a temporary replacement. Default local mode still saved retained-source status. The uncaptured BLS next-year case succeeded with its explicit warning; loss of previously captured coverage was rejected.
 - `npm run build` passed commercial-data policy validation.
@@ -24,6 +24,12 @@ Both Node 22/24 verification jobs and hosting configuration use that exact emitt
 
 ## Remote acceptance checks
 
-After pushing, confirm an ordinary main push skips refresh while both verification jobs and the selected-host deployment succeed. Then dispatch `main` with `refresh_data=true` to exercise remote feed access, the job token's snapshot push, verification of the emitted commit, and same-run deployment. Pull the generated snapshot commit and compare the deployed assets with its build. These remote checks are not claimed by the local evidence above.
+The ordinary [main push run 39689336879](https://github.com/Vasuki8/us-treasury/actions/runs/39689336879) passed both Node verification jobs and deployed GitHub Pages with refresh skipped, confirming the dependency guards.
+
+The first [full-refresh dispatch 39689430763](https://github.com/Vasuki8/us-treasury/actions/runs/39689430763) reached every collector but rejected the candidate because the BLS annual calendar returned HTTP 403. All other attempted collectors completed successfully. Snapshot commit and deployment were skipped, preserving the prior published snapshot. Remote end-to-end refresh publication is therefore not yet established.
+
+Investigation found that the original BLS calendar requests used Node's generic identification and fetched both annual pages concurrently. [BLS's automated retrieval policy](https://www.bls.gov/bls/blsterms.htm) reserves blocking of unidentified owners and excessive activity. The collector now identifies the bot with the repository's enabled issue tracker for owner contact, waits one second between annual requests and stops immediately on a current-year denial. Three regression tests cover identification, asynchronous spacing and early exit. A local identified request still returned 403; the correction does not establish restored source access. No alternate host, proxy or generated schedule was introduced.
+
+Once source access or an explicitly chosen cached-source policy allows publication, exercise the remote snapshot push, verification of its emitted commit and same-run deployment. Pull that generated snapshot commit and compare the deployed assets with its build.
 
 The daily cron's future execution time remains best effort under GitHub's scheduler. Public repositories can disable scheduled workflows after 60 days without activity. See the linked official GitHub documentation in the README.

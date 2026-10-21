@@ -1,5 +1,6 @@
 import { requestText } from './http.mjs';
 import { decodeHtmlText, easternFields, easternInstant } from './calendar-utils.mjs';
+import { setTimeout as delay } from 'node:timers/promises';
 
 const MAX_BYTES=2*1024*1024;
 const annual=year=>`https://www.bls.gov/schedule/${year}/home.htm`;
@@ -65,22 +66,26 @@ export function parseBlsCalendar(html,{year}={}) {
   return events.sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)||a.id.localeCompare(b.id));
 }
 
-export async function collectBlsCalendar({fetchImpl=globalThis.fetch,now=new Date()}={}) {
+export async function collectBlsCalendar({fetchImpl=globalThis.fetch,now=new Date(),pause=delay}={}) {
   const year=Number(easternFields(now.toISOString()).date.slice(0,4));
   const read=async sourceYear=>{
-    const response=await requestText(annual(sourceYear),{fetchImpl,maxBytes:MAX_BYTES,headers:{Accept:'text/html'}});
+    const response=await requestText(annual(sourceYear),{fetchImpl,maxBytes:MAX_BYTES,headers:{Accept:'text/html','User-Agent':'us-treasury-data-refresh/1.0 (+https://github.com/Vasuki8/us-treasury/issues)'}});
     if (response.url!==annual(sourceYear)) throw new Error('Unexpected BLS calendar source URL or redirect');
     const events=parseBlsCalendar(response.text,{year:sourceYear});
     const {text:_text,...provenance}=response;
     return {events,provenance};
   };
-  const results=await Promise.allSettled([read(year),read(year+1)]);
-  if (results[0].status==='rejected') throw results[0].reason;
-  const accepted=results.filter(result=>result.status==='fulfilled').map(result=>result.value);
+  // BLS asks bots to identify their owner and avoid excessive requests: /bls/blsterms.htm.
+  const accepted=[await read(year)];
+  await pause(1000);
+  const failedYears=[],warnings=[];
+  try { accepted.push(await read(year+1)); }
+  catch(error) {
+    failedYears.push(year+1);
+    warnings.push(`BLS ${year+1} annual calendar unavailable: ${error.message}. Current-year schedule retained; previously captured next-year coverage must remain marked stale.`);
+  }
   const events=accepted.flatMap(result=>result.events).sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)||a.id.localeCompare(b.id));
   if (new Set(events.map(event=>event.id)).size!==events.length) throw new Error('Duplicate BLS release period across annual schedules');
-  const failedYears=results[1].status==='rejected'?[year+1]:[];
-  const warnings=failedYears.length?[`BLS ${year+1} annual calendar unavailable: ${results[1].reason.message}. Current-year schedule retained; previously captured next-year coverage must remain marked stale.`]:[];
   const coverage=Object.keys(programs).map(name=>{
     const rows=events.filter(event=>event.name===name);
     return `${name}: ${rows.length?`through ${rows.at(-1).date}`:'no published dates in the retrieved calendars'}`;
