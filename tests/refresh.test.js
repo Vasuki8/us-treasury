@@ -109,11 +109,35 @@ test('a failed BLS next-year fetch retains the whole previous agency schedule wi
 
 test('calendar status stays partial when an added agency fails while the others succeed',async()=>{
   const good=id=>({id,status:'ok',events:[],fetchedAt:'2026-10-21T12:00:00.000Z',provenance:[],warnings:[]});
-  for(const missing of ['census','dol','treasury']) {
-    const sources=Object.fromEntries(['bls','bea','census','dol','treasury'].filter(id=>id!==missing).map(id=>[id,good(id)]));
+  for(const missing of ['census','dol','treasury','treasury-yield-timing']) {
+    const sources=Object.fromEntries(['bls','bea','census','dol','treasury','treasury-yield-timing'].filter(id=>id!==missing).map(id=>[id,good(id)]));
     const next=await refreshSnapshot({previous:{calendar:{sources}},calendarCollectors:{[missing]:async()=>{throw Error('HTTP 503');}}});
     assert.equal(next.calendar.status,'partial',`${missing} absence must remain visible`);
     assert.equal(next.calendar.sources[missing].status,'unavailable');
     assert.match(next.calendar.sources[missing].error,/503/);
   }
+});
+
+const timingResult=()=>({id:'treasury-yield-timing',agency:'U.S. Department of the Treasury, Office of Debt Management',events:[],timing:{program:'daily-par-yields',seriesIds:['yield'],topic:'Rates',scheduleBasis:'usual-availability',frequency:'each-trading-day',availableBy:'18:00',timeZone:'America/New_York',delaysPossible:true,sourceUrl:'https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology'},fetchedAt:'2026-10-21T12:01:00.000Z',provenance:[{url:'https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology',sha256:'b'.repeat(64)}],warnings:[]});
+
+test('Treasury yield timing captures separately and failed or invalid refreshes retain the original rule without adding releases',async()=>{
+  const prior=await refreshSnapshot({calendarCollectors:{bea:async()=>calendarResult(),'treasury-yield-timing':async()=>timingResult()},now:new Date('2026-10-21T12:00:00Z')});
+  assert.equal(prior.calendar.sources['treasury-yield-timing'].status,'ok');
+  assert.equal(prior.calendar.sources['treasury-yield-timing'].timing.availableBy,'18:00');
+  assert.deepEqual(prior.releases,[calendarEvent()]);
+  for(const collect of [async()=>{throw Error('methodology HTTP 503');},async()=>{const invalid=timingResult();invalid.timing.availableBy='15:30';return invalid;}]) {
+    const next=await refreshSnapshot({previous:prior,calendarCollectors:{bea:async()=>calendarResult(),'treasury-yield-timing':collect},now:new Date('2026-10-22T12:00:00Z')});
+    const source=next.calendar.sources['treasury-yield-timing'];
+    assert.equal(source.status,'error');
+    assert.deepEqual(source.timing,prior.calendar.sources['treasury-yield-timing'].timing);
+    assert.equal(source.fetchedAt,prior.calendar.sources['treasury-yield-timing'].fetchedAt);
+    assert.deepEqual(source.provenance,prior.calendar.sources['treasury-yield-timing'].provenance);
+    assert.equal(next.calendar.sources.bea.status,'ok');
+    assert.deepEqual(next.releases,[calendarEvent()]);
+  }
+  const failed=await refreshSnapshot({calendarCollectors:{'treasury-yield-timing':async()=>{throw Error('unavailable');}}});
+  assert.equal(failed.calendar.sources['treasury-yield-timing'].status,'unavailable');
+  assert.equal(failed.calendar.sources['treasury-yield-timing'].timing,undefined);
+  assert.doesNotMatch(failed.calendar.message,/18:00|6\s*p\.m\./i,'an initial failure must not display an uncaptured deadline in shared calendar context');
+  assert.deepEqual(failed.releases,[]);
 });

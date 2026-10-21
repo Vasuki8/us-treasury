@@ -6,6 +6,7 @@ import { escapeHtml, chart } from '../src/ui.js';
 import { getSeries, latest, formatValue, transformSeries } from '../src/model.js';
 import { releases, yieldCurve, dataStatus } from '../src/data.js';
 import { renderCharts } from '../src/charts.js';
+import { refreshSnapshot } from '../scripts/sources/refresh.mjs';
 import { parseRoute, routeFor } from '../src/router.js';
 
 const base = {
@@ -33,6 +34,89 @@ const calendarFixture = { status: 'partial', message: 'BLS retained; BEA unavail
   bls: { id: 'bls', agency: 'BLS', status: 'error', fetchedAt: '2026-10-20T12:00:00Z', lastAttemptAt: '2026-10-21T12:00:00Z', error: 'HTTP 503', warnings: [] },
   bea: { id: 'bea', agency: 'BEA', status: 'unavailable', lastAttemptAt: '2026-10-21T12:00:00Z', error: 'No response', warnings: [] },
 }, links: [{ name: 'BLS release schedule', url: 'https://www.bls.gov/schedule/' }, { name: 'BEA release schedule', url: 'https://www.bea.gov/news/schedule' }] };
+
+const yieldTimingSource = (changes = {}) => ({
+  id: 'treasury-yield-timing', agency: 'U.S. Department of the Treasury, Office of Debt Management', status: 'ok',
+  events: [], fetchedAt: '2026-10-21T12:05:00Z', lastAttemptAt: '2026-10-21T12:06:00Z', error: null, warnings: [],
+  timing: { program: 'daily-par-yields', seriesIds: ['yield'], topic: 'Rates', scheduleBasis: 'usual-availability', frequency: 'each-trading-day', availableBy: '18:00', timeZone: 'America/New_York', delaysPossible: true, sourceUrl: 'https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology' },
+  ...changes,
+});
+const timingPanel = html => html.match(/<section class="panel yield-timing">[^]*?<\/section>/)?.[0] ?? '';
+
+test('Treasury yield guidance stays ongoing without adding dated releases or inheriting month and day filters', () => {
+  const events = [calendarEvent(), calendarEvent({ id: 'another-day', date: '2026-12-04', scheduledAt: '2026-12-04T13:30:00Z' })];
+  withCalendar(events, { status: 'ok', sources: { 'treasury-yield-timing': yieldTimingSource() } }, () => {
+    const november = render({ page: 'calendar', calendarMonth: '2026-11', day: '2026-11-06' });
+    const december = render({ page: 'calendar', calendarMonth: '2026-12', day: '2026-12-04' });
+    const panel = timingPanel(november);
+    assert.ok(panel, 'ongoing timing has its own visible panel');
+    assert.equal(timingPanel(december), panel, 'dated filters must not turn general guidance into a dated promise');
+    assert.match(panel, /ONGOING TIMING/);
+    assert.match(panel, /usually available by <strong[^>]*>18:00 Eastern Time/);
+    assert.match(panel, /each trading day/);
+    assert.match(panel, /Publication can be delayed/);
+    assert.match(panel, /Office of Debt Management/);
+    assert.match(panel, /2026-10-21T12:05:00Z/);
+    assert.match(panel, /href="#\/series\/yield"/);
+    assert.doesNotMatch(panel, /SCHEDULED|RELEASED|2026-11-06|2026-12-04|data-event=|15:30/);
+    assert.equal((november.match(/class="calendar-event/g) || []).length, 1);
+    assert.match(november, /1 RELEASES/);
+    assert.match(november, /<dt>Captured events<\/dt><dd>2<\/dd>/);
+  });
+});
+
+test('Treasury ongoing timing follows Rates and yield watchlist filters even when no dated Rates events exist', () => {
+  withCalendar([calendarEvent()], { status: 'ok', sources: { 'treasury-yield-timing': yieldTimingSource() } }, () => {
+    for (const filters of [{ calendarTopic: 'All topics' }, { calendarTopic: 'Rates' }, { calendarTopic: 'Rates', watchOnly: true, saved: ['yield'] }]) {
+      const html = render({ page: 'calendar', calendarMonth: '2026-11', ...filters });
+      assert.ok(timingPanel(html));
+      assert.match(html, /<option value="Rates"/);
+      if (filters.calendarTopic === 'Rates') {
+        assert.match(html, /0 RELEASES/);
+        assert.doesNotMatch(html, /class="calendar-event/);
+      }
+    }
+    for (const filters of [{ calendarTopic: 'Labor' }, { calendarTopic: 'Fiscal' }, { watchOnly: true, saved: ['debt'] }, { watchOnly: true, saved: [] }]) {
+      assert.equal(timingPanel(render({ page: 'calendar', calendarMonth: '2026-11', ...filters })), '');
+    }
+  });
+});
+
+test('yield detail shows independently cached timing beside unchanged observation retrieval and escapes source errors', () => {
+  const source = yieldTimingSource({ status: 'error', error: 'HTTP 503 <retry>', coverageNote: 'Timing <guidance> only.', warnings: ['Delay <possible>'] });
+  withCalendar([], { status: 'partial', sources: { 'treasury-yield-timing': source } }, () => {
+    const html = render({ page: 'indicator', seriesId: 'yield', tab: 'data' });
+    const panel = timingPanel(html);
+    assert.ok(panel, 'timing is visible without opening methodology');
+    assert.match(panel, /CACHED TIMING/);
+    assert.match(panel, /usually available by/);
+    assert.match(panel, /HTTP 503 &lt;retry&gt;/);
+    assert.match(panel, /Timing &lt;guidance&gt; only/);
+    assert.match(panel, /Delay &lt;possible&gt;/);
+    assert.match(panel, /Timing source retrieved/);
+    assert.match(panel, /2026-10-21T12:05:00Z/);
+    assert.ok(html.includes(getSeries('yield').fetchedAt));
+    assert.ok(html.includes(formatValue(getSeries('yield'), latest(getSeries('yield'))?.value)));
+    assert.doesNotMatch(html, /<retry>|<guidance>|<possible>/);
+    assert.equal(timingPanel(render({ page: 'indicator', seriesId: 'debt' })), '');
+  });
+});
+
+test('initial timing failure stays unavailable without presenting an uncaptured usual deadline', async () => {
+  const source = yieldTimingSource({ status: 'unavailable', fetchedAt: null, timing: undefined, error: 'Methodology unavailable' });
+  const failed = await refreshSnapshot({ calendarCollectors: { 'treasury-yield-timing': async () => { throw Error('Methodology unavailable'); } } });
+  for (const calendar of [{ status: 'unavailable', sources: { 'treasury-yield-timing': source } }, { status: 'unavailable', sources: {} }, failed.calendar]) {
+    withCalendar([], calendar, () => {
+      for (const state of [{ page: 'calendar' }, { page: 'indicator', seriesId: 'yield' }]) {
+        const html = render(state), panel = timingPanel(html);
+        assert.ok(panel);
+        assert.match(panel, /TIMING UNAVAILABLE/);
+        assert.match(panel, /No successful retrieval/);
+        assert.doesNotMatch(html, /18:00|usually available|CACHED TIMING|CAPTURED TIMING/);
+      }
+    });
+  }
+});
 
 test('HTML helpers escape untrusted values and expose declarative chart controls', () => {
   assert.equal(escapeHtml('<a title="x">&\'test\'</a>'), '&lt;a title=&quot;x&quot;&gt;&amp;&#39;test&#39;&lt;/a&gt;');

@@ -88,6 +88,12 @@ export const calendarPolicies = {
     terms:['https://fiscaldata.treasury.gov/api-documentation/#license-and-authorization','https://www.copyright.gov/what-is-copyright/'],
     programs:{'debt-to-the-penny':['debt']},
   },
+  'treasury-yield-timing': {
+    reviewedOn:'2026-10-21',commercialUse:true,
+    basis:'Extracted factual yield availability deadline, trading-day scope and delay qualification with original paraphrase. Copyright Office facts/title exclusions and federal official-duty works rule; no methodology-prose or dataset CC0 transfer. Credit Treasury Office of Debt Management without endorsement.',
+    terms:['https://www.copyright.gov/what-is-copyright/','https://www.copyright.gov/title17/92chap1.html#105','https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology'],
+    programs:{},
+  },
 };
 
 function calendarFeed(value,id) {
@@ -99,6 +105,7 @@ function calendarFeed(value,id) {
     if(id==='census')return url.origin==='https://www.census.gov'&&/^\/economic-indicators\/calendar-listview(?:-\d{4})?\.html$/.test(url.pathname);
     if(id==='dol')return url.href==='https://oui.doleta.gov/unemploy/claims_arch.asp';
     if(id==='treasury')return ['https://api.fiscaldata.treasury.gov/services/calendar/release','https://api.fiscaldata.treasury.gov/services/dtg/metadata/'].includes(url.href);
+    if(id==='treasury-yield-timing')return url.href==='https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology';
   } catch { /* Invalid calendar URLs are outside the reviewed scope. */ }
   return false;
 }
@@ -142,11 +149,26 @@ function assertTreasurySchedule(source,event) {
   if(event.scheduledAt!==instant||event.date!==fields.date||event.time!==fields.time||event.id!==`treasury-debt-to-the-penny-${event.sourceDate}`)fail();
 }
 
+function assertYieldTiming(source) {
+  const fail=()=>{throw new Error('Unreviewed Treasury yield timing scope, qualification or provenance');};
+  if(!Array.isArray(source.events)||source.events.length)fail();
+  if(!source.timing) {if(source.fetchedAt)fail();return;}
+  const approved={program:'daily-par-yields',seriesIds:['yield'],topic:'Rates',scheduleBasis:'usual-availability',frequency:'each-trading-day',availableBy:'18:00',timeZone:'America/New_York',delaysPossible:true,sourceUrl:'https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology'};
+  const timing=source.timing;
+  if(typeof timing!=='object'||Array.isArray(timing)||Object.keys(timing).length!==Object.keys(approved).length)fail();
+  for(const [key,value] of Object.entries(approved)) {
+    if(Array.isArray(value)?!Array.isArray(timing[key])||timing[key].length!==value.length||value.some((item,index)=>timing[key][index]!==item):timing[key]!==value)fail();
+  }
+  if(!source.provenance?.some(item=>item.url===approved.sourceUrl))fail();
+}
+
 function assertCalendarData(snapshot) {
   const captured=new Map();
   for(const [id,source] of Object.entries(snapshot.calendar?.sources??{})) {
     const policy=calendarPolicies[id];
     if(!Object.hasOwn(calendarPolicies,id)||!policy.commercialUse)throw new Error(`Commercial reuse review required for calendar source: ${id}`);
+    if(id==='treasury-yield-timing')assertYieldTiming(source);
+    else if(Object.hasOwn(source,'timing'))throw new Error(`Unreviewed timing metadata for calendar source: ${id}`);
     for(const item of source.provenance??[]) {
       if(!calendarFeed(item.url,id)||!/^[a-f0-9]{64}$/.test(item.sha256))throw new Error(`Unreviewed calendar provenance for ${id}`);
     }

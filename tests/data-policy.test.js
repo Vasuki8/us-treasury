@@ -107,6 +107,22 @@ test('Treasury calendar reuse covers only factual Debt to the Penny estimates wi
   assert.throws(()=>assertCommercialData(treasuryCalendarSnapshot({}, {provenance:[{url:treasuryCalendarFeed,sha256:'a'.repeat(64)}]})),/calendar/i);
 });
 
+const yieldTimingUrl='https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology';
+const yieldTiming=()=>({program:'daily-par-yields',seriesIds:['yield'],topic:'Rates',scheduleBasis:'usual-availability',frequency:'each-trading-day',availableBy:'18:00',timeZone:'America/New_York',delaysPossible:true,sourceUrl:yieldTimingUrl});
+const yieldTimingSnapshot=(timing=yieldTiming(),extra={})=>({calendar:{sources:{'treasury-yield-timing':{events:[],timing,provenance:[{url:yieldTimingUrl,sha256:'b'.repeat(64)}],...extra}}},releases:[]});
+
+test('Treasury yield timing reuse is scoped to factual ongoing availability with delay caveats and no dated events',()=>{
+  assert.doesNotThrow(()=>assertCommercialData(yieldTimingSnapshot()));
+  for(const change of [{availableBy:'15:30'},{frequency:'weekdays'},{scheduleBasis:'scheduled-release'},{timeZone:'EST'},{delaysPossible:false},{seriesIds:['debt']},{program:'third-party-yields'},{topic:'Fiscal'},{sourceUrl:yieldTimingUrl+'?mirror=1'},{date:'2026-11-02'},{scheduledAt:'2026-11-02T23:00:00Z'},{publishedAt:'2026-11-02T23:00:00Z'},{description:'Unreviewed copied narrative'}]) {
+    assert.throws(()=>assertCommercialData(yieldTimingSnapshot({...yieldTiming(),...change})),/timing|calendar/i,JSON.stringify(change));
+  }
+  assert.throws(()=>assertCommercialData(yieldTimingSnapshot(undefined,{provenance:[]})),/timing|calendar/i);
+  assert.throws(()=>assertCommercialData(yieldTimingSnapshot(null,{fetchedAt:'2026-10-21T12:00:00Z'})),/timing|calendar/i);
+  assert.throws(()=>assertCommercialData(yieldTimingSnapshot(undefined,{events:[{id:'fake-yield-release',sourceId:'treasury-yield-timing'}]})),/timing|calendar/i);
+  const elsewhere={calendar:{sources:{bls:{events:[],timing:yieldTiming(),provenance:[]}}},releases:[]};
+  assert.throws(()=>assertCommercialData(elsewhere),/timing|calendar/i);
+});
+
 const newCalendarEvent=(sourceId,extra={})=>({id:`${sourceId}-example`,sourceId,program:sourceId==='census'?'retail-sales':'weekly-claims',seriesId:sourceId==='census'?'retail':'claims',seriesIds:[sourceId==='census'?'retail':'claims'],sourceUrl:sourceId==='census'?'https://www.census.gov/economic-indicators/calendar-listview.html':'https://oui.doleta.gov/unemploy/claims_arch.asp',scheduleBasis:sourceId==='census'?'listed-date':'recurring-rule',date:'2026-10-22',time:'08:30',nominalDate:'2026-10-22',period:null,periodLabel:null,...extra});
 const dolCalendarSource=events=>({events,provenance:[{url:'https://oui.doleta.gov/unemploy/claims_arch.asp',sha256:'a'.repeat(64)}],scheduleMethod:'recurring-rule-with-exceptions',rawScheduleRule:'Publication Schedule: The UI Weekly Claims News Release is published each week on Thursday morning at 8:30am EST.',coverageStart:'2026-10-21',coverageEnd:'2027-01-18',publishedExceptions:[{date:'2026-11-25',time:'08:30',nominalDate:'2026-11-26'},{date:'2027-11-10',time:'08:30',nominalDate:'2027-11-11'}]});
 function calendarSnapshot(id,source) { return {calendar:{sources:{[id]:source}},releases:source.events}; }

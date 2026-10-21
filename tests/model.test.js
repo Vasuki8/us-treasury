@@ -64,13 +64,19 @@ test('production calendar contains traced official schedules without invented pu
   assert.equal(dataStatus.calendar.status,'ok');
   assert.ok(dataStatus.calendar.links.some(link=>link.url.includes('bls.gov')));
   assert.ok(dataStatus.calendar.links.some(link=>link.url.includes('bea.gov')));
-  for(const sourceId of ['bls','bea','census','dol','treasury']) {
+  for(const sourceId of ['bls','bea','census','dol','treasury','treasury-yield-timing']) {
     const source=dataStatus.calendar.sources[sourceId];
     assert.ok(source, `${sourceId} calendar is connected`);
     assert.equal(source.status,'ok');
     assert.match(source.fetchedAt,/^\d{4}-\d{2}-\d{2}T/);
     assert.ok(source.provenance.every(item=>/^[a-f0-9]{64}$/.test(item.sha256)));
   }
+  const timing=dataStatus.calendar.sources['treasury-yield-timing'];
+  assert.deepEqual(timing.events,[],'ongoing availability adds no dated releases');
+  assert.equal(timing.timing.availableBy,'18:00');
+  assert.equal(timing.timing.delaysPossible,true);
+  assert.equal(timing.timing.frequency,'each-trading-day');
+  for(const key of ['date','scheduledAt','publishedAt'])assert.equal(Object.hasOwn(timing.timing,key),false);
   assert.equal(new Set(releases.map(event=>event.id)).size,releases.length);
   for(const event of releases) {
     assert.ok(dataStatus.calendar.sources[event.sourceId].events.some(captured=>captured.id===event.id));
