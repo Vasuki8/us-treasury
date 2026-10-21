@@ -170,7 +170,7 @@ test('global source notice credits agencies and ties the BLS disclaimer to the r
   assert.match(html, /not endorsed/i);
 });
 
-test('historical claims coverage stays visible on headline, monitor, catalog and detail views', () => {
+test('historical claims coverage stays visible on headline, monitor, catalog, comparison and detail views', () => {
   const current = getSeries('claims');
   const saved = { ...current };
   Object.assign(current, {
@@ -179,7 +179,7 @@ test('historical claims coverage stays visible on headline, monitor, catalog and
     observations: [{ date: '2026-09-19', value: 225, publishedAt: null }],
   });
   try {
-    for (const html of [ui.metrics(['claims']), ui.seriesTable(['claims']), render({ page: 'explore', query: 'claims' })]) {
+    for (const html of [ui.metrics(['claims']), ui.seriesTable(['claims']), render({ page: 'explore', query: 'claims' }), render({ page: 'explore', exploreMode: 'compare', selected: ['claims', 'retail'] })]) {
       assert.match(html, /Historical feed/i);
       assert.match(html, /&lt;may lag&gt;/);
       assert.doesNotMatch(html, /<may lag>/);

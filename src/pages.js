@@ -128,7 +128,7 @@ function comparison(state) {
   const result = compareSeries(state.selected, state.comparison, state.range);
   const selected = state.selected.map((id, index) => {
     const current = getSeries(id);
-    return `<div class="builder-series"><span class="mono ${index % 2 ? 'cyan' : 'amber'}">${index + 1} / ${esc(current.code)}</span><h3>${seriesLink(id)}</h3><p class="muted">${esc(current.unit)} · ${esc(current.frequency)}</p>${button('REMOVE', `data-remove="${esc(id)}"`, 'link-button')}</div>`;
+    return `<div class="builder-series"><span class="mono ${index % 2 ? 'cyan' : 'amber'}">${index + 1} / ${esc(current.code)}</span><h3>${seriesLink(id)}</h3><p class="muted">${esc(current.unit)} · ${esc(current.frequency)}</p>${coverageBadge(current)}${current.coverageNote ? `<p class="small amber">${esc(current.coverageNote)}</p>` : ''}${button('REMOVE', `data-remove="${esc(id)}"`, 'link-button')}</div>`;
   }).join('');
   let workspace;
   if (!state.selected.length) workspace = emptyState('No series selected.', 'Choose up to four series from the catalog.', button('OPEN CATALOG', 'data-explore-mode="catalog"'));
