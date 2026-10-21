@@ -90,15 +90,19 @@ Original HTML/SVG/PDF design artifacts are preserved in the original local works
 
 ## Live site and automatic deployment
 
-Public URL: [Meridian on GitHub Pages](https://vasuki8.github.io/us-treasury/).
+Selected production host: **Cloudflare Workers Static Assets**. The deployment workflow is prepared; account authorization and a verified Cloudflare publication are still required. See the [Cloudflare setup and migration guide](docs/cloudflare-deployment.md).
+
+Current live migration fallback: [Meridian on GitHub Pages](https://vasuki8.github.io/us-treasury/).
 
 Continue development locally, then commit and push to [Vasuki8/us-treasury](https://github.com/Vasuki8/us-treasury).
 
 The **Test, build and deploy** GitHub Actions workflow runs on pushes to `main`, pull requests targeting `main`, and manual dispatch. It tests Node 22 and 24, builds the app with the commercial data policy check, checks the built entry point and imported modules over HTTP, and saves a static build artifact for each Node version. No dependencies need installing.
 
-After both verification jobs pass, pushes to `main` and manual runs on `main` automatically deploy the verified Node 24 build to GitHub Pages. Pull requests and manual runs on other branches run verification only. Only `dist/` is published. The deployment job uses GitHub's short-lived token and OIDC; no deployment secret is needed. Main runs are serialized so a new push does not interrupt an active deployment.
+After both verification jobs pass, pushes to `main` and manual runs on `main` automatically deploy the verified Node 24 build to the selected host. Pull requests and manual runs on other branches run verification only. Only `dist/` is published. Main runs are serialized so a new push does not interrupt an active deployment.
 
-Repository **Settings → Pages → Build and deployment → Source** must remain **GitHub Actions**. The `github-pages` environment records each deployment and its URL. Relative asset URLs and hash routes support the repository prefix, including links such as `/us-treasury/#/series/unrate`.
+Set repository variable `DEPLOY_TARGET=cloudflare` after configuring `CLOUDFLARE_ACCOUNT_ID` as a repository variable and `CLOUDFLARE_API_TOKEN` as an Actions secret. Cloudflare uses the `cloudflare-production` environment and publishes the same-run Node 24 artifact through Wrangler. A public HTTPS check compares the served assets with that artifact. Until Cloudflare is activated, the existing Pages deployment remains the fallback. The guide explains the scoped token and first-time Worker setup.
+
+Relative assets and hash routes support both an origin root on Cloudflare and the existing `/us-treasury/` Pages prefix. The static Worker has no server script and does not enable SPA fallback for missing assets.
 
 CI validates the committed snapshot and deterministic source-response fixtures. It does not call external agency feeds, avoiding rate limits and upstream outages during routine verification. Run the refresh command locally when updating data, then include the changed snapshot in the commit.
 
@@ -113,7 +117,7 @@ git push
 
 Follow the [Actions workflow](https://github.com/Vasuki8/us-treasury/actions) after pushing. To redeploy the current `main`, select **Test, build and deploy → Run workflow → main**. To roll back content, revert the unwanted commit locally, test, and push the revert to `main`; the same checks and deployment run automatically.
 
-GitHub's [advertising policy](https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies#10-advertising-on-github) permits advertising subject to limits, including keeping content as the primary focus. Its [Pages limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits) separately restrict hosting an online business, commercial transactions or commercial SaaS. This deployment serves the current free informational dashboard. Reassess hosting fit when implementing the advertising business; data reuse permission alone does not establish hosting or AdSense eligibility.
+The [commercial data reuse review](docs/data-sources.md) remains applicable on Cloudflare. Hosting setup does not configure Google advertising or establish AdSense eligibility.
 
 ## Verification
 
