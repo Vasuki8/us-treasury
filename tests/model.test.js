@@ -18,7 +18,7 @@ const fixture = (values, extra = {}) => ({
   })), ...extra,
 });
 
-test('official catalog has traced observations and explicitly unavailable out-of-scope series', () => {
+test('all twelve official indicators have traced observations and retrieval provenance', () => {
   assert.deepEqual(Object.keys(series).sort(), [...ids].sort());
   for (const [id, s] of Object.entries(series)) {
     assert.equal(s.id,id);
@@ -26,11 +26,6 @@ test('official catalog has traced observations and explicitly unavailable out-of
     assert.match(s.source.url,/^https:\/\//);
     assert.ok(Number.isInteger(s.precision));
     assert.deepEqual(s.revisions,[], 'no invented revision history');
-    if (['claims','retail'].includes(id)) {
-      assert.equal(s.dataStatus,'unavailable');
-      assert.deepEqual(s.observations,[]);
-      continue;
-    }
     assert.equal(s.dataStatus,'official',id);
     assert.ok(s.observations.filter(o=>Number.isFinite(o.value)).length>=12,id);
     assert.match(s.fetchedAt,/^\d{4}-\d{2}-\d{2}T/);
@@ -51,7 +46,10 @@ test('official observations follow their real frequencies and maintain source pr
     assert.ok(s.observations.every(o=>o.date.endsWith('-01')));
   }
   assert.equal(series.cpi.adjustment,'Not seasonally adjusted');
-  for(const id of ['treasury','bls','bea']) {
+  assert.ok(series.claims.observations.every(o=>new Date(`${o.date}T00:00:00Z`).getUTCDay()===6),'claims dates are week endings');
+  assert.match(series.claims.coverageNote,/historical|lag|advance/i);
+  assert.match(series.retail.source.name,/Census.*Advance Monthly Retail Trade/i);
+  for(const id of ['treasury','bls','bea','dol','census']) {
     assert.equal(dataStatus.sources[id].status,'ok');
     assert.ok(dataStatus.sources[id].provenance.length);
     for(const source of dataStatus.sources[id].provenance) {
@@ -82,15 +80,16 @@ test('official Treasury curve preserves exact dated snapshots and unavailable te
 
 test('captured official measures reconcile with their retained source values and exact baselines',()=>{
   for(const [id,s] of Object.entries(series)) {
-    if(['claims','retail','yield'].includes(id))continue;
+    if(id==='yield')continue;
     for(const o of s.observations) {
       if(o.value===null)continue;
       const raw=Number(String(o.sourceValue).replaceAll(',',''));
       let expected=raw;
       if(id==='debt')expected=raw/1e12;
-      else if(id==='openings')expected=raw/1000;
+      else if(['openings','claims'].includes(id))expected=raw/1000;
       else if(id==='payroll')expected=raw-Number(o.baseValue);
       else if(['cpi','wages','pce'].includes(id))expected=100*(raw/Number(o.baseValue??o.yearAgoSourceValue)-1);
+      else if(id==='retail')expected=100*(raw/Number(o.baseValue)-1);
       assert.ok(Number.isFinite(expected),`${id} ${o.date} source inputs`);
       assert.ok(Math.abs(o.value-expected)<1e-9,`${id} ${o.date} calculation`);
     }
@@ -150,7 +149,7 @@ test('period labels describe observation frequency in UTC', () => {
   assert.equal(periodLabel(series.cpi, '2026-09-01'), 'Sep 2026');
   assert.equal(periodLabel(series.gdp, '2026-04-01'), 'Q2 2026');
   assert.equal(periodLabel(series.yield, '2026-10-20'), '20 Oct 2026');
-  assert.equal(periodLabel(series.claims, '2026-10-10'), 'Week of 10 Oct 2026');
+  assert.equal(periodLabel(series.claims, '2026-10-10'), 'Week ending 10 Oct 2026');
   assert.equal(periodLabel(series.cpi, 'invalid'), '—');
 });
 
@@ -284,6 +283,21 @@ test('CSV exports transformed and indexed values exactly as displayed', () => {
   } finally {
     delete series[s.id];
   }
+});
+
+test('CSV preserves claims coverage and Census attribution with exact retail calculation inputs', () => {
+  const [headers, ...values] = parseCsv(toCsv(['claims', 'retail'], { range: 1 }));
+  const rows = values.map(row => Object.fromEntries(headers.map((key, index) => [key, row[index]])));
+  const claims = rows.find(row => row.series_id === 'claims');
+  const retail = rows.find(row => row.series_id === 'retail');
+  assert.equal(claims.coverage_note, series.claims.coverageNote);
+  assert.match(claims.coverage_note, /historical.*week ending.*lag/i);
+  assert.match(retail.source, /Census.*Advance Monthly Retail Trade/i);
+  assert.equal(retail.source_value, latest(series.retail).sourceValue);
+  assert.equal(retail.source_baseline_value, latest(series.retail).baseValue);
+  assert.equal(retail.source_baseline_date, latest(series.retail).baseDate);
+  assert.equal(Number(retail.value), 100 * (Number(retail.source_value) / Number(retail.source_baseline_value) - 1));
+  assert.equal(retail.publication_date, '');
 });
 
 test('CSV escapes quotes and newlines, neutralizes formula text, and leaves missing numeric cells blank', () => {

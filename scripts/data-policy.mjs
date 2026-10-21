@@ -26,6 +26,18 @@ export const dataPolicies = [
     terms:['https://catalog.data.gov/dataset/interest-rate-statistics-daily-treasury-yield-curve-rates','https://creativecommons.org/publicdomain/zero/1.0/'],
     series:{yield:['BC_10YEAR']}, feed:'treasury-par-yields',
   },
+  {
+    id:'dol-national-claims', agency:'dol', reviewedOn:'2026-10-21', commercialUse:true,
+    basis:'DOL public-domain federal statistical compilation; credit ETA and do not imply endorsement',
+    terms:['https://beta.dol.gov/about/notices/website-content-and-publication-practices/public-domain-copyright-trademarks-patents','https://catalog.data.gov/dataset/historical-unemployment-insurance-seasonally-adjusted-and-unadjusted-weekly-claims-data'],
+    series:{claims:['InitialClaims/SA']}, feed:'dol-national-claims',
+  },
+  {
+    id:'census-advance-retail', agency:'census', reviewedOn:'2026-10-21', commercialUse:true,
+    basis:'Census MARTS dataset is listed as CC0; bulk download requires Census Bureau and originating program attribution',
+    terms:['https://catalog.data.gov/dataset/time-series-economic-indicators-time-series-advance-monthly-sales-for-retail-and-food-serv','https://www.census.gov/about/policies/citation.html','https://www.census.gov/econ_datasets/'],
+    series:{retail:['MARTS:44X72:SM:US:SA']}, feed:'census-advance-retail',
+  },
 ];
 
 function matchesFeed(value, feed) {
@@ -37,6 +49,8 @@ function matchesFeed(value, feed) {
     if(feed==='bea-nipa')return ['https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt','https://apps.bea.gov/national/Release/TXT/NipaDataM.txt'].includes(endpoint);
     if(feed==='treasury-debt')return endpoint==='https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny';
     if(feed==='treasury-par-yields')return url.origin==='https://home.treasury.gov' && /^\/resource-center\/data-chart-center\/interest-rates\/daily-treasury-rates\.csv\/\d{4}\/all$/.test(url.pathname) && url.searchParams.get('type')==='daily_treasury_yield_curve';
+    if(feed==='dol-national-claims')return endpoint==='https://oui.doleta.gov/unemploy/wkclaims/report.asp';
+    if(feed==='census-advance-retail')return endpoint==='https://www.census.gov/econ_getzippedfile/' && url.searchParams.get('programCode')==='MARTS';
   } catch { /* A malformed URL is never an approved feed. */ }
   return false;
 }

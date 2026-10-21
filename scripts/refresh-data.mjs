@@ -5,12 +5,14 @@ import { snapshot as previous } from '../src/official-snapshot.js';
 import { collectTreasury } from './sources/treasury.mjs';
 import { collectBls } from './sources/bls.mjs';
 import { collectBea } from './sources/bea.mjs';
+import { collectDol } from './sources/dol.mjs';
+import { collectCensus } from './sources/census.mjs';
 import { refreshSnapshot } from './sources/refresh.mjs';
 import { assertCommercialData } from './data-policy.mjs';
 
-const all={treasury:collectTreasury,bls:collectBls,bea:collectBea};
+const all={treasury:collectTreasury,bls:collectBls,bea:collectBea,dol:collectDol,census:collectCensus};
 const selection=process.argv.find(arg=>arg.startsWith('--sources='))?.split('=')[1]?.split(',')||Object.keys(all);
-if(selection.some(id=>!Object.hasOwn(all,id)))throw new Error('Sources must be treasury,bls,bea');
+if(selection.some(id=>!Object.hasOwn(all,id)))throw new Error('Sources must be treasury,bls,bea,dol,census');
 const collectors=Object.fromEntries(selection.map(id=>[id,async options=>{
   console.log(`Retrieving ${id.toUpperCase()} official data…`);
   return all[id](options);

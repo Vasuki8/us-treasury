@@ -2,7 +2,7 @@
 
 The public Meridian website is intended to earn advertising revenue. Display and CSV redistribution must use datasets whose terms permit commercial reuse. Free access, an API key, or an official-looking domain is insufficient evidence by itself.
 
-Review date: **October 21, 2026**. The ten connected indicators and Treasury par yield curve below fit this policy; no source replacement was needed.
+Review date: **October 21, 2026**. The twelve connected indicators and Treasury par yield curve below fit this policy.
 
 | Reviewed dataset scope | Commercial reuse basis | Official evidence |
 | --- | --- | --- |
@@ -10,6 +10,8 @@ Review date: **October 21, 2026**. The ten connected indicators and Treasury par
 | BEA NIPA GDP growth and PCE price index | BEA permits reuse of its public-domain website information unless a specific notice says otherwise. This review covers the NIPA statistical values retrieved by our adapters. | [Copyright FAQ](https://www.bea.gov/help/faq/147), [citation guidelines](https://www.bea.gov/help/guidelines-for-citing-bea), [official open data](https://www.bea.gov/open-data) |
 | Treasury Fiscal Data, Debt to the Penny | The API's License and Authorization section explicitly permits commercial copying, adaptation and redistribution. | [Fiscal Data API documentation](https://fiscaldata.treasury.gov/api-documentation/#license-and-authorization) |
 | Treasury daily nominal par yield curve, including the 10-year yield | Treasury's official Data.gov record, identifier `015-DO-020`, lists CC0 1.0. CC0 permits commercial copying and modification. This covers Treasury's published yields, not third-party market quote feeds. | [Treasury dataset license](https://catalog.data.gov/dataset/interest-rate-statistics-daily-treasury-yield-curve-rates), [CC0 terms](https://creativecommons.org/publicdomain/zero/1.0/), [Treasury methodology and data links](https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics) |
+| DOL Employment and Training Administration, national seasonally adjusted initial claims | DOL permits public-domain federal materials to be reproduced and distributed without permission. This review covers ETA's national statistical compilation, not imagery, logos or third-party content. Credit DOL ETA without implying endorsement. | [DOL public-domain policy](https://beta.dol.gov/about/notices/website-content-and-publication-practices/public-domain-copyright-trademarks-patents), [official dataset catalog](https://catalog.data.gov/dataset/historical-unemployment-insurance-seasonally-adjusted-and-unadjusted-weekly-claims-data), [ETA data](https://oui.doleta.gov/unemploy/claims.asp) |
+| Census Advance Monthly Retail Trade Survey (MARTS), total retail trade and food services sales | Census's MARTS catalog record lists CC0. Its bulk-download README requires credit to the U.S. Census Bureau and originating program; retain the precision of published values and distinguish our calculations. | [Census MARTS license](https://catalog.data.gov/dataset/time-series-economic-indicators-time-series-advance-monthly-sales-for-retail-and-food-serv), [official bulk downloads and README](https://www.census.gov/econ_datasets/), [Census citation guidance](https://www.census.gov/about/policies/citation.html) |
 
 ## Attribution and presentation
 
@@ -25,7 +27,9 @@ Review date: **October 21, 2026**. The ten connected indicators and Treasury par
 
 This check enforces the recorded scope; it does not detect future changes to a provider's legal terms. Recheck the primary terms before public launch, when changing feeds, and when adding data. Record any material change here and in the policy module. Confirm commercial display, derived use and downloadable redistribution, including any attribution, caching, rate-limit or third-party restrictions, before admitting a new dataset.
 
-Initial claims (DOL) and retail sales (Census) remain disconnected with no observations. They have not been admitted to this commercial reuse policy. A future integration needs its own dataset-specific review. Release calendars currently contain links only; ingesting or redistributing calendar content also requires reviewing its terms.
+The approved DOL feed is the national historical XML export and the approved Census feed is the MARTS bulk ZIP. Other DOL/Census datasets, state claims, unadjusted substitutions and other retail programs require their own review. Release calendars currently contain links only; ingesting or redistributing calendar content also requires reviewing its terms.
+
+Claims carry a visible historical-feed limitation: the latest available table observation can trail the newest advance release, even after a successful retrieval. Preserve that limitation in exports. Census retail estimates are nominal, seasonally adjusted and revisable; the latest month is advance. File update and report execution dates are metadata, not evidence of historical publication times.
 
 ## Access and advertising
 

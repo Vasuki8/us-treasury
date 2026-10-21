@@ -52,7 +52,7 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   [...new Set(labelIndexes)].forEach(index => {
     const date = orderedDates[index];
     let label = curve ? date : chartDateLabel(panels,date);
-    if (!curve && panels[0].series.frequency === 'Weekly') label = label.replace('Week of ','');
+    if (!curve && panels[0].series.frequency === 'Weekly') label = label.replace('Week ending ','');
     svgElement('text',{x:xIndex(index),y:h-(staggerCurveLabels && index%2===0 ? 24 : 8),'text-anchor':index===0?'start':index===orderedDates.length-1?'end':'middle'},svg,label);
   });
   panels.forEach((panel,index) => {

@@ -162,8 +162,59 @@ test('global source notice credits agencies and ties the BLS disclaimer to the r
   assert.match(html, /U\.S\. Treasury/);
   assert.match(html, /Bureau of Labor Statistics/);
   assert.match(html, /Bureau of Economic Analysis/);
+  assert.match(html, /Department of Labor/);
+  assert.match(html, /Employment and Training Administration/);
+  assert.match(html, /U\.S\. Census Bureau/);
+  assert.match(html, /Advance Monthly Retail Trade Survey/);
   assert.match(html, /independent site/i);
   assert.match(html, /not endorsed/i);
+});
+
+test('historical claims coverage stays visible on headline, monitor, catalog and detail views', () => {
+  const current = getSeries('claims');
+  const saved = { ...current };
+  Object.assign(current, {
+    dataStatus: 'official', error: null,
+    coverageNote: 'Historical feed <may lag> the latest advance release.',
+    observations: [{ date: '2026-09-19', value: 225, publishedAt: null }],
+  });
+  try {
+    for (const html of [ui.metrics(['claims']), ui.seriesTable(['claims']), render({ page: 'explore', query: 'claims' })]) {
+      assert.match(html, /Historical feed/i);
+      assert.match(html, /&lt;may lag&gt;/);
+      assert.doesNotMatch(html, /<may lag>/);
+    }
+    const detail = render({ page: 'indicator', seriesId: 'claims' });
+    assert.match(detail, /Historical feed &lt;may lag&gt; the latest advance release\./);
+    assert.match(detail, /Week ending 19 Sep 2026/);
+    assert.match(render({ page: 'indicator', seriesId: 'claims', tab: 'methodology' }), /<strong>Coverage\.<\/strong> Historical feed &lt;may lag&gt;/);
+    assert.doesNotMatch(render({ page: 'labor' }), /DOL claims are unavailable/);
+  } finally { Object.assign(current, saved); }
+});
+
+test('source warnings and historical coverage remain escaped in compact and expanded source status', () => {
+  const sources = { dol: { status: 'ok', fetchedAt: '2026-10-21T12:00:00Z', coverageNote: 'Historical <feed>', warnings: ['Advance release <newer>'] } };
+  for (const compact of [false, true]) {
+    const html = ui.sourceStatusList(sources, { compact });
+    assert.match(html, /DOL ETA/);
+    assert.match(html, /Historical &lt;feed&gt;/);
+    assert.match(html, /Advance release &lt;newer&gt;/);
+    assert.doesNotMatch(html, /<feed>|<newer>/);
+  }
+});
+
+test('compact source warnings are closed disclosures while coverage and refresh failures stay visible', () => {
+  const source = { status: 'error', fetchedAt: '2026-10-21T12:00:00Z', error: 'HTTP 503', coverageNote: 'Historical feed through September.', warnings: ['First <note>', 'Second note'] };
+  const compact = ui.sourceStatusList({ dol: source }, { compact: true });
+  assert.match(compact, /<details[^>]*><summary>Source notes \(2\)<\/summary><p class="muted">First &lt;note&gt;<\/p><p class="muted">Second note<\/p><\/details>/);
+  assert.doesNotMatch(compact, /<details[^>]*\bopen\b/);
+  const visible = compact.replace(/<details[\s\S]*?<\/details>/g, '');
+  assert.match(visible, /Historical feed through September\./);
+  assert.match(visible, /HTTP 503/);
+  const expanded = ui.sourceStatusList({ dol: source });
+  assert.doesNotMatch(expanded, /<details/);
+  assert.match(expanded, /First &lt;note&gt;/);
+  assert.doesNotMatch(ui.sourceStatusList({ census: { status: 'ok' } }, { compact: true }), /<details/);
 });
 
 test('source notice does not invent a retrieval timestamp when BLS is unavailable', () => {

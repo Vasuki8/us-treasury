@@ -24,10 +24,30 @@ export function* iterateCsv(input) {
 }
 export const parseCsv=text=>[...iterateCsv(text)];
 
-export async function requestText(url,{fetchImpl=globalThis.fetch,method='GET',body,headers={},timeoutMs=45000}={}) {
+export async function requestBytes(url,{fetchImpl=globalThis.fetch,method='GET',body,headers={},timeoutMs=45000,maxBytes=80*1024*1024}={}) {
   const response=await fetchImpl(url,{method,body,headers:{'Accept':'text/plain, application/json, text/csv, */*',...headers},signal:AbortSignal.timeout(timeoutMs)});
   if(!response.ok)throw new Error(`Official source HTTP ${response.status} (${new URL(url).hostname})`);
-  const bytes=Buffer.from(await response.arrayBuffer());
-  if(bytes.length>80*1024*1024)throw new Error('Official response exceeds the 80 MiB source limit');
-  return {text:bytes.toString('utf8'),url:response.url||url,sha256:createHash('sha256').update(bytes).digest('hex'),retrievedAt:new Date().toISOString(),lastModified:response.headers.get('last-modified')||null};
+  const chunks=[];let length=0;
+  if(response.body?.getReader) {
+    const reader=response.body.getReader();
+    try {
+      while(true) {
+        const {done,value}=await reader.read();if(done)break;
+        length+=value.byteLength;
+        if(length>maxBytes){await reader.cancel();throw new Error('Official response exceeds the source byte limit');}
+        chunks.push(Buffer.from(value));
+      }
+    } finally {reader.releaseLock();}
+  } else {
+    const bytes=Buffer.from(await response.arrayBuffer());
+    if(bytes.length>maxBytes)throw new Error('Official response exceeds the source byte limit');
+    chunks.push(bytes);length=bytes.length;
+  }
+  const bytes=Buffer.concat(chunks,length);
+  return {bytes,url:response.url||url,sha256:createHash('sha256').update(bytes).digest('hex'),retrievedAt:new Date().toISOString(),lastModified:response.headers.get('last-modified')||null};
+}
+
+export async function requestText(url,options={}) {
+  const {bytes,...metadata}=await requestBytes(url,options);
+  return {text:bytes.toString('utf8'),...metadata};
 }

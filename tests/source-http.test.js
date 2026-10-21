@@ -1,12 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseCsv, requestText } from '../scripts/sources/http.mjs';
+import * as http from '../scripts/sources/http.mjs';
+import { createHash } from 'node:crypto';
 
 test('official CSV handles quoted delimiters, escaped quotes, CRLF and embedded lines', () => {
   assert.deepEqual(parseCsv('\ufeffCode,Value,Note\r\na,0,"quoted, value"\r\nb,,"two\nlines and ""quotes"""\r\n'),[
     ['Code','Value','Note'],['a','0','quoted, value'],['b','','two\nlines and "quotes"'],
   ]);
   assert.throws(()=>parseCsv('a,"broken'),/unterminated/i);
+});
+
+test('binary source fetch preserves raw bytes and their hash without UTF-8 conversion', async () => {
+  assert.equal(typeof http.requestBytes,'function');
+  const bytes=Buffer.from([0x50,0x4b,0xff,0x00,0x80]);
+  const result=await http.requestBytes('https://example.test/archive',{fetchImpl:async()=>new Response(bytes)});
+  assert.deepEqual(result.bytes,bytes);
+  assert.equal(result.sha256,createHash('sha256').update(bytes).digest('hex'));
+  assert.equal(result.url,'https://example.test/archive');
+});
+
+test('source byte limit rejects a response even when content length is absent', async () => {
+  assert.equal(typeof http.requestBytes,'function');
+  await assert.rejects(http.requestBytes('https://example.test/archive',{maxBytes:3,fetchImpl:async()=>new Response('1234')}),/limit|exceeds/i);
 });
 
 test('source fetch rejects unsuccessful HTTP and records a hash without the body', async () => {

@@ -1,0 +1,157 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+let adapter;
+try {
+  adapter = await import('../scripts/sources/dol.mjs');
+} catch (error) {
+  if (error.code !== 'ERR_MODULE_NOT_FOUND' || !error.message.includes('dol.mjs')) throw error;
+}
+function dol() {
+  assert.ok(adapter, 'The DOL source adapter must exist');
+  return adapter;
+}
+
+const endpoint = 'https://oui.doleta.gov/unemploy/wkclaims/report.asp';
+function week(date, value = '198,000') {
+  return `<week><weekEnded>${date}</weekEnded><InitialClaims><NSA>164,717</NSA><SF>83.0</SF>${value === null ? '' : `<SA>${value}</SA>`}<SA4WK>202,500</SA4WK></InitialClaims><ContinuedClaims><NSA>1,497,243</NSA><SF>88.1</SF><SA>1,699,000</SA><SA4WK>1,723,250</SA4WK></ContinuedClaims><IUR><NSA>1.0</NSA><SA>1.1</SA></IUR><CoveredEmployment>153,732,307</CoveredEmployment></week>`;
+}
+function xml(rows, reportDate = '10/21/2026') {
+  return `<r539cyNational rundate="${reportDate}">\n${rows.join('\n')}\n</r539cyNational>`;
+}
+function fixtureFetch(text) {
+  return async (url, options) => {
+    const body = new URLSearchParams(options.body);
+    assert.equal(url, endpoint);
+    assert.equal(options.method, 'POST');
+    assert.equal(options.headers['Content-Type'], 'application/x-www-form-urlencoded');
+    assert.equal(body.get('level'), 'us');
+    assert.equal(body.get('strtdate'), '2024');
+    assert.equal(body.get('enddate'), '2026');
+    assert.equal(body.get('filetype'), 'xml');
+    assert.equal(body.get('submit'), 'Submit');
+    return new Response(text, { headers: { 'content-type': 'text/xml; charset=UTF-8' } });
+  };
+}
+
+test('DOL preserves week-ending periods and raw counts while converting SA initial claims to thousands', () => {
+  const result = dol().parseDol(xml([week('09/19/2026'), week('09/05/2026', '0'), week('09/12/2026', '1,234')]));
+  assert.deepEqual(result.observations, [
+    { date: '2026-09-05', value: 0, publishedAt: null, sourceValue: '0' },
+    { date: '2026-09-12', value: 1.234, publishedAt: null, sourceValue: '1,234' },
+    { date: '2026-09-19', value: 198, publishedAt: null, sourceValue: '198,000' },
+  ]);
+  assert.equal(result.reportDate, '2026-10-21');
+});
+
+test('DOL omits missing SA counts, including XML nonbreaking spaces, without fabricating zeros', () => {
+  const result = dol().parseDol(xml([
+    week('08/15/2026', ''), week('08/22/2026', '&#160;'), week('08/29/2026', '&#xA0;'),
+    week('09/05/2026', '\u00a0'), week('09/12/2026', null), week('09/19/2026', '0'),
+  ]));
+  assert.deepEqual(result.observations, [{ date: '2026-09-19', value: 0, publishedAt: null, sourceValue: '0' }]);
+});
+
+test('DOL retains an internal missing week so changes and charts cannot bridge an unobserved count', () => {
+  const result = dol().parseDol(xml([
+    week('08/29/2026', '&#160;'), week('09/05/2026', '197,000'), week('09/12/2026', '&#160;'),
+    week('09/19/2026', '198,000'), week('09/26/2026', '&#160;'),
+  ]));
+  assert.deepEqual(result.observations, [
+    { date: '2026-09-05', value: 197, publishedAt: null, sourceValue: '197,000' },
+    { date: '2026-09-12', value: null, publishedAt: null, sourceValue: '' },
+    { date: '2026-09-19', value: 198, publishedAt: null, sourceValue: '198,000' },
+  ]);
+});
+
+test('DOL rejects duplicate weekly periods even when one duplicate lacks a count', () => {
+  assert.throws(() => dol().parseDol(xml([week('09/19/2026'), week('09/19/2026', '199,000')])), /duplicate/i);
+  assert.throws(() => dol().parseDol(xml([week('09/19/2026'), week('09/19/2026', '&#160;')])), /duplicate/i);
+});
+
+test('DOL rejects invalid calendar dates and observation dates that are not week-ending Saturdays', () => {
+  for (const date of ['02/30/2026', '09/21/2026', '2026-09-19', '00/19/2026']) {
+    assert.throws(() => dol().parseDol(xml([week(date)])), /date|Saturday|week/i);
+  }
+  assert.throws(() => dol().parseDol(xml([week('09/19/2026')], '02/30/2026')), /date/i);
+});
+
+test('DOL rejects malformed or negative claims rather than normalizing them into plausible data', () => {
+  for (const value of ['-1', '1.5', '1,23', '1e3', 'NaN', 'Infinity', '9007199254740992', '&unknown;']) {
+    assert.throws(() => dol().parseDol(xml([week('09/19/2026', value)])), /numeric|count|entity|XML/i);
+  }
+});
+
+test('DOL accepts only the known national XML schema and never evaluates declarations or entities', () => {
+  const valid = xml([week('09/19/2026')]);
+  const invalid = [
+    '<html>Access denied</html>', valid.replaceAll('r539cyNational', 'r539cyState'),
+    valid.replace('<weekEnded>', '<date>').replace('</weekEnded>', '</date>'),
+    valid.replace('</InitialClaims>', ''), valid.replace('<SA>198,000</SA>', '<SA>198,000</SA><SA>199,000</SA>'),
+    '<!DOCTYPE claims [<!ENTITY external SYSTEM "https://example.com/data">]>' + valid,
+    valid.replace('198,000', '&external;'), valid + '<other/>', null,
+  ];
+  for (const text of invalid) assert.throws(() => dol().parseDol(text), /DOL|XML|schema|date|entity/i);
+  assert.equal(dol().parseDol('<?xml version="1.0" encoding="UTF-8"?>\n' + valid).observations[0].value, 198);
+  assert.throws(() => dol().parseDol(' '.repeat(2 * 1024 * 1024) + valid), /limit|large|size/i);
+});
+
+test('DOL fails unusable exports instead of treating an empty or future-only placeholder year as data', () => {
+  for (const text of [xml([]), xml([week('09/19/2026', '&#160;')])]) {
+    assert.throws(() => dol().parseDol(text), /numeric|usable|observations/i);
+  }
+});
+
+test('a revised DOL export replaces its reported count without inventing publication history', () => {
+  const prior = dol().parseDol(xml([week('09/19/2026', '198,000')], '10/20/2026'));
+  const revised = dol().parseDol(xml([week('09/19/2026', '199,000')]));
+  assert.equal(prior.observations[0].value, 198);
+  assert.equal(revised.observations[0].value, 199);
+  assert.equal(revised.observations[0].publishedAt, null);
+  assert.equal(revised.observations[0].sourceValue, '199,000');
+  assert.equal(revised.revisions, undefined);
+});
+
+test('DOL collector fetches national XML, retains the latest 52 past weeks, and records source provenance', async () => {
+  const start = Date.parse('2025-06-21T00:00:00Z');
+  const rows = Array.from({ length: 71 }, (_, index) => {
+    const date = new Date(start + index * 7 * 86400000).toISOString().slice(0, 10);
+    return week(`${date.slice(5, 7)}/${date.slice(8)}/${date.slice(0, 4)}`, String(200000 + index * 1000));
+  });
+  const result = await dol().collectDol({ now: new Date('2026-10-21T12:00:00Z'), fetchImpl: fixtureFetch(xml(rows)) });
+  const claims = result.series.claims;
+  assert.equal(result.id, 'dol');
+  assert.equal(claims.observations.length, 52);
+  assert.equal(claims.observations[0].date, '2025-10-25');
+  assert.equal(claims.observations.at(-1).date, '2026-10-17');
+  assert.equal(claims.observations.at(-1).value, 269);
+  assert.equal(claims.sourceUrl, endpoint);
+  assert.deepEqual(claims.sourceIds, ['InitialClaims/SA']);
+  assert.equal(claims.dataStatus, 'official');
+  assert.match(claims.calculation, /1,?000|1000/);
+  assert.equal(result.reportDate, '2026-10-21');
+  assert.equal(result.latestObservationDate, '2026-10-17');
+  assert.equal(claims.latestObservationDate, '2026-10-17');
+  assert.match(result.coverageNote, /2026-10-17/);
+  assert.match(claims.coverageNote, /lag.*advance|advance.*lag/i);
+  assert.equal(result.provenance.length, 1);
+  assert.equal(result.provenance[0].url, endpoint);
+  assert.match(result.provenance[0].sha256, /^[a-f\d]{64}$/);
+  assert.ok(!('text' in result.provenance[0]));
+  assert.equal(result.fetchedAt, result.provenance[0].retrievedAt);
+  assert.equal(result.warnings.length, 0);
+});
+
+test('DOL source warns when its actual latest observation trails the as-of date by more than 14 days', async () => {
+  const stale = await dol().collectDol({ now: new Date('2026-10-21T12:00:00Z'), fetchImpl: fixtureFetch(xml([week('09/19/2026'), week('10/24/2026')])) });
+  assert.equal(stale.latestObservationDate, '2026-09-19');
+  assert.match(stale.warnings.join(' '), /lag|advance|old/i);
+  assert.match(stale.warnings.join(' '), /2026-09-19/);
+  const boundary = await dol().collectDol({ now: new Date('2026-10-17T12:00:00Z'), fetchImpl: fixtureFetch(xml([week('10/03/2026')])) });
+  assert.equal(boundary.warnings.length, 0);
+});
+
+test('DOL collector rejects unavailable HTTP responses and exports without usable observations before the cutoff', async () => {
+  await assert.rejects(dol().collectDol({ now: new Date('2026-10-21T12:00:00Z'), fetchImpl: async () => new Response('Unavailable', { status: 503 }) }), /HTTP.*503/i);
+  await assert.rejects(dol().collectDol({ now: new Date('2026-10-21T12:00:00Z'), fetchImpl: fixtureFetch(xml([week('10/24/2026')])) }), /usable|numeric|observations/i);
+});

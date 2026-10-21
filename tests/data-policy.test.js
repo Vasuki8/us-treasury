@@ -43,3 +43,18 @@ test('calendar observations cannot be published before their reuse rights are re
   changed.releases = [{id:'vendor-release',sourceUrl:'https://vendor.example/calendar',seriesId:'unrate'}];
   assert.throws(() => assertCommercialData(changed), /commercial reuse.*calendar/i);
 });
+
+test('reviewed DOL national claims and Census MARTS feeds are allowed without approving other datasets', () => {
+  const dolUrl='https://oui.doleta.gov/unemploy/wkclaims/report.asp';
+  const censusUrl='https://www.census.gov/econ_getzippedfile/?programCode=MARTS';
+  const next={sources:{
+    dol:{series:{claims:{sourceIds:['InitialClaims/SA'],sourceUrl:dolUrl}},provenance:[{url:dolUrl}]},
+    census:{series:{retail:{sourceIds:['MARTS:44X72:SM:US:SA'],sourceUrl:censusUrl}},provenance:[{url:censusUrl}]},
+  }};
+  assert.doesNotThrow(()=>assertCommercialData(next));
+  next.sources.census.series.retail.sourceUrl=censusUrl.replace('MARTS','MRTS');
+  assert.throws(()=>assertCommercialData(next),/feed.*retail/i);
+  next.sources.census.series.retail.sourceUrl=censusUrl;
+  next.sources.dol.series.claims.sourceIds=['InitialClaims/NSA'];
+  assert.throws(()=>assertCommercialData(next),/identifier.*claims/i);
+});
