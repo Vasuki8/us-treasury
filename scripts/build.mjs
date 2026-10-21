@@ -1,7 +1,10 @@
 import { mkdir, copyFile, cp, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { snapshot } from '../src/official-snapshot.js';
+import { assertCommercialData } from './data-policy.mjs';
 
+assertCommercialData(snapshot);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.join(root, 'dist');
 // Only this project's fixed build directory is ever replaced.

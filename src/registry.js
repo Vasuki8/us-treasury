@@ -1,6 +1,6 @@
 const bls={name:'Bureau of Labor Statistics',url:'https://www.bls.gov/'};
 const bea={name:'Bureau of Economic Analysis',url:'https://www.bea.gov/'};
-const treasury={name:'U.S. Treasury',url:'https://home.treasury.gov/resource-center-data-chart-center/interest-rates'};
+const treasury={name:'U.S. Treasury',url:'https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics'};
 const percent={unit:'Percent',precision:1,format:'percent'};
 const monthly={frequency:'Monthly',adjustment:'Seasonally adjusted'};
 

@@ -4,6 +4,12 @@ A working frontend foundation for the selected compact Graphite design. Includes
 
 Uses official Treasury, BLS and BEA observations captured by the data refresh command. The app serves a committed snapshot, with observation periods, source identifiers and actual retrieval times. It does not stream live market quotes.
 
+## Commercial data reuse
+
+The site is intended for advertising revenue. Only datasets reviewed for commercial display, derived use and downloadable redistribution may be connected. The current ten indicators and Treasury yield curve qualify under their published policies; see the [dataset rights review](docs/data-sources.md) for official evidence, scope and conditions.
+
+The app credits the agencies, shows the required BLS disclaimer and retrieval date, and includes the disclaimer in exported BLS rows. Build and refresh commands reject data outside the reviewed dataset, identifier and feed scope in `scripts/data-policy.mjs`. Recheck terms before launch and when adding or changing a source. DOL/Census placeholders remain unavailable pending integration and rights review.
+
 ## Run locally
 
 Requires Node.js 22 or newer. No dependency installation is needed.
@@ -47,7 +53,7 @@ The refresh command writes `src/official-snapshot.js` atomically and exits with 
 | Federal debt | Treasury `tot_pub_debt_out_amt` | Official dollars divided by one trillion |
 | 10-year yield / curve | Treasury daily par yield CSV | Published percent; daily changes in basis points |
 
-Source documentation: [BLS API](https://www.bls.gov/developers/api_signature_v1.htm), [Treasury Fiscal Data API](https://fiscaldata.treasury.gov/api-documentation/), [Treasury yield data](https://home.treasury.gov/resource-center-data-chart-center/interest-rates), [BEA official flat files](https://apps.bea.gov/iTable/?reqid=19&step=4&isuri=1&1921=flatfiles&1903=3). BEA uses the keyless `NipaDataQ.txt` and `NipaDataM.txt` downloads; the exact series code is matched before values are accepted.
+Source documentation: [BLS API](https://www.bls.gov/developers/api_signature_v1.htm), [Treasury Fiscal Data API](https://fiscaldata.treasury.gov/api-documentation/), [Treasury yield data](https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics), [BEA official flat files](https://apps.bea.gov/iTable/?reqid=19&step=4&isuri=1&1921=flatfiles&1903=3). BEA uses the keyless `NipaDataQ.txt` and `NipaDataM.txt` downloads; the exact series code is matched before values are accepted.
 
 Historical publication timestamps are absent from these feeds and remain unknown. Source-file modification dates and retrieval times are never substituted for release dates. Source footnotes are retained. No historical initial estimates or revision ledger has yet been captured. CSV downloads include source URLs, identifiers, calculation inputs, retrieval timestamps and official/cached status; unknown publication dates are blank.
 
@@ -71,6 +77,7 @@ Claims and retail sales are DOL/Census measures outside this integration. Their 
 | `src/registry.js` | Canonical official series definitions, units and source mappings |
 | `src/data.js`, `src/official-snapshot.js` | Hydrated official snapshots, availability and provenance |
 | `scripts/refresh-data.mjs`, `scripts/sources/` | Official agency retrieval, parsing, transformations and last-good retention |
+| `scripts/data-policy.mjs`, `docs/data-sources.md` | Reviewed commercial reuse scope, evidence and build/refresh validation |
 | `src/model.js` | Search, formatting, transformations, comparison, CSV |
 | `src/router.js` | Validated shareable hash routes |
 | `src/storage.js` | Versioned browser preferences and failure handling |

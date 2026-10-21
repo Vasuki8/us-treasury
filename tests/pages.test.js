@@ -150,6 +150,31 @@ test('source status distinguishes cached retrievals from a failed refresh attemp
   assert.match(html, /unavailable/i);
 });
 
+test('global source notice credits agencies and ties the BLS disclaimer to the retained retrieval', () => {
+  assert.equal(typeof ui.sourceNotice, 'function', 'source notice renderer is available');
+  const html = ui.sourceNotice({
+    bls: { status: 'error', fetchedAt: '2026-10-20T12:00:00Z', lastAttemptAt: '2026-10-21T16:00:00Z' },
+  });
+  assert.ok(html.includes('BLS.gov cannot vouch for the data or analyses derived from these data after the data have been retrieved from BLS.gov.'));
+  assert.match(html, /datetime="2026-10-20T12:00:00Z"/);
+  assert.doesNotMatch(html, /2026-10-21T16:00:00Z/);
+  assert.match(html, /href="https:\/\/www\.bls\.gov\/developers\/termsOfService\.htm"/);
+  assert.match(html, /U\.S\. Treasury/);
+  assert.match(html, /Bureau of Labor Statistics/);
+  assert.match(html, /Bureau of Economic Analysis/);
+  assert.match(html, /independent site/i);
+  assert.match(html, /not endorsed/i);
+});
+
+test('source notice does not invent a retrieval timestamp when BLS is unavailable', () => {
+  assert.equal(typeof ui.sourceNotice, 'function', 'source notice renderer is available');
+  const html = ui.sourceNotice({ bls: { status: 'unavailable', fetchedAt: null } });
+  assert.match(html, /BLS retrieval unavailable/);
+  assert.doesNotMatch(html, /<time/);
+  const escaped = ui.sourceNotice({ bls: { fetchedAt: '<script>unsafe</script>' } });
+  assert.doesNotMatch(escaped, /<script>/);
+});
+
 // A small DOM boundary keeps the real SVG renderer and interaction handlers in use.
 function withChartDocument(run) {
   class Element {

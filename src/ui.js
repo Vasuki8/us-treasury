@@ -1,4 +1,4 @@
-import { getSeries, latest, formatValue, formatChange, periodLabel } from './model.js';
+import { getSeries, latest, formatValue, formatChange, periodLabel, BLS_DATA_NOTICE } from './model.js';
 
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -64,6 +64,15 @@ export function sourceLink(series) {
 
 export function seriesStatus(series) {
   return series.dataStatus === 'cached' ? 'Cached official snapshot' : series.dataStatus === 'official' ? 'Official snapshot' : 'Unavailable';
+}
+
+/** The BLS disclaimer and last successful capture accompany every route. */
+export function sourceNotice(sources = {}) {
+  const retrieved = sources.bls?.fetchedAt;
+  const retrieval = retrieved
+    ? `BLS data retrieved <time datetime="${escapeHtml(retrieved)}">${escapeHtml(retrieved)}</time>.`
+    : 'BLS retrieval unavailable.';
+  return `<p>Data sources: <a href="https://home.treasury.gov/" target="_blank" rel="noopener noreferrer">U.S. Treasury</a>, <a href="https://www.bls.gov/" target="_blank" rel="noopener noreferrer">Bureau of Labor Statistics</a> and <a href="https://www.bea.gov/" target="_blank" rel="noopener noreferrer">Bureau of Economic Analysis</a>. Meridian is an independent site and is not endorsed by these agencies.</p><p>${escapeHtml(BLS_DATA_NOTICE)} ${retrieval} <a href="https://www.bls.gov/developers/termsOfService.htm" target="_blank" rel="noopener noreferrer">BLS data terms ↗</a></p>`;
 }
 
 /** Last successful retrieval and latest attempt remain separate after failures. */

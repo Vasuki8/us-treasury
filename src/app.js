@@ -1,7 +1,7 @@
 import { releases, dataStatus } from './data.js';
 import { filterSeries, getSeries, latest, formatValue, formatChange, toCsv } from './model.js';
 import { renderPage } from './pages.js';
-import { escapeHtml as esc, sourceStatusList } from './ui.js';
+import { escapeHtml as esc, sourceStatusList, sourceNotice } from './ui.js';
 import { renderCharts } from './charts.js';
 import { parseRoute, routeFor } from './router.js';
 import { readPreferences, writePreferences } from './storage.js';
@@ -62,6 +62,7 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   document.getElementById('saved-count').textContent=state.saved.length;
   document.getElementById('saved-list').innerHTML=state.saved.length?state.saved.map(id=>`<div class="saved-item"><a href="#/series/${id}">${esc(getSeries(id).short)}</a><button type="button" data-save="${id}" aria-label="Remove ${esc(getSeries(id).name)} from watchlist">×</button></div>`).join(''):'<p class="rail-note">No saved series.<br>Open an indicator to save it.</p>';
   document.getElementById('source-status').innerHTML=sourceStatusList(dataStatus.sources,{compact:true});
+  document.getElementById('source-notice').innerHTML=sourceNotice(dataStatus.sources);
   document.getElementById('snapshot-time').textContent=`OFFICIAL SNAPSHOT · ASSEMBLED ${dataStatus.generatedAt ?? 'UNAVAILABLE'}`;
   document.title=`${state.page==='indicator'?getSeries(state.seriesId).name:pageNames[state.page]} — Meridian`;
   renderCharts(main);

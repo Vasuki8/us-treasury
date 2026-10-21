@@ -307,3 +307,23 @@ test('CSV preserves validated negative numeric source strings without a formula-
     assert.equal(row[headers.indexOf('source_value')],'-28.0');
   } finally {delete series[example.id];}
 });
+
+test('CSV keeps the BLS required notice on each BLS observation in a mixed-source export', () => {
+  const bls = fixture([4.2, 4.3], { id: 'bls-export', agency: 'bls', source: { name: 'Bureau of Labor Statistics', url: 'https://www.bls.gov/' } });
+  const bea = fixture([2.1], { id: 'bea-export', agency: 'bea', source: { name: 'Bureau of Economic Analysis', url: 'https://www.bea.gov/' } });
+  series[bls.id] = bls;
+  series[bea.id] = bea;
+  try {
+    const [headers, ...rows] = parseCsv(toCsv([bls.id, bea.id]));
+    const noticeIndex = headers.indexOf('source_notice');
+    assert.ok(noticeIndex >= 0, 'source notice is included in exported provenance');
+    assert.deepEqual(rows.filter(row => row[0] === bls.id).map(row => row[noticeIndex]), [
+      'BLS.gov cannot vouch for the data or analyses derived from these data after the data have been retrieved from BLS.gov.',
+      'BLS.gov cannot vouch for the data or analyses derived from these data after the data have been retrieved from BLS.gov.',
+    ]);
+    assert.equal(rows.find(row => row[0] === bea.id)[noticeIndex], '');
+  } finally {
+    delete series[bls.id];
+    delete series[bea.id];
+  }
+});
