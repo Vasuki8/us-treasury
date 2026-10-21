@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Meridian — a compact US macroeconomic research workspace. Development edition with clearly labeled sample data.">
+  <meta name="theme-color" content="#17191f">
+  <title>Meridian — US Macro Research</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./src/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div id="app" data-theme="Graphite" data-density="compact">
+    <header class="brandbar">
+      <a class="brand" href="#/overview">MERIDIAN<span>US MACRO / RESEARCH TERMINAL</span></a>
+      <span class="data-mode"><span aria-hidden="true">●</span> SAMPLE DATA</span>
+      <label class="appearance">Appearance <select id="theme-select"><option>Graphite</option><option>Paper</option><option>Midnight</option></select></label>
+      <label class="appearance density-label">Density <select id="density-select"><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select></label>
+    </header>
+    <nav class="functionbar" aria-label="Main navigation">
+      <a href="#/overview" data-nav="overview"><kbd>F1</kbd>OVERVIEW</a>
+      <a href="#/economy/labor" data-nav="labor"><kbd>F2</kbd>LABOR MARKET</a>
+      <a href="#/series/unrate" data-nav="indicator" id="indicator-nav"><kbd>F3</kbd>INDICATOR</a>
+      <a href="#/calendar" data-nav="calendar"><kbd>F4</kbd>CALENDAR</a>
+      <a href="#/explore" data-nav="explore"><kbd>F5</kbd>EXPLORE DATA</a>
+    </nav>
+    <form class="commandbar" id="command-form" role="search">
+      <label for="command-input">SEARCH <span aria-hidden="true">›</span></label>
+      <input id="command-input" placeholder="Search indicators or enter US, LABOR, UNRATE, CAL, FIND" autocomplete="off" spellcheck="false" maxlength="200">
+      <kbd class="command-hint">Ctrl K</kbd><button class="go" type="submit">GO</button>
+    </form>
+    <div class="ticker" id="ticker" aria-label="Sample macro snapshot"></div>
+    <div class="shell">
+      <aside class="rail" aria-label="Workspace navigation">
+        <div class="rail-title">WORKSPACE</div>
+        <a href="#/overview" data-nav="overview"><span class="code">US</span>Overview</a>
+        <a href="#/economy/labor" data-nav="labor"><span class="code">LAB</span>Labor market</a>
+        <a href="#/series/unrate" data-nav="indicator" id="indicator-rail"><span class="code">IND</span>Indicator detail</a>
+        <a href="#/calendar" data-nav="calendar"><span class="code">CAL</span>Calendar</a>
+        <a href="#/explore" data-nav="explore"><span class="code">EXP</span>Explore data</a>
+        <hr><div class="rail-title">QUICK SERIES</div>
+        <a href="#/series/gdp"><span class="code">GDP</span>Real growth</a>
+        <a href="#/series/cpi"><span class="code">CPI</span>Inflation</a>
+        <a href="#/series/debt"><span class="code">DBT</span>Federal debt</a>
+        <a href="#/series/yield"><span class="code">UST</span>Treasury 10Y</a>
+        <hr><div class="rail-title">MY WATCHLIST <span id="saved-count">0</span></div>
+        <div id="saved-list" class="saved-list"></div>
+        <hr><div class="rail-note">UNITED STATES<br><span class="mono">ET · USD</span><br><br>Sample observations<br>and release schedule.<br><span class="sample-note">No live feed connected.</span></div>
+      </aside>
+      <main id="main-content" tabindex="-1"><div class="loading">Loading workspace…</div></main>
+    </div>
+    <div class="status" id="app-status" role="status" aria-live="polite">Sample data · Choose a measure to inspect its history and definition.</div>
+    <footer class="footline"><span>MERIDIAN / US MACRO</span><span>SYNTHETIC VALUES · SAMPLE SCHEDULE · ET</span></footer>
+  </div>
+  <noscript><p class="empty-state">Enable JavaScript to use the research workspace.</p></noscript>
+</body>
+</html>

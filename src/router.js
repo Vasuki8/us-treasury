@@ -1,0 +1,71 @@
+import { series, releases } from './data.js';
+
+const validIds = ids => [...new Set(ids.filter(id => Object.hasOwn(series, id)))].slice(0, 4);
+const topics = ['All topics', ...new Set(Object.values(series).map(s => s.topic))];
+const frequencies = ['All frequencies', 'Daily', 'Weekly', 'Monthly', 'Quarterly'];
+export const defaults = {
+  page: 'overview', seriesId: 'unrate', range: 12, transform: 'level', tab: 'data',
+  query: '', topic: 'All topics', frequency: 'All frequencies', selected: ['unrate', 'cpi'],
+  exploreMode: 'catalog', comparison: 'native', day: 'all', calendarTopic: 'All topics',
+  watchOnly: false, eventId: 'cpi',
+};
+
+/** Hash routes work on ordinary static hosts and preserve browser history. */
+export function parseRoute(hash = '') {
+  const state = { ...defaults, selected: [...defaults.selected] };
+  try {
+    const [encodedPath, query = ''] = hash.replace(/^#/, '').split('?');
+    const path = decodeURIComponent(encodedPath).replace(/\/$/, '');
+    const p = new URLSearchParams(query);
+    if (path === '/economy/labor') state.page = 'labor';
+    else if (path.startsWith('/series/')) {
+      state.page = 'indicator';
+      const id = path.slice('/series/'.length);
+      state.seriesId = Object.hasOwn(series, id) ? id : defaults.seriesId;
+    } else if (path === '/calendar') state.page = 'calendar';
+    else if (path === '/explore') state.page = 'explore';
+    state.range = p.get('range') === '6' ? 6 : 12;
+    state.transform = p.get('transform') === 'change' ? 'change' : 'level';
+    state.tab = ['methodology', 'revisions'].includes(p.get('tab')) ? p.get('tab') : 'data';
+    state.query = (p.get('q') || '').slice(0, 200);
+    state.topic = topics.includes(p.get('topic')) ? p.get('topic') : 'All topics';
+    state.frequency = frequencies.includes(p.get('frequency')) ? p.get('frequency') : 'All frequencies';
+    if (p.has('selected')) state.selected = validIds(p.get('selected').split(','));
+    state.exploreMode = p.get('mode') === 'compare' ? 'compare' : 'catalog';
+    state.comparison = p.get('comparison') === 'indexed' ? 'indexed' : 'native';
+    state.day = /^2026-10-(19|20|21|22|23)$/.test(p.get('day')) ? p.get('day') : 'all';
+    state.calendarTopic = topics.includes(p.get('calendarTopic')) ? p.get('calendarTopic') : 'All topics';
+    state.watchOnly = p.get('watch') === '1';
+    state.eventId = releases.some(event => event.id === p.get('event')) ? p.get('event') : defaults.eventId;
+  } catch {
+    // A malformed externally supplied URL should leave the workspace usable.
+  }
+  return state;
+}
+
+export function routeFor(input) {
+  const state = { ...defaults, ...input };
+  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore'}[state.page] || '/overview';
+  const p = new URLSearchParams();
+  if (state.page === 'indicator') {
+    if (state.range === 6) p.set('range', '6');
+    if (state.transform === 'change') p.set('transform', 'change');
+    if (state.tab !== 'data') p.set('tab', state.tab);
+  }
+  if (state.page === 'explore') {
+    p.set('selected', validIds(state.selected || []).join(','));
+    if (state.query) p.set('q', state.query);
+    if (state.topic !== 'All topics') p.set('topic', state.topic);
+    if (state.frequency !== 'All frequencies') p.set('frequency', state.frequency);
+    if (state.exploreMode === 'compare') p.set('mode', 'compare');
+    if (state.comparison === 'indexed') p.set('comparison', 'indexed');
+    if (state.range === 6) p.set('range', '6');
+  }
+  if (state.page === 'calendar') {
+    if (state.day !== 'all') p.set('day', state.day);
+    if (state.calendarTopic !== 'All topics') p.set('calendarTopic', state.calendarTopic);
+    if (state.watchOnly) p.set('watch', '1');
+    if (state.eventId !== 'cpi') p.set('event', state.eventId);
+  }
+  return `#${path}${p.size ? `?${p}` : ''}`;
+}

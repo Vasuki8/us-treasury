@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+test-results/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+
+# Original design studies and transfer tooling stay in the local workspace.
+/build-meridian.cjs
+/refine-terminal.cjs
+/preview-server.cjs
+/library_file_transfer.py
+/economy-pulse-overview.svg
+/economy-pulse-preview.html
+/economy-pulse-terminal.html
+/meridian-terminal-concept-check.png
+/meridian-terminal-concept.pdf
+/meridian-terminal-concept.svg
