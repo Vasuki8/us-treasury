@@ -93,6 +93,7 @@ Yield timing has a separate factual-metadata commercial-use review; the statisti
 
 ## Working features
 
+- Global data freshness banner with the latest successful source retrieval, latest recorded attempt, named cached/unavailable feeds, and expandable capture details for all eleven data/calendar sources. Times display Eastern daylight/standard time; snapshot assembly and observation periods do not stand in for refresh timestamps.
 - Connected five-page navigation, deep links, browser back/forward, refresh, F1–F5 shortcuts, and Ctrl/Cmd+K search.
 - Twelve official indicators, with definitions, source identifiers, units, adjustment, observation periods, retrieval times, source footnotes and coverage limitations.
 - Indicator level/change controls, six/twelve-observation ranges, exact-value pointer and keyboard chart readouts, and data/methodology/revision tabs.
@@ -108,6 +109,7 @@ Yield timing has a separate factual-metadata commercial-use review; the statisti
 | --- | --- |
 | `src/registry.js` | Canonical official series definitions, units and source mappings |
 | `src/data.js`, `src/official-snapshot.js` | Hydrated official snapshots, availability and provenance |
+| `src/freshness.js` | Recorded retrieval/attempt summary and independent cached data/calendar states |
 | `scripts/refresh-data.mjs`, `scripts/sources/` | Official agency retrieval, parsing, transformations and last-good retention |
 | `scripts/publish-snapshot.mjs` | Snapshot-only bot commits, expected-commit checks and normal pushes |
 | `scripts/data-policy.mjs`, `docs/data-sources.md` | Reviewed commercial reuse scope, evidence and build/refresh validation |

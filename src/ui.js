@@ -1,9 +1,24 @@
 import { getSeries, latest, formatValue, formatChange, periodLabel, BLS_DATA_NOTICE } from './model.js';
+import { getFreshness } from './freshness.js';
 
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   })[character]);
+}
+
+const freshnessTimeFormat=new Intl.DateTimeFormat('en-US',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23',timeZone:'America/New_York',timeZoneName:'short'});
+const freshnessTime=value=>value?`<time datetime="${escapeHtml(value)}">${escapeHtml(freshnessTimeFormat.format(new Date(value)))}</time>`:'Not recorded';
+
+/** Recorded source retrievals remain distinct from attempts and snapshot assembly. */
+export function freshnessBanner(snapshot={}) {
+  const freshness=getFreshness(snapshot);
+  const counts=[freshness.cached.length?`${freshness.cached.length} cached`:null,freshness.unavailable.length?`${freshness.unavailable.length} unavailable`:null].filter(Boolean);
+  const state=counts.join(' · ')||`All ${freshness.entries.length} sources captured`;
+  const cached=freshness.cached.length?`<p><strong>Cached:</strong> ${freshness.cached.map(source=>escapeHtml(source.label)).join(', ')}</p>`:'';
+  const unavailable=freshness.unavailable.length?`<p><strong>Unavailable:</strong> ${freshness.unavailable.length===freshness.entries.length?`All ${freshness.entries.length} official data and calendar sources`:freshness.unavailable.map(source=>escapeHtml(source.label)).join(', ')}</p>`:'';
+  const sources=freshness.entries.map(source=>`<li class="freshness-source"><div class="freshness-source-heading"><strong>${escapeHtml(source.label)}</strong><span>${source.status==='available'?'Captured':source.status==='cached'?'Cached':'Unavailable'}</span></div><p>Last successful capture: ${freshnessTime(source.fetchedAt)}</p><p>Latest attempt: ${freshnessTime(source.lastAttemptAt)}</p>${source.error?`<p class="freshness-error">${escapeHtml(source.error)}</p>`:''}</li>`).join('');
+  return `<section class="freshness-banner" data-state="${freshness.state}" aria-label="Data freshness"><div class="freshness-heading"><p class="freshness-title">DATA FRESHNESS</p><span class="freshness-state">${escapeHtml(state)}</span></div><div class="freshness-times"><p><span>Last successful source refresh</span> ${freshness.lastSuccessfulRefresh?freshnessTime(freshness.lastSuccessfulRefresh):'<strong>No successful source refresh recorded</strong>'}</p><p><span>Latest attempt</span> ${freshnessTime(freshness.lastAttemptAt)}</p></div><div class="freshness-source-summary">${cached}${unavailable}</div><p class="freshness-note">Retrieval times in Eastern Time. Observation periods vary by source.</p><details class="freshness-details"><summary>Refresh details · ${freshness.entries.length} sources</summary><ul class="freshness-source-list">${sources}</ul></details></section>`;
 }
 
 export function button(label, attrs = '', className = 'action') {
