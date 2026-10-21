@@ -38,11 +38,15 @@ npm run data:refresh -- --sources=treasury
 npm run data:refresh -- --sources=dol,census
 # Refresh official release schedules without downloading indicator data
 npm run data:refresh -- --sources=calendar
+# Require every attempted source to succeed before replacing the snapshot
+npm run data:refresh -- --require-all
 ```
 
 Refresh and then reload the browser. No API keys or dependency installation are needed. Refresh uses Node's server-side fetch; the browser does not contact agency APIs. BEA's two public bulk files total about 70 MB, so refreshing may take several seconds. BLS unauthenticated requests are rate-limited; all six BLS series are batched into one request.
 
 The refresh command writes `src/official-snapshot.js` atomically and exits with an error if an agency fails. Other successful agencies still update. A failed agency retains its last successful values, original retrieval time and provenance; its cached status and refresh error are visible. A first failure leaves that agency unavailable. Do not hand-edit snapshot observations.
+
+Use `--require-all` for automated publication. It fetches every selected source, then rejects the candidate before writing if any source fails. An unavailable BLS next-year schedule that has never been captured remains an explicit coverage limitation; failure to retrieve a previously captured year rejects the refresh. The default local command retains its partial-update behavior for investigation.
 
 | Indicator | Official source identifier | Calculation |
 | --- | --- | --- |
@@ -67,7 +71,7 @@ Claims use the keyless [ETA national historical XML export](https://oui.doleta.g
 
 Retail uses the keyless [Census MARTS bulk ZIP](https://www.census.gov/econ_datasets/), with 36 retained monthly observations after calculating growth from exact calendar comparisons. Metadata selects U.S. total retail trade and food services, seasonally adjusted monthly sales in millions of dollars. The latest month is an advance estimate. Sales are not price-adjusted; revisions replace earlier levels. Published source precision and Census program credits are retained. The Census API requires a key, so this adapter uses the documented public bulk feed.
 
-The calendar captures official BLS annual schedules, BEA's official iCalendar feed, Census's annual retail schedule, DOL's published weekly claims rule and holiday exceptions, and Treasury Fiscal Data's dated Debt to the Penny estimates. The current snapshot contains 218 schedule entries across five agencies, including 25 Census retail dates, 13 upcoming DOL dates and 50 Treasury estimates. It defaults to the next 30 Eastern calendar days, with month/day, topic and watchlist filters. Shared Employment Situation releases match unemployment, payrolls, participation and wages without duplicating the release. EST/EDT follows `America/New_York` rules, and reference periods come from explicit agency text. Scheduled dates do not establish publication or results.
+The calendar captures official BLS annual schedules, BEA's official iCalendar feed, Census's annual retail schedule, DOL's published weekly claims rule and holiday exceptions, and Treasury Fiscal Data's dated Debt to the Penny estimates. Entry counts and coverage horizons change as agencies update their schedules and DOL's upcoming window rolls forward. It defaults to the next 30 Eastern calendar days, with month/day, topic and watchlist filters. Shared Employment Situation releases match unemployment, payrolls, participation and wages without duplicating the release. EST/EDT follows `America/New_York` rules, and reference periods come from explicit agency text. Scheduled dates do not establish publication or results.
 
 Calendar retrievals and their SHA256 provenance remain separate from indicator retrievals. A failed agency refresh retains its complete last-good schedule with the original retrieval time and a visible cached/error status. A successful refresh replaces that agency's records, removing withdrawn events; BEA UID sequences and cancellations are respected. If an already captured BLS next-year calendar fails, the entire previous BLS schedule is retained atomically. An unpublished next year remains an explicit coverage limitation. Calendar source URLs and program-to-indicator mappings have their own commercial-use allowlist.
 
@@ -77,9 +81,9 @@ DOL publishes a recurring Thursday 08:30 Eastern rule plus individually listed W
 
 Treasury uses the official [Fiscal Data release calendar JSON](https://api.fiscaldata.treasury.gov/services/calendar/release), joined to [official dataset metadata](https://api.fiscaldata.treasury.gov/services/dtg/metadata/) for the exact Debt to the Penny identity (`015-BFS-2014Q3-065`). The source describes its dates and times as estimates, so rows and previews display `ESTIMATED`, including on narrow screens and when retained after a failed refresh. Source UTC dates/clocks and both response hashes remain available separately from Eastern display fields. Only explicitly listed dates are imported, currently through January 4, 2027. Observation periods remain unknown, and the source's `released` flag is not used as publication history. Factual calendar metadata has a separate commercial-use review with Treasury/Bureau of the Fiscal Service attribution.
 
-Treasury par-yield publication timing is captured independently from its official [yield methodology](https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology): usually available by 6 p.m. Eastern each trading day, with possible delays. The calendar and yield detail show this as ongoing guidance with source credit, retrieval time and independent cached/unavailable status. Rates and yield-watchlist filters include the guidance; month/day filters do not turn it into a dated release. No trading days, holidays, early closes or future publication instants are generated, and the 3:30 p.m. input quotation time is not publication timing. The snapshot still contains 218 dated entries.
+Treasury par-yield publication timing is captured independently from its official [yield methodology](https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology): usually available by 6 p.m. Eastern each trading day, with possible delays. The calendar and yield detail show this as ongoing guidance with source credit, retrieval time and independent cached/unavailable status. Rates and yield-watchlist filters include the guidance; month/day filters do not turn it into a dated release. No trading days, holidays, early closes or future publication instants are generated, and the 3:30 p.m. input quotation time is not publication timing.
 
-Yield timing has a separate factual-metadata commercial-use review; the statistical dataset's CC0 label is not transferred to methodology prose. Treasury auctions, release results, forecasts, impact ratings and revision ledgers are not ingested. All six schedule/timing captures across five agencies must succeed for an `ok` calendar status; a failed source remains visible as partial coverage while others can update. Refresh schedules and timing with `--sources=calendar`, or include them in the default full refresh, then commit and push through the existing tested deployment workflow.
+Yield timing has a separate factual-metadata commercial-use review; the statistical dataset's CC0 label is not transferred to methodology prose. Treasury auctions, release results, forecasts, impact ratings and revision ledgers are not ingested. All six schedule/timing captures across five agencies must succeed for an `ok` calendar status without coverage warnings. A failed source remains visible as partial coverage during a default local refresh; automated publication requires every source to succeed. Refresh schedules and timing with `--sources=calendar`, or include them in the default full refresh.
 
 ## Working features
 
@@ -99,6 +103,7 @@ Yield timing has a separate factual-metadata commercial-use review; the statisti
 | `src/registry.js` | Canonical official series definitions, units and source mappings |
 | `src/data.js`, `src/official-snapshot.js` | Hydrated official snapshots, availability and provenance |
 | `scripts/refresh-data.mjs`, `scripts/sources/` | Official agency retrieval, parsing, transformations and last-good retention |
+| `scripts/publish-snapshot.mjs` | Snapshot-only bot commits, expected-commit checks and normal pushes |
 | `scripts/data-policy.mjs`, `docs/data-sources.md` | Reviewed commercial reuse scope, evidence and build/refresh validation |
 | `src/model.js` | Search, formatting, transformations, comparison, CSV |
 | `src/router.js` | Validated shareable hash routes |
@@ -118,15 +123,19 @@ Current live migration fallback: [Meridian on GitHub Pages](https://vasuki8.gith
 
 Continue development locally, then commit and push to [Vasuki8/us-treasury](https://github.com/Vasuki8/us-treasury).
 
-The **Test, build and deploy** GitHub Actions workflow runs on pushes to `main`, pull requests targeting `main`, and manual dispatch. It tests Node 22 and 24, builds the app with the commercial data policy check, checks the built entry point and imported modules over HTTP, and saves a static build artifact for each Node version. No dependencies need installing.
+The **Test, build and deploy** GitHub Actions workflow runs on pushes to `main`, pull requests targeting `main`, manual dispatch, and a daily schedule at **23:37 UTC** (7:37 p.m. EDT / 6:37 p.m. EST). It tests Node 22 and 24, builds the app with the commercial data policy check, checks the built entry point and imported modules over HTTP, and saves a static build artifact for each Node version. No dependencies need installing.
 
-After both verification jobs pass, pushes to `main` and manual runs on `main` automatically deploy the verified Node 24 build to the selected host. Pull requests and manual runs on other branches run verification only. Only `dist/` is published. Main runs are serialized so a new push does not interrupt an active deployment.
+After both verification jobs pass, pushes to `main`, manual runs on `main`, and daily runs automatically deploy the verified Node 24 build to the selected host. Pull requests and manual runs on other branches run verification only. Only `dist/` is published. Main runs are serialized so a new push does not interrupt an active deployment.
 
 Set repository variable `DEPLOY_TARGET=cloudflare` after configuring `CLOUDFLARE_ACCOUNT_ID` as a repository variable and `CLOUDFLARE_API_TOKEN` as an Actions secret. Cloudflare uses the `cloudflare-production` environment and publishes the same-run Node 24 artifact through Wrangler. A public HTTPS check compares the served assets with that artifact. Until Cloudflare is activated, the existing Pages deployment remains the fallback. The guide explains the scoped token and first-time Worker setup.
 
 Relative assets and hash routes support both an origin root on Cloudflare and the existing `/us-treasury/` Pages prefix. The static Worker has no server script and does not enable SPA fallback for missing assets.
 
-CI validates the committed snapshot and deterministic source-response fixtures. It does not call external agency feeds, avoiding rate limits and upstream outages during routine verification. Run the refresh command locally when updating data, then include the changed snapshot in the commit.
+Routine push and pull-request verification uses the committed snapshot and deterministic source-response fixtures without contacting agency feeds. Scheduled runs, and manual `main` runs with **refresh_data** enabled, first refresh all five statistical collectors and all six calendar/timing collectors with `--require-all`. These use the existing commercially reviewed official sources and require no agency API keys.
+
+The refresh job tests, builds and smoke-checks the candidate before committing only `src/official-snapshot.js` with the job's `GITHUB_TOKEN`. It checks that remote `main` still matches the starting commit, refuses unrelated tracked or staged changes, and uses a normal push so competing changes cannot be overwritten. Source failures, validation errors and push conflicts stop the run and leave the previous live deployment in place. Subsequent Node 22/24 verification and deployment check out the exact emitted snapshot commit. Refresh and deployment share one workflow because [pushes using `GITHUB_TOKEN` do not trigger another push workflow](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
+
+The cron is [GitHub's best-effort schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule): runs can be delayed, and public repositories disable schedules after 60 days without repository activity. The refresh job needs repository `contents: write`; other verification jobs retain read-only repository access. No personal token or additional repository secret is needed for data refreshes.
 
 ```powershell
 npm test
@@ -137,7 +146,7 @@ git commit -m "Describe the change"
 git push
 ```
 
-Follow the [Actions workflow](https://github.com/Vasuki8/us-treasury/actions) after pushing. To redeploy the current `main`, select **Test, build and deploy → Run workflow → main**. To roll back content, revert the unwanted commit locally, test, and push the revert to `main`; the same checks and deployment run automatically.
+Follow the [Actions workflow](https://github.com/Vasuki8/us-treasury/actions) after pushing. To refresh immediately, select **Test, build and deploy → Run workflow → main**, enable **refresh_data**, and run it. Leave that option disabled to redeploy the committed snapshot without fetching feeds. To roll back content, revert the unwanted commit locally, test, and push the revert to `main`; the same checks and deployment run automatically.
 
 The [commercial data reuse review](docs/data-sources.md) remains applicable on Cloudflare. Hosting setup does not configure Google advertising or establish AdSense eligibility.
 

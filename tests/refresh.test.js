@@ -141,3 +141,45 @@ test('Treasury yield timing captures separately and failed or invalid refreshes 
   assert.doesNotMatch(failed.calendar.message,/18:00|6\s*p\.m\./i,'an initial failure must not display an uncaptured deadline in shared calendar context');
   assert.deepEqual(failed.releases,[]);
 });
+
+test('strict refresh rejects a failed observation source after independent collectors finish without mutating the previous snapshot',async()=>{
+  const previous={sources:{bls:{...result('bls'),status:'ok'}}};
+  const original=structuredClone(previous);
+  let independentFinished=false;
+  await assert.rejects(refreshSnapshot({previous,requireAll:true,collectors:{
+    bls:async()=>{throw Error('BLS HTTP 503');},
+    bea:async()=>{await new Promise(resolve=>setImmediate(resolve));independentFinished=true;return result('bea');},
+  }}),/bls.*503/i);
+  assert.equal(independentFinished,true,'strict rejection waits for all attempted sources');
+  assert.deepEqual(previous,original,'the retained snapshot remains untouched');
+});
+
+test('strict refresh rejects invalid observation and calendar responses',async()=>{
+  const invalid=result('bls');invalid.series.example.observations[0].value=Infinity;
+  await assert.rejects(refreshSnapshot({requireAll:true,collectors:{bls:async()=>invalid}}),/bls.*Invalid official value/i);
+  await assert.rejects(refreshSnapshot({requireAll:true,calendarCollectors:{bea:async()=>calendarResult([calendarEvent({sourceId:'vendor'})])}}),/bea.*Unreviewed calendar/i);
+});
+
+test('strict refresh permits successful selected sources without requiring unattempted sources',async()=>{
+  const next=await refreshSnapshot({previous:{sources:{dol:{...result('dol'),status:'error'}}},requireAll:true,collectors:{bls:async()=>result('bls')},calendarCollectors:{bea:async()=>calendarResult()}});
+  assert.equal(next.sources.bls.status,'ok');
+  assert.equal(next.sources.dol.status,'error','an unattempted cached source is outside this strict selection');
+  assert.equal(next.calendar.sources.bea.status,'ok');
+});
+
+const blsAnnualResult=(years,failedYears=[])=>({
+  id:'bls',fetchedAt:'2026-10-21T12:00:00.000Z',coveredYears:years,failedYears,
+  events:years.map(year=>calendarEvent({id:`bls-cpi-${year}`,sourceId:'bls',program:'consumer-price-index',agency:'BLS',seriesId:'cpi',seriesIds:['cpi'],topic:'Inflation',date:`${year}-10-29`,scheduledAt:`${year}-10-29T12:30:00.000Z`,sourceUrl:`https://www.bls.gov/schedule/${year}/home.htm`})),
+  provenance:years.map(year=>({url:`https://www.bls.gov/schedule/${year}/home.htm`,sha256:'a'.repeat(64)})),
+  warnings:failedYears.map(year=>`BLS ${year} annual calendar unavailable; current-year schedule retained.`),
+});
+
+test('strict refresh accepts a first unavailable BLS next-year calendar but rejects loss of previously captured coverage',async()=>{
+  const current=blsAnnualResult([2026],[2027]);
+  const accepted=await refreshSnapshot({requireAll:true,calendarCollectors:{bls:async()=>current}});
+  assert.equal(accepted.calendar.status,'partial','unpublished future-year coverage stays visible');
+  assert.equal(accepted.calendar.sources.bls.status,'ok');
+  assert.deepEqual(accepted.calendar.sources.bls.failedYears,[2027]);
+  const previous=await refreshSnapshot({calendarCollectors:{bls:async()=>blsAnnualResult([2026,2027])}});
+  await assert.rejects(refreshSnapshot({previous,requireAll:true,calendarCollectors:{bls:async()=>current}}),/bls.*previously captured year.*2027/i);
+});

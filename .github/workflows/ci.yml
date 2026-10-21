@@ -6,6 +6,14 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      refresh_data:
+        description: Refresh all official data, calendars and yield timing before deployment
+        type: boolean
+        default: false
+  schedule:
+    # After Treasury's usual 18:00 Eastern availability in both EST and EDT.
+    - cron: '37 23 * * *'
 
 permissions:
   contents: read
@@ -16,18 +24,67 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  refresh:
+    name: Refresh official data and calendars
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh_data))
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    outputs:
+      commit_sha: ${{ steps.publish.outputs.commit_sha }}
+    steps:
+      - name: Check out the exact starting commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          # Only this trusted main-branch job needs credentials for its snapshot push.
+          persist-credentials: true
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      - name: Refresh every official source without replacing an incomplete snapshot
+        run: npm run data:refresh -- --require-all
+
+      - name: Test the refreshed snapshot
+        run: npm test
+
+      - name: Build the refreshed application
+        run: npm run build
+
+      - name: Smoke test the refreshed build
+        run: node scripts/check-build.mjs
+
+      - name: Commit and push only the verified snapshot
+        id: publish
+        env:
+          EXPECTED_HEAD: ${{ github.sha }}
+        run: node scripts/publish-snapshot.mjs
+
+      - name: Record failed refresh
+        if: failure()
+        run: echo 'Refresh failed. The previous published snapshot remains in place. See the failed step for details.' >> "$GITHUB_STEP_SUMMARY"
+
   verify:
     name: Verify on Node ${{ matrix.node }}
+    needs: refresh
+    if: ${{ !cancelled() && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
         node: ['22', '24']
+    outputs:
+      commit_sha: ${{ needs.refresh.outputs.commit_sha || github.sha }}
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.refresh.outputs.commit_sha || github.sha }}
           persist-credentials: false
 
       - name: Set up Node
@@ -54,7 +111,7 @@ jobs:
           retention-days: 7
 
       - name: Upload verified GitHub Pages build
-        if: vars.DEPLOY_TARGET != 'cloudflare' && github.ref == 'refs/heads/main' && matrix.node == '24' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        if: vars.DEPLOY_TARGET != 'cloudflare' && github.ref == 'refs/heads/main' && matrix.node == '24' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: dist/
@@ -62,7 +119,7 @@ jobs:
   deploy:
     name: Deploy GitHub Pages
     needs: verify
-    if: vars.DEPLOY_TARGET != 'cloudflare' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: ${{ !cancelled() && needs.verify.result == 'success' && vars.DEPLOY_TARGET != 'cloudflare' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -82,7 +139,7 @@ jobs:
   deploy-cloudflare:
     name: Deploy Cloudflare
     needs: verify
-    if: vars.DEPLOY_TARGET == 'cloudflare' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: ${{ !cancelled() && needs.verify.result == 'success' && vars.DEPLOY_TARGET == 'cloudflare' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -104,6 +161,7 @@ jobs:
       - name: Check out deployment configuration
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.verify.outputs.commit_sha }}
           persist-credentials: false
 
       - name: Set up Node

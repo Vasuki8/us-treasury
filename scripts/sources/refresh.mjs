@@ -49,7 +49,7 @@ function validate(result,cutoff) {
   }
 }
 
-export async function refreshSnapshot({previous={},collectors={},calendarCollectors={},now=new Date()}={}) {
+export async function refreshSnapshot({previous={},collectors={},calendarCollectors={},now=new Date(),requireAll=false}={}) {
   const checkedAt=now.toISOString(),sources={...previous.sources};
   const calendarPromise=refreshCalendar(previous.calendar,calendarCollectors,checkedAt,now);
   await Promise.all(Object.entries(collectors).map(async([id,collect])=>{
@@ -62,6 +62,13 @@ export async function refreshSnapshot({previous={},collectors={},calendarCollect
     }
   }));
   const calendar=await calendarPromise;
+  if(requireAll) {
+    const failures=[
+      ...Object.keys(collectors).filter(id=>sources[id]?.status!=='ok').map(id=>`${id}: ${sources[id]?.error||'Source did not refresh successfully'}`),
+      ...Object.keys(calendarCollectors).filter(id=>calendar.sources[id]?.status!=='ok').map(id=>`${id} calendar: ${calendar.sources[id]?.error||'Schedule did not refresh successfully'}`),
+    ];
+    if(failures.length)throw new Error(`Required official refresh failed; snapshot was not replaced. ${failures.join('; ')}`);
+  }
   const releases=Object.values(calendar.sources??{}).flatMap(source=>source.events??[]).sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)||a.id.localeCompare(b.id));
   const generatedAt=new Date(Math.max(Date.now(),Date.parse(checkedAt),...[...Object.values(sources),...Object.values(calendar.sources??{})].map(source=>Date.parse(source.fetchedAt)||0))).toISOString();
   return {schemaVersion:1,generatedAt,checkedAt,sources,releases,calendar};

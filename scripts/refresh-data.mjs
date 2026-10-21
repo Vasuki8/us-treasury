@@ -17,6 +17,7 @@ import { refreshSnapshot } from './sources/refresh.mjs';
 import { assertCommercialData } from './data-policy.mjs';
 
 const all={treasury:collectTreasury,bls:collectBls,bea:collectBea,dol:collectDol,census:collectCensus};
+const requireAll=process.argv.includes('--require-all');
 const selection=process.argv.find(arg=>arg.startsWith('--sources='))?.split('=')[1]?.split(',')||[...Object.keys(all),'calendar'];
 if(selection.some(id=>!Object.hasOwn(all,id)&&id!=='calendar'))throw new Error('Sources must be treasury,bls,bea,dol,census,calendar');
 const collectors=Object.fromEntries(selection.filter(id=>id!=='calendar').map(id=>[id,async options=>{
@@ -25,7 +26,7 @@ const collectors=Object.fromEntries(selection.filter(id=>id!=='calendar').map(id
 }]));
 const calendarCollectors=selection.includes('calendar')?{bls:collectBlsCalendar,bea:collectBeaCalendar,census:collectCensusCalendar,dol:collectDolCalendar,treasury:collectTreasuryCalendar,'treasury-yield-timing':collectTreasuryYieldTiming}:{};
 if(selection.includes('calendar'))console.log('Retrieving BLS, BEA, Census, DOL and Treasury official schedules and yield timing…');
-const snapshot=await refreshSnapshot({previous,collectors,calendarCollectors});
+const snapshot=await refreshSnapshot({previous,collectors,calendarCollectors,requireAll});
 assertCommercialData(snapshot);
 const destination=fileURLToPath(new URL('../src/official-snapshot.js',import.meta.url));
 const temporary=path.join(path.dirname(destination),'.official-snapshot.tmp');
@@ -43,4 +44,4 @@ for(const id of selection) {
   if(source.status==='ok')console.log(`${id.toUpperCase()}: refreshed ${Object.keys(source.series).length} series at ${source.fetchedAt}`);
   else console.error(`${id.toUpperCase()}: ${source.error}${source.fetchedAt?`; retained snapshot from ${source.fetchedAt}`:'; no observations available'}`);
 }
-if(selection.some(id=>id==='calendar'?snapshot.calendar.status!=='ok':snapshot.sources[id].status!=='ok'))process.exitCode=1;
+if(!requireAll&&selection.some(id=>id==='calendar'?snapshot.calendar.status!=='ok':snapshot.sources[id].status!=='ok'))process.exitCode=1;

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { series, releases, yieldCurve, dataStatus } from '../src/data.js';
 import { parseCsv } from '../scripts/sources/http.mjs';
+import { easternFields } from '../scripts/sources/calendar-utils.mjs';
 import {
   getSeries, filterSeries, latest, formatValue, formatChange,
   periodLabel, transformSeries, compareSeries, toCsv,
@@ -61,16 +62,25 @@ test('official observations follow their real frequencies and maintain source pr
 
 test('production calendar contains traced official schedules without invented publication results', () => {
   assert.ok(releases.length>0);
-  assert.equal(dataStatus.calendar.status,'ok');
   assert.ok(dataStatus.calendar.links.some(link=>link.url.includes('bls.gov')));
   assert.ok(dataStatus.calendar.links.some(link=>link.url.includes('bea.gov')));
+  let unpublishedNextYear=false;
   for(const sourceId of ['bls','bea','census','dol','treasury','treasury-yield-timing']) {
     const source=dataStatus.calendar.sources[sourceId];
     assert.ok(source, `${sourceId} calendar is connected`);
     assert.equal(source.status,'ok');
     assert.match(source.fetchedAt,/^\d{4}-\d{2}-\d{2}T/);
     assert.ok(source.provenance.every(item=>/^[a-f0-9]{64}$/.test(item.sha256)));
+    if(source.failedYears?.length) {
+      assert.equal(sourceId,'bls','only the unpublished BLS next-year schedule may reduce successful calendar coverage');
+      const capturedYear=Number(easternFields(source.fetchedAt).date.slice(0,4));
+      assert.deepEqual(source.coveredYears,[capturedYear]);
+      assert.deepEqual(source.failedYears,[capturedYear+1]);
+      assert.ok(source.warnings.some(warning=>warning.includes(String(capturedYear+1))&&/unavailable/i.test(warning)));
+      unpublishedNextYear=true;
+    }
   }
+  assert.equal(dataStatus.calendar.status,unpublishedNextYear?'partial':'ok','partial coverage requires the explicit unpublished next-year warning while every source remains successful');
   const timing=dataStatus.calendar.sources['treasury-yield-timing'];
   assert.deepEqual(timing.events,[],'ongoing availability adds no dated releases');
   assert.equal(timing.timing.availableBy,'18:00');

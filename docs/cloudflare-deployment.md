@@ -19,7 +19,7 @@ The target Worker is `us-treasury` in the signed-in account. Its existing worker
 ## Automated path
 
 - Pull requests run the Node 22/24 tests, build and local HTTP smoke check; they do not deploy or receive the Cloudflare credential.
-- Main pushes/manual runs must pass both verification jobs. The Cloudflare job downloads `meridian-static-node-24` from that same run, then publishes its exact files with the pinned Wrangler action and CLI version. It does not rebuild different app assets during deployment.
+- Main pushes/manual runs and daily scheduled runs must pass both verification jobs. The daily run at 23:37 UTC refreshes all official data and release calendars first; a manual `main` run does the same when **refresh_data** is enabled. Source or validation failures stop publication. The Cloudflare job downloads `meridian-static-node-24` from that same run and checks out deployment configuration from its exact verified commit, then publishes the artifact with the pinned Wrangler action and CLI version. It does not rebuild different app assets during deployment.
 - `wrangler.json` includes only `dist/`. Missing assets return 404; the app's existing hash routes work at the origin root. Source scripts, tests, documentation, credentials and unrelated local exports are not published.
 - `scripts/check-live.mjs` verifies the HTTPS deployment entry and imported asset graph against the downloaded build, including exact byte content and JavaScript MIME types. A failed public check fails the deployment job for investigation; it does not silently change the hosting target or automatically roll back.
 - Main workflow runs are serialized, preserving an in-progress deployment. Deployment secrets are passed only to the gated Cloudflare job.
