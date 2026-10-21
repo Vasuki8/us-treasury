@@ -152,6 +152,8 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
 .explain { font-size:12px; color:var(--muted); padding:12px; line-height:1.65; }
 .explain strong { font-weight:400; color:var(--text); }
 .calendar-layout { display:grid; grid-template-columns:minmax(0,1fr) 245px; gap:9px; margin-bottom:9px; }
+.calendar-detail .facts { grid-template-columns:minmax(0,1fr); gap:5px; }
+.calendar-detail .facts dd { max-width:none; text-align:left; }
 .calendar-days { display:flex; flex-wrap:wrap; gap:4px; }
 .calendar-days button { padding:6px 9px; border:1px solid var(--border); font-size:11px; }
 .calendar-days button[aria-pressed="true"] { background:var(--selected); color:var(--text); border-color:var(--accent); }
