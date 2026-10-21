@@ -11,6 +11,7 @@ import { collectBlsCalendar } from './sources/calendar-bls.mjs';
 import { collectBeaCalendar } from './sources/calendar-bea.mjs';
 import { collectCensusCalendar } from './sources/calendar-census.mjs';
 import { collectDolCalendar } from './sources/calendar-dol.mjs';
+import { collectTreasuryCalendar } from './sources/calendar-treasury.mjs';
 import { refreshSnapshot } from './sources/refresh.mjs';
 import { assertCommercialData } from './data-policy.mjs';
 
@@ -21,8 +22,8 @@ const collectors=Object.fromEntries(selection.filter(id=>id!=='calendar').map(id
   console.log(`Retrieving ${id.toUpperCase()} official data…`);
   return all[id](options);
 }]));
-const calendarCollectors=selection.includes('calendar')?{bls:collectBlsCalendar,bea:collectBeaCalendar,census:collectCensusCalendar,dol:collectDolCalendar}:{};
-if(selection.includes('calendar'))console.log('Retrieving BLS, BEA, Census and DOL official release schedules…');
+const calendarCollectors=selection.includes('calendar')?{bls:collectBlsCalendar,bea:collectBeaCalendar,census:collectCensusCalendar,dol:collectDolCalendar,treasury:collectTreasuryCalendar}:{};
+if(selection.includes('calendar'))console.log('Retrieving BLS, BEA, Census, DOL and Treasury official release schedules…');
 const snapshot=await refreshSnapshot({previous,collectors,calendarCollectors});
 assertCommercialData(snapshot);
 const destination=fileURLToPath(new URL('../src/official-snapshot.js',import.meta.url));

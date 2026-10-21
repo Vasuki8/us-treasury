@@ -1,3 +1,5 @@
+import { easternFields } from './sources/calendar-utils.mjs';
+
 // Dataset-specific commercial reuse review. Evidence and limitations: docs/data-sources.md.
 // An official-looking hostname alone does not establish reuse rights.
 export const dataPolicies = [
@@ -80,6 +82,12 @@ export const calendarPolicies = {
     terms:['https://beta.dol.gov/about/notices/website-content-and-publication-practices/public-domain-copyright-trademarks-patents','https://oui.doleta.gov/unemploy/claims_arch.asp'],
     programs:{'weekly-claims':['claims']},
   },
+  treasury: {
+    reviewedOn:'2026-10-21',commercialUse:true,
+    basis:'Scoped factual Debt to the Penny identity and agency-estimated release dates/times from official Fiscal Data services. General Fiscal Data commercial open-data terms and Copyright Office facts/title exclusions; no calendar-specific CC0 claim. Credit Treasury Bureau of the Fiscal Service without endorsement.',
+    terms:['https://fiscaldata.treasury.gov/api-documentation/#license-and-authorization','https://www.copyright.gov/what-is-copyright/'],
+    programs:{'debt-to-the-penny':['debt']},
+  },
 };
 
 function calendarFeed(value,id) {
@@ -90,6 +98,7 @@ function calendarFeed(value,id) {
     if(id==='bea')return url.href==='https://www.bea.gov/news/schedule/ics/online-calendar-subscription.ics';
     if(id==='census')return url.origin==='https://www.census.gov'&&/^\/economic-indicators\/calendar-listview(?:-\d{4})?\.html$/.test(url.pathname);
     if(id==='dol')return url.href==='https://oui.doleta.gov/unemploy/claims_arch.asp';
+    if(id==='treasury')return ['https://api.fiscaldata.treasury.gov/services/calendar/release','https://api.fiscaldata.treasury.gov/services/dtg/metadata/'].includes(url.href);
   } catch { /* Invalid calendar URLs are outside the reviewed scope. */ }
   return false;
 }
@@ -119,6 +128,20 @@ function assertDolSchedule(source,event) {
   } else if(event.scheduleBasis!=='recurring-rule'||event.date!==event.nominalDate)fail();
 }
 
+function assertTreasurySchedule(source,event) {
+  const fail=()=>{throw new Error('Unreviewed Treasury calendar metadata, estimate or UTC date/time');};
+  const calendarUrl='https://api.fiscaldata.treasury.gov/services/calendar/release';
+  const metadataUrl='https://api.fiscaldata.treasury.gov/services/dtg/metadata/';
+  const identity=source.datasetIdentity;
+  if(!identity||identity.datasetId!=='015-BFS-2014Q3-065'||identity.title!=='Debt to the Penny'||identity.path!=='debt-to-the-penny'||!source.provenance?.some(item=>item.url===metadataUrl))fail();
+  if(event.sourceUrl!==calendarUrl||event.sourceDatasetId!==identity.datasetId||event.name!==identity.title||event.scheduleBasis!=='calendar-estimate'||event.sourceTimeZone!=='UTC'||event.period!==null||event.periodLabel!==null||calendarDate(event.sourceDate)===null||typeof event.sourceTime!=='string'||!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(event.sourceTime))fail();
+  if(['description','html','content','body','image','logo','released','publishedAt','actual','consensus','forecast'].some(key=>Object.hasOwn(event,key)))fail();
+  const instant=`${event.sourceDate}T${event.sourceTime}:00.000Z`;
+  let fields;
+  try {fields=easternFields(instant);} catch {fail();}
+  if(event.scheduledAt!==instant||event.date!==fields.date||event.time!==fields.time||event.id!==`treasury-debt-to-the-penny-${event.sourceDate}`)fail();
+}
+
 function assertCalendarData(snapshot) {
   const captured=new Map();
   for(const [id,source] of Object.entries(snapshot.calendar?.sources??{})) {
@@ -133,6 +156,7 @@ function assertCalendarData(snapshot) {
       if(!calendarFeed(event.sourceUrl,id)||!source.provenance?.some(item=>item.url===event.sourceUrl))throw new Error(`Unreviewed calendar feed for ${id}`);
       if(id==='census'&&(event.scheduleBasis!=='listed-date'||['description','html','content','body','image','logo'].some(key=>Object.hasOwn(event,key))))throw new Error('Unreviewed Census calendar content beyond listed factual metadata');
       if(id==='dol')assertDolSchedule(source,event);
+      if(id==='treasury')assertTreasurySchedule(source,event);
       if(!event.id||captured.has(event.id))throw new Error('Invalid or duplicate captured calendar identifier');
       captured.set(event.id,event);
     }

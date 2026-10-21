@@ -85,6 +85,28 @@ test('an approved agency label cannot introduce calendar records outside its cap
   assert.throws(()=>assertCommercialData({calendar,releases:[{...event,id:'fabricated'}]}),/calendar/i);
 });
 
+const treasuryCalendarFeed='https://api.fiscaldata.treasury.gov/services/calendar/release';
+const treasuryMetadataFeed='https://api.fiscaldata.treasury.gov/services/dtg/metadata/';
+function treasuryCalendarSnapshot(change={},sourceChange={}) {
+  const event={id:'treasury-debt-to-the-penny-2026-11-02',sourceId:'treasury',program:'debt-to-the-penny',name:'Debt to the Penny',agency:'Treasury Fiscal Data',seriesId:'debt',seriesIds:['debt'],topic:'Fiscal',date:'2026-11-02',time:'16:15',scheduledAt:'2026-11-02T21:15:00.000Z',period:null,periodLabel:null,sourceUrl:treasuryCalendarFeed,sourceUid:null,scheduleBasis:'calendar-estimate',sourceDatasetId:'015-BFS-2014Q3-065',sourceDate:'2026-11-02',sourceTime:'21:15',sourceTimeZone:'UTC',...change};
+  return {calendar:{sources:{treasury:{events:[event],datasetIdentity:{datasetId:'015-BFS-2014Q3-065',title:'Debt to the Penny',path:'debt-to-the-penny'},provenance:[treasuryCalendarFeed,treasuryMetadataFeed].map(url=>({url,sha256:'a'.repeat(64)})),...sourceChange}}},releases:[event]};
+}
+
+test('Treasury calendar reuse covers only factual Debt to the Penny estimates with verified UTC source metadata',()=>{
+  assert.doesNotThrow(()=>assertCommercialData(treasuryCalendarSnapshot()));
+  for(const change of [
+    {sourceUrl:treasuryMetadataFeed}, {sourceUrl:treasuryCalendarFeed+'?dataset=debt'},
+    {program:'daily-treasury-statement'}, {seriesId:'yield',seriesIds:['yield']},
+    {sourceDatasetId:'unreviewed-dataset'}, {name:'Monthly Treasury Statement'},
+    {scheduleBasis:'listed-date'}, {sourceTimeZone:'EST'}, {sourceTime:'25:15'},
+    {sourceDate:'2026-02-30'}, {time:'15:15'}, {scheduledAt:'2026-11-02T20:15:00.000Z'},
+    {date:'2026-11-03'}, {periodLabel:'November 2026'}, {period:'2026-11-01'},
+    {description:'Unreviewed copied narrative'}, {html:'<b>Copied source</b>'},
+  ]) assert.throws(()=>assertCommercialData(treasuryCalendarSnapshot(change)),/calendar/i,JSON.stringify(change));
+  assert.throws(()=>assertCommercialData(treasuryCalendarSnapshot({}, {datasetIdentity:{datasetId:'wrong',title:'Debt to the Penny',path:'debt-to-the-penny'}})),/calendar/i);
+  assert.throws(()=>assertCommercialData(treasuryCalendarSnapshot({}, {provenance:[{url:treasuryCalendarFeed,sha256:'a'.repeat(64)}]})),/calendar/i);
+});
+
 const newCalendarEvent=(sourceId,extra={})=>({id:`${sourceId}-example`,sourceId,program:sourceId==='census'?'retail-sales':'weekly-claims',seriesId:sourceId==='census'?'retail':'claims',seriesIds:[sourceId==='census'?'retail':'claims'],sourceUrl:sourceId==='census'?'https://www.census.gov/economic-indicators/calendar-listview.html':'https://oui.doleta.gov/unemploy/claims_arch.asp',scheduleBasis:sourceId==='census'?'listed-date':'recurring-rule',date:'2026-10-22',time:'08:30',nominalDate:'2026-10-22',period:null,periodLabel:null,...extra});
 const dolCalendarSource=events=>({events,provenance:[{url:'https://oui.doleta.gov/unemploy/claims_arch.asp',sha256:'a'.repeat(64)}],scheduleMethod:'recurring-rule-with-exceptions',rawScheduleRule:'Publication Schedule: The UI Weekly Claims News Release is published each week on Thursday morning at 8:30am EST.',coverageStart:'2026-10-21',coverageEnd:'2027-01-18',publishedExceptions:[{date:'2026-11-25',time:'08:30',nominalDate:'2026-11-26'},{date:'2027-11-10',time:'08:30',nominalDate:'2027-11-11'}]});
 function calendarSnapshot(id,source) { return {calendar:{sources:{[id]:source}},releases:source.events}; }

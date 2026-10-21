@@ -6,6 +6,7 @@ import { escapeHtml, chart } from '../src/ui.js';
 import { getSeries, latest, formatValue, transformSeries } from '../src/model.js';
 import { releases, yieldCurve, dataStatus } from '../src/data.js';
 import { renderCharts } from '../src/charts.js';
+import { parseRoute, routeFor } from '../src/router.js';
 
 const base = {
   page: 'overview', seriesId: 'unrate', range: 12, transform: 'level', tab: 'data',
@@ -209,6 +210,72 @@ test('overview release watch distinguishes a DOL rule date from an individually 
     assert.match(html, /<small>AGENCY RULE · [^<]*· DOL · Observation period not supplied<\/small>/);
     assert.match(html, /<small>AGENCY EXCEPTION · [^<]*· DOL · Observation period not supplied<\/small>/);
     assert.doesNotMatch(html, />OUT<|>NEXT</);
+  });
+});
+
+test('Treasury calendar estimates disclose their basis on debt watchlists with Eastern seasonal times and full source credit', () => {
+  const events = [
+    calendarEvent({ id: 'treasury-debt-oct22', sourceId: 'treasury', program: 'debt-to-the-penny', name: 'Debt to the Penny', agency: 'Treasury Fiscal Data', seriesId: 'debt', seriesIds: ['debt'], topic: 'Fiscal', scheduleBasis: 'calendar-estimate', date: '2026-10-22', time: '16:00', scheduledAt: '2026-10-22T20:00:00Z', sourceUrl: 'https://api.fiscaldata.treasury.gov/services/calendar/release' }),
+    calendarEvent({ id: 'treasury-debt-nov02', sourceId: 'treasury', program: 'debt-to-the-penny', name: 'Debt to the Penny', agency: 'Treasury Fiscal Data', seriesId: 'debt', seriesIds: ['debt'], topic: 'Fiscal', scheduleBasis: 'calendar-estimate', date: '2026-11-02', time: '15:00', scheduledAt: '2026-11-02T20:00:00Z', sourceUrl: 'https://api.fiscaldata.treasury.gov/services/calendar/release' }),
+  ];
+  const calendar = { status: 'ok', sources: { treasury: { status: 'ok', fetchedAt: '2026-10-21T12:00:00Z', coverageNote: 'Treasury dates are <estimates>.', warnings: [] } } };
+  withCalendar(events, calendar, () => {
+    for (const [month, time] of [['2026-10', '16:00 EDT'], ['2026-11', '15:00 EST']]) {
+      const html = render({ page: 'calendar', calendarMonth: month, watchOnly: true, saved: ['debt'], calendarTopic: 'Fiscal' });
+      assert.equal((html.match(/class="calendar-event/g) || []).length, 1);
+      assert.match(html, /<span class="table-code muted">ESTIMATED · Observation period not supplied · Treasury Fiscal Data<\/span>/);
+      assert.match(html, /<span class="pill">ESTIMATED<\/span>/);
+      assert.ok(html.includes(time));
+      assert.match(html, /U\.S\. Department of the Treasury, Bureau of the Fiscal Service/);
+      assert.match(html, /href="#\/series\/debt"/);
+      assert.match(html, /Individually listed estimate on the official Fiscal Data calendar/);
+      assert.match(html, /date and time may change/i);
+      assert.match(html, /Treasury dates are &lt;estimates&gt;/);
+      assert.doesNotMatch(html, /<estimates>|Observation period:|Period ending/);
+    }
+    for (const filters of [{ saved: ['cpi'], calendarTopic: 'Fiscal' }, { saved: ['debt'], calendarTopic: 'Labor' }]) {
+      const html = render({ page: 'calendar', calendarMonth: '2026-10', watchOnly: true, ...filters });
+      assert.match(html, /No releases match these filters/);
+      assert.doesNotMatch(html, /class="calendar-event|class="detail-title"/);
+    }
+  });
+});
+
+test('Treasury estimate deep links select the captured event and cached schedules retain estimate disclosure', () => {
+  const events = ['2026-10-22', '2026-10-23'].map(date => calendarEvent({ id: `treasury-debt-${date}`, sourceId: 'treasury', program: 'debt-to-the-penny', name: 'Debt to the Penny', agency: 'Treasury Fiscal Data', seriesId: 'debt', seriesIds: ['debt'], topic: 'Fiscal', scheduleBasis: 'calendar-estimate', date, time: '16:00', scheduledAt: `${date}T20:00:00Z`, sourceUrl: 'https://api.fiscaldata.treasury.gov/services/calendar/release' }));
+  const source = { status: 'error', fetchedAt: '2026-10-21T12:00:00Z', error: 'HTTP 503 <retry>', warnings: [] };
+  withCalendar(events, { status: 'partial', sources: { treasury: source } }, () => {
+    const route = parseRoute(routeFor({ page: 'calendar', calendarMonth: '2026-10', day: '2026-10-23', eventId: 'treasury-debt-2026-10-23', calendarTopic: 'Fiscal' }));
+    const html = render(route);
+    assert.equal((html.match(/class="calendar-event/g) || []).length, 1);
+    assert.match(html, /data-event="treasury-debt-2026-10-23" aria-pressed="true"/);
+    assert.match(html, /Oct 23, 2026/);
+    assert.match(html, /CACHED SCHEDULE/);
+    assert.match(html, /ESTIMATED · Observation period not supplied/);
+    assert.match(html, /Individually listed estimate on the official Fiscal Data calendar/);
+    assert.match(html, /HTTP 503 &lt;retry&gt;/);
+    assert.doesNotMatch(html, /<retry>/);
+  });
+});
+
+test('Treasury estimates remain estimated after scheduled time has elapsed', () => {
+  const event = calendarEvent({ id: 'treasury-debt-elapsed', sourceId: 'treasury', program: 'debt-to-the-penny', name: 'Debt to the Penny', agency: 'Treasury Fiscal Data', seriesId: 'debt', seriesIds: ['debt'], topic: 'Fiscal', scheduleBasis: 'calendar-estimate', date: '2000-01-03', time: '15:00', scheduledAt: '2000-01-03T20:00:00Z', sourceUrl: 'https://api.fiscaldata.treasury.gov/services/calendar/release' });
+  withCalendar([event], { status: 'ok', sources: { treasury: { status: 'ok', fetchedAt: '2026-10-21T12:00:00Z' } } }, () => {
+    const html = render({ page: 'calendar', calendarMonth: '2000-01' });
+    assert.match(html, /<span class="pill">ESTIMATED<\/span>/);
+    assert.match(html, /past scheduled time does not establish that a result was published/);
+    assert.doesNotMatch(html, />RELEASED<|>PUBLISHED<|>ACTUAL<|>OUT<|>NEXT</i);
+  });
+});
+
+test('overview release watch keeps the Treasury estimate basis visible with an upcoming debt event', () => {
+  const date = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+  const event = calendarEvent({ id: 'treasury-debt-upcoming', sourceId: 'treasury', program: 'debt-to-the-penny', name: 'Debt to the Penny', agency: 'Treasury Fiscal Data', seriesId: 'debt', seriesIds: ['debt'], topic: 'Fiscal', scheduleBasis: 'calendar-estimate', date, time: '16:00', scheduledAt: `${date}T20:00:00Z`, sourceUrl: 'https://api.fiscaldata.treasury.gov/services/calendar/release' });
+  withCalendar([event], { status: 'ok', sources: { treasury: { status: 'ok', fetchedAt: '2026-10-21T12:00:00Z' } } }, () => {
+    const html = render();
+    assert.match(html, /<small>ESTIMATED · [^<]* · Treasury Fiscal Data · Observation period not supplied<\/small>/);
+    assert.match(html, /<span class="pill">ESTIMATED<\/span>/);
+    assert.match(html, /data-event="treasury-debt-upcoming"/);
   });
 });
 
