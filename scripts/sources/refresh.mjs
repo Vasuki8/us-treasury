@@ -1,5 +1,6 @@
 import { easternFields } from './calendar-utils.mjs';
 import { assertCommercialData } from '../data-policy.mjs';
+import { OfficialSourceHttpError } from './http.mjs';
 
 const calendarLinks=[{name:'BLS release calendar',url:'https://www.bls.gov/schedule/'},{name:'BEA release schedule',url:'https://www.bea.gov/news/schedule/'},{name:'Census release schedule',url:'https://www.census.gov/economic-indicators/calendar-listview.html'},{name:'DOL claims release schedule',url:'https://oui.doleta.gov/unemploy/claims_arch.asp'},{name:'Treasury Fiscal Data release calendar',url:'https://fiscaldata.treasury.gov/release-calendar/'},{name:'Treasury yield publication timing',url:'https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology'}];
 const calendarCoverage='Schedules cover Employment Situation, CPI, JOLTS, national GDP, Personal Income and Outlays, Census advance retail sales, DOL weekly claims and Treasury Debt to the Penny. Treasury debt entries retain the agency calendar\'s estimated dates and times. Treasury yield publication timing appears separately as ongoing guidance when a verified capture is available; it adds no dated events. DOL dates expand its published Thursday rule and explicit holiday exceptions within a 90-day upcoming window. Auctions are not ingested. Dates can change; a scheduled time does not confirm publication or results.';
@@ -24,16 +25,26 @@ async function refreshCalendar(previous,collectors,checkedAt,now) {
     try {
       const result=await collect({now});validateCalendar(id,result);
       if(result.failedYears?.some(year=>sources[id]?.coveredYears?.includes(year)))throw new Error(`Calendar refresh could not replace previously captured year(s): ${result.failedYears.join(', ')}. Retained the last successful agency schedule.`);
-      sources[id]={...result,status:'ok',lastAttemptAt:checkedAt,error:null};
+      sources[id]={...result,status:'ok',lastAttemptAt:checkedAt,error:null,failure:null};
     } catch(error) {
       const prior=sources[id];
-      sources[id]={...(prior??{id,events:[],fetchedAt:null,provenance:[],warnings:[]}),status:prior?.fetchedAt?'error':'unavailable',lastAttemptAt:checkedAt,error:String(error.message||error)};
+      const failure=error instanceof OfficialSourceHttpError?{kind:'http',status:error.status,requestedUrl:error.requestedUrl,url:error.url,redirected:error.redirected}:null;
+      sources[id]={...(prior??{id,events:[],fetchedAt:null,provenance:[],warnings:[]}),status:prior?.fetchedAt?'error':'unavailable',lastAttemptAt:checkedAt,error:String(error.message||error),failure};
     }
   }));
   const values=Object.values(sources),success=values.some(source=>source.status==='ok'),captured=values.some(source=>source.fetchedAt);
   const complete=['bls','bea','census','dol','treasury','treasury-yield-timing'].every(id=>sources[id]?.status==='ok'&&!sources[id]?.failedYears?.length);
   const status=complete?'ok':success?'partial':captured?'error':'unavailable';
   return {status,message:calendarCoverage,sources,links:calendarLinks,checkedAt};
+}
+
+function canPublishCachedBls(source,now) {
+  const failure=source?.failure;
+  const year=Number(easternFields(now.toISOString()).date.slice(0,4));
+  const annualUrls=[year,year+1].map(value=>`https://www.bls.gov/schedule/${value}/home.htm`);
+  if(source?.status!=='error'||failure?.kind!=='http'||failure.status!==403||failure.redirected!==false||!annualUrls.includes(failure.requestedUrl)||failure.url!==failure.requestedUrl||!source.events?.length||Date.parse(source.fetchedAt)>now.getTime())return false;
+  try {validateCalendar('bls',source);return true;}
+  catch {return false;}
 }
 function validate(result,cutoff) {
   if(!result || !result.series || !Object.keys(result.series).length)throw new Error('Official source returned no series');
@@ -49,7 +60,8 @@ function validate(result,cutoff) {
   }
 }
 
-export async function refreshSnapshot({previous={},collectors={},calendarCollectors={},now=new Date(),requireAll=false}={}) {
+export async function refreshSnapshot({previous={},collectors={},calendarCollectors={},now=new Date(),requireAll=false,allowCachedBlsCalendar=false}={}) {
+  if(requireAll&&allowCachedBlsCalendar)throw new Error('requireAll and allowCachedBlsCalendar are mutually exclusive');
   const checkedAt=now.toISOString(),sources={...previous.sources};
   const calendarPromise=refreshCalendar(previous.calendar,calendarCollectors,checkedAt,now);
   await Promise.all(Object.entries(collectors).map(async([id,collect])=>{
@@ -62,14 +74,15 @@ export async function refreshSnapshot({previous={},collectors={},calendarCollect
     }
   }));
   const calendar=await calendarPromise;
-  if(requireAll) {
+  const cachedCalendarSources=allowCachedBlsCalendar&&Object.hasOwn(calendarCollectors,'bls')&&canPublishCachedBls(calendar.sources.bls,now)?['bls']:[];
+  if(requireAll||allowCachedBlsCalendar) {
     const failures=[
       ...Object.keys(collectors).filter(id=>sources[id]?.status!=='ok').map(id=>`${id}: ${sources[id]?.error||'Source did not refresh successfully'}`),
-      ...Object.keys(calendarCollectors).filter(id=>calendar.sources[id]?.status!=='ok').map(id=>`${id} calendar: ${calendar.sources[id]?.error||'Schedule did not refresh successfully'}`),
+      ...Object.keys(calendarCollectors).filter(id=>calendar.sources[id]?.status!=='ok'&&!cachedCalendarSources.includes(id)).map(id=>`${id} calendar: ${calendar.sources[id]?.error||'Schedule did not refresh successfully'}`),
     ];
     if(failures.length)throw new Error(`Required official refresh failed; snapshot was not replaced. ${failures.join('; ')}`);
   }
   const releases=Object.values(calendar.sources??{}).flatMap(source=>source.events??[]).sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)||a.id.localeCompare(b.id));
   const generatedAt=new Date(Math.max(Date.now(),Date.parse(checkedAt),...[...Object.values(sources),...Object.values(calendar.sources??{})].map(source=>Date.parse(source.fetchedAt)||0))).toISOString();
-  return {schemaVersion:1,generatedAt,checkedAt,sources,releases,calendar};
+  return {schemaVersion:1,generatedAt,checkedAt,sources,releases,calendar,...(allowCachedBlsCalendar?{publicationPolicy:{mode:'allow-cached-bls-calendar',cachedCalendarSources}}:{})};
 }

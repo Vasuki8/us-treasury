@@ -64,12 +64,25 @@ test('production calendar contains traced official schedules without invented pu
   assert.ok(releases.length>0);
   assert.ok(dataStatus.calendar.links.some(link=>link.url.includes('bls.gov')));
   assert.ok(dataStatus.calendar.links.some(link=>link.url.includes('bea.gov')));
-  let unpublishedNextYear=false;
+  let unpublishedNextYear=false,cachedBls=false;
   for(const sourceId of ['bls','bea','census','dol','treasury','treasury-yield-timing']) {
     const source=dataStatus.calendar.sources[sourceId];
     assert.ok(source, `${sourceId} calendar is connected`);
-    assert.equal(source.status,'ok');
+    if(source.status!=='ok') {
+      assert.equal(sourceId,'bls','only the explicitly approved BLS calendar access denial may remain cached');
+      assert.equal(source.status,'error');
+      assert.deepEqual(dataStatus.publicationPolicy,{mode:'allow-cached-bls-calendar',cachedCalendarSources:['bls']});
+      const year=Number(easternFields(source.lastAttemptAt).date.slice(0,4));
+      assert.ok([year,year+1].some(value=>source.failure?.requestedUrl===`https://www.bls.gov/schedule/${value}/home.htm`));
+      assert.deepEqual(source.failure,{kind:'http',status:403,requestedUrl:source.failure.requestedUrl,url:source.failure.requestedUrl,redirected:false});
+      assert.match(source.error,/HTTP 403/);
+      assert.ok(source.events.length>0,'cached coverage must contain verified dated records');
+      assert.ok(Date.parse(source.fetchedAt)<=Date.parse(source.lastAttemptAt));
+      assert.equal(source.lastAttemptAt,dataStatus.calendar.checkedAt);
+      cachedBls=true;
+    }
     assert.match(source.fetchedAt,/^\d{4}-\d{2}-\d{2}T/);
+    assert.ok(source.provenance.length>0);
     assert.ok(source.provenance.every(item=>/^[a-f0-9]{64}$/.test(item.sha256)));
     if(source.failedYears?.length) {
       assert.equal(sourceId,'bls','only the unpublished BLS next-year schedule may reduce successful calendar coverage');
@@ -80,7 +93,7 @@ test('production calendar contains traced official schedules without invented pu
       unpublishedNextYear=true;
     }
   }
-  assert.equal(dataStatus.calendar.status,unpublishedNextYear?'partial':'ok','partial coverage requires the explicit unpublished next-year warning while every source remains successful');
+  assert.equal(dataStatus.calendar.status,unpublishedNextYear||cachedBls?'partial':'ok','partial coverage requires the explicit unpublished next-year warning or approved BLS access denial');
   const timing=dataStatus.calendar.sources['treasury-yield-timing'];
   assert.deepEqual(timing.events,[],'ongoing availability adds no dated releases');
   assert.equal(timing.timing.availableBy,'18:00');

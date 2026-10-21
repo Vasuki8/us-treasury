@@ -46,8 +46,8 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Refresh every official source without replacing an incomplete snapshot
-        run: npm run data:refresh -- --require-all
+      - name: Refresh official sources and retain verified BLS calendar on access denial
+        run: npm run data:refresh -- --allow-cached-bls-calendar
 
       - name: Test the refreshed snapshot
         run: npm test

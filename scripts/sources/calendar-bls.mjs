@@ -1,4 +1,4 @@
-import { requestText } from './http.mjs';
+import { OfficialSourceHttpError, requestText } from './http.mjs';
 import { decodeHtmlText, easternFields, easternInstant } from './calendar-utils.mjs';
 import { setTimeout as delay } from 'node:timers/promises';
 
@@ -81,6 +81,7 @@ export async function collectBlsCalendar({fetchImpl=globalThis.fetch,now=new Dat
   const failedYears=[],warnings=[];
   try { accepted.push(await read(year+1)); }
   catch(error) {
+    if(error instanceof OfficialSourceHttpError && error.status===403)throw error;
     failedYears.push(year+1);
     warnings.push(`BLS ${year+1} annual calendar unavailable: ${error.message}. Current-year schedule retained; previously captured next-year coverage must remain marked stale.`);
   }

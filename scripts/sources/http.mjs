@@ -24,9 +24,19 @@ export function* iterateCsv(input) {
 }
 export const parseCsv=text=>[...iterateCsv(text)];
 
+export class OfficialSourceHttpError extends Error {
+  constructor(status,requestedUrl,response={}) {
+    super(`Official source HTTP ${status} (${new URL(requestedUrl).hostname})`);
+    this.status=status;
+    this.requestedUrl=requestedUrl;
+    this.url=response.url||requestedUrl;
+    this.redirected=Boolean(response.redirected);
+  }
+}
+
 export async function requestBytes(url,{fetchImpl=globalThis.fetch,method='GET',body,headers={},timeoutMs=45000,maxBytes=80*1024*1024}={}) {
   const response=await fetchImpl(url,{method,body,headers:{'Accept':'text/plain, application/json, text/csv, */*',...headers},signal:AbortSignal.timeout(timeoutMs)});
-  if(!response.ok)throw new Error(`Official source HTTP ${response.status} (${new URL(url).hostname})`);
+  if(!response.ok)throw new OfficialSourceHttpError(response.status,url,response);
   const chunks=[];let length=0;
   if(response.body?.getReader) {
     const reader=response.body.getReader();

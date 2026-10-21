@@ -33,3 +33,31 @@ test('source fetch rejects unsuccessful HTTP and records a hash without the body
   assert.match(result.retrievedAt,/^\d{4}-\d{2}-\d{2}T/);
   assert.equal(result.url,'https://example.test/data');
 });
+
+test('official HTTP errors preserve status and default request identity', () => {
+  assert.equal(typeof http.OfficialSourceHttpError,'function');
+  const error=new http.OfficialSourceHttpError(403,'https://www.bls.gov/schedule/2026/home.htm');
+  assert.ok(error instanceof Error);
+  assert.equal(error.message,'Official source HTTP 403 (www.bls.gov)');
+  assert.equal(error.status,403);
+  assert.equal(error.requestedUrl,'https://www.bls.gov/schedule/2026/home.htm');
+  assert.equal(error.url,error.requestedUrl);
+  assert.equal(error.redirected,false);
+});
+
+test('unsuccessful fetch exposes the final response identity without changing its public message', async () => {
+  const requestedUrl='https://www.bls.gov/schedule/2026/home.htm';
+  const finalUrl='https://www.bls.gov/access-denied';
+  const response=new Response('Access Denied',{status:403});
+  Object.defineProperties(response,{url:{value:finalUrl},redirected:{value:true}});
+  await assert.rejects(requestText(requestedUrl,{fetchImpl:async()=>response}),error=>{
+    assert.equal(typeof http.OfficialSourceHttpError,'function');
+    assert.ok(error instanceof http.OfficialSourceHttpError);
+    assert.equal(error.message,'Official source HTTP 403 (www.bls.gov)');
+    assert.equal(error.status,403);
+    assert.equal(error.requestedUrl,requestedUrl);
+    assert.equal(error.url,finalUrl);
+    assert.equal(error.redirected,true);
+    return true;
+  });
+});

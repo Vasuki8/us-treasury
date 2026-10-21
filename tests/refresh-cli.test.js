@@ -94,3 +94,70 @@ test('strict calendar CLI publishes successful current coverage when BLS has nev
     assert.match(published.calendar.sources.bls.warnings.join(' '),/2027.*unavailable/);
   });
 });
+
+async function blockedBlsFixture(directory,{failOther=false}={}) {
+  // Keep every other verified source deterministic while exercising the real
+  // BLS HTTP collector, publication gate and atomic CLI writer together.
+  for(const [filename,exportName,id,calendar] of [
+    ['treasury.mjs','collectTreasury','treasury',false],
+    ['bls.mjs','collectBls','bls',false],
+    ['bea.mjs','collectBea','bea',false],
+    ['dol.mjs','collectDol','dol',false],
+    ['census.mjs','collectCensus','census',false],
+    ['calendar-bea.mjs','collectBeaCalendar','bea',true],
+    ['calendar-census.mjs','collectCensusCalendar','census',true],
+    ['calendar-dol.mjs','collectDolCalendar','dol',true],
+    ['calendar-treasury.mjs','collectTreasuryCalendar','treasury',true],
+    ['timing-treasury-yields.mjs','collectTreasuryYieldTiming','treasury-yield-timing',true],
+  ])await writeFile(path.join(directory,'scripts','sources',filename),`import {snapshot} from '../../src/official-snapshot.js';\nexport async function ${exportName}(){${failOther&&id==='bea'&&!calendar?"throw new Error('BEA unavailable');":`return {...snapshot.${calendar?'calendar.':''}sources[${JSON.stringify(id)}],fetchedAt:new Date().toISOString()};`}}\n`);
+  await writeFile(path.join(directory,'blocked-bls.mjs'),`
+    const NativeDate=Date;
+    globalThis.Date=class extends NativeDate {
+      constructor(...args){super(...(args.length?args:['2026-10-22T14:00:00.000Z']));}
+      static now(){return NativeDate.parse('2026-10-22T14:00:00.000Z');}
+    };
+    globalThis.fetch=async()=>new Response('BLS access denied',{status:403});
+  `);
+}
+
+test('approved cached-BLS CLI mode publishes other sources and reports the original retained capture',async()=>{
+  await withCliFixture(async({directory,destination,original})=>{
+    const {snapshot:prior}=await import(`${pathToFileURL(destination).href}?prior-cached`);
+    await blockedBlsFixture(directory);
+    const summary=path.join(directory,'summary.md');
+    const result=await execute(process.execPath,['--import','./blocked-bls.mjs','scripts/refresh-data.mjs','--allow-cached-bls-calendar'],{cwd:directory,timeout:20000,env:{...process.env,GITHUB_STEP_SUMMARY:summary}});
+    const {snapshot:published}=await import(`${pathToFileURL(destination).href}?cached-published`);
+    assert.notDeepEqual(await readFile(destination),original);
+    assert.deepEqual(published.publicationPolicy,{mode:'allow-cached-bls-calendar',cachedCalendarSources:['bls']});
+    assert.equal(published.calendar.status,'partial');
+    const cached=published.calendar.sources.bls;
+    assert.equal(cached.status,'error');
+    assert.equal(cached.fetchedAt,prior.calendar.sources.bls.fetchedAt);
+    assert.deepEqual(cached.provenance,prior.calendar.sources.bls.provenance);
+    assert.deepEqual(cached.events,prior.calendar.sources.bls.events);
+    assert.equal(cached.lastAttemptAt,'2026-10-22T14:00:00.000Z');
+    for(const source of Object.values(published.sources))assert.equal(source.status,'ok');
+    for(const [id,source] of Object.entries(published.calendar.sources))if(id!=='bls')assert.equal(source.status,'ok');
+    assert.match(result.stdout,/warning.*BLS.*cached|BLS.*cached/i);
+    assert.match(await readFile(summary,'utf8'),/BLS.*cached/i);
+    assert.ok((await readFile(summary,'utf8')).includes(cached.fetchedAt));
+  });
+});
+
+test('strict CLI still rejects the same BLS403 candidate without replacing any snapshot bytes',async()=>{
+  await withCliFixture(async({directory,destination,original})=>{
+    await blockedBlsFixture(directory);
+    await assert.rejects(execute(process.execPath,['--import','./blocked-bls.mjs','scripts/refresh-data.mjs','--require-all'],{cwd:directory,timeout:20000}),error=>error.code===1&&/bls calendar.*403/i.test(error.stderr));
+    assert.ok((await readFile(destination)).equals(original));
+  });
+});
+
+test('cached-BLS CLI mode rejects another failed source and conflicting mode flags before writing',async()=>{
+  await withCliFixture(async({directory,destination,original})=>{
+    await blockedBlsFixture(directory,{failOther:true});
+    await assert.rejects(execute(process.execPath,['--import','./blocked-bls.mjs','scripts/refresh-data.mjs','--allow-cached-bls-calendar'],{cwd:directory,timeout:20000}),error=>error.code===1&&/bea.*unavailable/i.test(error.stderr));
+    assert.ok((await readFile(destination)).equals(original));
+    await assert.rejects(execute(process.execPath,['--import','./blocked-bls.mjs','scripts/refresh-data.mjs','--require-all','--allow-cached-bls-calendar'],{cwd:directory,timeout:20000}),error=>error.code===1&&/cannot.*combine|mutually exclusive/i.test(error.stderr));
+    assert.ok((await readFile(destination)).equals(original));
+  });
+});

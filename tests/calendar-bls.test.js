@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import * as http from '../scripts/sources/http.mjs';
 
 let adapter;
 try { adapter = await import('../scripts/sources/calendar-bls.mjs'); }
@@ -93,6 +94,33 @@ test('BLS next-year unavailability preserves current rows and explicitly reports
   assert.deepEqual(result.failedYears,[2027]);
   assert.match(result.warnings.join(' '),/2027.*unavailable|unavailable.*2027/i);
   assert.match(result.coverageNote,/2027/);
+});
+
+test('BLS next-year HTTP 403 propagates so refresh can retain the complete verified calendar', async () => {
+  const requests=[];
+  await assert.rejects(bls().collectBlsCalendar({pause:async()=>{},now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async url=>{
+    requests.push(url);
+    return url===annual(2026)?new Response(page([row()])):new Response('Access Denied',{status:403});
+  }}),error=>{
+    assert.ok(error instanceof http.OfficialSourceHttpError);
+    assert.equal(error.status,403);
+    assert.equal(error.requestedUrl,annual(2027));
+    assert.equal(error.url,annual(2027));
+    assert.equal(error.redirected,false);
+    return true;
+  });
+  assert.deepEqual(requests,[annual(2026),annual(2027)]);
+});
+
+test('BLS next-year non-HTTP errors retain the existing missing-year warning behavior', async () => {
+  const result=await bls().collectBlsCalendar({pause:async()=>{},now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async url=>{
+    if(url===annual(2026))return new Response(page([row()]));
+    throw new Error('Official source HTTP 403 (www.bls.gov)');
+  }});
+  assert.deepEqual(result.coveredYears,[2026]);
+  assert.deepEqual(result.failedYears,[2027]);
+  assert.equal(result.events.length,1);
+  assert.match(result.warnings.join(' '),/2027.*403/);
 });
 
 test('BLS current-year source failure prevents treating partial or redirected content as a verified schedule', async () => {

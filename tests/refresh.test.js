@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { refreshSnapshot } from '../scripts/sources/refresh.mjs';
+import * as http from '../scripts/sources/http.mjs';
 
 const result=id=>({id,fetchedAt:'2026-10-21T12:00:00Z',series:{example:{observations:[{date:'2026-09-01',value:4.2,publishedAt:null}],dataStatus:'official'}},provenance:[],warnings:[]});
 
@@ -182,4 +183,97 @@ test('strict refresh accepts a first unavailable BLS next-year calendar but reje
   assert.deepEqual(accepted.calendar.sources.bls.failedYears,[2027]);
   const previous=await refreshSnapshot({calendarCollectors:{bls:async()=>blsAnnualResult([2026,2027])}});
   await assert.rejects(refreshSnapshot({previous,requireAll:true,calendarCollectors:{bls:async()=>current}}),/bls.*previously captured year.*2027/i);
+});
+
+test('cached BLS publication and strict publication cannot be requested together',async()=>{
+  let attempted=false;
+  await assert.rejects(refreshSnapshot({requireAll:true,allowCachedBlsCalendar:true,collectors:{bea:async()=>{attempted=true;return result('bea');}}}),/requireAll.*allowCachedBlsCalendar|mutually exclusive/i);
+  assert.equal(attempted,false,'conflicting modes fail before contacting official sources');
+});
+
+test('cached BLS publication records its policy even when every attempted source succeeds',async()=>{
+  const next=await refreshSnapshot({allowCachedBlsCalendar:true,collectors:{bea:async()=>result('bea')},calendarCollectors:{bls:async()=>blsAnnualResult([2026,2027])},now:new Date('2026-10-22T12:00:00Z')});
+  assert.deepEqual(next.publicationPolicy,{mode:'allow-cached-bls-calendar',cachedCalendarSources:[]});
+  assert.equal(next.calendar.sources.bls.failure,null);
+  const manual=await refreshSnapshot({calendarCollectors:{bls:async()=>blsAnnualResult([2026])}});
+  assert.equal(Object.hasOwn(manual,'publicationPolicy'),false);
+  const strict=await refreshSnapshot({requireAll:true,calendarCollectors:{bls:async()=>blsAnnualResult([2026])}});
+  assert.equal(Object.hasOwn(strict,'publicationPolicy'),false);
+});
+
+const refreshNow=new Date('2026-10-22T12:00:00.000Z');
+const blsBlocked=(year=2026,extra={})=>new http.OfficialSourceHttpError(403,`https://www.bls.gov/schedule/${year}/home.htm`,extra);
+const retainedBlsSnapshot=()=>({calendar:{sources:{bls:{...blsAnnualResult([2026,2027]),status:'ok',lastAttemptAt:'2026-10-21T12:00:00.000Z',error:null}}}});
+
+test('cached BLS publication permits exact annual HTTP 403 and preserves the verified capture while other sources update',async()=>{
+  for(const year of [2026,2027]) {
+    const previous=retainedBlsSnapshot(),original=structuredClone(previous);
+    const next=await refreshSnapshot({previous,allowCachedBlsCalendar:true,now:refreshNow,collectors:{bea:async()=>result('bea')},calendarCollectors:{bls:async()=>{throw blsBlocked(year);},bea:async()=>calendarResult()}});
+    const cached=next.calendar.sources.bls;
+    assert.deepEqual(next.publicationPolicy,{mode:'allow-cached-bls-calendar',cachedCalendarSources:['bls']});
+    assert.equal(next.sources.bea.status,'ok');
+    assert.equal(next.calendar.sources.bea.status,'ok');
+    assert.equal(next.calendar.status,'partial');
+    assert.equal(cached.status,'error');
+    assert.equal(cached.fetchedAt,'2026-10-21T12:00:00.000Z');
+    assert.equal(cached.lastAttemptAt,'2026-10-22T12:00:00.000Z');
+    assert.match(cached.error,/HTTP 403/);
+    assert.deepEqual(cached.failure,{kind:'http',status:403,requestedUrl:`https://www.bls.gov/schedule/${year}/home.htm`,url:`https://www.bls.gov/schedule/${year}/home.htm`,redirected:false});
+    assert.deepEqual(cached.events,original.calendar.sources.bls.events);
+    assert.deepEqual(cached.provenance,original.calendar.sources.bls.provenance);
+    assert.deepEqual(cached.coveredYears,[2026,2027]);
+    assert.deepEqual(previous,original,'refresh does not mutate the cached snapshot');
+    const again=await refreshSnapshot({previous:next,allowCachedBlsCalendar:true,now:new Date('2026-10-23T12:00:00Z'),calendarCollectors:{bls:async()=>{throw blsBlocked(year);}}});
+    assert.equal(again.calendar.sources.bls.fetchedAt,'2026-10-21T12:00:00.000Z');
+    assert.deepEqual(again.calendar.sources.bls.events,cached.events);
+    assert.deepEqual(again.calendar.sources.bls.provenance,cached.provenance);
+  }
+});
+
+test('cached BLS publication rejects other failures and forged HTTP 403 messages',async()=>{
+  const annual='https://www.bls.gov/schedule/2026/home.htm';
+  const blockedErrors=[
+    Error('Official source HTTP 403 (www.bls.gov)'),
+    Object.assign(Error('Official source HTTP 403'),{status:403,requestedUrl:annual,url:annual,redirected:false}),
+    new http.OfficialSourceHttpError(503,annual),
+    new http.OfficialSourceHttpError(403,'https://www.bls.gov/schedule/2025/home.htm'),
+    new http.OfficialSourceHttpError(403,`${annual}?retry=1`),
+    new http.OfficialSourceHttpError(403,annual,{redirected:true}),
+    new http.OfficialSourceHttpError(403,annual,{url:'https://www.bls.gov/schedule/'}),
+    new http.OfficialSourceHttpError(403,'https://vendor.example/schedule/2026/home.htm'),
+  ];
+  for(const error of blockedErrors)await assert.rejects(refreshSnapshot({previous:retainedBlsSnapshot(),allowCachedBlsCalendar:true,now:refreshNow,calendarCollectors:{bls:async()=>{throw error;}}}),/bls calendar.*(?:403|503)/i);
+  await assert.rejects(refreshSnapshot({previous:retainedBlsSnapshot(),allowCachedBlsCalendar:true,now:refreshNow,collectors:{bls:async()=>{throw blsBlocked();}},calendarCollectors:{bls:async()=>{throw blsBlocked();}}}),/bls:.*403/i);
+  await assert.rejects(refreshSnapshot({previous:retainedBlsSnapshot(),allowCachedBlsCalendar:true,now:refreshNow,calendarCollectors:{bls:async()=>{throw blsBlocked();},bea:async()=>{throw blsBlocked();}}}),/bea calendar.*403/i);
+});
+
+test('cached BLS publication rejects a first failure or an empty, invalid, unreviewed or future retained capture',async()=>{
+  const invalidCaptures=[
+    undefined,
+    {...blsAnnualResult([2026]),events:[]},
+    {...blsAnnualResult([2026]),fetchedAt:'not-a-date'},
+    {...blsAnnualResult([2026]),fetchedAt:'2026-10-23T12:00:00.000Z'},
+    {...blsAnnualResult([2026]),provenance:[]},
+    {...blsAnnualResult([2026]),provenance:[{url:'https://vendor.example/calendar',sha256:'a'.repeat(64)}]},
+    {...blsAnnualResult([2026]),provenance:[{url:'https://www.bls.gov/schedule/2026/home.htm',sha256:'invalid'}]},
+    {...blsAnnualResult([2026]),events:[calendarEvent({sourceId:'bls',program:'consumer-price-index',seriesId:'cpi',seriesIds:['cpi'],sourceUrl:'https://vendor.example/calendar'})]},
+    {...blsAnnualResult([2026]),events:blsAnnualResult([2026]).events.map(event=>({...event,scheduledAt:'2026-10-29T13:30:00.000Z'}))},
+  ];
+  for(const capture of invalidCaptures) {
+    const previous={calendar:{sources:capture?{bls:capture}:{}}};
+    await assert.rejects(refreshSnapshot({previous,allowCachedBlsCalendar:true,now:refreshNow,calendarCollectors:{bls:async()=>{throw blsBlocked();}}}),/bls calendar.*403/i);
+  }
+});
+
+test('strict mode still rejects an otherwise admissible cached BLS 403 and a successful retry clears stale failure metadata',async()=>{
+  const previous=retainedBlsSnapshot();
+  await assert.rejects(refreshSnapshot({previous,requireAll:true,now:refreshNow,calendarCollectors:{bls:async()=>{throw blsBlocked();}}}),/bls calendar.*403/i);
+  const failed=await refreshSnapshot({previous,now:refreshNow,calendarCollectors:{bls:async()=>{throw blsBlocked();}}});
+  const success=await refreshSnapshot({previous:failed,allowCachedBlsCalendar:true,now:refreshNow,calendarCollectors:{bls:async()=>blsAnnualResult([2026,2027])}});
+  assert.equal(success.calendar.sources.bls.failure,null);
+  assert.equal(success.calendar.sources.bls.error,null);
+  assert.equal(success.calendar.sources.bls.status,'ok');
+  assert.deepEqual(success.publicationPolicy.cachedCalendarSources,[]);
+  const generic=await refreshSnapshot({previous:failed,calendarCollectors:{bls:async()=>{throw Error('network timeout');}}});
+  assert.equal(generic.calendar.sources.bls.failure,null,'an old typed403 cannot authorize an unrelated current failure');
 });
