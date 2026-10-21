@@ -58,3 +58,29 @@ test('reviewed DOL national claims and Census MARTS feeds are allowed without ap
   next.sources.dol.series.claims.sourceIds=['InitialClaims/NSA'];
   assert.throws(()=>assertCommercialData(next),/identifier.*claims/i);
 });
+
+test('calendar policy permits only reviewed program mappings with matching agency provenance',()=>{
+  const event={id:'bea-example',sourceId:'bea',program:'gdp',seriesId:'gdp',seriesIds:['gdp'],sourceUrl:'https://www.bea.gov/news/schedule/ics/online-calendar-subscription.ics'};
+  const calendar={sources:{bea:{events:[event],provenance:[{url:event.sourceUrl,sha256:'a'.repeat(64)}]}}};
+  assert.doesNotThrow(()=>assertCommercialData({calendar,releases:[event]}));
+  for(const change of [
+    {sourceUrl:'https://vendor.example/calendar'},
+    {program:'county-gdp'},
+    {seriesIds:['gdp','retail']},
+    {sourceId:'census'},
+  ]) {
+    const changed=structuredClone({calendar,releases:[event]});
+    Object.assign(changed.calendar.sources.bea.events[0],change);
+    changed.releases=structuredClone(changed.calendar.sources.bea.events);
+    assert.throws(()=>assertCommercialData(changed),/calendar/i);
+  }
+  const changed=structuredClone({calendar,releases:[event]});
+  changed.calendar.sources.bea.provenance[0].url='https://vendor.example/input';
+  assert.throws(()=>assertCommercialData(changed),/calendar/i);
+});
+
+test('an approved agency label cannot introduce calendar records outside its captured source list',()=>{
+  const event={id:'bea-example',sourceId:'bea',program:'gdp',seriesId:'gdp',seriesIds:['gdp'],sourceUrl:'https://www.bea.gov/news/schedule/ics/online-calendar-subscription.ics'};
+  const calendar={sources:{bea:{events:[event],provenance:[{url:event.sourceUrl,sha256:'a'.repeat(64)}]}}};
+  assert.throws(()=>assertCommercialData({calendar,releases:[{...event,id:'fabricated'}]}),/calendar/i);
+});

@@ -55,9 +55,54 @@ function matchesFeed(value, feed) {
   return false;
 }
 
+export const calendarPolicies = {
+  bls: {
+    reviewedOn:'2026-10-21',commercialUse:true,
+    basis:'BLS public-domain electronic publications; agency-authored release schedule metadata, with source credit',
+    terms:['https://www.bls.gov/opub/copyright-information.htm'],
+    programs:{'employment-situation':['unrate','payroll','participation','wages'],'consumer-price-index':['cpi'],'job-openings':['openings']},
+  },
+  bea: {
+    reviewedOn:'2026-10-21',commercialUse:true,
+    basis:'BEA website information is public domain unless otherwise noted; national release schedule metadata has no contrary notice',
+    terms:['https://www.bea.gov/help/faq/147','https://www.bea.gov/help/guidelines-for-citing-bea'],
+    programs:{gdp:['gdp'],'personal-income-outlays':['pce']},
+  },
+};
+
+function calendarFeed(value,id) {
+  try {
+    const url=new URL(value);
+    if(url.username||url.password||url.search||url.hash)return false;
+    if(id==='bls')return url.origin==='https://www.bls.gov' && /^\/schedule\/\d{4}\/home\.htm$/.test(url.pathname);
+    if(id==='bea')return url.href==='https://www.bea.gov/news/schedule/ics/online-calendar-subscription.ics';
+  } catch { /* Invalid calendar URLs are outside the reviewed scope. */ }
+  return false;
+}
+
+function assertCalendarData(snapshot) {
+  const captured=new Map();
+  for(const [id,source] of Object.entries(snapshot.calendar?.sources??{})) {
+    const policy=calendarPolicies[id];
+    if(!Object.hasOwn(calendarPolicies,id)||!policy.commercialUse)throw new Error(`Commercial reuse review required for calendar source: ${id}`);
+    for(const item of source.provenance??[]) {
+      if(!calendarFeed(item.url,id)||!/^[a-f0-9]{64}$/.test(item.sha256))throw new Error(`Unreviewed calendar provenance for ${id}`);
+    }
+    for(const event of source.events??[]) {
+      const approved=Object.hasOwn(policy.programs,event.program)?policy.programs[event.program]:null;
+      if(event.sourceId!==id||!approved||event.seriesId!==approved[0]||!Array.isArray(event.seriesIds)||event.seriesIds.length!==approved.length||!approved.every((value,index)=>event.seriesIds[index]===value))throw new Error(`Unreviewed calendar program or indicator mapping for ${id}`);
+      if(!calendarFeed(event.sourceUrl,id)||!source.provenance?.some(item=>item.url===event.sourceUrl))throw new Error(`Unreviewed calendar feed for ${id}`);
+      if(!event.id||captured.has(event.id))throw new Error('Invalid or duplicate captured calendar identifier');
+      captured.set(event.id,event);
+    }
+  }
+  const releases=snapshot.releases??[];
+  if(releases.length!==captured.size||new Set(releases.map(event=>event.id)).size!==releases.length||releases.some(event=>JSON.stringify(captured.get(event.id))!==JSON.stringify(event)))throw new Error('Commercial reuse review required for uncaptured calendar records');
+}
+
 /** Stop publication or snapshot replacement when data exceed the reviewed scope. */
 export function assertCommercialData(snapshot) {
-  if(snapshot.releases?.length)throw new Error('Commercial reuse review required for calendar observations');
+  assertCalendarData(snapshot);
   for(const [agency,source] of Object.entries(snapshot.sources ?? {})) {
     const policies=dataPolicies.filter(policy=>policy.agency===agency && policy.commercialUse===true);
     if(!policies.length)throw new Error(`Commercial reuse review required for source: ${agency}`);

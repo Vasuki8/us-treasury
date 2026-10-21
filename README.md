@@ -36,6 +36,8 @@ npm run data:refresh
 npm run data:refresh -- --sources=treasury
 # Refresh the new feeds only
 npm run data:refresh -- --sources=dol,census
+# Refresh official release schedules without downloading indicator data
+npm run data:refresh -- --sources=calendar
 ```
 
 Refresh and then reload the browser. No API keys or dependency installation are needed. Refresh uses Node's server-side fetch; the browser does not contact agency APIs. BEA's two public bulk files total about 70 MB, so refreshing may take several seconds. BLS unauthenticated requests are rate-limited; all six BLS series are batched into one request.
@@ -65,7 +67,11 @@ Claims use the keyless [ETA national historical XML export](https://oui.doleta.g
 
 Retail uses the keyless [Census MARTS bulk ZIP](https://www.census.gov/econ_datasets/), with 36 retained monthly observations after calculating growth from exact calendar comparisons. Metadata selects U.S. total retail trade and food services, seasonally adjusted monthly sales in millions of dollars. The latest month is an advance estimate. Sales are not price-adjusted; revisions replace earlier levels. Published source precision and Census program credits are retained. The Census API requires a key, so this adapter uses the documented public bulk feed.
 
-The calendar links to official BLS/BEA schedules and contains no invented dates, results, forecasts or revisions. The BLS calendar feed denied automated access in local verification, so schedule ingestion remains unavailable.
+The calendar captures official BLS annual schedules and BEA's official iCalendar feed for Employment Situation, CPI, JOLTS, national GDP and Personal Income and Outlays. The current snapshot contains 130 scheduled releases. It defaults to the next 30 Eastern calendar days, with month/day, topic and watchlist filters. Shared Employment Situation releases match unemployment, payrolls, participation and wages without duplicating the release. EST/EDT follows `America/New_York` rules, and reference periods come from explicit agency text. Scheduled dates do not establish publication or results.
+
+Calendar retrievals and their SHA256 provenance remain separate from indicator retrievals. A failed agency refresh retains its complete last-good schedule with the original retrieval time and a visible cached/error status. A successful refresh replaces that agency's records, removing withdrawn events; BEA UID sequences and cancellations are respected. If an already captured BLS next-year calendar fails, the entire previous BLS schedule is retained atomically. An unpublished next year remains an explicit coverage limitation. Calendar source URLs and program-to-indicator mappings have their own commercial-use allowlist.
+
+Census retail, DOL claims and Treasury publication schedules are not ingested. The calendar links to official Census/DOL references and states this coverage limit. No release results, forecasts, impact ratings or revision ledger are invented. Refresh schedules with `--sources=calendar`, or include them in the default full refresh, then commit and push the new snapshot through the existing tested deployment workflow.
 
 ## Working features
 
@@ -73,7 +79,7 @@ The calendar links to official BLS/BEA schedules and contains no invented dates,
 - Twelve official indicators, with definitions, source identifiers, units, adjustment, observation periods, retrieval times, source footnotes and coverage limitations.
 - Indicator level/change controls, six/twelve-observation ranges, exact-value pointer and keyboard chart readouts, and data/methodology/revision tabs.
 - Browser watchlists and appearance/density preferences. Saving falls back to session state with an explicit message if browser storage is unavailable.
-- Calendar navigation with official source schedule links and an honest empty state until a verified schedule feed is ingested.
+- Official release calendar with upcoming and monthly windows, date/topic/watchlist filters, related indicators, verified source links, reference periods, EST/EDT times and cached-source status.
 - Catalog name/code/agency search, aliases such as “jobs”, composed filters, and up to four comparison series.
 - Native-unit comparison panels; optional indexing at an explicit shared nonzero baseline. No automatic frequency aggregation, interpolation, or filling.
 - CSV downloads with displayed observations, units, source identifiers, calculation inputs, retrieval times, unknown publication dates and official/cached status.
@@ -135,6 +141,6 @@ In restricted environments the server test needs permission to connect to loopba
 
 ## Next development milestone
 
-Capture historical publication snapshots and revisions, integrate verified agency schedules, and evaluate a reliable advance-claims feed to supplement the historical table. Persistent multi-device workspaces, accounts, alerts, broader coverage, and advertising remain subsequent milestones.
+Capture historical publication snapshots and revisions, review additional agency calendar coverage, and evaluate a reliable advance-claims feed to supplement the historical table. Persistent multi-device workspaces, accounts, alerts, broader coverage, and advertising remain subsequent milestones.
 
 Design and implementation scope are recorded in `docs/superpowers/`.

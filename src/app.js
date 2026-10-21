@@ -123,7 +123,7 @@ root.addEventListener('click',async event=>{
   else if('compare' in d)navigate({page:'explore',selected:[...new Set(d.compare.split(',').filter(id=>getSeries(id)))].slice(0,4),exploreMode:'compare',comparison:'native'});
   else if('event' in d){
     const selected=releases.find(release=>release.id===d.event);
-    if(selected)navigate(state.page==='calendar'?{eventId:selected.id}:{page:'calendar',eventId:selected.id,day:'all',calendarTopic:'All topics',watchOnly:false});
+    if(selected)navigate(state.page==='calendar'?{eventId:selected.id}:{page:'calendar',eventId:selected.id,calendarMonth:selected.date.slice(0,7),day:'all',calendarTopic:'All topics',watchOnly:false});
   }
   else if('range' in d)navigate({range:Number(d.range)});
   else if('tab' in d)navigate({tab:d.tab});
@@ -131,7 +131,7 @@ root.addEventListener('click',async event=>{
   else if('remove' in d)navigate({selected:state.selected.filter(id=>id!==d.remove)});
   else if('day' in d)navigate({day:d.day});
   else if('resetFilters' in d)navigate({query:'',topic:'All topics',frequency:'All frequencies'});
-  else if('resetCalendar' in d)navigate({day:'all',calendarTopic:'All topics',watchOnly:false});
+  else if('resetCalendar' in d)navigate({calendarMonth:'upcoming',day:'all',calendarTopic:'All topics',watchOnly:false});
   else if('export' in d)exportCsv();
   else if('copyLink' in d) {
     try {await navigator.clipboard.writeText(location.href);announce('Link copied with the current series, range, view and tab.');}
@@ -149,7 +149,9 @@ root.addEventListener('change',event=>{
     return;
   }
   const fields={'topic-filter':'topic','frequency-filter':'frequency','transform-select':'transform','comparison-select':'comparison','calendar-topic':'calendarTopic'};
-  if(fields[target.id])navigate({[fields[target.id]]:target.value});
+  if(target.id==='calendar-month')navigate({calendarMonth:target.value,day:'all'});
+  else if(target.id==='calendar-day')navigate({day:target.value});
+  else if(fields[target.id])navigate({[fields[target.id]]:target.value});
   else if(target.id==='calendar-watch-only')navigate({watchOnly:target.checked});
   else if(target.matches('[data-select]')) {
     const id=target.dataset.select;

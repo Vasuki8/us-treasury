@@ -59,11 +59,24 @@ test('official observations follow their real frequencies and maintain source pr
   }
 });
 
-test('production calendar has no invented releases, consensus or revision snapshots', () => {
-  assert.deepEqual(releases,[]);
-  assert.equal(dataStatus.calendar.status,'unavailable');
+test('production calendar contains traced official schedules without invented publication results', () => {
+  assert.ok(releases.length>0);
+  assert.equal(dataStatus.calendar.status,'ok');
   assert.ok(dataStatus.calendar.links.some(link=>link.url.includes('bls.gov')));
   assert.ok(dataStatus.calendar.links.some(link=>link.url.includes('bea.gov')));
+  for(const sourceId of ['bls','bea']) {
+    const source=dataStatus.calendar.sources[sourceId];
+    assert.equal(source.status,'ok');
+    assert.match(source.fetchedAt,/^\d{4}-\d{2}-\d{2}T/);
+    assert.ok(source.provenance.every(item=>/^[a-f0-9]{64}$/.test(item.sha256)));
+  }
+  assert.equal(new Set(releases.map(event=>event.id)).size,releases.length);
+  for(const event of releases) {
+    assert.ok(dataStatus.calendar.sources[event.sourceId].events.some(captured=>captured.id===event.id));
+    assert.ok(event.seriesIds.every(id=>Object.hasOwn(series,id)));
+    assert.match(event.scheduledAt,/^\d{4}-\d{2}-\d{2}T/);
+    for(const key of ['actual','consensus','forecast','publishedAt'])assert.equal(Object.hasOwn(event,key),false);
+  }
 });
 
 test('official Treasury curve preserves exact dated snapshots and unavailable tenors', () => {

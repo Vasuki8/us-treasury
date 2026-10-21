@@ -5,7 +5,7 @@ import { escapeHtml as esc, button, heading, panel, chart, metrics, seriesTable,
 const defaults = {
   page: 'overview', seriesId: 'unrate', range: 12, transform: 'level', tab: 'data',
   query: '', topic: 'All topics', frequency: 'All frequencies', selected: ['unrate', 'cpi'],
-  exploreMode: 'catalog', comparison: 'native', day: 'all', calendarTopic: 'All topics',
+  exploreMode: 'catalog', comparison: 'native', calendarMonth: 'upcoming', day: 'all', calendarTopic: 'All topics',
   watchOnly: false, eventId: '', saved: [], density: 'compact',
 };
 const allSeries = () => Object.values(series);
@@ -19,10 +19,30 @@ const saveButton = (id, state, labels = ['☆ SAVE', '★ SAVED']) => button(sta
 const releaseDate = date => new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`));
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 const scheduleLinks = () => (dataStatus.calendar?.links ?? []).map(source => `<a class="action" href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.name)} ↗</a>`).join('');
+const calendarSourceNames = { bls: 'Bureau of Labor Statistics', bea: 'Bureau of Economic Analysis' };
+const relatedSeries = event => seriesIds(event.seriesIds ?? [event.seriesId]);
+const scheduledPeriod = event => event.periodLabel || 'Observation period not supplied';
+const scheduleSource = event => dataStatus.calendar?.sources?.[event.sourceId];
+const scheduleState = event => scheduleSource(event)?.status === 'ok' ? 'SCHEDULED' : scheduleSource(event)?.fetchedAt ? 'CACHED SCHEDULE' : 'SCHEDULED';
+const orderedReleases = () => [...releases].sort((a, b) => a.date.localeCompare(b.date) || String(a.time ?? '').localeCompare(String(b.time ?? '')) || a.id.localeCompare(b.id));
+function upcomingReleases() {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()).map(part => [part.type, part.value]));
+  const today = `${parts.year}-${parts.month}-${parts.day}`;
+  const end = new Date(Date.parse(`${today}T12:00:00Z`) + 29 * 86400000).toISOString().slice(0, 10);
+  return orderedReleases().filter(event => event.date >= today && event.date <= end);
+}
+function scheduledTime(event) {
+  const instant = new Date(event.scheduledAt);
+  return event.scheduledAt && Number.isFinite(instant.getTime())
+    ? new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZoneName: 'short' }).format(instant)
+    : event.time ? `${event.time} ET` : 'Time not supplied';
+}
 
 function releaseWatch() {
   if (!releases.length) return emptyState('No verified releases have been ingested.', 'Consult the official release schedules for publication dates.', scheduleLinks());
-  return releases.slice(0, 4).map(event => `<div class="release-item"><span class="mono muted">${esc(event.time)}</span><div>${button(event.name, `data-event="${esc(event.id)}"`, 'link-button')}<small>${esc(releaseDate(event.date))} · ${esc(event.agency)} · ${esc(periodLabel(getSeries(event.seriesId), event.period))}</small></div><span class="pill ${event.status === 'released' ? 'released' : 'next'}">${event.status === 'released' ? 'OUT' : 'NEXT'}</span></div>`).join('');
+  const upcoming = upcomingReleases().filter(event => !event.scheduledAt || Date.parse(event.scheduledAt) >= Date.now()).slice(0, 4);
+  if (!upcoming.length) return emptyState('No scheduled releases in the next 30 days.', 'The captured schedules may cover other dates; check the calendar and source status.', link('OPEN CALENDAR ↗', '#/calendar') + scheduleLinks());
+  return upcoming.map(event => `<div class="release-item"><span class="mono muted">${esc(event.time ?? '—')}</span><div>${button(event.name, `data-event="${esc(event.id)}"`, 'link-button')}<small>${esc(releaseDate(event.date))} · ${esc(scheduledTime(event))} · ${esc(event.agency)} · ${esc(scheduledPeriod(event))}</small></div><span class="pill">${esc(scheduleState(event))}</span></div>`).join('');
 }
 
 function overview() {
@@ -84,29 +104,34 @@ function indicator(state) {
 
 function calendarPreview(event, state) {
   if (!event) return panel('02', 'RELEASE PREVIEW', emptyState('No release selected.', releases.length ? 'Choose a release from the filtered schedule.' : 'No verified schedule has been ingested. Use the official agency schedules below.'), '', '', 'calendar-detail');
-  const current = getSeries(event.seriesId);
-  return panel('02', 'RELEASE PREVIEW', `<h3 class="detail-title">${esc(event.name)}</h3><p class="detail-sub">${esc(event.agency)}${current ? ` / ${esc(periodLabel(current, event.period))}` : ''}<br>${esc(releaseDate(event.date))} · ${esc(event.time ?? 'Time unavailable')} ET</p><p class="panel-note">Schedule information describes publication timing. A release result requires its own verified publication record.</p>${current ? `<div class="panel-body actions">${seriesLink(event.seriesId, 'OPEN INDICATOR ↗', 'action primary')}${saveButton(event.seriesId, state, ['☆ FOLLOW SERIES', '★ FOLLOWING'])}</div>` : ''}`, '', 'Follow saves this series to your browser watchlist.', 'calendar-detail');
+  const source = scheduleSource(event);
+  const indicators = relatedSeries(event).map(id => `<div class="panel-body actions">${seriesLink(id, getSeries(id).short + ' ↗', 'action')}${saveButton(id, state, ['☆ FOLLOW', '★ FOLLOWING'])}</div>`).join('');
+  return panel('02', 'RELEASE PREVIEW', `<h3 class="detail-title">${esc(event.name)}</h3><p class="detail-sub">${esc(event.agency)} / ${esc(scheduledPeriod(event))}<br>${esc(releaseDate(event.date))} · ${esc(scheduledTime(event))}</p><p class="panel-note"><span class="pill">${esc(scheduleState(event))}</span> Schedule information describes planned publication timing. A past scheduled time does not establish that a result was published.</p><dl class="facts"><dt>Schedule source</dt><dd>${esc(calendarSourceNames[event.sourceId] ?? event.agency)}</dd><dt>Retrieved</dt><dd class="mono">${esc(source?.fetchedAt ?? 'Unavailable')}</dd></dl>${source?.error ? `<p class="panel-note amber">${esc(source.error)} · retained schedule may have changed.</p>` : ''}<p class="panel-note"><a href="${esc(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">OFFICIAL SCHEDULE ↗</a></p>${indicators}`, '', 'Related indicators use their own observation snapshots. Follow saves each series to your browser watchlist.', 'calendar-detail');
 }
 
 function calendar(state) {
-  const days = [...new Set(releases.map(event => event.date))].sort();
-  const filtered = releases.filter(event => (state.day === 'all' || event.date === state.day)
+  const months = [...new Set(releases.map(event => event.date.slice(0, 7)))].sort();
+  const month = months.includes(state.calendarMonth) ? state.calendarMonth : 'upcoming';
+  const windowEvents = month === 'upcoming' ? upcomingReleases() : orderedReleases().filter(event => event.date.startsWith(month));
+  const days = [...new Set(windowEvents.map(event => event.date))];
+  const filtered = windowEvents.filter(event => (state.day === 'all' || event.date === state.day)
     && (state.calendarTopic === 'All topics' || event.topic === state.calendarTopic)
-    && (!state.watchOnly || state.saved.includes(event.seriesId)));
+    && (!state.watchOnly || relatedSeries(event).some(id => state.saved.includes(id))));
   const selected = filtered.find(event => event.id === state.eventId) ?? filtered[0];
   let previousDay = '';
   const rows = filtered.map(event => {
-    const current = getSeries(event.seriesId);
     const dayHeader = previousDay === event.date ? '' : `<tr class="calendar-day"><th scope="rowgroup" colspan="3">${esc(releaseDate(event.date))}</th></tr>`;
     previousDay = event.date;
-    return dayHeader + `<tr class="calendar-event${selected?.id === event.id ? ' selected-row' : ''}"><td class="mono">${esc(event.time ?? '—')}</td><th scope="row">${button(event.name, `data-event="${esc(event.id)}" aria-pressed="${selected?.id === event.id}"`, 'link-button')}<span class="table-code muted">${esc(periodLabel(current, event.period))} · ${esc(event.agency)}</span></th><td><span class="pill">VERIFIED SCHEDULE</span></td></tr>`;
+    return dayHeader + `<tr class="calendar-event${selected?.id === event.id ? ' selected-row' : ''}"><td class="mono">${esc(scheduledTime(event))}</td><th scope="row">${button(event.name, `data-event="${esc(event.id)}" aria-pressed="${selected?.id === event.id}"`, 'link-button')}<span class="table-code muted">${esc(scheduledPeriod(event))} · ${esc(event.agency)}</span></th><td><span class="pill">${esc(scheduleState(event))}</span></td></tr>`;
   }).join('');
   const schedule = filtered.length ? `<div class="table-wrap"><table><caption class="sr-only">Verified agency release schedule; times are Eastern Time.</caption><thead><tr><th scope="col">TIME / ET</th><th scope="col">RELEASE / PERIOD</th><th scope="col">STATE</th></tr></thead><tbody>${rows}</tbody></table></div>` : emptyState(releases.length ? 'No releases match these filters.' : 'No verified releases have been ingested.', releases.length ? state.watchOnly && !state.saved.length ? 'Your watchlist is empty. Follow a series from an indicator page or clear the filters.' : 'Try another day or topic, or clear the filters.' : dataStatus.calendar?.message ?? 'Consult the official release schedules for publication dates.', button('CLEAR FILTERS', 'data-reset-calendar') + scheduleLinks());
-  const dayButtons = `<div class="calendar-days" aria-label="Filter releases by day">${button('ALL DATES', `data-day="all" aria-pressed="${state.day === 'all'}"`)}${days.map(date => button(releaseDate(date).toUpperCase(), `data-day="${date}" aria-pressed="${state.day === date}"`)).join('')}</div>`;
+  const monthSelect = `<label for="calendar-month">Window <select id="calendar-month"><option value="upcoming"${month === 'upcoming' ? ' selected' : ''}>Next 30 days</option>${months.map(value => `<option value="${value}"${month === value ? ' selected' : ''}>${esc(new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(value + '-01T12:00:00Z')))}</option>`).join('')}</select></label>`;
+  const daySelect = `<label for="calendar-day">Day <select id="calendar-day"><option value="all"${state.day === 'all' ? ' selected' : ''}>All days in window</option>${days.map(date => `<option value="${date}"${state.day === date ? ' selected' : ''}>${esc(releaseDate(date))}</option>`).join('')}</select></label>`;
+  const sources = Object.entries(dataStatus.calendar?.sources ?? {}).map(([id, source]) => `<div class="definition"><h3>${esc(calendarSourceNames[id] ?? source.agency ?? id)}</h3><p>${source.status === 'ok' ? 'Captured official schedule' : source.fetchedAt ? 'Cached schedule · refresh failed' : 'Schedule unavailable'}</p><dl class="facts"><dt>Retrieved</dt><dd class="mono">${esc(source.fetchedAt ?? 'No successful retrieval')}</dd><dt>Last attempt</dt><dd class="mono">${esc(source.lastAttemptAt ?? 'Not attempted')}</dd></dl>${source.error ? `<p class="amber">${esc(source.error)}</p>` : ''}${source.coverageNote ? `<p>${esc(source.coverageNote)}</p>` : ''}${(source.warnings ?? []).map(warning => `<p class="muted">${esc(warning)}</p>`).join('')}</div>`).join('');
   return heading('ECONOMIC CALENDAR', 'Official release schedules / Eastern Time', button('RESET FILTERS', 'data-reset-calendar'))
-    + `<div class="toolbar calendar-toolbar">${dayButtons}<label for="calendar-topic">Topic <select id="calendar-topic">${options(['All topics', ...new Set(releases.map(event => event.topic))], state.calendarTopic)}</select></label><label class="check-label" for="calendar-watch-only"><input type="checkbox" id="calendar-watch-only"${state.watchOnly ? ' checked' : ''}>Watchlist only</label></div>`
+    + `<div class="toolbar calendar-toolbar">${monthSelect}${daySelect}<label for="calendar-topic">Topic <select id="calendar-topic">${options(['All topics', ...new Set(releases.map(event => event.topic))], state.calendarTopic)}</select></label><label class="check-label" for="calendar-watch-only"><input type="checkbox" id="calendar-watch-only"${state.watchOnly ? ' checked' : ''}>Watchlist only</label></div>`
     + `<div class="calendar-layout">${panel('01', 'RELEASE SCHEDULE', schedule, `<span class="small muted">${filtered.length} RELEASES</span>`, 'Only ingested agency schedule records appear here.')}${calendarPreview(selected, state)}</div>`
-    + `<div class="grid g11 calendar-context">${panel('03', 'READING THIS CALENDAR', `<div class="explain"><p>Observation periods and retrieval timestamps do not establish publication dates. This calendar uses separately verified agency schedule records.</p><p>No release results, forecasts or revision records have been ingested. Indicator observations remain available through each series page.</p><div class="actions">${scheduleLinks()}</div></div>`)}${panel('04', 'SCHEDULE CONTEXT', `<dl class="facts"><dt>Timezone</dt><dd>Eastern Time</dd><dt>Schedule status</dt><dd>${esc(dataStatus.calendar?.status ?? 'Unavailable')}</dd><dt>Verified events</dt><dd>${releases.length}</dd><dt>Snapshot checked</dt><dd class="mono">${esc(dataStatus.checkedAt ?? 'Unavailable')}</dd></dl><p class="panel-note">${esc(dataStatus.calendar?.message ?? 'A verified schedule feed is unavailable.')}</p>`)}</div>`;
+    + `<div class="grid g11 calendar-context">${panel('03', 'READING THIS CALENDAR', `<div class="explain"><p>Observation periods and retrieval timestamps do not establish publication dates. This calendar uses separately captured official agency schedules. Times follow America/New_York, including daylight saving time.</p><p>Schedules may change. A past scheduled time does not confirm publication. No release results, forecasts or revision records have been ingested. Indicator observations remain available through each series page.</p><div class="actions">${scheduleLinks()}</div></div>`)}${panel('04', 'SCHEDULE CONTEXT', `<dl class="facts"><dt>Timezone</dt><dd>Eastern Time (EST / EDT)</dd><dt>Schedule status</dt><dd>${esc(dataStatus.calendar?.status ?? 'Unavailable')}</dd><dt>Captured events</dt><dd>${releases.length}</dd></dl><p class="panel-note">${esc(dataStatus.calendar?.message ?? 'A verified schedule feed is unavailable.')}</p><div class="definitions">${sources}</div>`)}</div>`;
 }
 
 function selectionTray(state) {

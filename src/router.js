@@ -6,8 +6,8 @@ const frequencies = ['All frequencies', 'Daily', 'Weekly', 'Monthly', 'Quarterly
 export const defaults = {
   page: 'overview', seriesId: 'unrate', range: 12, transform: 'level', tab: 'data',
   query: '', topic: 'All topics', frequency: 'All frequencies', selected: ['unrate', 'cpi'],
-  exploreMode: 'catalog', comparison: 'native', day: 'all', calendarTopic: 'All topics',
-  watchOnly: false, eventId: 'cpi',
+  exploreMode: 'catalog', comparison: 'native', calendarMonth: 'upcoming', day: 'all', calendarTopic: 'All topics',
+  watchOnly: false, eventId: '',
 };
 
 /** Hash routes work on ordinary static hosts and preserve browser history. */
@@ -34,6 +34,8 @@ export function parseRoute(hash = '') {
     state.exploreMode = p.get('mode') === 'compare' ? 'compare' : 'catalog';
     state.comparison = p.get('comparison') === 'indexed' ? 'indexed' : 'native';
     state.day = releases.some(event=>event.date===p.get('day')) ? p.get('day') : 'all';
+    state.calendarMonth = releases.some(event => event.date.startsWith(p.get('month') + '-')) ? p.get('month') : !p.has('month') && state.day !== 'all' ? state.day.slice(0, 7) : 'upcoming';
+    if (state.calendarMonth !== 'upcoming' && state.day !== 'all' && !state.day.startsWith(state.calendarMonth + '-')) state.day = 'all';
     state.calendarTopic = topics.includes(p.get('calendarTopic')) ? p.get('calendarTopic') : 'All topics';
     state.watchOnly = p.get('watch') === '1';
     state.eventId = releases.some(event => event.id === p.get('event')) ? p.get('event') : defaults.eventId;
@@ -62,10 +64,11 @@ export function routeFor(input) {
     if (state.range === 6) p.set('range', '6');
   }
   if (state.page === 'calendar') {
+    if (state.calendarMonth !== 'upcoming') p.set('month', state.calendarMonth);
     if (state.day !== 'all') p.set('day', state.day);
     if (state.calendarTopic !== 'All topics') p.set('calendarTopic', state.calendarTopic);
     if (state.watchOnly) p.set('watch', '1');
-    if (state.eventId !== 'cpi') p.set('event', state.eventId);
+    if (state.eventId) p.set('event', state.eventId);
   }
   return `#${path}${p.size ? `?${p}` : ''}`;
 }

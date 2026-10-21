@@ -4,7 +4,7 @@ import { renderPage } from '../src/pages.js';
 import * as ui from '../src/ui.js';
 import { escapeHtml, chart } from '../src/ui.js';
 import { getSeries, latest, formatValue, transformSeries } from '../src/model.js';
-import { releases, yieldCurve } from '../src/data.js';
+import { releases, yieldCurve, dataStatus } from '../src/data.js';
 import { renderCharts } from '../src/charts.js';
 
 const base = {
@@ -14,6 +14,24 @@ const base = {
   watchOnly: false, eventId: 'cpi', saved: [], density: 'compact',
 };
 const render = (state = {}) => renderPage({ ...base, ...state });
+
+function withCalendar(events, calendar, run) {
+  const savedEvents = releases.splice(0), savedCalendar = dataStatus.calendar;
+  releases.push(...events);
+  dataStatus.calendar = calendar;
+  try { run(); }
+  finally { releases.splice(0, releases.length, ...savedEvents); dataStatus.calendar = savedCalendar; }
+}
+
+const calendarEvent = (changes = {}) => ({
+  id: 'bls-employment-2026-11-06', sourceId: 'bls', program: 'employment', name: 'Employment Situation', agency: 'BLS',
+  seriesId: 'unrate', seriesIds: ['unrate', 'payroll', 'participation', 'wages'], topic: 'Labor', date: '2026-11-06', time: '08:30',
+  scheduledAt: '2026-11-06T13:30:00Z', period: null, periodLabel: null, sourceUrl: 'https://www.bls.gov/schedule/news_release/bls.ics', ...changes,
+});
+const calendarFixture = { status: 'partial', message: 'BLS retained; BEA unavailable.', sources: {
+  bls: { id: 'bls', agency: 'BLS', status: 'error', fetchedAt: '2026-10-20T12:00:00Z', lastAttemptAt: '2026-10-21T12:00:00Z', error: 'HTTP 503', warnings: [] },
+  bea: { id: 'bea', agency: 'BEA', status: 'unavailable', lastAttemptAt: '2026-10-21T12:00:00Z', error: 'No response', warnings: [] },
+}, links: [{ name: 'BLS release schedule', url: 'https://www.bls.gov/schedule/' }, { name: 'BEA release schedule', url: 'https://www.bea.gov/news/schedule' }] };
 
 test('HTML helpers escape untrusted values and expose declarative chart controls', () => {
   assert.equal(escapeHtml('<a title="x">&\'test\'</a>'), '&lt;a title=&quot;x&quot;&gt;&amp;&#39;test&#39;&lt;/a&gt;');
@@ -48,12 +66,82 @@ test('indicator data table uses the same transformed observations as its chart',
 });
 
 test('calendar empty filters remove any release preview and keep a clear recovery action', () => {
-  const html = render({ page: 'calendar', watchOnly: true, saved: [] });
-  assert.match(html, /No (verified )?releases (have been ingested|match)/i);
-  assert.match(html, /data-reset-calendar/);
-  assert.doesNotMatch(html, /class="detail-title"/);
-  assert.match(html, /bls\.gov[^\"]*schedule/);
-  assert.match(html, /bea\.gov[^\"]*schedule/);
+  withCalendar([calendarEvent()], calendarFixture, () => {
+    const html = render({ page: 'calendar', calendarMonth: '2026-11', watchOnly: true, saved: [] });
+    assert.match(html, /No releases match/i);
+    assert.match(html, /data-reset-calendar/);
+    assert.doesNotMatch(html, /class="detail-title"/);
+    assert.match(html, /bls\.gov[^\"]*schedule/);
+    assert.match(html, /bea\.gov[^\"]*schedule/);
+  });
+});
+
+test('one employment release matches every related watchlist series and links their details', () => {
+  withCalendar([calendarEvent()], calendarFixture, () => {
+    for (const id of ['unrate', 'payroll', 'participation', 'wages']) {
+      const html = render({ page: 'calendar', calendarMonth: '2026-11', watchOnly: true, saved: [id] });
+      assert.equal((html.match(/class="calendar-event/g) || []).length, 1);
+      assert.match(html, /Observation period not supplied/i);
+      assert.match(html, /08:30 EST/);
+      for (const related of ['unrate', 'payroll', 'participation', 'wages']) assert.ok(html.includes(`href="#/series/${related}"`));
+      assert.match(html, /href="https:\/\/www\.bls\.gov\/schedule\/news_release\/bls\.ics"/);
+    }
+  });
+});
+
+test('cached calendar capture and partial agency failures stay distinct from observation retrievals', () => {
+  withCalendar([calendarEvent()], calendarFixture, () => {
+    const html = render({ page: 'calendar', calendarMonth: '2026-11' });
+    assert.match(html, /CACHED SCHEDULE/);
+    assert.match(html, /BLS retained; BEA unavailable\./);
+    assert.match(html, /2026-10-20T12:00:00Z/);
+    assert.match(html, /2026-10-21T12:00:00Z/);
+    assert.match(html, /HTTP 503/);
+    assert.match(html, /No response/);
+    assert.doesNotMatch(html, />OUT<|>NEXT<|>Released</i);
+  });
+});
+
+test('calendar groups only the selected month and uses bounded month and day selectors', () => {
+  const events = Array.from({ length: 365 }, (_, index) => {
+    const date = new Date(Date.UTC(2026, 0, index + 1)).toISOString().slice(0, 10);
+    return calendarEvent({ id: `release-${date}`, date, scheduledAt: `${date}T13:30:00Z` });
+  });
+  withCalendar(events, calendarFixture, () => {
+    const html = render({ page: 'calendar', calendarMonth: '2026-11' });
+    assert.equal((html.match(/class="calendar-event/g) || []).length, 30);
+    assert.match(html, /id="calendar-month"/);
+    assert.match(html, /id="calendar-day"/);
+    assert.doesNotMatch(html, /data-day=/);
+    assert.match(html, /Nov 1, 2026/);
+    assert.doesNotMatch(html, /class="calendar-day"[^]*Oct 31, 2026/);
+    const selectedDay = render({ page: 'calendar', calendarMonth: '2026-11', day: '2026-11-06' });
+    assert.equal((selectedDay.match(/class="calendar-event/g) || []).length, 1);
+  });
+});
+
+test('overview release watch selects upcoming ET dates rather than old schedule entries', () => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const dateAfter = days => new Date(Date.parse(`${today}T12:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
+  const events = [calendarEvent({ id: 'past', name: 'Past release', date: dateAfter(-1) }), calendarEvent({ id: 'elapsed', name: 'Elapsed today', date: today, scheduledAt: new Date(Date.now() - 60000).toISOString() }), ...[1, 2, 3, 4, 5, 40].map(days => calendarEvent({ id: `future-${days}`, name: `Future release ${days}`, date: dateAfter(days), scheduledAt: `${dateAfter(days)}T13:30:00Z` }))];
+  withCalendar(events, calendarFixture, () => {
+    const html = render();
+    assert.doesNotMatch(html, /Past release|Elapsed today|Future release 5|Future release 40/);
+    for (const days of [1, 2, 3, 4]) assert.ok(html.includes(`Future release ${days}`));
+    assert.match(html, /CACHED SCHEDULE/);
+    assert.doesNotMatch(html, />OUT<|>NEXT</);
+  });
+});
+
+test('calendar preserves an authoritative period label and shows daylight saving time from the event instant', () => {
+  const calendar = { ...calendarFixture, sources: { bea: { id: 'bea', agency: 'BEA', status: 'ok', fetchedAt: '2026-10-21T12:00:00Z' } } };
+  withCalendar([calendarEvent({ id: 'bea-pio', sourceId: 'bea', agency: 'BEA', name: 'Personal Income and Outlays, September 2026', seriesId: 'pce', seriesIds: ['pce'], topic: 'Prices', date: '2026-10-15', scheduledAt: '2026-10-15T12:30:00Z', periodLabel: 'September 2026', sourceUrl: 'https://www.bea.gov/news/schedule/ics/online-calendar-subscription.ics' })], calendar, () => {
+    const html = render({ page: 'calendar', calendarMonth: '2026-10' });
+    assert.match(html, /September 2026/);
+    assert.match(html, /08:30 EDT/);
+    assert.match(html, /Bureau of Economic Analysis/);
+    assert.doesNotMatch(html, /Observation period not supplied/);
+  });
 });
 
 test('catalog escapes search input and renders a useful no-results state', () => {
