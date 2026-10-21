@@ -1,8 +1,8 @@
 import { easternFields } from './calendar-utils.mjs';
 import { assertCommercialData } from '../data-policy.mjs';
 
-const calendarLinks=[{name:'BLS release calendar',url:'https://www.bls.gov/schedule/'},{name:'BEA release schedule',url:'https://www.bea.gov/news/schedule/'},{name:'Census release schedule',url:'https://www.census.gov/economic-indicators/calendar-listview.html'},{name:'DOL claims release information',url:'https://oui.doleta.gov/unemploy/archive.asp'}];
-const calendarCoverage='Captured schedules cover Employment Situation, CPI, JOLTS, national GDP and Personal Income and Outlays. Census retail, DOL claims and Treasury publication schedules are not ingested. Dates can change; a scheduled time does not confirm publication or results.';
+const calendarLinks=[{name:'BLS release calendar',url:'https://www.bls.gov/schedule/'},{name:'BEA release schedule',url:'https://www.bea.gov/news/schedule/'},{name:'Census release schedule',url:'https://www.census.gov/economic-indicators/calendar-listview.html'},{name:'DOL claims release schedule',url:'https://oui.doleta.gov/unemploy/claims_arch.asp'}];
+const calendarCoverage='Schedules cover Employment Situation, CPI, JOLTS, national GDP, Personal Income and Outlays, Census advance retail sales and DOL weekly claims. DOL dates expand its published Thursday rule and explicit holiday exceptions within a 90-day upcoming window; these are labeled separately from individually listed dates. Treasury publication schedules are not ingested. Dates can change; a scheduled time does not confirm publication or results.';
 
 function validateCalendar(id,result) {
   if(!result||result.id!==id||!Array.isArray(result.events)||result.events.length>2000||!Number.isFinite(Date.parse(result.fetchedAt))||!result.provenance?.length)throw new Error(`Invalid official calendar response for ${id}`);
@@ -31,7 +31,7 @@ async function refreshCalendar(previous,collectors,checkedAt,now) {
     }
   }));
   const values=Object.values(sources),success=values.some(source=>source.status==='ok'),captured=values.some(source=>source.fetchedAt);
-  const complete=['bls','bea'].every(id=>sources[id]?.status==='ok'&&!sources[id]?.failedYears?.length);
+  const complete=['bls','bea','census','dol'].every(id=>sources[id]?.status==='ok'&&!sources[id]?.failedYears?.length);
   const status=complete?'ok':success?'partial':captured?'error':'unavailable';
   return {status,message:calendarCoverage,sources,links:calendarLinks,checkedAt};
 }

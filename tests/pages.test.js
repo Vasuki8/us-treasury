@@ -144,6 +144,74 @@ test('calendar preserves an authoritative period label and shows daylight saving
   });
 });
 
+test('Census retail schedule events match the retail watchlist and retain the originating program credit', () => {
+  const event = calendarEvent({ id: 'census-retail-nov', sourceId: 'census', program: 'retail-sales', name: 'Advance Monthly Sales for Retail and Food Services', agency: 'Census', seriesId: 'retail', seriesIds: ['retail'], topic: 'Growth', scheduleBasis: 'listed-date', date: '2026-11-17', scheduledAt: '2026-11-17T13:30:00Z', periodLabel: 'October 2026', sourceUrl: 'https://www.census.gov/economic-indicators/calendar-listview.html' });
+  withCalendar([event], { status: 'ok', sources: { census: { status: 'ok', fetchedAt: '2026-10-21T12:00:00Z', warnings: [] } } }, () => {
+    const html = render({ page: 'calendar', calendarMonth: '2026-11', watchOnly: true, saved: ['retail'], calendarTopic: 'Growth' });
+    assert.equal((html.match(/class="calendar-event/g) || []).length, 1);
+    assert.match(html, /href="#\/series\/retail"/);
+    assert.match(html, /U\.S\. Census Bureau, Advance Monthly Retail Trade Survey/);
+    assert.match(html, /Individually listed date on the official agency schedule/);
+    assert.match(html, /October 2026/);
+    assert.doesNotMatch(html, /AGENCY RULE/);
+  });
+});
+
+test('DOL agency-rule dates match claims watchlists and explain their basis without inventing an observation week', () => {
+  const events = [
+    calendarEvent({ id: 'dol-oct22', sourceId: 'dol', program: 'weekly-claims', name: 'Unemployment Insurance Weekly Claims', agency: 'DOL', seriesId: 'claims', seriesIds: ['claims'], topic: 'Labor', scheduleBasis: 'recurring-rule', nominalDate: '2026-10-22', date: '2026-10-22', scheduledAt: '2026-10-22T12:30:00Z', sourceUrl: 'https://oui.doleta.gov/unemploy/claims_arch.asp' }),
+    calendarEvent({ id: 'dol-nov05', sourceId: 'dol', program: 'weekly-claims', name: 'Unemployment Insurance Weekly Claims', agency: 'DOL', seriesId: 'claims', seriesIds: ['claims'], topic: 'Labor', scheduleBasis: 'recurring-rule', nominalDate: '2026-11-05', date: '2026-11-05', scheduledAt: '2026-11-05T13:30:00Z', sourceUrl: 'https://oui.doleta.gov/unemploy/claims_arch.asp' }),
+  ];
+  const calendar = { status: 'ok', sources: { dol: { status: 'ok', fetchedAt: '2026-10-21T12:00:00Z', coverageNote: 'Future dates follow the agency <rule>; schedules may change.', warnings: [] } } };
+  withCalendar(events, calendar, () => {
+    for (const [month, timezone] of [['2026-10', 'EDT'], ['2026-11', 'EST']]) {
+      const html = render({ page: 'calendar', calendarMonth: month, watchOnly: true, saved: ['claims'], calendarTopic: 'Labor' });
+      assert.equal((html.match(/class="calendar-event/g) || []).length, 1);
+      assert.match(html, /AGENCY RULE/);
+      assert.match(html, /<span class="table-code muted">AGENCY RULE · Observation period not supplied · DOL<\/span>/);
+      assert.match(html, /Thursday at 08:30 Eastern Time/);
+      assert.match(html, new RegExp(`08:30 ${timezone}`));
+      assert.match(html, /Observation period not supplied/);
+      assert.match(html, /Department of Labor, Employment and Training Administration/);
+      assert.match(html, /href="#\/series\/claims"/);
+      assert.match(html, /agency &lt;rule&gt;/);
+      assert.doesNotMatch(html, /Week ending|<rule>/);
+    }
+  });
+});
+
+test('DOL individually posted exceptions identify the nominal Thursday while cached failures retain basis disclosure', () => {
+  const event = calendarEvent({ id: 'dol-thanksgiving', sourceId: 'dol', program: 'weekly-claims', name: 'Unemployment Insurance Weekly Claims', agency: 'DOL', seriesId: 'claims', seriesIds: ['claims'], topic: 'Labor', scheduleBasis: 'published-exception', nominalDate: '2026-11-26', date: '2026-11-25', scheduledAt: '2026-11-25T13:30:00Z', sourceUrl: 'https://oui.doleta.gov/unemploy/claims_arch.asp' });
+  const source = { status: 'ok', fetchedAt: '2026-10-21T12:00:00Z', warnings: [] };
+  withCalendar([event], { status: 'ok', sources: { dol: source } }, () => {
+    const html = render({ page: 'calendar', calendarMonth: '2026-11' });
+    assert.match(html, /AGENCY EXCEPTION/);
+    assert.match(html, /<span class="table-code muted">AGENCY EXCEPTION · Observation period not supplied · DOL<\/span>/);
+    assert.match(html, /official DOL schedule lists this exception/i);
+    assert.match(html, /Nominal Thursday: Nov 26, 2026/);
+    assert.match(html, /Nov 25, 2026/);
+    source.status = 'error'; source.error = 'HTTP 503';
+    const cached = render({ page: 'calendar', calendarMonth: '2026-11' });
+    assert.match(cached, /CACHED SCHEDULE/);
+    assert.match(cached, /official DOL schedule lists this exception/i);
+    assert.match(cached, /Nominal Thursday: Nov 26, 2026/);
+    assert.match(cached, /HTTP 503/);
+  });
+});
+
+test('overview release watch distinguishes a DOL rule date from an individually posted exception', () => {
+  const now = Date.now(), dateAfter = days => new Date(now + days * 86400000).toISOString().slice(0, 10);
+  const events = ['recurring-rule', 'published-exception'].map((scheduleBasis, index) => calendarEvent({ id: `dol-${index}`, sourceId: 'dol', program: 'weekly-claims', name: `Claims ${index}`, agency: 'DOL', seriesId: 'claims', seriesIds: ['claims'], topic: 'Labor', scheduleBasis, nominalDate: dateAfter(index + 2), date: dateAfter(index + 1), scheduledAt: `${dateAfter(index + 1)}T13:30:00Z`, sourceUrl: 'https://oui.doleta.gov/unemploy/claims_arch.asp' }));
+  withCalendar(events, { status: 'ok', sources: { dol: { status: 'ok', fetchedAt: '2026-10-21T12:00:00Z' } } }, () => {
+    const html = render();
+    assert.match(html, /AGENCY RULE/);
+    assert.match(html, /AGENCY EXCEPTION/);
+    assert.match(html, /<small>AGENCY RULE · [^<]*· DOL · Observation period not supplied<\/small>/);
+    assert.match(html, /<small>AGENCY EXCEPTION · [^<]*· DOL · Observation period not supplied<\/small>/);
+    assert.doesNotMatch(html, />OUT<|>NEXT</);
+  });
+});
+
 test('catalog escapes search input and renders a useful no-results state', () => {
   const html = render({ page: 'explore', query: '"><script>bad</script>' });
   assert.doesNotMatch(html, /<script>/);

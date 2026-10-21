@@ -106,3 +106,14 @@ test('a failed BLS next-year fetch retains the whole previous agency schedule wi
   assert.deepEqual(next.releases,prior.releases);
   assert.match(next.calendar.sources.bls.error,/2027.*Retained/);
 });
+
+test('calendar status stays partial when either added agency fails while BLS and BEA succeed',async()=>{
+  const good=id=>({id,status:'ok',events:[],fetchedAt:'2026-10-21T12:00:00.000Z',provenance:[],warnings:[]});
+  for(const missing of ['census','dol']) {
+    const sources=Object.fromEntries(['bls','bea','census','dol'].filter(id=>id!==missing).map(id=>[id,good(id)]));
+    const next=await refreshSnapshot({previous:{calendar:{sources}},calendarCollectors:{[missing]:async()=>{throw Error('HTTP 503');}}});
+    assert.equal(next.calendar.status,'partial',`${missing} absence must remain visible`);
+    assert.equal(next.calendar.sources[missing].status,'unavailable');
+    assert.match(next.calendar.sources[missing].error,/503/);
+  }
+});

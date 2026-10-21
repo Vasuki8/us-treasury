@@ -68,6 +68,18 @@ export const calendarPolicies = {
     terms:['https://www.bea.gov/help/faq/147','https://www.bea.gov/help/guidelines-for-citing-bea'],
     programs:{gdp:['gdp'],'personal-income-outlays':['pce']},
   },
+  census: {
+    reviewedOn:'2026-10-21',commercialUse:true,
+    basis:'Scoped review of factual federal retail release titles, dates, times and reference periods; Census employee-work policy and Copyright Office exclusions for facts/names, with Census program credit. This is not a calendar CC0 claim.',
+    terms:['https://www2.census.gov/foia/ds_policies/ds027.pdf','https://www.copyright.gov/what-is-copyright/','https://www.census.gov/about/policies/citation.html'],
+    programs:{'retail-sales':['retail']},
+  },
+  dol: {
+    reviewedOn:'2026-10-21',commercialUse:true,
+    basis:'DOL public-domain federal schedule metadata; bounded future expansion of the published weekly rule with its explicit holiday exceptions, source credit and no endorsement',
+    terms:['https://beta.dol.gov/about/notices/website-content-and-publication-practices/public-domain-copyright-trademarks-patents','https://oui.doleta.gov/unemploy/claims_arch.asp'],
+    programs:{'weekly-claims':['claims']},
+  },
 };
 
 function calendarFeed(value,id) {
@@ -76,8 +88,35 @@ function calendarFeed(value,id) {
     if(url.username||url.password||url.search||url.hash)return false;
     if(id==='bls')return url.origin==='https://www.bls.gov' && /^\/schedule\/\d{4}\/home\.htm$/.test(url.pathname);
     if(id==='bea')return url.href==='https://www.bea.gov/news/schedule/ics/online-calendar-subscription.ics';
+    if(id==='census')return url.origin==='https://www.census.gov'&&/^\/economic-indicators\/calendar-listview(?:-\d{4})?\.html$/.test(url.pathname);
+    if(id==='dol')return url.href==='https://oui.doleta.gov/unemploy/claims_arch.asp';
   } catch { /* Invalid calendar URLs are outside the reviewed scope. */ }
   return false;
+}
+
+function calendarDate(value) {
+  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))return null;
+  const stamp=Date.parse(`${value}T12:00:00Z`);
+  return Number.isFinite(stamp)&&new Date(stamp).toISOString().slice(0,10)===value?stamp:null;
+}
+
+function assertDolSchedule(source,event) {
+  const fail=()=>{throw new Error('Unreviewed DOL calendar rule, coverage or exception');};
+  const start=calendarDate(source.coverageStart),end=calendarDate(source.coverageEnd),nominal=calendarDate(event.nominalDate),date=calendarDate(event.date);
+  if(source.scheduleMethod!=='recurring-rule-with-exceptions'||!source.rawScheduleRule?.startsWith('Publication Schedule: The UI Weekly Claims News Release is published each week on Thursday morning at 8:30am EST.')||start===null||end===null||end<start||end-start>89*86400000||nominal===null||new Date(nominal).getUTCDay()!==4||date===null||date<start||date>end||event.time!=='08:30'||event.period!==null||event.periodLabel!==null)fail();
+  if(!Array.isArray(source.publishedExceptions)||!source.publishedExceptions.length)fail();
+  const seen=new Set();
+  for(const exception of source.publishedExceptions) {
+    const posted=calendarDate(exception.date),replaced=calendarDate(exception.nominalDate);
+    if(posted===null||replaced===null||new Date(posted).getUTCDay()!==3||replaced-posted!==86400000||exception.time!=='08:30'||seen.has(exception.nominalDate))fail();
+    seen.add(exception.nominalDate);
+  }
+  const lastYear=Math.max(...source.publishedExceptions.map(exception=>Number(exception.date.slice(0,4))));
+  if(source.coverageEnd>`${lastYear}-12-31`)fail();
+  const exception=source.publishedExceptions.find(item=>item.nominalDate===event.nominalDate);
+  if(exception) {
+    if(event.scheduleBasis!=='published-exception'||event.date!==exception.date||event.time!==exception.time)fail();
+  } else if(event.scheduleBasis!=='recurring-rule'||event.date!==event.nominalDate)fail();
 }
 
 function assertCalendarData(snapshot) {
@@ -92,6 +131,8 @@ function assertCalendarData(snapshot) {
       const approved=Object.hasOwn(policy.programs,event.program)?policy.programs[event.program]:null;
       if(event.sourceId!==id||!approved||event.seriesId!==approved[0]||!Array.isArray(event.seriesIds)||event.seriesIds.length!==approved.length||!approved.every((value,index)=>event.seriesIds[index]===value))throw new Error(`Unreviewed calendar program or indicator mapping for ${id}`);
       if(!calendarFeed(event.sourceUrl,id)||!source.provenance?.some(item=>item.url===event.sourceUrl))throw new Error(`Unreviewed calendar feed for ${id}`);
+      if(id==='census'&&(event.scheduleBasis!=='listed-date'||['description','html','content','body','image','logo'].some(key=>Object.hasOwn(event,key))))throw new Error('Unreviewed Census calendar content beyond listed factual metadata');
+      if(id==='dol')assertDolSchedule(source,event);
       if(!event.id||captured.has(event.id))throw new Error('Invalid or duplicate captured calendar identifier');
       captured.set(event.id,event);
     }

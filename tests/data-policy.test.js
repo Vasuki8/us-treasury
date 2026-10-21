@@ -84,3 +84,43 @@ test('an approved agency label cannot introduce calendar records outside its cap
   const calendar={sources:{bea:{events:[event],provenance:[{url:event.sourceUrl,sha256:'a'.repeat(64)}]}}};
   assert.throws(()=>assertCommercialData({calendar,releases:[{...event,id:'fabricated'}]}),/calendar/i);
 });
+
+const newCalendarEvent=(sourceId,extra={})=>({id:`${sourceId}-example`,sourceId,program:sourceId==='census'?'retail-sales':'weekly-claims',seriesId:sourceId==='census'?'retail':'claims',seriesIds:[sourceId==='census'?'retail':'claims'],sourceUrl:sourceId==='census'?'https://www.census.gov/economic-indicators/calendar-listview.html':'https://oui.doleta.gov/unemploy/claims_arch.asp',scheduleBasis:sourceId==='census'?'listed-date':'recurring-rule',date:'2026-10-22',time:'08:30',nominalDate:'2026-10-22',period:null,periodLabel:null,...extra});
+const dolCalendarSource=events=>({events,provenance:[{url:'https://oui.doleta.gov/unemploy/claims_arch.asp',sha256:'a'.repeat(64)}],scheduleMethod:'recurring-rule-with-exceptions',rawScheduleRule:'Publication Schedule: The UI Weekly Claims News Release is published each week on Thursday morning at 8:30am EST.',coverageStart:'2026-10-21',coverageEnd:'2027-01-18',publishedExceptions:[{date:'2026-11-25',time:'08:30',nominalDate:'2026-11-26'},{date:'2027-11-10',time:'08:30',nominalDate:'2027-11-11'}]});
+function calendarSnapshot(id,source) { return {calendar:{sources:{[id]:source}},releases:source.events}; }
+
+test('Census calendar approval covers factual retail metadata on exact annual schedule feeds',()=>{
+  const event=newCalendarEvent('census');
+  const source={events:[event],provenance:[{url:event.sourceUrl,sha256:'a'.repeat(64)}]};
+  assert.doesNotThrow(()=>assertCommercialData(calendarSnapshot('census',source)));
+  const archived=structuredClone(source);
+  archived.events[0].sourceUrl='https://www.census.gov/economic-indicators/calendar-listview-2026.html';
+  archived.provenance[0].url=archived.events[0].sourceUrl;
+  assert.doesNotThrow(()=>assertCommercialData(calendarSnapshot('census',archived)));
+  for(const change of [{program:'durable-goods'},{seriesIds:['retail','gdp']},{sourceUrl:'https://www.census.gov/retail/release_schedule.html'},{scheduleBasis:'recurring-rule'},{description:'Unreviewed copied narrative'}]) {
+    const changed=structuredClone(source);Object.assign(changed.events[0],change);
+    assert.throws(()=>assertCommercialData(calendarSnapshot('census',changed)),/calendar/i);
+  }
+});
+
+test('DOL recurring calendar approval requires the reviewed rule and exact published exceptions',()=>{
+  const recurring=newCalendarEvent('dol');
+  const exception=newCalendarEvent('dol',{id:'dol-exception',date:'2026-11-25',nominalDate:'2026-11-26',scheduleBasis:'published-exception'});
+  assert.doesNotThrow(()=>assertCommercialData(calendarSnapshot('dol',dolCalendarSource([recurring,exception]))));
+  for(const change of [
+    {date:'2026-11-26',nominalDate:'2026-11-26',scheduleBasis:'recurring-rule'},
+    {date:'2026-11-24',nominalDate:'2026-11-26',scheduleBasis:'published-exception'},
+    {scheduleBasis:'listed-date'},
+    {time:'09:30'},
+    {nominalDate:'2026-10-23'},
+    {periodLabel:'Week ending 17 Oct 2026'},
+    {sourceUrl:'https://oui.doleta.gov/unemploy/archive.asp'},
+  ]) {
+    const changed=dolCalendarSource([{...recurring,...change}]);
+    assert.throws(()=>assertCommercialData(calendarSnapshot('dol',changed)),/calendar/i);
+  }
+  for(const change of [{scheduleMethod:'guessed-holidays'},{rawScheduleRule:''},{coverageEnd:'2027-12-31'}]) {
+    const changed={...dolCalendarSource([recurring]),...change};
+    assert.throws(()=>assertCommercialData(calendarSnapshot('dol',changed)),/calendar/i);
+  }
+});

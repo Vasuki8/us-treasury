@@ -64,8 +64,9 @@ test('production calendar contains traced official schedules without invented pu
   assert.equal(dataStatus.calendar.status,'ok');
   assert.ok(dataStatus.calendar.links.some(link=>link.url.includes('bls.gov')));
   assert.ok(dataStatus.calendar.links.some(link=>link.url.includes('bea.gov')));
-  for(const sourceId of ['bls','bea']) {
+  for(const sourceId of ['bls','bea','census','dol']) {
     const source=dataStatus.calendar.sources[sourceId];
+    assert.ok(source, `${sourceId} calendar is connected`);
     assert.equal(source.status,'ok');
     assert.match(source.fetchedAt,/^\d{4}-\d{2}-\d{2}T/);
     assert.ok(source.provenance.every(item=>/^[a-f0-9]{64}$/.test(item.sha256)));
