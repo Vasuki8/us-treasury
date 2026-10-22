@@ -11,23 +11,29 @@ async function temporary(t){const directory=await mkdtemp(path.join(tmpdir(),'me
 
 test('append-only DOL capture retains earlier records exactly, orders missing identities, and never refetches a complete archive',async()=>{
  const previous=fixture([claimsPublicationScope.at(-1).id]),before=JSON.stringify(previous);let calls=0;
- const archive=await captureClaimsPublicationArchive({previous,collect:async({ids})=>{calls++;assert.equal(ids.length,559);return fixture(ids.toReversed());}});
- assert.equal(calls,1);assert.equal(archive.releases[0],previous.releases[0]);assert.equal(JSON.stringify(previous),before);assert.equal(archive.releases.length,560);assertClaimsPublicationData(archive,{complete:true});
+ const archive=await captureClaimsPublicationArchive({previous,collect:async({ids})=>{calls++;assert.equal(ids.length,767);return fixture(ids.toReversed());}});
+ assert.equal(calls,1);assert.equal(archive.releases[0],previous.releases[0]);assert.equal(JSON.stringify(previous),before);assert.equal(archive.releases.length,768);assertClaimsPublicationData(archive,{complete:true});
  assert.equal(await captureClaimsPublicationArchive({previous:archive,collect:()=>{throw Error('No refetch');}}),archive);
 });
 
 test('retained other-year archives append only the missing 184 admitted 2025 facts without replacing retained objects',async()=>{
  const previous=fixture(claimsPublicationScope.filter(row=>!row.publicationDate.startsWith('2025')).map(row=>row.id)),before=JSON.stringify(previous);let calls=0;
  const result=await captureClaimsPublicationArchive({previous,collect:async({ids})=>{calls++;assert.equal(ids.length,184);assert.ok(ids.every(id=>claimsPublicationScope.find(row=>row.id===id).publicationDate.startsWith('2025')));return fixture(ids);}});
- assert.equal(calls,1);assert.equal(JSON.stringify(previous),before);assert.equal(result.releases.length,560);
+ assert.equal(calls,1);assert.equal(JSON.stringify(previous),before);assert.equal(result.releases.length,768);
  for(let i=0;i<previous.releases.length;i++)assert.equal(result.releases[i],previous.releases[i]);
 });
 
-test('the original 352-fact archive appends only 208 new2024 identities and preserves every original object',async()=>{
- const previous=fixture(claimsPublicationScope.slice(0,352).map(row=>row.id)),before=JSON.stringify(previous);let calls=0;
+test('retained other-year archives append only the missing 208 admitted2024 facts without replacing objects',async()=>{
+ const previous=fixture(claimsPublicationScope.filter(row=>!row.publicationDate.startsWith('2024')).map(row=>row.id)),before=JSON.stringify(previous);let calls=0;
  const result=await captureClaimsPublicationArchive({previous,collect:async({ids})=>{calls++;assert.equal(ids.length,208);assert.ok(ids.every(id=>claimsPublicationScope.find(row=>row.id===id).publicationDate.startsWith('2024')));return fixture(ids.toReversed());}});
- assert.equal(calls,1);assert.equal(JSON.stringify(previous),before);assert.equal(result.releases.length,560);
- for(let i=0;i<352;i++)assert.equal(result.releases[i],previous.releases[i]);
+ assert.equal(calls,1);assert.equal(JSON.stringify(previous),before);assert.equal(result.releases.length,768);
+ for(let i=0;i<previous.releases.length;i++)assert.equal(result.releases[i],previous.releases[i]);
+});
+
+test('the original560-fact archive appends only208 reviewed2023 identities, including the originalDOL edition, without replacing records',async()=>{
+ const previous=fixture(claimsPublicationScope.slice(0,560).map(row=>row.id)),before=JSON.stringify(previous);let calls=0;
+ const result=await captureClaimsPublicationArchive({previous,collect:async({ids})=>{calls++;assert.equal(ids.length,208);assert.ok(ids.every(id=>claimsPublicationScope.find(row=>row.id===id).publicationDate.startsWith('2023')));return fixture(ids.toReversed());}});
+ assert.equal(calls,1);assert.equal(JSON.stringify(previous),before);assert.equal(result.releases.length,768);for(let i=0;i<560;i++)assert.equal(result.releases[i],previous.releases[i]);
 });
 test('incomplete, duplicate, extra and conflicting source batches reject without changing retained records',async()=>{
  const previous=fixture([claimsPublicationScope[0].id]),before=JSON.stringify(previous);

@@ -1,6 +1,6 @@
 # Archived DOL claims publication facts
 
-Reviewed October 22, 2026. This page records the initial admission of national regular UI seasonally adjusted initial and continued claims facts in **42 archived official releases, January 8–October 22, 2026**. Its batch counts and verification below describe that milestone. The [2025 extension](dol-publications-2025-source-review.md) adds 46 releases / 184 facts and the [2024 extension](dol-publications-2024-source-review.md) adds 52 releases / 208 facts, bringing active scope to 140 releases / 560 facts while preserving this entire original batch. Publication history remains separate from the revised XML feed and latest release context.
+Reviewed October 22, 2026. This page records the initial **42 official releases / 168 facts, January 8–October 22, 2026**. Counts and verification below describe that milestone. Subsequent [2025](dol-publications-2025-source-review.md) and [2024](dol-publications-2024-source-review.md) batches preserved it; the [2023 extension](dol-publications-2023-source-review.md) brings active scope to 192 releases / 768 facts. Publication history remains separate from revised XML and latest release context.
 
 ## Source discovery and commercial scope
 

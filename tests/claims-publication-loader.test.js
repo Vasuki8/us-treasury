@@ -9,8 +9,8 @@ test('claims loader is lazy and retries its native module URL with a fresh query
  assert.ok(api,'Claims publication loader must exist');const urls=[];
  const loader=api.createClaimsPublicationLoader({importModule:async url=>{urls.push(url);if(urls.length===1)throw Error('old failed module');return {claimsPublicationArchive:{version:1,releases:[]}};}});
  assert.equal(urls.length,0);await assert.rejects(loader.load(),/failed/);await loader.load({retry:true});assert.equal(urls.length,2);assert.match(urls[0],/claims-publication-archive\.js$/);assert.match(urls[1],/claims-publication-archive\.js\?retry=/);
- const complete=api.createClaimsPublicationLoader({importModule:async()=>({claimsPublicationArchive:{version:1,releases:Array(560).fill({})}})});assert.equal((await complete.load()).releases.length,560,'the approved 2024/2025/2026 scope fits the loader');
- const tooMany=api.createClaimsPublicationLoader({importModule:async()=>({claimsPublicationArchive:{version:1,releases:Array(561).fill({})}})});await assert.rejects(tooMany.load(),/structure/i);
+ const complete=api.createClaimsPublicationLoader({importModule:async()=>({claimsPublicationArchive:{version:1,releases:Array(768).fill({})}})});assert.equal((await complete.load()).releases.length,768,'the approved 2023/2024/2025/2026 scope fits the loader');
+ const tooMany=api.createClaimsPublicationLoader({importModule:async()=>({claimsPublicationArchive:{version:1,releases:Array(769).fill({})}})});await assert.rejects(tooMany.load(),/structure/i);
 });
 test('publication synchronization loads only the selected family and stale completion cannot replace another view',async()=>{
  assert.ok(control,'Publication controller must exist');let route={page:'overview'},renders=0,finishGdp,finishClaims;const calls={gdp:0,claims:0};

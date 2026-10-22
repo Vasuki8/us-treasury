@@ -1,6 +1,6 @@
 # Archived DOL claims publications: 2025 extension
 
-Reviewed October 22, 2026. This records the addition of **46 official 2025 releases and 184 facts** to the [original 2026 admission](dol-publication-history-source-review.md), reaching 88 releases / 352 facts at this milestone. The [2024 extension](dol-publications-2024-source-review.md) subsequently brings active scope to 140 releases / 560 facts while preserving this entire batch. Counts and verification below describe the 2025 milestone. Revised XML history, current advance context, calendars, GDP publications and immutable snapshot captures remain separate.
+Reviewed October 22, 2026. This page records **46 official 2025 releases / 184 facts**, reaching 88 releases / 352 facts while preserving the original 2026 batch. The [2024 extension](dol-publications-2024-source-review.md) subsequently reached140/560; the [2023 extension](dol-publications-2023-source-review.md) brings active scope to 192 releases / 768 facts. Counts and verification below describe the 2025 milestone. Revised XML, current release context, calendars, GDP and immutable captures remain separate.
 
 ## Discovery and commercial display/export
 

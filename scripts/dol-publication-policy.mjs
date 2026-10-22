@@ -1,6 +1,7 @@
 import {dolPublicationReleases} from './dol-publication-scope.mjs';
 import {dolPublicationReleases2025} from './dol-publication-scope-2025.mjs';
 import {dolPublicationReleases2024} from './dol-publication-scope-2024.mjs';
+import {dolPublicationReleases2023} from './dol-publication-scope-2023.mjs';
 import {DOL_ADVANCE_IDS,DOL_ADVANCE_LICENSE,DOL_ADVANCE_ATTRIBUTION,DOL_SEASONAL_UPDATE_NOTICES,DOL_RELEASE_NOTICES} from './sources/dol-advance.mjs';
 import {easternInstant} from './sources/calendar-utils.mjs';
 import {isDeepStrictEqual} from 'node:util';
@@ -11,13 +12,14 @@ const keys=(value,allowed,label)=>{if(!plain(value)||Object.keys(value).some(key
 const count=value=>Number(value.replaceAll(',',''));
 const estimates={advance:'Advance','prior-week-revised':'Revised prior','prior-week-unrevised':'Unrevised prior','prior-week-status-unknown':'Prior comparison (status unknown)'};
 export const DOL_TABLE_EXTRACTION_NOTE='The printed March 5 initial-SA table change cell is 0, verified on PDF page 4. Text extraction omits that glyph; restoration is restricted to the exact reviewed PDF hash and row. The narrative explicitly says unchanged and both printed count cells are 213,000.';
+export const DOL_ORIGINAL_EDITION_NOTE="The original official April 13 PDF is retained. DOL later corrected its highest-since prose; the original and corrected PDFs report identical selected national SA numerical facts. Incorrect historical-high statements are not used here. The correction date is not established and the corrected copy is not another numerical vintage. Correction reference: https://www.dol.gov/sites/dolgov/files/OPA/newsreleases/ui-claims/20230700b.pdf";
 const tableExtractionNotes=Object.freeze({
  'https://oui.doleta.gov/press/2026/030526.pdf':DOL_TABLE_EXTRACTION_NOTE,
  'https://oui.doleta.gov/press/2025/091125.pdf':'The printed September 11 continued-SA table change cell is 0, verified on PDF page 4. Text extraction omits that glyph; restoration is restricted to the exact reviewed PDF hash and row. The narrative explicitly says unchanged and both printed count cells are 1,939,000.',
 });
-export const claimsPublicationScope=Object.freeze([...dolPublicationReleases,...dolPublicationReleases2025,...dolPublicationReleases2024].flatMap(release=>release.facts.map(fact=>Object.freeze({...fact,publicationDate:release.publicationDate,sourceUrl:release.sourceUrl,reviewedPdfSha256:release.sha256,id:`dol-${fact.seriesId}-${fact.period}-${fact.releaseStage}-${release.publicationDate}`}))));
+export const claimsPublicationScope=Object.freeze([...dolPublicationReleases,...dolPublicationReleases2025,...dolPublicationReleases2024,...dolPublicationReleases2023].flatMap(release=>release.facts.map(fact=>Object.freeze({...fact,publicationDate:release.publicationDate,sourceUrl:release.sourceUrl,reviewedPdfSha256:release.sha256,id:`dol-${fact.seriesId}-${fact.period}-${fact.releaseStage}-${release.publicationDate}`}))));
 const byId=new Map(claimsPublicationScope.map(fact=>[fact.id,fact]));
-if(byId.size!==560||dolPublicationReleases.length!==42||dolPublicationReleases2025.length!==46||dolPublicationReleases2024.length!==52)fail('reviewed scope manifest');
+if(byId.size!==768||dolPublicationReleases.length!==42||dolPublicationReleases2025.length!==46||dolPublicationReleases2024.length!==52||dolPublicationReleases2023.length!==52)fail('reviewed scope manifest');
 
 export function requestedClaimsPublicationIds(ids=claimsPublicationScope.map(row=>row.id)){
  if(!Array.isArray(ids)||ids.length>claimsPublicationScope.length||new Set(ids).size!==ids.length||ids.some(id=>!byId.has(id)))fail('unknown or duplicate requested scope');
@@ -31,6 +33,7 @@ export function claimsPublicationMetadataFor(scope){
  const footnotes=[scope.releaseStage==='advance'?`Advance estimate; subject to revision. Released ${scope.publicationDate} (day precision). Change versus the same release's ${status?status+' prior week':'prior-week comparison (revision status unspecified)'}: ${count(advance.sourceValue)-count(prior.sourceValue)} claims.`:priorFootnote];
  if(notice)footnotes.push(notice.note);
  if(releaseNotice)footnotes.push(releaseNotice.note);
+ if(scope.editionNote)footnotes.push(DOL_ORIGINAL_EDITION_NOTE);
  const tableExtractionNote=scope.tableExtractionNote?tableExtractionNotes[scope.sourceUrl]:null;
  if(scope.tableExtractionNote&&!tableExtractionNote)fail('unreviewed table extraction note');
  if(tableExtractionNote)footnotes.push(tableExtractionNote);
@@ -53,6 +56,7 @@ export function assertClaimsPublicationData(archive,{complete=false,ids}={}){
   if(source.url!==scope.sourceUrl||typeof source.sha256!=='string'||!/^[a-f0-9]{64}$/.test(source.sha256)||typeof stamp!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(stamp)||!Number.isFinite(Date.parse(stamp))||new Date(stamp).toISOString()!==stamp||Date.parse(stamp)<Date.parse(easternInstant(scope.publicationDate,'08:30')))fail('source hash or actual retrieval after publication embargo');
   if(source.lastModified!==null&&(typeof source.lastModified!=='string'||source.lastModified.length>200||!Number.isFinite(Date.parse(source.lastModified))))fail('last-modified metadata');
   if(scope.tableExtractionNote&&source.sha256!==scope.reviewedPdfSha256)fail('reviewed zero-cell PDF hash');
+  if((scope.narrativeLayoutNote||scope.editionNote)&&source.sha256!==scope.reviewedPdfSha256)fail('reviewed narrative layout or original-edition PDF hash');
  }
  if(complete||ids!==undefined){const requested=requestedClaimsPublicationIds(ids);if(seen.size!==requested.length||requested.some(id=>!seen.has(id)))fail('incomplete or unrequested batch');}
  return true;

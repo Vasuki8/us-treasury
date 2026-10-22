@@ -10,10 +10,11 @@ import {createResearchPackage,exportResearchPackage,importResearchPackage,resear
 import {parseCsv} from '../scripts/sources/http.mjs';
 const execute=promisify(execFile),root=fileURLToPath(new URL('../',import.meta.url));
 
-test('canonical archive admits all560 facts with the original weekly sequences and exact immutable prefixes',()=>{
- assertClaimsPublicationData(archive,{complete:true});assert.equal(archive.releases.length,560);
+test('canonical archive admits all768 facts with the original weekly sequences and exact immutable prefixes',()=>{
+ assertClaimsPublicationData(archive,{complete:true});assert.equal(archive.releases.length,768);
  assert.equal(createHash('sha256').update(JSON.stringify(archive.releases.slice(0,168))).digest('hex'),'52b8e550fdea7e36f4051fc609ba86ef8eb4587fecffcce6f9794bb12ab98061');
  assert.equal(createHash('sha256').update(JSON.stringify(archive.releases.slice(0,352))).digest('hex'),'a564188ec5f0149cb321edff6a62bc49edcf46ae6420258d6ae129ce57270175');
+ assert.equal(createHash('sha256').update(JSON.stringify(archive.releases.slice(0,560))).digest('hex'),'916505aca7493db3ed3db2c68e4062310668fc6d6c197ab3e691743e435be782');
  for(const [id,start,end]of [['claimsAdvance','2026-01-03','2026-10-17'],['continuedClaimsAdvance','2025-12-27','2026-10-10']]){
   const rows=archive.releases.filter(row=>row.publicationDate.startsWith('2026')&&row.seriesId===id&&row.releaseStage==='advance');assert.equal(rows.length,42);assert.equal(rows[0].period,start);assert.equal(rows.at(-1).period,end);
   for(let i=1;i<rows.length;i++)assert.equal(Date.parse(rows[i].period)-Date.parse(rows[i-1].period),7*86400000);
@@ -41,8 +42,8 @@ test('real2025 publications retain Wednesday dates, missing shutdown releases, u
  const corrected=added.filter(row=>row.tableExtractionNote);assert.equal(corrected.length,2);assert.ok(corrected.every(row=>row.seriesId==='continuedClaimsAdvance'&&row.publicationDate==='2025-09-11'));
 });
 
-test('real2024 facts retain complete independent weeks, Wednesday dates and the2025 handoff without promoting earliest priors',()=>{
- const added=archive.releases.slice(352);assert.equal(added.length,208);assert.equal(new Set(added.map(row=>row.sourceUrl)).size,52);
+test('real2024 facts retain complete independent weeks, Wednesday dates and the2025 handoff with separately evidenced original advances',()=>{
+ const added=archive.releases.slice(352,560);assert.equal(added.length,208);assert.equal(new Set(added.map(row=>row.sourceUrl)).size,52);
  assert.deepEqual([...new Set(added.map(row=>row.publicationDate))].filter(date=>new Date(date+'T00:00:00Z').getUTCDay()===3),['2024-07-03','2024-11-27']);
  assert.ok(added.every(row=>row.publishedAt===null&&row.publicationDatePrecision==='day'&&row.tableExtractionNote===null&&row.releaseStage!=='prior-week-status-unknown'));
  for(const [id,first,last,period,oldValue,newValue]of [['claimsAdvance','2023-12-30','2024-12-21','2024-12-21',219,220],['continuedClaimsAdvance','2023-12-23','2024-12-14','2024-12-14',1910,1896]]){
@@ -50,8 +51,30 @@ test('real2024 facts retain complete independent weeks, Wednesday dates and the2
   for(let i=1;i<advances.length;i++)assert.equal(Date.parse(advances[i].period)-Date.parse(advances[i-1].period),7*86400000);
   const view=selectClaimsPublicationHistory(archive,id,'2025-01-02',period);assert.deepEqual(view.releases.map(row=>[row.publicationDate,row.value]),[['2024-12-26',oldValue],['2025-01-02',newValue]]);assert.equal(view.firstAdvance.value,oldValue);assert.equal(view.rows[1].change,newValue-oldValue);
  }
- const earliest=selectClaimsPublicationHistory(archive,'claimsAdvance','2024-01-04','2023-12-23');assert.equal(earliest.firstAdvance,null);assert.equal(earliest.latest.value,220);
+ const earliest=selectClaimsPublicationHistory(archive,'claimsAdvance','2024-01-04','2023-12-23');assert.equal(earliest.firstAdvance.value,218);assert.equal(earliest.firstAdvance.publicationDate,'2023-12-28');assert.equal(earliest.latest.value,220);
  assert.equal(selectClaimsPublicationHistory(archive,'claimsAdvance','2024-07-02','2024-06-29').latest,null);assert.equal(selectClaimsPublicationHistory(archive,'claimsAdvance','2024-07-03','2024-06-29').latest.publicationDate,'2024-07-03');
+});
+
+test('real2023 facts retain independent year-edge weeks, a Wednesday release, the2024 handoff and missing original edge advances',()=>{
+ const added=archive.releases.slice(560);assert.equal(added.length,208);assert.equal(new Set(added.map(row=>row.sourceUrl)).size,52);
+ assert.deepEqual([...new Set(added.map(row=>row.publicationDate))].filter(date=>new Date(date+'T00:00:00Z').getUTCDay()===3),['2023-11-22']);
+ for(const [id,first,last,period,original,next]of [['claimsAdvance','2022-12-31','2023-12-23','2023-12-23',218,220],['continuedClaimsAdvance','2022-12-24','2023-12-16','2023-12-16',1875,1886]]){
+  const advances=added.filter(row=>row.seriesId===id&&row.releaseStage==='advance');assert.equal(advances.length,52);assert.equal(advances[0].period,first);assert.equal(advances.at(-1).period,last);for(let i=1;i<advances.length;i++)assert.equal(Date.parse(advances[i].period)-Date.parse(advances[i-1].period),7*86400000);
+  const view=selectClaimsPublicationHistory(archive,id,'2024-01-04',period);assert.deepEqual(view.releases.map(row=>[row.publicationDate,row.value]),[['2023-12-28',original],['2024-01-04',next]]);assert.equal(view.firstAdvance.value,original);assert.equal(view.rows[1].change,next-original);
+ }
+ const edge=selectClaimsPublicationHistory(archive,'claimsAdvance','2023-01-05','2022-12-24');assert.equal(edge.firstAdvance,null);assert.equal(edge.latest.value,223);
+ assert.equal(selectClaimsPublicationHistory(archive,'claimsAdvance','2023-11-21','2023-11-18').latest,null);assert.equal(selectClaimsPublicationHistory(archive,'claimsAdvance','2023-11-22','2023-11-18').latest.publicationDate,'2023-11-22');
+ assert.ok(added.every(row=>row.tableExtractionNote===null&&row.publishedAt===null&&row.releaseStage!=='prior-week-status-unknown'));
+});
+
+test('2023 hybrid-methodology boundaries are withheld while original-edition numerical confirmations and evidence survive CSV/pins',async()=>{
+ for(const [id,updatedWeek,unrevisedWeek]of [['claimsAdvance','2023-03-25','2023-04-01'],['continuedClaimsAdvance','2023-03-18','2023-03-25']]){
+  const changed=selectClaimsPublicationHistory(archive,id,'2023-04-06',updatedWeek);assert.equal(changed.rows.length,2);assert.equal(changed.rows[1].change,null);assert.match(changed.latest.seasonalAdjustmentNote,/March 2020.*June 2021.*not revised.*additive/);
+  const original=selectClaimsPublicationHistory(archive,id,'2023-04-13',unrevisedWeek);assert.equal(original.rows[1].change,0);assert.equal(original.latest.releaseStage,'prior-week-unrevised');assert.match(original.latest.sourceUrl,/20230700\.pdf$/);assert.ok(original.latest.footnotes.some(note=>note.includes('correction date is not established')));
+  const csv=claimsPublicationCsv(archive,id,'2023-04-13',unrevisedWeek),pkg=await createResearchPackage({name:'2023 official original edition',...buildClaimsPublicationPin(archive,id,'2023-04-13',unrevisedWeek)}),restored=await importResearchPackage(exportResearchPackage(pkg));
+  assert.equal(restored.context.attachments[0].content,csv);assert.deepEqual(restored.context.publicationReleases,original.releases);assert.equal(restored.catalog[id].sourceUrl,original.latest.sourceUrl);assert.equal(restored.catalog[id].fetchedAt,original.latest.provenance[0].retrievedAt);assert.match(csv,/20230700b\.pdf/,'the corrected copy is contextual evidence only');
+ }
+ assert.equal(archive.releases.filter(row=>row.publicationDate==='2023-04-13').length,4);assert.ok(!archive.releases.some(row=>/20230700b\.pdf$|press\/2023\/041323\.pdf$/.test(row.sourceUrl)));
 });
 
 test('2024 applied models withhold incompatible differences while the later no-impact factor-file notice permits ordinary same-week comparisons',async()=>{
