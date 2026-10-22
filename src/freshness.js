@@ -14,13 +14,13 @@ const targets = [
 
 export const DAILY_REFRESH_SCHEDULE = Object.freeze({ hourUTC: 23, minuteUTC: 37, graceMinutes: 60 });
 
-function refreshWindow(now) {
+function refreshWindow(now, graceMinutes = DAILY_REFRESH_SCHEDULE.graceMinutes) {
   if (!(now instanceof Date) || !Number.isFinite(now.getTime())) {
     throw new RangeError('The freshness clock must be a valid Date.');
   }
   const day = 24 * 60 * 60 * 1000;
   const scheduleOffset = (DAILY_REFRESH_SCHEDULE.hourUTC * 60 + DAILY_REFRESH_SCHEDULE.minuteUTC) * 60 * 1000;
-  const grace = DAILY_REFRESH_SCHEDULE.graceMinutes * 60 * 1000;
+  const grace = graceMinutes * 60 * 1000;
   // Select the most recent run whose grace period has elapsed. The deadline
   // crosses UTC midnight, so subtract the grace before selecting its day.
   const scheduledAt = Math.floor((now.getTime() - scheduleOffset - grace) / day) * day + scheduleOffset;
@@ -28,6 +28,11 @@ function refreshWindow(now) {
     expectedRefreshAt: new Date(scheduledAt).toISOString(),
     refreshDeadline: new Date(scheduledAt + grace).toISOString(),
   };
+}
+
+/** Latest scheduled run, including one still inside the banner's grace period. */
+export function getScheduledRefreshAt(now = new Date()) {
+  return refreshWindow(now, 0).expectedRefreshAt;
 }
 
 // Date.parse accepts calendar rollovers and local dates; capture provenance must

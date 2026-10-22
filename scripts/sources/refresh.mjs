@@ -38,7 +38,7 @@ async function refreshCalendar(previous,collectors,checkedAt,now) {
   return {status,message:calendarCoverage,sources,links:calendarLinks,checkedAt};
 }
 
-function canPublishCachedBls(source,now) {
+export function canPublishCachedBls(source,now) {
   const failure=source?.failure;
   const year=Number(easternFields(now.toISOString()).date.slice(0,4));
   const annualUrls=[year,year+1].map(value=>`https://www.bls.gov/schedule/${value}/home.htm`);

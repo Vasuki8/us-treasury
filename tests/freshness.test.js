@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { getFreshness } from '../src/freshness.js';
+import * as freshness from '../src/freshness.js';
 
 // Keep the provenance cases independent of the date this suite runs.
 const clock = { now: new Date('2026-10-21T23:30:00.000Z') };
@@ -288,14 +289,35 @@ test('invalid freshness clocks fail explicitly instead of displaying an incorrec
   }
 });
 
+test('the refresh guard selects the latest scheduled start immediately, without the banner grace period', () => {
+  assert.equal(typeof freshness.getScheduledRefreshAt, 'function');
+  for (const [now, expected] of [
+    ['2026-10-21T23:36:59.999Z', '2026-10-20T23:37:00.000Z'],
+    ['2026-10-21T23:37:00.000Z', '2026-10-21T23:37:00.000Z'],
+    ['2026-10-22T00:17:00.000Z', '2026-10-21T23:37:00.000Z'],
+    ['2026-10-22T01:17:00.000Z', '2026-10-21T23:37:00.000Z'],
+    ['2027-01-01T00:00:00.000Z', '2026-12-31T23:37:00.000Z'],
+    ['2024-03-01T00:00:00.000Z', '2024-02-29T23:37:00.000Z'],
+    ['2026-10-25T00:17:00.000Z', '2026-10-24T23:37:00.000Z'],
+    ['2026-03-08T07:30:00.000Z', '2026-03-07T23:37:00.000Z'],
+    ['2026-11-01T06:30:00.000Z', '2026-10-31T23:37:00.000Z'],
+  ]) assert.equal(freshness.getScheduledRefreshAt(new Date(now)), expected, now);
+  for (const now of [new Date('invalid'), null, '2026-10-22T00:17:00Z', 1792623600000, {}]) {
+    assert.throws(() => freshness.getScheduledRefreshAt(now), { name: 'RangeError', message: /valid Date/i });
+  }
+});
+
 test('the banner daily schedule matches the workflow that refreshes its data', async () => {
   const { DAILY_REFRESH_SCHEDULE } = await import('../src/freshness.js');
   const workflow = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
   const schedules = [...workflow.matchAll(/^\s*-\s*cron:\s*['"]([^'"]+)['"]\s*$/gm)].map(match => match[1]);
-  assert.equal(schedules.length, 1, 'A single daily refresh schedule must drive the freshness policy');
+  assert.equal(schedules.length, 2, 'A primary daily refresh and guarded catch-up schedule must drive the freshness policy');
   const [minute, hour, day, month, weekday] = schedules[0].split(/\s+/);
   assert.deepEqual([day, month, weekday], ['*', '*', '*']);
   assert.equal(DAILY_REFRESH_SCHEDULE.minuteUTC, Number(minute));
   assert.equal(DAILY_REFRESH_SCHEDULE.hourUTC, Number(hour));
   assert.equal(Object.isFrozen(DAILY_REFRESH_SCHEDULE), true);
+  assert.equal(schedules[1], '17 0,1 * * *');
+  assert.equal(freshness.getScheduledRefreshAt(new Date('2026-10-22T00:17:00Z')), '2026-10-21T23:37:00.000Z');
+  assert.equal(freshness.getScheduledRefreshAt(new Date('2026-10-22T01:17:00Z')), '2026-10-21T23:37:00.000Z');
 });

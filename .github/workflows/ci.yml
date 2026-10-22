@@ -14,6 +14,8 @@ on:
   schedule:
     # After Treasury's usual 18:00 Eastern availability in both EST and EDT.
     - cron: '37 23 * * *'
+    # Catch a missed/delayed daily trigger; the guard skips completed captures.
+    - cron: '17 0,1 * * *'
 
 permissions:
   contents: read
@@ -24,9 +26,35 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  refresh_check:
+    name: Check whether the daily refresh is due
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh_data))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      required: ${{ steps.check.outputs.required }}
+      expected_refresh_at: ${{ steps.check.outputs.expected_refresh_at }}
+    steps:
+      - name: Check out the exact starting commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      - name: Check all eleven daily capture outcomes
+        id: check
+        # Only this explicit manual option forces a repeat of a completed run.
+        run: node scripts/check-refresh-due.mjs ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_data && '--force' || '' }}
+
   refresh:
     name: Refresh official data and calendars
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh_data))
+    needs: refresh_check
+    if: ${{ !cancelled() && needs.refresh_check.result == 'success' && needs.refresh_check.outputs.required == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
@@ -70,8 +98,8 @@ jobs:
 
   verify:
     name: Verify on Node ${{ matrix.node }}
-    needs: refresh
-    if: ${{ !cancelled() && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') }}
+    needs: [refresh_check, refresh]
+    if: ${{ !cancelled() && (needs.refresh_check.result == 'success' || needs.refresh_check.result == 'skipped') && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') && (github.event_name != 'schedule' || needs.refresh.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:

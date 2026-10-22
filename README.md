@@ -42,6 +42,8 @@ npm run data:refresh -- --sources=calendar
 npm run data:refresh -- --require-all
 # Daily publication policy: permit only the verified cached BLS calendar on HTTP 403
 npm run data:refresh -- --allow-cached-bls-calendar
+# Read-only check: has the latest scheduled daily refresh completed?
+node scripts/check-refresh-due.mjs
 ```
 
 Refresh and then reload the browser. No API keys or dependency installation are needed. Refresh uses Node's server-side fetch; the browser does not contact agency APIs. BEA's two public bulk files total about 70 MB, so refreshing may take several seconds. BLS unauthenticated requests are rate-limited; all six BLS series are batched into one request.
@@ -113,6 +115,7 @@ Yield timing has a separate factual-metadata commercial-use review; the statisti
 | `src/freshness-controller.js` | Minute/resume freshness checks that preserve disclosure and keyboard focus |
 | `scripts/refresh-data.mjs`, `scripts/sources/` | Official agency retrieval, parsing, transformations and last-good retention |
 | `scripts/publish-snapshot.mjs` | Snapshot-only bot commits, expected-commit checks and normal pushes |
+| `scripts/check-refresh-due.mjs` | Daily capture completion guard for scheduled, backup and main-push refreshes |
 | `scripts/data-policy.mjs`, `docs/data-sources.md` | Reviewed commercial reuse scope, evidence and build/refresh validation |
 | `src/model.js` | Search, formatting, transformations, comparison, CSV |
 | `src/router.js` | Validated shareable hash routes |
@@ -132,7 +135,7 @@ Current live migration fallback: [Meridian on GitHub Pages](https://vasuki8.gith
 
 Continue development locally, then commit and push to [Vasuki8/us-treasury](https://github.com/Vasuki8/us-treasury).
 
-The **Test, build and deploy** GitHub Actions workflow runs on pushes to `main`, pull requests targeting `main`, manual dispatch, and a daily schedule at **23:37 UTC** (7:37 p.m. EDT / 6:37 p.m. EST). It tests Node 22 and 24, builds the app with the commercial data policy check, checks the built entry point and imported modules over HTTP, and saves a static build artifact for each Node version. No dependencies need installing.
+The **Test, build and deploy** GitHub Actions workflow runs on pushes to `main`, pull requests targeting `main`, manual dispatch, and a daily schedule at **23:37 UTC** (7:37 p.m. EDT / 6:37 p.m. EST). Backup checks run at **00:17 and 01:17 UTC**, using the same daily target. It tests Node 22 and 24, builds the app with the commercial data policy check, checks the built entry point and imported modules over HTTP, and saves a static build artifact for each Node version. No dependencies need installing.
 
 After both verification jobs pass, pushes to `main`, manual runs on `main`, and daily runs automatically deploy the verified Node 24 build to the selected host. Pull requests and manual runs on other branches run verification only. Only `dist/` is published. Main runs are serialized so a new push does not interrupt an active deployment.
 
@@ -140,11 +143,17 @@ Set repository variable `DEPLOY_TARGET=cloudflare` after configuring `CLOUDFLARE
 
 Relative assets and hash routes support both an origin root on Cloudflare and the existing `/us-treasury/` Pages prefix. The static Worker has no server script and does not enable SPA fallback for missing assets.
 
-Routine push and pull-request verification uses the committed snapshot and deterministic source-response fixtures without contacting agency feeds. Scheduled runs, and manual `main` runs with **refresh_data** enabled, first attempt all five statistical collectors and all six calendar/timing collectors with `--allow-cached-bls-calendar`. These use the existing commercially reviewed official sources and require no agency API keys. BLS calendar access currently returns HTTP 403; its last verified calendar remains visibly cached while the other ten collectors update. This exception does not apply to BLS statistical observations.
+Scheduled and main-push runs first check whether all eleven daily capture outcomes have completed since the most recent 23:37 UTC start. A missing, failed, invalid, future or older successful capture requests a full refresh. The sole exception is a verified BLS calendar HTTP 403 retained under the approved publication policy, with a new attempt in that daily window; the guard reuses the existing cached-BLS validator. That outcome counts as an attempted daily refresh while its actual old capture stays visibly cached and stale. Attempts and assembly times cannot substitute for the other ten successful captures.
+
+When due, the run attempts all five statistical collectors and all six calendar/timing collectors with `--allow-cached-bls-calendar`. Normal `main` pushes can therefore recover a missed scheduled run or a refresh rejected after a competing push. Once completed, backup scheduled checks stop after the guard, avoiding agency requests, duplicate builds and deployments. Main pushes with a completed daily capture and pull requests verify the committed snapshot using deterministic source-response fixtures. Manual `main` runs with **refresh_data** enabled force a full refresh even if the daily target is complete; leaving it disabled preserves redeploy-only behavior. Guard or collection failures block publication and deployment.
+
+These use the existing commercially reviewed official sources and require no agency API keys. BLS calendar access currently returns HTTP 403; its last verified calendar remains visibly cached while the other ten collectors update. This exception does not apply to BLS statistical observations.
 
 The refresh job tests, builds and smoke-checks the candidate before committing only `src/official-snapshot.js` with the job's `GITHUB_TOKEN`. It checks that remote `main` still matches the starting commit, refuses unrelated tracked or staged changes, and uses a normal push so competing changes cannot be overwritten. Source failures outside the approved BLS calendar exception, validation errors and push conflicts stop the run and leave the previous live deployment in place. Subsequent Node 22/24 verification and deployment check out the exact emitted snapshot commit. Refresh and deployment share one workflow because [pushes using `GITHUB_TOKEN` do not trigger another push workflow](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
 
 The cron is [GitHub's best-effort schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule): runs can be delayed, and public repositories disable schedules after 60 days without repository activity. The refresh job needs repository `contents: write`; other verification jobs retain read-only repository access. No personal token or additional repository secret is needed for data refreshes.
+
+The backup triggers and push catch-up reduce missed-run exposure; GitHub scheduling still has no delivery guarantee. Check Actions for an actual `schedule` run, not just successful push deployments. On October 22, investigation found an active workflow on default branch `main` but no scheduled runs recorded for the October 21 target; the last manual capture was at 23:18 UTC, before the 23:37 target. The resulting eleven stale warnings were correct. GitHub's API did not expose why that trigger was absent. The guard now records the expected run, decision and pending source names in the job log and Actions summary. Explicit manual **refresh_data** remains available for recovery if all scheduled attempts are missed.
 
 The banner allows **60 minutes** after each 23:37 UTC run for collection, verification and deployment. At **00:37 UTC**, a source's displayed successful capture must be at or after that run's scheduled start; older captures are marked **stale**, including on weekends. Cached status describes a failed attempt and remains independent: a source can be both cached and stale, while missing/invalid capture times remain unavailable. Attempts, assembly times and observation dates never reset this warning. A regression test keeps the banner schedule aligned with the workflow cron.
 
