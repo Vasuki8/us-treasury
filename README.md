@@ -93,7 +93,7 @@ Yield timing has a separate factual-metadata commercial-use review; the statisti
 
 ## Working features
 
-- Global data freshness banner with the latest successful source retrieval, latest recorded attempt, named cached/unavailable feeds, and expandable capture details for all eleven data/calendar sources. Times display Eastern daylight/standard time; snapshot assembly and observation periods do not stand in for refresh timestamps.
+- Global data freshness banner with the latest successful source retrieval, latest recorded attempt, named stale/cached/unavailable feeds, and expandable capture details for all eleven data/calendar sources. Times display Eastern daylight/standard time; snapshot assembly and observation periods do not stand in for refresh timestamps.
 - Connected five-page navigation, deep links, browser back/forward, refresh, F1–F5 shortcuts, and Ctrl/Cmd+K search.
 - Twelve official indicators, with definitions, source identifiers, units, adjustment, observation periods, retrieval times, source footnotes and coverage limitations.
 - Indicator level/change controls, six/twelve-observation ranges, exact-value pointer and keyboard chart readouts, and data/methodology/revision tabs.
@@ -109,7 +109,8 @@ Yield timing has a separate factual-metadata commercial-use review; the statisti
 | --- | --- |
 | `src/registry.js` | Canonical official series definitions, units and source mappings |
 | `src/data.js`, `src/official-snapshot.js` | Hydrated official snapshots, availability and provenance |
-| `src/freshness.js` | Recorded retrieval/attempt summary and independent cached data/calendar states |
+| `src/freshness.js` | Recorded retrieval/attempt summary, daily refresh deadlines and independent stale/cached states |
+| `src/freshness-controller.js` | Minute/resume freshness checks that preserve disclosure and keyboard focus |
 | `scripts/refresh-data.mjs`, `scripts/sources/` | Official agency retrieval, parsing, transformations and last-good retention |
 | `scripts/publish-snapshot.mjs` | Snapshot-only bot commits, expected-commit checks and normal pushes |
 | `scripts/data-policy.mjs`, `docs/data-sources.md` | Reviewed commercial reuse scope, evidence and build/refresh validation |
@@ -144,6 +145,10 @@ Routine push and pull-request verification uses the committed snapshot and deter
 The refresh job tests, builds and smoke-checks the candidate before committing only `src/official-snapshot.js` with the job's `GITHUB_TOKEN`. It checks that remote `main` still matches the starting commit, refuses unrelated tracked or staged changes, and uses a normal push so competing changes cannot be overwritten. Source failures outside the approved BLS calendar exception, validation errors and push conflicts stop the run and leave the previous live deployment in place. Subsequent Node 22/24 verification and deployment check out the exact emitted snapshot commit. Refresh and deployment share one workflow because [pushes using `GITHUB_TOKEN` do not trigger another push workflow](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
 
 The cron is [GitHub's best-effort schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule): runs can be delayed, and public repositories disable schedules after 60 days without repository activity. The refresh job needs repository `contents: write`; other verification jobs retain read-only repository access. No personal token or additional repository secret is needed for data refreshes.
+
+The banner allows **60 minutes** after each 23:37 UTC run for collection, verification and deployment. At **00:37 UTC**, a source's displayed successful capture must be at or after that run's scheduled start; older captures are marked **stale**, including on weekends. Cached status describes a failed attempt and remains independent: a source can be both cached and stale, while missing/invalid capture times remain unavailable. Attempts, assembly times and observation dates never reset this warning. A regression test keeps the banner schedule aligned with the workflow cron.
+
+Warnings describe the snapshot loaded in the tab, using the browser's clock; they do not establish whether an agency released new observations or whether a newer deployment already exists. The banner rechecks every minute and when a hidden/restored tab resumes, preserving expanded details and keyboard focus. **Reload snapshot** checks for a newer deployed snapshot without requesting agency feeds. Reload after a successful deployment to see its updated captures.
 
 ```powershell
 npm test

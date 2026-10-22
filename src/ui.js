@@ -1,5 +1,5 @@
 import { getSeries, latest, formatValue, formatChange, periodLabel, BLS_DATA_NOTICE } from './model.js';
-import { getFreshness } from './freshness.js';
+import { DAILY_REFRESH_SCHEDULE, getFreshness } from './freshness.js';
 
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -11,14 +11,27 @@ const freshnessTimeFormat=new Intl.DateTimeFormat('en-US',{year:'numeric',month:
 const freshnessTime=value=>value?`<time datetime="${escapeHtml(value)}">${escapeHtml(freshnessTimeFormat.format(new Date(value)))}</time>`:'Not recorded';
 
 /** Recorded source retrievals remain distinct from attempts and snapshot assembly. */
-export function freshnessBanner(snapshot={}) {
-  const freshness=getFreshness(snapshot);
-  const counts=[freshness.cached.length?`${freshness.cached.length} cached`:null,freshness.unavailable.length?`${freshness.unavailable.length} unavailable`:null].filter(Boolean);
+export function freshnessBanner(snapshot={}, options={}) {
+  const freshness=getFreshness(snapshot, options);
+  const counts=[freshness.stale.length?`${freshness.stale.length} stale`:null,freshness.cached.length?`${freshness.cached.length} cached`:null,freshness.unavailable.length?`${freshness.unavailable.length} unavailable`:null].filter(Boolean);
   const state=counts.join(' · ')||`All ${freshness.entries.length} sources captured`;
   const cached=freshness.cached.length?`<p><strong>Cached:</strong> ${freshness.cached.map(source=>escapeHtml(source.label)).join(', ')}</p>`:'';
   const unavailable=freshness.unavailable.length?`<p><strong>Unavailable:</strong> ${freshness.unavailable.length===freshness.entries.length?`All ${freshness.entries.length} official data and calendar sources`:freshness.unavailable.map(source=>escapeHtml(source.label)).join(', ')}</p>`:'';
-  const sources=freshness.entries.map(source=>`<li class="freshness-source"><div class="freshness-source-heading"><strong>${escapeHtml(source.label)}</strong><span>${source.status==='available'?'Captured':source.status==='cached'?'Cached':'Unavailable'}</span></div><p>Last successful capture: ${freshnessTime(source.fetchedAt)}</p><p>Latest attempt: ${freshnessTime(source.lastAttemptAt)}</p>${source.error?`<p class="freshness-error">${escapeHtml(source.error)}</p>`:''}</li>`).join('');
-  return `<section class="freshness-banner" data-state="${freshness.state}" aria-label="Data freshness"><div class="freshness-heading"><p class="freshness-title">DATA FRESHNESS</p><span class="freshness-state">${escapeHtml(state)}</span></div><div class="freshness-times"><p><span>Last successful source refresh</span> ${freshness.lastSuccessfulRefresh?freshnessTime(freshness.lastSuccessfulRefresh):'<strong>No successful source refresh recorded</strong>'}</p><p><span>Latest attempt</span> ${freshnessTime(freshness.lastAttemptAt)}</p></div><div class="freshness-source-summary">${cached}${unavailable}</div><p class="freshness-note">Retrieval times in Eastern Time. Observation periods vary by source.</p><details class="freshness-details"><summary>Refresh details · ${freshness.entries.length} sources</summary><ul class="freshness-source-list">${sources}</ul></details></section>`;
+  const stale=freshness.stale.length?`<div class="freshness-stale-warning">
+    <div><p class="freshness-warning-title">Daily refresh overdue</p>
+    <p><strong>Stale:</strong> ${freshness.stale.map(source=>escapeHtml(source.label)).join(', ')}</p>
+    <p class="freshness-note">These captures in this snapshot predate the expected daily run. Deadline: ${freshnessTime(freshness.refreshDeadline)}. Reload to check for a newer snapshot.</p></div>
+    <button type="button" class="action freshness-reload" data-reload-snapshot>Reload snapshot</button>
+  </div>`:'';
+  const schedule=`${String(DAILY_REFRESH_SCHEDULE.hourUTC).padStart(2,'0')}:${String(DAILY_REFRESH_SCHEDULE.minuteUTC).padStart(2,'0')} UTC`;
+  const sources=freshness.entries.map(source=>`<li class="freshness-source"${source.stale?' data-stale="true"':''}><div class="freshness-source-heading"><strong>${escapeHtml(source.label)}</strong><span>${source.stale?'Stale · ':''}${source.status==='available'?'Captured':source.status==='cached'?'Cached':'Unavailable'}</span></div><p>Last successful capture: ${freshnessTime(source.fetchedAt)}</p><p>Latest attempt: ${freshnessTime(source.lastAttemptAt)}</p>${source.stale?`<p class="freshness-error">Daily refresh deadline: ${freshnessTime(source.staleSince)}</p>`:''}${source.error?`<p class="freshness-error">${escapeHtml(source.error)}</p>`:''}</li>`).join('');
+  return `<section class="freshness-banner" data-state="${freshness.state}" aria-label="Data freshness">
+    <div class="freshness-heading"><p class="freshness-title">DATA FRESHNESS</p><span class="freshness-state">${escapeHtml(state)}</span></div>
+    <div class="freshness-times"><p><span>Last successful source refresh</span> ${freshness.lastSuccessfulRefresh?freshnessTime(freshness.lastSuccessfulRefresh):'<strong>No successful source refresh recorded</strong>'}</p><p><span>Latest attempt</span> ${freshnessTime(freshness.lastAttemptAt)}</p></div>
+    ${stale}<div class="freshness-source-summary">${cached}${unavailable}</div>
+    <p class="freshness-note">Daily refresh: ${schedule}, allowing ${DAILY_REFRESH_SCHEDULE.graceMinutes} minutes for completion. Retrieval times in Eastern Time; observation periods vary by source.</p>
+    <details class="freshness-details"><summary>Refresh details · ${freshness.entries.length} sources</summary><ul class="freshness-source-list">${sources}</ul></details>
+  </section>`;
 }
 
 export function button(label, attrs = '', className = 'action') {

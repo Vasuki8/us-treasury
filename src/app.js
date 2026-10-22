@@ -1,7 +1,8 @@
 import { releases, dataStatus } from './data.js';
 import { filterSeries, getSeries, latest, formatValue, formatChange, toCsv } from './model.js';
 import { renderPage } from './pages.js';
-import { escapeHtml as esc, sourceStatusList, sourceNotice, freshnessBanner } from './ui.js';
+import { escapeHtml as esc, sourceStatusList, sourceNotice } from './ui.js';
+import { mountFreshnessBanner } from './freshness-controller.js';
 import { renderCharts } from './charts.js';
 import { parseRoute, routeFor } from './router.js';
 import { readPreferences, writePreferences } from './storage.js';
@@ -9,8 +10,8 @@ import { readPreferences, writePreferences } from './storage.js';
 const root = document.getElementById('app');
 const main = document.getElementById('main-content');
 const status = document.getElementById('app-status');
-// Source metadata is fixed for this page load; preserve disclosure state on route changes.
-document.getElementById('data-freshness').innerHTML=freshnessBanner(dataStatus);
+// Recheck source age while keeping native disclosure state independent of routes.
+mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus);
 let storage;
 try { storage = window.localStorage; } catch { /* Session remains usable without persistence. */ }
 let state = { ...parseRoute(location.hash), ...readPreferences(storage) };
@@ -119,7 +120,8 @@ root.addEventListener('click',async event=>{
   const button=event.target.closest('button');
   if(!button)return;
   const d=button.dataset;
-  if('save' in d)save(d.save);
+  if('reloadSnapshot' in d)window.location.reload();
+  else if('save' in d)save(d.save);
   else if('series' in d && getSeries(d.series))navigate({page:'indicator',seriesId:d.series,transform:'level',tab:'data'});
   else if('page' in d && pageNames[d.page])navigate({page:d.page});
   else if('compare' in d)navigate({page:'explore',selected:[...new Set(d.compare.split(',').filter(id=>getSeries(id)))].slice(0,4),exploreMode:'compare',comparison:'native'});

@@ -12,6 +12,24 @@ const targets = [
   ['calendar', 'treasury-yield-timing', 'Treasury yield timing'],
 ];
 
+export const DAILY_REFRESH_SCHEDULE = Object.freeze({ hourUTC: 23, minuteUTC: 37, graceMinutes: 60 });
+
+function refreshWindow(now) {
+  if (!(now instanceof Date) || !Number.isFinite(now.getTime())) {
+    throw new RangeError('The freshness clock must be a valid Date.');
+  }
+  const day = 24 * 60 * 60 * 1000;
+  const scheduleOffset = (DAILY_REFRESH_SCHEDULE.hourUTC * 60 + DAILY_REFRESH_SCHEDULE.minuteUTC) * 60 * 1000;
+  const grace = DAILY_REFRESH_SCHEDULE.graceMinutes * 60 * 1000;
+  // Select the most recent run whose grace period has elapsed. The deadline
+  // crosses UTC midnight, so subtract the grace before selecting its day.
+  const scheduledAt = Math.floor((now.getTime() - scheduleOffset - grace) / day) * day + scheduleOffset;
+  return {
+    expectedRefreshAt: new Date(scheduledAt).toISOString(),
+    refreshDeadline: new Date(scheduledAt + grace).toISOString(),
+  };
+}
+
 // Date.parse accepts calendar rollovers and local dates; capture provenance must
 // be an actual UTC instant in the format written by the refresh collectors.
 function timestamp(value) {
@@ -26,11 +44,13 @@ function newest(values) {
   return values.filter(Boolean).reduce((latest, value) => latest === null || value > latest ? value : latest, null);
 }
 
-/** Summarize recorded capture outcomes, independently of data observation dates. */
-export function getFreshness(snapshot = {}) {
+/** Summarize captures against the daily deadline using a valid Date clock. */
+export function getFreshness(snapshot = {}, { now = new Date() } = {}) {
+  const { expectedRefreshAt, refreshDeadline } = refreshWindow(now);
   const entries = targets.map(([kind, sourceId, label]) => {
     const source = kind === 'data' ? snapshot?.sources?.[sourceId] : snapshot?.calendar?.sources?.[sourceId];
     const fetchedAt = timestamp(source?.fetchedAt);
+    const stale = fetchedAt !== null && fetchedAt < expectedRefreshAt;
     return {
       id: `${kind}:${sourceId}`,
       label,
@@ -39,12 +59,17 @@ export function getFreshness(snapshot = {}) {
       fetchedAt,
       lastAttemptAt: timestamp(source?.lastAttemptAt),
       error: typeof source?.error === 'string' && source.error.trim() ? source.error : null,
+      stale,
+      staleSince: stale ? refreshDeadline : null,
     };
   });
   const cached = entries.filter(entry => entry.status === 'cached');
   const unavailable = entries.filter(entry => entry.status === 'unavailable');
+  const stale = entries.filter(entry => entry.stale);
   return {
     entries,
+    expectedRefreshAt,
+    refreshDeadline,
     lastSuccessfulRefresh: newest(entries.map(entry => entry.fetchedAt)),
     lastAttemptAt: newest([
       timestamp(snapshot?.checkedAt),
@@ -53,6 +78,7 @@ export function getFreshness(snapshot = {}) {
     ]),
     cached,
     unavailable,
-    state: unavailable.length === entries.length ? 'unavailable' : cached.length || unavailable.length ? 'partial' : 'available',
+    stale,
+    state: unavailable.length === entries.length ? 'unavailable' : cached.length || unavailable.length || stale.length ? 'partial' : 'available',
   };
 }
