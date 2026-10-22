@@ -2,7 +2,7 @@
 
 A compact US fiscal and macro research dashboard with Light and Graphite themes. The original Overview, Labor Market, Indicator Detail, Calendar and Explore Data views remain available alongside eight specialist research views and a five-family macro workspace.
 
-The header's compact sun/moon **Light / Dark** button switches between Light and Graphite. New visitors start in Light; the choice is saved in the same browser alongside density and watchlist preferences. Switching preserves the current page, filters and unsaved inputs. Existing Graphite/Midnight preferences open Graphite, and Paper preferences open Light. With browser storage blocked, the button still works for the current session.
+The header's small sun/moon icon switches between Light and Graphite. Its tooltip describes the next action, and its touch target expands on mobile. New visitors start in Light; the choice is saved in the same browser alongside density and watchlist preferences. Switching preserves the current page, filters and unsaved inputs. Existing Graphite/Midnight preferences open Graphite, and Paper preferences open Light. With browser storage blocked, the button still works for the current session.
 
 Uses official Treasury, BLS, BEA, DOL ETA, Census, Federal Reserve Board and reviewed New York Fed observations captured by the data refresh command. The app serves a committed snapshot, with observation periods, source identifiers and actual retrieval times. It does not stream live market quotes.
 
