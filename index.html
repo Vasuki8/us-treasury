@@ -24,19 +24,36 @@
       <label class="appearance density-label">Density <select id="density-select"><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select></label>
     </header>
     <nav class="functionbar" aria-label="Main navigation">
-      <a href="#/overview" data-nav="overview"><kbd>F1</kbd>OVERVIEW</a>
-      <a href="#/economy/labor" data-nav="labor"><kbd>F2</kbd>LABOR MARKET</a>
-      <a href="#/series/unrate" data-nav="indicator" id="indicator-nav"><kbd>F3</kbd>INDICATOR</a>
-      <a href="#/calendar" data-nav="calendar"><kbd>F4</kbd>CALENDAR</a>
-      <a href="#/explore" data-nav="explore"><kbd>F5</kbd>EXPLORE DATA</a>
-      <a href="#/fiscal" data-nav="research">FISCAL / MACRO RESEARCH</a>
+      <a href="#/overview" data-nav="overview" aria-keyshortcuts="F1">Overview</a>
+      <a href="#/economy/labor" data-nav="labor" aria-keyshortcuts="F2"><span class="nav-full-label">Labor market</span><span class="nav-short-label">Labor</span></a>
+      <a class="nav-secondary" href="#/series/unrate" data-nav="indicator" id="indicator-nav" aria-keyshortcuts="F3">Indicator</a>
+      <a href="#/calendar" data-nav="calendar" aria-keyshortcuts="F4">Calendar</a>
+      <a href="#/explore" data-nav="explore" aria-keyshortcuts="F5"><span class="nav-full-label">Explore data</span><span class="nav-short-label">Explore</span></a>
+      <a class="nav-secondary" href="#/fiscal" data-nav="fiscal" data-nav-group="research">Research</a>
+      <details class="navigation-more" id="navigation-more">
+        <summary aria-label="More pages">More<svg aria-hidden="true" focusable="false" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 4.5 3 3 3-3"/></svg></summary>
+        <div class="navigation-menu">
+          <a href="#/series/unrate" data-nav="indicator" id="indicator-mobile">Indicator detail</a>
+          <a href="#/watchlist" data-nav="watchlist">Watchlist <span class="nav-count" id="mobile-saved-count">0</span></a>
+          <a href="#/research" data-nav="research">Saved research</a>
+          <p class="navigation-group-label">Research modules</p>
+          <a href="#/economy" data-nav="macroCoverage">Macro coverage</a>
+          <a href="#/fiscal" data-nav="fiscal">Fiscal pressure</a>
+          <a href="#/refinancing" data-nav="refinancing">Refinancing risk</a>
+          <a href="#/yields" data-nav="yields">Yield explanations</a>
+          <a href="#/auctions" data-nav="auctions">Auction demand</a>
+          <a href="#/ownership" data-nav="ownership">Debt ownership</a>
+          <a href="#/macro" data-nav="macro">Macro drivers</a>
+          <a href="#/vintages" data-nav="vintages">Revision history</a>
+          <a href="#/market" data-nav="market">Market functioning</a>
+        </div>
+      </details>
     </nav>
     <form class="commandbar" id="command-form" role="search">
       <label for="command-input">SEARCH <span aria-hidden="true">›</span></label>
       <input id="command-input" placeholder="Search indicators or enter US, LABOR, UNRATE, CAL, FIND" autocomplete="off" spellcheck="false" maxlength="200">
       <kbd class="command-hint">Ctrl K</kbd><button class="go" type="submit">GO</button>
     </form>
-    <nav class="mobile-workspace" aria-label="Personal workspace"><a class="action" href="#/watchlist" data-nav="watchlist">MY WATCHLIST <span id="mobile-saved-count">0</span></a><a class="action" href="#/research" data-nav="research">SAVED RESEARCH</a></nav>
     <div class="ticker" id="ticker" aria-label="Official macro snapshot"></div>
     <div id="data-freshness"></div>
     <div class="shell">

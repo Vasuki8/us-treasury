@@ -8,7 +8,7 @@ import {ownershipCsv} from './ownership-page.js';
 import {macroContributionsCsv} from './macro-page.js';
 import {vintagesCsv,normalizedCutoff} from './vintages-page.js';
 import {marketFunctioningCsv} from './market-functioning-page.js';
-import {isResearchPage} from './research-navigation.js';
+import {mountCompactNavigation,syncCompactNavigation} from './compact-navigation.js';
 import { renderPage } from './pages.js';
 import { escapeHtml as esc, sourceStatusList, sourceNotice } from './ui.js';
 import { mountFreshnessBanner } from './freshness-controller.js';
@@ -32,6 +32,7 @@ import {publicationExplanationsCsv} from './publication-explanation-view.js';
 const root = document.getElementById('app');
 const main = document.getElementById('main-content');
 const status = document.getElementById('app-status');
+mountCompactNavigation(document.querySelector('.functionbar'));
 // Recheck source age while keeping native disclosure state independent of routes.
 mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus);
 let storage;
@@ -178,11 +179,7 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   const agencies=new Set(trackedChanges().map(id=>series[id].agency));
   const failures=Object.entries(dataStatus.sources).filter(([id,source])=>agencies.has(id)&&source.status!=='ok').map(([id,source])=>({id,...source}));
   main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${researchActions()}${renderPage(state,{...historyController.context(state),library:researchLibrary.getState(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationArchive,publicationState,publicationExplanations,explanationState})}`;
-  root.querySelectorAll('[data-nav]').forEach(link=>{
-    if(link.dataset.nav===state.page||link.dataset.nav==='research'&&isResearchPage(state.page))link.setAttribute('aria-current','page');
-    else link.removeAttribute('aria-current');
-  });
-  for(const id of ['indicator-nav','indicator-rail']) document.getElementById(id).href=`#/series/${state.seriesId}`;
+  syncCompactNavigation(root,state);
   document.getElementById('ticker').innerHTML=['yield','unrate','cpi','payroll'].map(id=>{
     const item=getSeries(id);
     return `<a href="#/series/${id}"><span>${esc(item.code)}</span><strong>${esc(formatValue(item,latest(item)?.value))}</strong><span class="mono">${esc(formatChange(item))}</span></a>`;
