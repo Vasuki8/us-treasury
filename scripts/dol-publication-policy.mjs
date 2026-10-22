@@ -1,5 +1,6 @@
 import {dolPublicationReleases} from './dol-publication-scope.mjs';
-import {DOL_ADVANCE_IDS,DOL_ADVANCE_LICENSE,DOL_ADVANCE_ATTRIBUTION,DOL_SEASONAL_UPDATE_NOTICES} from './sources/dol-advance.mjs';
+import {dolPublicationReleases2025} from './dol-publication-scope-2025.mjs';
+import {DOL_ADVANCE_IDS,DOL_ADVANCE_LICENSE,DOL_ADVANCE_ATTRIBUTION,DOL_SEASONAL_UPDATE_NOTICES,DOL_RELEASE_NOTICES} from './sources/dol-advance.mjs';
 import {easternInstant} from './sources/calendar-utils.mjs';
 import {isDeepStrictEqual} from 'node:util';
 
@@ -7,11 +8,15 @@ const fail=message=>{throw new Error('Unreviewed DOL claims publication: '+messa
 const plain=value=>value&&typeof value==='object'&&!Array.isArray(value)&&Object.getPrototypeOf(value)===Object.prototype;
 const keys=(value,allowed,label)=>{if(!plain(value)||Object.keys(value).some(key=>!allowed.includes(key)))fail(label+' fields');};
 const count=value=>Number(value.replaceAll(',',''));
-const estimates={advance:'Advance','prior-week-revised':'Revised prior','prior-week-unrevised':'Unrevised prior'};
+const estimates={advance:'Advance','prior-week-revised':'Revised prior','prior-week-unrevised':'Unrevised prior','prior-week-status-unknown':'Prior comparison (status unknown)'};
 export const DOL_TABLE_EXTRACTION_NOTE='The printed March 5 initial-SA table change cell is 0, verified on PDF page 4. Text extraction omits that glyph; restoration is restricted to the exact reviewed PDF hash and row. The narrative explicitly says unchanged and both printed count cells are 213,000.';
-export const claimsPublicationScope=Object.freeze(dolPublicationReleases.flatMap(release=>release.facts.map(fact=>Object.freeze({...fact,publicationDate:release.publicationDate,sourceUrl:release.sourceUrl,reviewedPdfSha256:release.sha256,id:`dol-${fact.seriesId}-${fact.period}-${fact.releaseStage}-${release.publicationDate}`}))));
+const tableExtractionNotes=Object.freeze({
+ 'https://oui.doleta.gov/press/2026/030526.pdf':DOL_TABLE_EXTRACTION_NOTE,
+ 'https://oui.doleta.gov/press/2025/091125.pdf':'The printed September 11 continued-SA table change cell is 0, verified on PDF page 4. Text extraction omits that glyph; restoration is restricted to the exact reviewed PDF hash and row. The narrative explicitly says unchanged and both printed count cells are 1,939,000.',
+});
+export const claimsPublicationScope=Object.freeze([...dolPublicationReleases,...dolPublicationReleases2025].flatMap(release=>release.facts.map(fact=>Object.freeze({...fact,publicationDate:release.publicationDate,sourceUrl:release.sourceUrl,reviewedPdfSha256:release.sha256,id:`dol-${fact.seriesId}-${fact.period}-${fact.releaseStage}-${release.publicationDate}`}))));
 const byId=new Map(claimsPublicationScope.map(fact=>[fact.id,fact]));
-if(byId.size!==168||dolPublicationReleases.length!==42)fail('reviewed scope manifest');
+if(byId.size!==352||dolPublicationReleases.length!==42||dolPublicationReleases2025.length!==46)fail('reviewed scope manifest');
 
 export function requestedClaimsPublicationIds(ids=claimsPublicationScope.map(row=>row.id)){
  if(!Array.isArray(ids)||ids.length>claimsPublicationScope.length||new Set(ids).size!==ids.length||ids.some(id=>!byId.has(id)))fail('unknown or duplicate requested scope');
@@ -20,10 +25,13 @@ export function requestedClaimsPublicationIds(ids=claimsPublicationScope.map(row
 export function claimsPublicationMetadataFor(scope){
  if(byId.get(scope.id)!==scope)fail('scope identity');
  const group=claimsPublicationScope.filter(row=>row.sourceUrl===scope.sourceUrl&&row.seriesId===scope.seriesId),prior=group.find(row=>row.releaseStage!=='advance'),advance=group.find(row=>row.releaseStage==='advance');
- const notice=DOL_SEASONAL_UPDATE_NOTICES[scope.publicationDate],status=prior.releaseStage==='prior-week-revised'?'revised':'unrevised';
- const footnotes=[scope.releaseStage==='advance'?`Advance estimate; subject to revision. Released ${scope.publicationDate} (day precision). Change versus the same release's ${status} prior week: ${count(advance.sourceValue)-count(prior.sourceValue)} claims.`:`Prior-week ${status} comparison in the ${scope.publicationDate} release, not an advance observation for this week. Previously published count: ${scope.previouslyPublishedSourceValue}. Release date has day precision.`];
+ const notice=DOL_SEASONAL_UPDATE_NOTICES[scope.publicationDate],releaseNotice=DOL_RELEASE_NOTICES[scope.publicationDate],status=prior.releaseStage==='prior-week-revised'?'revised':prior.releaseStage==='prior-week-unrevised'?'unrevised':null;
+ const priorFootnote=status?`Prior-week ${status} comparison in the ${scope.publicationDate} release, not an advance observation for this week. Previously published count: ${scope.previouslyPublishedSourceValue}. Release date has day precision.`:`Prior-week comparison in the ${scope.publicationDate} release, not an advance observation for this week. Revision status is not stated and no previously published count is supplied. Release date has day precision.`;
+ const footnotes=[scope.releaseStage==='advance'?`Advance estimate; subject to revision. Released ${scope.publicationDate} (day precision). Change versus the same release's ${status?status+' prior week':'prior-week comparison (revision status unspecified)'}: ${count(advance.sourceValue)-count(prior.sourceValue)} claims.`:priorFootnote];
  if(notice)footnotes.push(notice.note);
- const tableExtractionNote=scope.tableExtractionNote?DOL_TABLE_EXTRACTION_NOTE:null;
+ if(releaseNotice)footnotes.push(releaseNotice.note);
+ const tableExtractionNote=scope.tableExtractionNote?tableExtractionNotes[scope.sourceUrl]:null;
+ if(scope.tableExtractionNote&&!tableExtractionNote)fail('unreviewed table extraction note');
  if(tableExtractionNote)footnotes.push(tableExtractionNote);
  return {id:scope.id,seriesId:scope.seriesId,period:scope.period,estimate:estimates[scope.releaseStage],releaseStage:scope.releaseStage,publicationDate:scope.publicationDate,publicationDatePrecision:'day',publishedAt:null,value:count(scope.sourceValue)/1000,sourceValue:scope.sourceValue,previouslyPublishedSourceValue:scope.previouslyPublishedSourceValue??null,
   unit:scope.seriesId==='claimsAdvance'?'Thousands of claims':'Thousands of continued claims',frequency:'Weekly',adjustment:'Seasonally adjusted',sourceUrl:scope.sourceUrl,releaseEvidenceUrl:scope.sourceUrl,sourceTitle:'Unemployment Insurance Weekly Claims',licenseUrl:DOL_ADVANCE_LICENSE,attribution:DOL_ADVANCE_ATTRIBUTION,

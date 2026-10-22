@@ -6563,6 +6563,7196 @@ export const claimsPublicationArchive = {
           "lastModified": "Thu, 22 Oct 2026 12:33:31 GMT"
         }
       ]
+    },
+    {
+      "id": "dol-claimsAdvance-2024-12-21-prior-week-revised-2025-01-02",
+      "seriesId": "claimsAdvance",
+      "period": "2024-12-21",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-01-02",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 220,
+      "sourceValue": "220,000",
+      "previouslyPublishedSourceValue": "219,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/010225.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/010225.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-01-02 release, not an advance observation for this week. Previously published count: 219,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/010225.pdf",
+          "sha256": "fee87d879ffed7e48829e2b989a70800232fbc8adba2b8c5ee4f2ca364cc603a",
+          "retrievedAt": "2026-10-22T22:04:56.852Z",
+          "lastModified": "Thu, 02 Jan 2025 13:32:40 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2024-12-28-advance-2025-01-02",
+      "seriesId": "claimsAdvance",
+      "period": "2024-12-28",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-01-02",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 211,
+      "sourceValue": "211,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/010225.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/010225.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-01-02 (day precision). Change versus the same release's revised prior week: -9000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/010225.pdf",
+          "sha256": "fee87d879ffed7e48829e2b989a70800232fbc8adba2b8c5ee4f2ca364cc603a",
+          "retrievedAt": "2026-10-22T22:04:56.852Z",
+          "lastModified": "Thu, 02 Jan 2025 13:32:40 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2024-12-14-prior-week-revised-2025-01-02",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2024-12-14",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-01-02",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1896,
+      "sourceValue": "1,896,000",
+      "previouslyPublishedSourceValue": "1,910,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/010225.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/010225.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-01-02 release, not an advance observation for this week. Previously published count: 1,910,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/010225.pdf",
+          "sha256": "fee87d879ffed7e48829e2b989a70800232fbc8adba2b8c5ee4f2ca364cc603a",
+          "retrievedAt": "2026-10-22T22:04:56.852Z",
+          "lastModified": "Thu, 02 Jan 2025 13:32:40 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2024-12-21-advance-2025-01-02",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2024-12-21",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-01-02",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1844,
+      "sourceValue": "1,844,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/010225.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/010225.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-01-02 (day precision). Change versus the same release's revised prior week: -52000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/010225.pdf",
+          "sha256": "fee87d879ffed7e48829e2b989a70800232fbc8adba2b8c5ee4f2ca364cc603a",
+          "retrievedAt": "2026-10-22T22:04:56.852Z",
+          "lastModified": "Thu, 02 Jan 2025 13:32:40 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2024-12-28-prior-week-unrevised-2025-01-08",
+      "seriesId": "claimsAdvance",
+      "period": "2024-12-28",
+      "estimate": "Unrevised prior",
+      "releaseStage": "prior-week-unrevised",
+      "publicationDate": "2025-01-08",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 211,
+      "sourceValue": "211,000",
+      "previouslyPublishedSourceValue": "211,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/010825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/010825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week unrevised comparison in the 2025-01-08 release, not an advance observation for this week. Previously published count: 211,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/010825.pdf",
+          "sha256": "4f783b03d1ef85ec2928e286f50ac8883c68a48352bdc6237c0b43dd2b3e4064",
+          "retrievedAt": "2026-10-22T22:04:56.823Z",
+          "lastModified": "Wed, 08 Jan 2025 13:32:21 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-01-04-advance-2025-01-08",
+      "seriesId": "claimsAdvance",
+      "period": "2025-01-04",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-01-08",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 201,
+      "sourceValue": "201,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/010825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/010825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-01-08 (day precision). Change versus the same release's unrevised prior week: -10000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/010825.pdf",
+          "sha256": "4f783b03d1ef85ec2928e286f50ac8883c68a48352bdc6237c0b43dd2b3e4064",
+          "retrievedAt": "2026-10-22T22:04:56.823Z",
+          "lastModified": "Wed, 08 Jan 2025 13:32:21 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2024-12-21-prior-week-revised-2025-01-08",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2024-12-21",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-01-08",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1834,
+      "sourceValue": "1,834,000",
+      "previouslyPublishedSourceValue": "1,844,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/010825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/010825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-01-08 release, not an advance observation for this week. Previously published count: 1,844,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/010825.pdf",
+          "sha256": "4f783b03d1ef85ec2928e286f50ac8883c68a48352bdc6237c0b43dd2b3e4064",
+          "retrievedAt": "2026-10-22T22:04:56.823Z",
+          "lastModified": "Wed, 08 Jan 2025 13:32:21 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2024-12-28-advance-2025-01-08",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2024-12-28",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-01-08",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1867,
+      "sourceValue": "1,867,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/010825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/010825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-01-08 (day precision). Change versus the same release's revised prior week: 33000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/010825.pdf",
+          "sha256": "4f783b03d1ef85ec2928e286f50ac8883c68a48352bdc6237c0b43dd2b3e4064",
+          "retrievedAt": "2026-10-22T22:04:56.823Z",
+          "lastModified": "Wed, 08 Jan 2025 13:32:21 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-01-04-prior-week-revised-2025-01-16",
+      "seriesId": "claimsAdvance",
+      "period": "2025-01-04",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-01-16",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 203,
+      "sourceValue": "203,000",
+      "previouslyPublishedSourceValue": "201,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/011625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/011625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-01-16 release, not an advance observation for this week. Previously published count: 201,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/011625.pdf",
+          "sha256": "ffc0c82813c64dc82b5648fd736ddf29c208cf0529c8e45b292b60300137cf47",
+          "retrievedAt": "2026-10-22T22:04:58.480Z",
+          "lastModified": "Thu, 16 Jan 2025 13:30:55 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-01-11-advance-2025-01-16",
+      "seriesId": "claimsAdvance",
+      "period": "2025-01-11",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-01-16",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 217,
+      "sourceValue": "217,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/011625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/011625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-01-16 (day precision). Change versus the same release's revised prior week: 14000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/011625.pdf",
+          "sha256": "ffc0c82813c64dc82b5648fd736ddf29c208cf0529c8e45b292b60300137cf47",
+          "retrievedAt": "2026-10-22T22:04:58.480Z",
+          "lastModified": "Thu, 16 Jan 2025 13:30:55 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2024-12-28-prior-week-revised-2025-01-16",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2024-12-28",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-01-16",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1877,
+      "sourceValue": "1,877,000",
+      "previouslyPublishedSourceValue": "1,867,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/011625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/011625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-01-16 release, not an advance observation for this week. Previously published count: 1,867,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/011625.pdf",
+          "sha256": "ffc0c82813c64dc82b5648fd736ddf29c208cf0529c8e45b292b60300137cf47",
+          "retrievedAt": "2026-10-22T22:04:58.480Z",
+          "lastModified": "Thu, 16 Jan 2025 13:30:55 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-01-04-advance-2025-01-16",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-01-04",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-01-16",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1859,
+      "sourceValue": "1,859,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/011625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/011625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-01-16 (day precision). Change versus the same release's revised prior week: -18000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/011625.pdf",
+          "sha256": "ffc0c82813c64dc82b5648fd736ddf29c208cf0529c8e45b292b60300137cf47",
+          "retrievedAt": "2026-10-22T22:04:58.480Z",
+          "lastModified": "Thu, 16 Jan 2025 13:30:55 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-01-11-prior-week-unrevised-2025-01-23",
+      "seriesId": "claimsAdvance",
+      "period": "2025-01-11",
+      "estimate": "Unrevised prior",
+      "releaseStage": "prior-week-unrevised",
+      "publicationDate": "2025-01-23",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 217,
+      "sourceValue": "217,000",
+      "previouslyPublishedSourceValue": "217,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/012325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/012325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week unrevised comparison in the 2025-01-23 release, not an advance observation for this week. Previously published count: 217,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/012325.pdf",
+          "sha256": "ab4c637c46147a996dccf45005ab427f20b5696054af2c45aa77b7eefb9fd9ae",
+          "retrievedAt": "2026-10-22T22:04:58.473Z",
+          "lastModified": "Thu, 23 Jan 2025 13:32:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-01-18-advance-2025-01-23",
+      "seriesId": "claimsAdvance",
+      "period": "2025-01-18",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-01-23",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 223,
+      "sourceValue": "223,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/012325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/012325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-01-23 (day precision). Change versus the same release's unrevised prior week: 6000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/012325.pdf",
+          "sha256": "ab4c637c46147a996dccf45005ab427f20b5696054af2c45aa77b7eefb9fd9ae",
+          "retrievedAt": "2026-10-22T22:04:58.473Z",
+          "lastModified": "Thu, 23 Jan 2025 13:32:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-01-04-prior-week-revised-2025-01-23",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-01-04",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-01-23",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1853,
+      "sourceValue": "1,853,000",
+      "previouslyPublishedSourceValue": "1,859,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/012325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/012325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-01-23 release, not an advance observation for this week. Previously published count: 1,859,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/012325.pdf",
+          "sha256": "ab4c637c46147a996dccf45005ab427f20b5696054af2c45aa77b7eefb9fd9ae",
+          "retrievedAt": "2026-10-22T22:04:58.473Z",
+          "lastModified": "Thu, 23 Jan 2025 13:32:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-01-11-advance-2025-01-23",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-01-11",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-01-23",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1899,
+      "sourceValue": "1,899,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/012325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/012325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-01-23 (day precision). Change versus the same release's revised prior week: 46000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/012325.pdf",
+          "sha256": "ab4c637c46147a996dccf45005ab427f20b5696054af2c45aa77b7eefb9fd9ae",
+          "retrievedAt": "2026-10-22T22:04:58.473Z",
+          "lastModified": "Thu, 23 Jan 2025 13:32:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-01-18-prior-week-unrevised-2025-01-30",
+      "seriesId": "claimsAdvance",
+      "period": "2025-01-18",
+      "estimate": "Unrevised prior",
+      "releaseStage": "prior-week-unrevised",
+      "publicationDate": "2025-01-30",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 223,
+      "sourceValue": "223,000",
+      "previouslyPublishedSourceValue": "223,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/013025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/013025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week unrevised comparison in the 2025-01-30 release, not an advance observation for this week. Previously published count: 223,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/013025.pdf",
+          "sha256": "3e4d459040e4593189348b2a55c800c028c4d0c5eee4bd741f9d6ebd9e93d0a0",
+          "retrievedAt": "2026-10-22T22:05:00.178Z",
+          "lastModified": "Thu, 30 Jan 2025 13:30:27 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-01-25-advance-2025-01-30",
+      "seriesId": "claimsAdvance",
+      "period": "2025-01-25",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-01-30",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 207,
+      "sourceValue": "207,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/013025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/013025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-01-30 (day precision). Change versus the same release's unrevised prior week: -16000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/013025.pdf",
+          "sha256": "3e4d459040e4593189348b2a55c800c028c4d0c5eee4bd741f9d6ebd9e93d0a0",
+          "retrievedAt": "2026-10-22T22:05:00.178Z",
+          "lastModified": "Thu, 30 Jan 2025 13:30:27 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-01-11-prior-week-revised-2025-01-30",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-01-11",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-01-30",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1900,
+      "sourceValue": "1,900,000",
+      "previouslyPublishedSourceValue": "1,899,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/013025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/013025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-01-30 release, not an advance observation for this week. Previously published count: 1,899,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/013025.pdf",
+          "sha256": "3e4d459040e4593189348b2a55c800c028c4d0c5eee4bd741f9d6ebd9e93d0a0",
+          "retrievedAt": "2026-10-22T22:05:00.178Z",
+          "lastModified": "Thu, 30 Jan 2025 13:30:27 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-01-18-advance-2025-01-30",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-01-18",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-01-30",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1858,
+      "sourceValue": "1,858,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/013025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/013025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-01-30 (day precision). Change versus the same release's revised prior week: -42000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/013025.pdf",
+          "sha256": "3e4d459040e4593189348b2a55c800c028c4d0c5eee4bd741f9d6ebd9e93d0a0",
+          "retrievedAt": "2026-10-22T22:05:00.178Z",
+          "lastModified": "Thu, 30 Jan 2025 13:30:27 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-01-25-prior-week-revised-2025-02-06",
+      "seriesId": "claimsAdvance",
+      "period": "2025-01-25",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-02-06",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 208,
+      "sourceValue": "208,000",
+      "previouslyPublishedSourceValue": "207,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/020625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/020625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-02-06 release, not an advance observation for this week. Previously published count: 207,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/020625.pdf",
+          "sha256": "3d65658482035b4005dba2ad1360237b2a6f1cd54a3231b794df15f59278c5ec",
+          "retrievedAt": "2026-10-22T22:05:00.180Z",
+          "lastModified": "Thu, 06 Feb 2025 13:31:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-02-01-advance-2025-02-06",
+      "seriesId": "claimsAdvance",
+      "period": "2025-02-01",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-02-06",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 219,
+      "sourceValue": "219,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/020625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/020625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-02-06 (day precision). Change versus the same release's revised prior week: 11000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/020625.pdf",
+          "sha256": "3d65658482035b4005dba2ad1360237b2a6f1cd54a3231b794df15f59278c5ec",
+          "retrievedAt": "2026-10-22T22:05:00.180Z",
+          "lastModified": "Thu, 06 Feb 2025 13:31:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-01-18-prior-week-revised-2025-02-06",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-01-18",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-02-06",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1850,
+      "sourceValue": "1,850,000",
+      "previouslyPublishedSourceValue": "1,858,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/020625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/020625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-02-06 release, not an advance observation for this week. Previously published count: 1,858,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/020625.pdf",
+          "sha256": "3d65658482035b4005dba2ad1360237b2a6f1cd54a3231b794df15f59278c5ec",
+          "retrievedAt": "2026-10-22T22:05:00.180Z",
+          "lastModified": "Thu, 06 Feb 2025 13:31:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-01-25-advance-2025-02-06",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-01-25",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-02-06",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1886,
+      "sourceValue": "1,886,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/020625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/020625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-02-06 (day precision). Change versus the same release's revised prior week: 36000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/020625.pdf",
+          "sha256": "3d65658482035b4005dba2ad1360237b2a6f1cd54a3231b794df15f59278c5ec",
+          "retrievedAt": "2026-10-22T22:05:00.180Z",
+          "lastModified": "Thu, 06 Feb 2025 13:31:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-02-01-prior-week-revised-2025-02-13",
+      "seriesId": "claimsAdvance",
+      "period": "2025-02-01",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-02-13",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 220,
+      "sourceValue": "220,000",
+      "previouslyPublishedSourceValue": "219,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/021325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/021325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-02-13 release, not an advance observation for this week. Previously published count: 219,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/021325.pdf",
+          "sha256": "482903a5b3fe7fe7b471e1a7f1f796c29ab13a9f4cf38c2037b666c2955fa8d2",
+          "retrievedAt": "2026-10-22T22:05:01.226Z",
+          "lastModified": "Thu, 13 Feb 2025 13:31:07 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-02-08-advance-2025-02-13",
+      "seriesId": "claimsAdvance",
+      "period": "2025-02-08",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-02-13",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 213,
+      "sourceValue": "213,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/021325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/021325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-02-13 (day precision). Change versus the same release's revised prior week: -7000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/021325.pdf",
+          "sha256": "482903a5b3fe7fe7b471e1a7f1f796c29ab13a9f4cf38c2037b666c2955fa8d2",
+          "retrievedAt": "2026-10-22T22:05:01.226Z",
+          "lastModified": "Thu, 13 Feb 2025 13:31:07 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-01-25-prior-week-unrevised-2025-02-13",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-01-25",
+      "estimate": "Unrevised prior",
+      "releaseStage": "prior-week-unrevised",
+      "publicationDate": "2025-02-13",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1886,
+      "sourceValue": "1,886,000",
+      "previouslyPublishedSourceValue": "1,886,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/021325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/021325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week unrevised comparison in the 2025-02-13 release, not an advance observation for this week. Previously published count: 1,886,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/021325.pdf",
+          "sha256": "482903a5b3fe7fe7b471e1a7f1f796c29ab13a9f4cf38c2037b666c2955fa8d2",
+          "retrievedAt": "2026-10-22T22:05:01.226Z",
+          "lastModified": "Thu, 13 Feb 2025 13:31:07 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-02-01-advance-2025-02-13",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-02-01",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-02-13",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1850,
+      "sourceValue": "1,850,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/021325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/021325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-02-13 (day precision). Change versus the same release's unrevised prior week: -36000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/021325.pdf",
+          "sha256": "482903a5b3fe7fe7b471e1a7f1f796c29ab13a9f4cf38c2037b666c2955fa8d2",
+          "retrievedAt": "2026-10-22T22:05:01.226Z",
+          "lastModified": "Thu, 13 Feb 2025 13:31:07 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-02-08-prior-week-revised-2025-02-20",
+      "seriesId": "claimsAdvance",
+      "period": "2025-02-08",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-02-20",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 214,
+      "sourceValue": "214,000",
+      "previouslyPublishedSourceValue": "213,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/022025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/022025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-02-20 release, not an advance observation for this week. Previously published count: 213,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/022025.pdf",
+          "sha256": "39bb43edf3e8451cd5642587f3757974611233106dfac3ad373e544dac1fec4c",
+          "retrievedAt": "2026-10-22T22:05:01.282Z",
+          "lastModified": "Thu, 20 Feb 2025 13:32:08 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-02-15-advance-2025-02-20",
+      "seriesId": "claimsAdvance",
+      "period": "2025-02-15",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-02-20",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 219,
+      "sourceValue": "219,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/022025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/022025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-02-20 (day precision). Change versus the same release's revised prior week: 5000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/022025.pdf",
+          "sha256": "39bb43edf3e8451cd5642587f3757974611233106dfac3ad373e544dac1fec4c",
+          "retrievedAt": "2026-10-22T22:05:01.282Z",
+          "lastModified": "Thu, 20 Feb 2025 13:32:08 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-02-01-prior-week-revised-2025-02-20",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-02-01",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-02-20",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1845,
+      "sourceValue": "1,845,000",
+      "previouslyPublishedSourceValue": "1,850,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/022025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/022025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-02-20 release, not an advance observation for this week. Previously published count: 1,850,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/022025.pdf",
+          "sha256": "39bb43edf3e8451cd5642587f3757974611233106dfac3ad373e544dac1fec4c",
+          "retrievedAt": "2026-10-22T22:05:01.282Z",
+          "lastModified": "Thu, 20 Feb 2025 13:32:08 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-02-08-advance-2025-02-20",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-02-08",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-02-20",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1869,
+      "sourceValue": "1,869,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/022025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/022025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-02-20 (day precision). Change versus the same release's revised prior week: 24000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/022025.pdf",
+          "sha256": "39bb43edf3e8451cd5642587f3757974611233106dfac3ad373e544dac1fec4c",
+          "retrievedAt": "2026-10-22T22:05:01.282Z",
+          "lastModified": "Thu, 20 Feb 2025 13:32:08 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-02-15-prior-week-revised-2025-02-27",
+      "seriesId": "claimsAdvance",
+      "period": "2025-02-15",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-02-27",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 220,
+      "sourceValue": "220,000",
+      "previouslyPublishedSourceValue": "219,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/022725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/022725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-02-27 release, not an advance observation for this week. Previously published count: 219,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/022725.pdf",
+          "sha256": "61cdac19347e8f2d6a2923da8204eaf70e37b60abfcec3a77fe35428241ab438",
+          "retrievedAt": "2026-10-22T22:05:02.296Z",
+          "lastModified": "Thu, 27 Feb 2025 13:31:27 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-02-22-advance-2025-02-27",
+      "seriesId": "claimsAdvance",
+      "period": "2025-02-22",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-02-27",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 242,
+      "sourceValue": "242,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/022725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/022725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-02-27 (day precision). Change versus the same release's revised prior week: 22000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/022725.pdf",
+          "sha256": "61cdac19347e8f2d6a2923da8204eaf70e37b60abfcec3a77fe35428241ab438",
+          "retrievedAt": "2026-10-22T22:05:02.296Z",
+          "lastModified": "Thu, 27 Feb 2025 13:31:27 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-02-08-prior-week-revised-2025-02-27",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-02-08",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-02-27",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1867,
+      "sourceValue": "1,867,000",
+      "previouslyPublishedSourceValue": "1,869,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/022725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/022725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-02-27 release, not an advance observation for this week. Previously published count: 1,869,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/022725.pdf",
+          "sha256": "61cdac19347e8f2d6a2923da8204eaf70e37b60abfcec3a77fe35428241ab438",
+          "retrievedAt": "2026-10-22T22:05:02.296Z",
+          "lastModified": "Thu, 27 Feb 2025 13:31:27 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-02-15-advance-2025-02-27",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-02-15",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-02-27",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1862,
+      "sourceValue": "1,862,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/022725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/022725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-02-27 (day precision). Change versus the same release's revised prior week: -5000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/022725.pdf",
+          "sha256": "61cdac19347e8f2d6a2923da8204eaf70e37b60abfcec3a77fe35428241ab438",
+          "retrievedAt": "2026-10-22T22:05:02.296Z",
+          "lastModified": "Thu, 27 Feb 2025 13:31:27 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-02-22-prior-week-unrevised-2025-03-06",
+      "seriesId": "claimsAdvance",
+      "period": "2025-02-22",
+      "estimate": "Unrevised prior",
+      "releaseStage": "prior-week-unrevised",
+      "publicationDate": "2025-03-06",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 242,
+      "sourceValue": "242,000",
+      "previouslyPublishedSourceValue": "242,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/030625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/030625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week unrevised comparison in the 2025-03-06 release, not an advance observation for this week. Previously published count: 242,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/030625.pdf",
+          "sha256": "30ce1440655e127931d249ec7b65b6c94da139913b5b40038cce78ec1f1fba34",
+          "retrievedAt": "2026-10-22T22:05:02.703Z",
+          "lastModified": "Thu, 06 Mar 2025 13:31:00 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-03-01-advance-2025-03-06",
+      "seriesId": "claimsAdvance",
+      "period": "2025-03-01",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-03-06",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 221,
+      "sourceValue": "221,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/030625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/030625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-03-06 (day precision). Change versus the same release's unrevised prior week: -21000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/030625.pdf",
+          "sha256": "30ce1440655e127931d249ec7b65b6c94da139913b5b40038cce78ec1f1fba34",
+          "retrievedAt": "2026-10-22T22:05:02.703Z",
+          "lastModified": "Thu, 06 Mar 2025 13:31:00 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-02-15-prior-week-revised-2025-03-06",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-02-15",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-03-06",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1855,
+      "sourceValue": "1,855,000",
+      "previouslyPublishedSourceValue": "1,862,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/030625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/030625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-03-06 release, not an advance observation for this week. Previously published count: 1,862,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/030625.pdf",
+          "sha256": "30ce1440655e127931d249ec7b65b6c94da139913b5b40038cce78ec1f1fba34",
+          "retrievedAt": "2026-10-22T22:05:02.703Z",
+          "lastModified": "Thu, 06 Mar 2025 13:31:00 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-02-22-advance-2025-03-06",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-02-22",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-03-06",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1897,
+      "sourceValue": "1,897,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/030625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/030625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-03-06 (day precision). Change versus the same release's revised prior week: 42000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/030625.pdf",
+          "sha256": "30ce1440655e127931d249ec7b65b6c94da139913b5b40038cce78ec1f1fba34",
+          "retrievedAt": "2026-10-22T22:05:02.703Z",
+          "lastModified": "Thu, 06 Mar 2025 13:31:00 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-03-01-prior-week-revised-2025-03-13",
+      "seriesId": "claimsAdvance",
+      "period": "2025-03-01",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-03-13",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 222,
+      "sourceValue": "222,000",
+      "previouslyPublishedSourceValue": "221,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/031325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/031325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-03-13 release, not an advance observation for this week. Previously published count: 221,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/031325.pdf",
+          "sha256": "af8c594abd5e4167670d6eb5ccca0a3a3fe445ed0cff6777ec2f79f5e7383427",
+          "retrievedAt": "2026-10-22T22:05:03.446Z",
+          "lastModified": "Thu, 13 Mar 2025 12:30:24 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-03-08-advance-2025-03-13",
+      "seriesId": "claimsAdvance",
+      "period": "2025-03-08",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-03-13",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 220,
+      "sourceValue": "220,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/031325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/031325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-03-13 (day precision). Change versus the same release's revised prior week: -2000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/031325.pdf",
+          "sha256": "af8c594abd5e4167670d6eb5ccca0a3a3fe445ed0cff6777ec2f79f5e7383427",
+          "retrievedAt": "2026-10-22T22:05:03.446Z",
+          "lastModified": "Thu, 13 Mar 2025 12:30:24 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-02-22-prior-week-unrevised-2025-03-13",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-02-22",
+      "estimate": "Unrevised prior",
+      "releaseStage": "prior-week-unrevised",
+      "publicationDate": "2025-03-13",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1897,
+      "sourceValue": "1,897,000",
+      "previouslyPublishedSourceValue": "1,897,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/031325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/031325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week unrevised comparison in the 2025-03-13 release, not an advance observation for this week. Previously published count: 1,897,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/031325.pdf",
+          "sha256": "af8c594abd5e4167670d6eb5ccca0a3a3fe445ed0cff6777ec2f79f5e7383427",
+          "retrievedAt": "2026-10-22T22:05:03.446Z",
+          "lastModified": "Thu, 13 Mar 2025 12:30:24 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-03-01-advance-2025-03-13",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-03-01",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-03-13",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1870,
+      "sourceValue": "1,870,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/031325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/031325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-03-13 (day precision). Change versus the same release's unrevised prior week: -27000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/031325.pdf",
+          "sha256": "af8c594abd5e4167670d6eb5ccca0a3a3fe445ed0cff6777ec2f79f5e7383427",
+          "retrievedAt": "2026-10-22T22:05:03.446Z",
+          "lastModified": "Thu, 13 Mar 2025 12:30:24 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-03-08-prior-week-revised-2025-03-20",
+      "seriesId": "claimsAdvance",
+      "period": "2025-03-08",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-03-20",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 221,
+      "sourceValue": "221,000",
+      "previouslyPublishedSourceValue": "220,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/032025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/032025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-03-20 release, not an advance observation for this week. Previously published count: 220,000. Release date has day precision.",
+        "DOL announced 2025 seasonal factors and revised 2020–2024 factors/history for March 27, 2025. This March 20 notice schedules the update; it does not establish that the update was applied to these readings."
+      ],
+      "seasonalAdjustmentNote": "DOL announced 2025 seasonal factors and revised 2020–2024 factors/history for March 27, 2025. This March 20 notice schedules the update; it does not establish that the update was applied to these readings.",
+      "seasonalAdjustmentKind": "scheduled-update",
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/032025.pdf",
+          "sha256": "6be534bb4b83e4c6d002e2e6419f81a193c063a0c1c63d395f2656072c17316b",
+          "retrievedAt": "2026-10-22T22:05:03.925Z",
+          "lastModified": "Thu, 20 Mar 2025 12:30:45 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-03-15-advance-2025-03-20",
+      "seriesId": "claimsAdvance",
+      "period": "2025-03-15",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-03-20",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 223,
+      "sourceValue": "223,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/032025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/032025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-03-20 (day precision). Change versus the same release's revised prior week: 2000 claims.",
+        "DOL announced 2025 seasonal factors and revised 2020–2024 factors/history for March 27, 2025. This March 20 notice schedules the update; it does not establish that the update was applied to these readings."
+      ],
+      "seasonalAdjustmentNote": "DOL announced 2025 seasonal factors and revised 2020–2024 factors/history for March 27, 2025. This March 20 notice schedules the update; it does not establish that the update was applied to these readings.",
+      "seasonalAdjustmentKind": "scheduled-update",
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/032025.pdf",
+          "sha256": "6be534bb4b83e4c6d002e2e6419f81a193c063a0c1c63d395f2656072c17316b",
+          "retrievedAt": "2026-10-22T22:05:03.925Z",
+          "lastModified": "Thu, 20 Mar 2025 12:30:45 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-03-01-prior-week-revised-2025-03-20",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-03-01",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-03-20",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1859,
+      "sourceValue": "1,859,000",
+      "previouslyPublishedSourceValue": "1,870,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/032025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/032025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-03-20 release, not an advance observation for this week. Previously published count: 1,870,000. Release date has day precision.",
+        "DOL announced 2025 seasonal factors and revised 2020–2024 factors/history for March 27, 2025. This March 20 notice schedules the update; it does not establish that the update was applied to these readings."
+      ],
+      "seasonalAdjustmentNote": "DOL announced 2025 seasonal factors and revised 2020–2024 factors/history for March 27, 2025. This March 20 notice schedules the update; it does not establish that the update was applied to these readings.",
+      "seasonalAdjustmentKind": "scheduled-update",
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/032025.pdf",
+          "sha256": "6be534bb4b83e4c6d002e2e6419f81a193c063a0c1c63d395f2656072c17316b",
+          "retrievedAt": "2026-10-22T22:05:03.925Z",
+          "lastModified": "Thu, 20 Mar 2025 12:30:45 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-03-08-advance-2025-03-20",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-03-08",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-03-20",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1892,
+      "sourceValue": "1,892,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/032025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/032025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-03-20 (day precision). Change versus the same release's revised prior week: 33000 claims.",
+        "DOL announced 2025 seasonal factors and revised 2020–2024 factors/history for March 27, 2025. This March 20 notice schedules the update; it does not establish that the update was applied to these readings."
+      ],
+      "seasonalAdjustmentNote": "DOL announced 2025 seasonal factors and revised 2020–2024 factors/history for March 27, 2025. This March 20 notice schedules the update; it does not establish that the update was applied to these readings.",
+      "seasonalAdjustmentKind": "scheduled-update",
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/032025.pdf",
+          "sha256": "6be534bb4b83e4c6d002e2e6419f81a193c063a0c1c63d395f2656072c17316b",
+          "retrievedAt": "2026-10-22T22:05:03.925Z",
+          "lastModified": "Thu, 20 Mar 2025 12:30:45 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-03-15-prior-week-revised-2025-03-27",
+      "seriesId": "claimsAdvance",
+      "period": "2025-03-15",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-03-27",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 225,
+      "sourceValue": "225,000",
+      "previouslyPublishedSourceValue": "223,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/032725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/032725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-03-27 release, not an advance observation for this week. Previously published count: 223,000. Release date has day precision.",
+        "DOL states this release applies the annual seasonal-factor revision to initial and continued claims from 2020 forward. This selected archive retains only the advance and prior-week facts in each release, not all historical values affected by the update. A specific numeric revision cause is not inferred."
+      ],
+      "seasonalAdjustmentNote": "DOL states this release applies the annual seasonal-factor revision to initial and continued claims from 2020 forward. This selected archive retains only the advance and prior-week facts in each release, not all historical values affected by the update. A specific numeric revision cause is not inferred.",
+      "seasonalAdjustmentKind": "applied-update",
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/032725.pdf",
+          "sha256": "5b6d56e5ed362673c599d9cba44e2621a4609570b9d1c870e3be11258609fa52",
+          "retrievedAt": "2026-10-22T22:05:04.203Z",
+          "lastModified": "Thu, 27 Mar 2025 12:31:13 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-03-22-advance-2025-03-27",
+      "seriesId": "claimsAdvance",
+      "period": "2025-03-22",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-03-27",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 224,
+      "sourceValue": "224,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/032725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/032725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-03-27 (day precision). Change versus the same release's revised prior week: -1000 claims.",
+        "DOL states this release applies the annual seasonal-factor revision to initial and continued claims from 2020 forward. This selected archive retains only the advance and prior-week facts in each release, not all historical values affected by the update. A specific numeric revision cause is not inferred."
+      ],
+      "seasonalAdjustmentNote": "DOL states this release applies the annual seasonal-factor revision to initial and continued claims from 2020 forward. This selected archive retains only the advance and prior-week facts in each release, not all historical values affected by the update. A specific numeric revision cause is not inferred.",
+      "seasonalAdjustmentKind": "applied-update",
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/032725.pdf",
+          "sha256": "5b6d56e5ed362673c599d9cba44e2621a4609570b9d1c870e3be11258609fa52",
+          "retrievedAt": "2026-10-22T22:05:04.203Z",
+          "lastModified": "Thu, 27 Mar 2025 12:31:13 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-03-08-prior-week-revised-2025-03-27",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-03-08",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-03-27",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1881,
+      "sourceValue": "1,881,000",
+      "previouslyPublishedSourceValue": "1,892,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/032725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/032725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-03-27 release, not an advance observation for this week. Previously published count: 1,892,000. Release date has day precision.",
+        "DOL states this release applies the annual seasonal-factor revision to initial and continued claims from 2020 forward. This selected archive retains only the advance and prior-week facts in each release, not all historical values affected by the update. A specific numeric revision cause is not inferred."
+      ],
+      "seasonalAdjustmentNote": "DOL states this release applies the annual seasonal-factor revision to initial and continued claims from 2020 forward. This selected archive retains only the advance and prior-week facts in each release, not all historical values affected by the update. A specific numeric revision cause is not inferred.",
+      "seasonalAdjustmentKind": "applied-update",
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/032725.pdf",
+          "sha256": "5b6d56e5ed362673c599d9cba44e2621a4609570b9d1c870e3be11258609fa52",
+          "retrievedAt": "2026-10-22T22:05:04.203Z",
+          "lastModified": "Thu, 27 Mar 2025 12:31:13 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-03-15-advance-2025-03-27",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-03-15",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-03-27",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1856,
+      "sourceValue": "1,856,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/032725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/032725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-03-27 (day precision). Change versus the same release's revised prior week: -25000 claims.",
+        "DOL states this release applies the annual seasonal-factor revision to initial and continued claims from 2020 forward. This selected archive retains only the advance and prior-week facts in each release, not all historical values affected by the update. A specific numeric revision cause is not inferred."
+      ],
+      "seasonalAdjustmentNote": "DOL states this release applies the annual seasonal-factor revision to initial and continued claims from 2020 forward. This selected archive retains only the advance and prior-week facts in each release, not all historical values affected by the update. A specific numeric revision cause is not inferred.",
+      "seasonalAdjustmentKind": "applied-update",
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/032725.pdf",
+          "sha256": "5b6d56e5ed362673c599d9cba44e2621a4609570b9d1c870e3be11258609fa52",
+          "retrievedAt": "2026-10-22T22:05:04.203Z",
+          "lastModified": "Thu, 27 Mar 2025 12:31:13 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-03-22-prior-week-revised-2025-04-03",
+      "seriesId": "claimsAdvance",
+      "period": "2025-03-22",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-04-03",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 225,
+      "sourceValue": "225,000",
+      "previouslyPublishedSourceValue": "224,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/040325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/040325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-04-03 release, not an advance observation for this week. Previously published count: 224,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/040325.pdf",
+          "sha256": "16d2fdc62b9e48829fc726446510f45ffa561ee0882b1a6c7ee4f348a55834e9",
+          "retrievedAt": "2026-10-22T22:05:04.503Z",
+          "lastModified": "Thu, 03 Apr 2025 12:31:27 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-03-29-advance-2025-04-03",
+      "seriesId": "claimsAdvance",
+      "period": "2025-03-29",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-04-03",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 219,
+      "sourceValue": "219,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/040325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/040325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-04-03 (day precision). Change versus the same release's revised prior week: -6000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/040325.pdf",
+          "sha256": "16d2fdc62b9e48829fc726446510f45ffa561ee0882b1a6c7ee4f348a55834e9",
+          "retrievedAt": "2026-10-22T22:05:04.503Z",
+          "lastModified": "Thu, 03 Apr 2025 12:31:27 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-03-15-prior-week-revised-2025-04-03",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-03-15",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-04-03",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1847,
+      "sourceValue": "1,847,000",
+      "previouslyPublishedSourceValue": "1,856,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/040325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/040325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-04-03 release, not an advance observation for this week. Previously published count: 1,856,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/040325.pdf",
+          "sha256": "16d2fdc62b9e48829fc726446510f45ffa561ee0882b1a6c7ee4f348a55834e9",
+          "retrievedAt": "2026-10-22T22:05:04.503Z",
+          "lastModified": "Thu, 03 Apr 2025 12:31:27 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-03-22-advance-2025-04-03",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-03-22",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-04-03",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1903,
+      "sourceValue": "1,903,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/040325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/040325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-04-03 (day precision). Change versus the same release's revised prior week: 56000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/040325.pdf",
+          "sha256": "16d2fdc62b9e48829fc726446510f45ffa561ee0882b1a6c7ee4f348a55834e9",
+          "retrievedAt": "2026-10-22T22:05:04.503Z",
+          "lastModified": "Thu, 03 Apr 2025 12:31:27 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-03-29-prior-week-unrevised-2025-04-10",
+      "seriesId": "claimsAdvance",
+      "period": "2025-03-29",
+      "estimate": "Unrevised prior",
+      "releaseStage": "prior-week-unrevised",
+      "publicationDate": "2025-04-10",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 219,
+      "sourceValue": "219,000",
+      "previouslyPublishedSourceValue": "219,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/041025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/041025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week unrevised comparison in the 2025-04-10 release, not an advance observation for this week. Previously published count: 219,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/041025.pdf",
+          "sha256": "c04aa493464c4dbcb0d7e88287380ba753097b68797398b9e4ca6922ee7624f6",
+          "retrievedAt": "2026-10-22T22:05:04.823Z",
+          "lastModified": "Thu, 10 Apr 2025 12:31:12 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-04-05-advance-2025-04-10",
+      "seriesId": "claimsAdvance",
+      "period": "2025-04-05",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-04-10",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 223,
+      "sourceValue": "223,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/041025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/041025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-04-10 (day precision). Change versus the same release's unrevised prior week: 4000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/041025.pdf",
+          "sha256": "c04aa493464c4dbcb0d7e88287380ba753097b68797398b9e4ca6922ee7624f6",
+          "retrievedAt": "2026-10-22T22:05:04.823Z",
+          "lastModified": "Thu, 10 Apr 2025 12:31:12 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-03-22-prior-week-revised-2025-04-10",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-03-22",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-04-10",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1893,
+      "sourceValue": "1,893,000",
+      "previouslyPublishedSourceValue": "1,903,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/041025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/041025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-04-10 release, not an advance observation for this week. Previously published count: 1,903,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/041025.pdf",
+          "sha256": "c04aa493464c4dbcb0d7e88287380ba753097b68797398b9e4ca6922ee7624f6",
+          "retrievedAt": "2026-10-22T22:05:04.823Z",
+          "lastModified": "Thu, 10 Apr 2025 12:31:12 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-03-29-advance-2025-04-10",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-03-29",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-04-10",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1850,
+      "sourceValue": "1,850,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/041025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/041025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-04-10 (day precision). Change versus the same release's revised prior week: -43000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/041025.pdf",
+          "sha256": "c04aa493464c4dbcb0d7e88287380ba753097b68797398b9e4ca6922ee7624f6",
+          "retrievedAt": "2026-10-22T22:05:04.823Z",
+          "lastModified": "Thu, 10 Apr 2025 12:31:12 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-04-05-prior-week-revised-2025-04-17",
+      "seriesId": "claimsAdvance",
+      "period": "2025-04-05",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-04-17",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 224,
+      "sourceValue": "224,000",
+      "previouslyPublishedSourceValue": "223,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/041725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/041725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-04-17 release, not an advance observation for this week. Previously published count: 223,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/041725.pdf",
+          "sha256": "89168144daca51aad104820685cd5923b73fc8c10293cf2392d60c91d39d5f40",
+          "retrievedAt": "2026-10-22T22:05:05.318Z",
+          "lastModified": "Thu, 17 Apr 2025 12:33:04 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-04-12-advance-2025-04-17",
+      "seriesId": "claimsAdvance",
+      "period": "2025-04-12",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-04-17",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 215,
+      "sourceValue": "215,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/041725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/041725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-04-17 (day precision). Change versus the same release's revised prior week: -9000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/041725.pdf",
+          "sha256": "89168144daca51aad104820685cd5923b73fc8c10293cf2392d60c91d39d5f40",
+          "retrievedAt": "2026-10-22T22:05:05.318Z",
+          "lastModified": "Thu, 17 Apr 2025 12:33:04 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-03-29-prior-week-revised-2025-04-17",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-03-29",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-04-17",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1844,
+      "sourceValue": "1,844,000",
+      "previouslyPublishedSourceValue": "1,850,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/041725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/041725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-04-17 release, not an advance observation for this week. Previously published count: 1,850,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/041725.pdf",
+          "sha256": "89168144daca51aad104820685cd5923b73fc8c10293cf2392d60c91d39d5f40",
+          "retrievedAt": "2026-10-22T22:05:05.318Z",
+          "lastModified": "Thu, 17 Apr 2025 12:33:04 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-04-05-advance-2025-04-17",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-04-05",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-04-17",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1885,
+      "sourceValue": "1,885,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/041725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/041725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-04-17 (day precision). Change versus the same release's revised prior week: 41000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/041725.pdf",
+          "sha256": "89168144daca51aad104820685cd5923b73fc8c10293cf2392d60c91d39d5f40",
+          "retrievedAt": "2026-10-22T22:05:05.318Z",
+          "lastModified": "Thu, 17 Apr 2025 12:33:04 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-04-12-prior-week-revised-2025-04-24",
+      "seriesId": "claimsAdvance",
+      "period": "2025-04-12",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-04-24",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 216,
+      "sourceValue": "216,000",
+      "previouslyPublishedSourceValue": "215,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/042425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/042425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-04-24 release, not an advance observation for this week. Previously published count: 215,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/042425.pdf",
+          "sha256": "f2fd120745105b98b6bfd9a876f8cc8d8501e3c68f227a909ce522534c7ca0b3",
+          "retrievedAt": "2026-10-22T22:05:05.702Z",
+          "lastModified": "Thu, 24 Apr 2025 12:30:59 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-04-19-advance-2025-04-24",
+      "seriesId": "claimsAdvance",
+      "period": "2025-04-19",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-04-24",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 222,
+      "sourceValue": "222,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/042425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/042425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-04-24 (day precision). Change versus the same release's revised prior week: 6000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/042425.pdf",
+          "sha256": "f2fd120745105b98b6bfd9a876f8cc8d8501e3c68f227a909ce522534c7ca0b3",
+          "retrievedAt": "2026-10-22T22:05:05.702Z",
+          "lastModified": "Thu, 24 Apr 2025 12:30:59 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-04-05-prior-week-revised-2025-04-24",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-04-05",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-04-24",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1878,
+      "sourceValue": "1,878,000",
+      "previouslyPublishedSourceValue": "1,885,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/042425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/042425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-04-24 release, not an advance observation for this week. Previously published count: 1,885,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/042425.pdf",
+          "sha256": "f2fd120745105b98b6bfd9a876f8cc8d8501e3c68f227a909ce522534c7ca0b3",
+          "retrievedAt": "2026-10-22T22:05:05.702Z",
+          "lastModified": "Thu, 24 Apr 2025 12:30:59 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-04-12-advance-2025-04-24",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-04-12",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-04-24",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1841,
+      "sourceValue": "1,841,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/042425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/042425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-04-24 (day precision). Change versus the same release's revised prior week: -37000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/042425.pdf",
+          "sha256": "f2fd120745105b98b6bfd9a876f8cc8d8501e3c68f227a909ce522534c7ca0b3",
+          "retrievedAt": "2026-10-22T22:05:05.702Z",
+          "lastModified": "Thu, 24 Apr 2025 12:30:59 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-04-19-prior-week-revised-2025-05-01",
+      "seriesId": "claimsAdvance",
+      "period": "2025-04-19",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-05-01",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 223,
+      "sourceValue": "223,000",
+      "previouslyPublishedSourceValue": "222,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/050125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/050125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-05-01 release, not an advance observation for this week. Previously published count: 222,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/050125.pdf",
+          "sha256": "42dc4b6c76d68c0613437f716b432d51702cf510e922fd618783d2ead8ce1b0c",
+          "retrievedAt": "2026-10-22T22:05:06.231Z",
+          "lastModified": "Thu, 01 May 2025 12:30:45 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-04-26-advance-2025-05-01",
+      "seriesId": "claimsAdvance",
+      "period": "2025-04-26",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-05-01",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 241,
+      "sourceValue": "241,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/050125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/050125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-05-01 (day precision). Change versus the same release's revised prior week: 18000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/050125.pdf",
+          "sha256": "42dc4b6c76d68c0613437f716b432d51702cf510e922fd618783d2ead8ce1b0c",
+          "retrievedAt": "2026-10-22T22:05:06.231Z",
+          "lastModified": "Thu, 01 May 2025 12:30:45 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-04-12-prior-week-revised-2025-05-01",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-04-12",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-05-01",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1833,
+      "sourceValue": "1,833,000",
+      "previouslyPublishedSourceValue": "1,841,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/050125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/050125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-05-01 release, not an advance observation for this week. Previously published count: 1,841,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/050125.pdf",
+          "sha256": "42dc4b6c76d68c0613437f716b432d51702cf510e922fd618783d2ead8ce1b0c",
+          "retrievedAt": "2026-10-22T22:05:06.231Z",
+          "lastModified": "Thu, 01 May 2025 12:30:45 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-04-19-advance-2025-05-01",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-04-19",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-05-01",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1916,
+      "sourceValue": "1,916,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/050125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/050125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-05-01 (day precision). Change versus the same release's revised prior week: 83000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/050125.pdf",
+          "sha256": "42dc4b6c76d68c0613437f716b432d51702cf510e922fd618783d2ead8ce1b0c",
+          "retrievedAt": "2026-10-22T22:05:06.231Z",
+          "lastModified": "Thu, 01 May 2025 12:30:45 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-04-26-prior-week-unrevised-2025-05-08",
+      "seriesId": "claimsAdvance",
+      "period": "2025-04-26",
+      "estimate": "Unrevised prior",
+      "releaseStage": "prior-week-unrevised",
+      "publicationDate": "2025-05-08",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 241,
+      "sourceValue": "241,000",
+      "previouslyPublishedSourceValue": "241,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/050825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/050825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week unrevised comparison in the 2025-05-08 release, not an advance observation for this week. Previously published count: 241,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/050825.pdf",
+          "sha256": "42d2a04ab04c532849c3ecbc3ebe9e335770a96af72e914f3dd6250dfbd9eaee",
+          "retrievedAt": "2026-10-22T22:05:06.844Z",
+          "lastModified": "Thu, 08 May 2025 12:31:56 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-05-03-advance-2025-05-08",
+      "seriesId": "claimsAdvance",
+      "period": "2025-05-03",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-05-08",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 228,
+      "sourceValue": "228,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/050825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/050825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-05-08 (day precision). Change versus the same release's unrevised prior week: -13000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/050825.pdf",
+          "sha256": "42d2a04ab04c532849c3ecbc3ebe9e335770a96af72e914f3dd6250dfbd9eaee",
+          "retrievedAt": "2026-10-22T22:05:06.844Z",
+          "lastModified": "Thu, 08 May 2025 12:31:56 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-04-19-prior-week-revised-2025-05-08",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-04-19",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-05-08",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1908,
+      "sourceValue": "1,908,000",
+      "previouslyPublishedSourceValue": "1,916,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/050825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/050825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-05-08 release, not an advance observation for this week. Previously published count: 1,916,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/050825.pdf",
+          "sha256": "42d2a04ab04c532849c3ecbc3ebe9e335770a96af72e914f3dd6250dfbd9eaee",
+          "retrievedAt": "2026-10-22T22:05:06.844Z",
+          "lastModified": "Thu, 08 May 2025 12:31:56 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-04-26-advance-2025-05-08",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-04-26",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-05-08",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1879,
+      "sourceValue": "1,879,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/050825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/050825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-05-08 (day precision). Change versus the same release's revised prior week: -29000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/050825.pdf",
+          "sha256": "42d2a04ab04c532849c3ecbc3ebe9e335770a96af72e914f3dd6250dfbd9eaee",
+          "retrievedAt": "2026-10-22T22:05:06.844Z",
+          "lastModified": "Thu, 08 May 2025 12:31:56 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-05-03-prior-week-revised-2025-05-15",
+      "seriesId": "claimsAdvance",
+      "period": "2025-05-03",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-05-15",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 229,
+      "sourceValue": "229,000",
+      "previouslyPublishedSourceValue": "228,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/051525.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/051525.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-05-15 release, not an advance observation for this week. Previously published count: 228,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/051525.pdf",
+          "sha256": "c6ad10027181774afe4a5186b644aa0b61c1bc3593070f1bbcbe0f37bf2e42fb",
+          "retrievedAt": "2026-10-22T22:05:07.634Z",
+          "lastModified": "Thu, 15 May 2025 12:30:43 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-05-10-advance-2025-05-15",
+      "seriesId": "claimsAdvance",
+      "period": "2025-05-10",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-05-15",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 229,
+      "sourceValue": "229,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/051525.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/051525.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-05-15 (day precision). Change versus the same release's revised prior week: 0 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/051525.pdf",
+          "sha256": "c6ad10027181774afe4a5186b644aa0b61c1bc3593070f1bbcbe0f37bf2e42fb",
+          "retrievedAt": "2026-10-22T22:05:07.634Z",
+          "lastModified": "Thu, 15 May 2025 12:30:43 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-04-26-prior-week-revised-2025-05-15",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-04-26",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-05-15",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1872,
+      "sourceValue": "1,872,000",
+      "previouslyPublishedSourceValue": "1,879,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/051525.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/051525.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-05-15 release, not an advance observation for this week. Previously published count: 1,879,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/051525.pdf",
+          "sha256": "c6ad10027181774afe4a5186b644aa0b61c1bc3593070f1bbcbe0f37bf2e42fb",
+          "retrievedAt": "2026-10-22T22:05:07.634Z",
+          "lastModified": "Thu, 15 May 2025 12:30:43 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-05-03-advance-2025-05-15",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-05-03",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-05-15",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1881,
+      "sourceValue": "1,881,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/051525.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/051525.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-05-15 (day precision). Change versus the same release's revised prior week: 9000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/051525.pdf",
+          "sha256": "c6ad10027181774afe4a5186b644aa0b61c1bc3593070f1bbcbe0f37bf2e42fb",
+          "retrievedAt": "2026-10-22T22:05:07.634Z",
+          "lastModified": "Thu, 15 May 2025 12:30:43 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-05-10-prior-week-unrevised-2025-05-22",
+      "seriesId": "claimsAdvance",
+      "period": "2025-05-10",
+      "estimate": "Unrevised prior",
+      "releaseStage": "prior-week-unrevised",
+      "publicationDate": "2025-05-22",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 229,
+      "sourceValue": "229,000",
+      "previouslyPublishedSourceValue": "229,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/052225.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/052225.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week unrevised comparison in the 2025-05-22 release, not an advance observation for this week. Previously published count: 229,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/052225.pdf",
+          "sha256": "446a6628a1a22e8448680a9a78b210bb0609a0dee9c381401ce86486cc4ba3a9",
+          "retrievedAt": "2026-10-22T22:05:08.114Z",
+          "lastModified": "Thu, 22 May 2025 12:30:30 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-05-17-advance-2025-05-22",
+      "seriesId": "claimsAdvance",
+      "period": "2025-05-17",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-05-22",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 227,
+      "sourceValue": "227,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/052225.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/052225.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-05-22 (day precision). Change versus the same release's unrevised prior week: -2000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/052225.pdf",
+          "sha256": "446a6628a1a22e8448680a9a78b210bb0609a0dee9c381401ce86486cc4ba3a9",
+          "retrievedAt": "2026-10-22T22:05:08.114Z",
+          "lastModified": "Thu, 22 May 2025 12:30:30 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-05-03-prior-week-revised-2025-05-22",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-05-03",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-05-22",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1867,
+      "sourceValue": "1,867,000",
+      "previouslyPublishedSourceValue": "1,881,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/052225.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/052225.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-05-22 release, not an advance observation for this week. Previously published count: 1,881,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/052225.pdf",
+          "sha256": "446a6628a1a22e8448680a9a78b210bb0609a0dee9c381401ce86486cc4ba3a9",
+          "retrievedAt": "2026-10-22T22:05:08.114Z",
+          "lastModified": "Thu, 22 May 2025 12:30:30 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-05-10-advance-2025-05-22",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-05-10",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-05-22",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1903,
+      "sourceValue": "1,903,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/052225.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/052225.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-05-22 (day precision). Change versus the same release's revised prior week: 36000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/052225.pdf",
+          "sha256": "446a6628a1a22e8448680a9a78b210bb0609a0dee9c381401ce86486cc4ba3a9",
+          "retrievedAt": "2026-10-22T22:05:08.114Z",
+          "lastModified": "Thu, 22 May 2025 12:30:30 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-05-17-prior-week-revised-2025-05-29",
+      "seriesId": "claimsAdvance",
+      "period": "2025-05-17",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-05-29",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 226,
+      "sourceValue": "226,000",
+      "previouslyPublishedSourceValue": "227,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/052925.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/052925.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-05-29 release, not an advance observation for this week. Previously published count: 227,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/052925.pdf",
+          "sha256": "4abd07e9f7c7766b35c203873caaed2115de0964f6d720a022588e77acfa1ba6",
+          "retrievedAt": "2026-10-22T22:05:08.552Z",
+          "lastModified": "Thu, 29 May 2025 12:31:19 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-05-24-advance-2025-05-29",
+      "seriesId": "claimsAdvance",
+      "period": "2025-05-24",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-05-29",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 240,
+      "sourceValue": "240,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/052925.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/052925.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-05-29 (day precision). Change versus the same release's revised prior week: 14000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/052925.pdf",
+          "sha256": "4abd07e9f7c7766b35c203873caaed2115de0964f6d720a022588e77acfa1ba6",
+          "retrievedAt": "2026-10-22T22:05:08.552Z",
+          "lastModified": "Thu, 29 May 2025 12:31:19 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-05-10-prior-week-revised-2025-05-29",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-05-10",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-05-29",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1893,
+      "sourceValue": "1,893,000",
+      "previouslyPublishedSourceValue": "1,903,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/052925.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/052925.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-05-29 release, not an advance observation for this week. Previously published count: 1,903,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/052925.pdf",
+          "sha256": "4abd07e9f7c7766b35c203873caaed2115de0964f6d720a022588e77acfa1ba6",
+          "retrievedAt": "2026-10-22T22:05:08.552Z",
+          "lastModified": "Thu, 29 May 2025 12:31:19 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-05-17-advance-2025-05-29",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-05-17",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-05-29",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1919,
+      "sourceValue": "1,919,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/052925.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/052925.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-05-29 (day precision). Change versus the same release's revised prior week: 26000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/052925.pdf",
+          "sha256": "4abd07e9f7c7766b35c203873caaed2115de0964f6d720a022588e77acfa1ba6",
+          "retrievedAt": "2026-10-22T22:05:08.552Z",
+          "lastModified": "Thu, 29 May 2025 12:31:19 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-05-24-prior-week-revised-2025-06-05",
+      "seriesId": "claimsAdvance",
+      "period": "2025-05-24",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-06-05",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 239,
+      "sourceValue": "239,000",
+      "previouslyPublishedSourceValue": "240,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/060525.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/060525.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-06-05 release, not an advance observation for this week. Previously published count: 240,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/060525.pdf",
+          "sha256": "1c0ba54160efa6b7e638cdf88f30eb993b7d26adce9d3d6cdb3acddeb9f85941",
+          "retrievedAt": "2026-10-22T22:05:08.816Z",
+          "lastModified": "Thu, 05 Jun 2025 12:31:10 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-05-31-advance-2025-06-05",
+      "seriesId": "claimsAdvance",
+      "period": "2025-05-31",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-06-05",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 247,
+      "sourceValue": "247,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/060525.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/060525.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-06-05 (day precision). Change versus the same release's revised prior week: 8000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/060525.pdf",
+          "sha256": "1c0ba54160efa6b7e638cdf88f30eb993b7d26adce9d3d6cdb3acddeb9f85941",
+          "retrievedAt": "2026-10-22T22:05:08.816Z",
+          "lastModified": "Thu, 05 Jun 2025 12:31:10 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-05-17-prior-week-revised-2025-06-05",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-05-17",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-06-05",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1907,
+      "sourceValue": "1,907,000",
+      "previouslyPublishedSourceValue": "1,919,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/060525.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/060525.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-06-05 release, not an advance observation for this week. Previously published count: 1,919,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/060525.pdf",
+          "sha256": "1c0ba54160efa6b7e638cdf88f30eb993b7d26adce9d3d6cdb3acddeb9f85941",
+          "retrievedAt": "2026-10-22T22:05:08.816Z",
+          "lastModified": "Thu, 05 Jun 2025 12:31:10 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-05-24-advance-2025-06-05",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-05-24",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-06-05",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1904,
+      "sourceValue": "1,904,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/060525.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/060525.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-06-05 (day precision). Change versus the same release's revised prior week: -3000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/060525.pdf",
+          "sha256": "1c0ba54160efa6b7e638cdf88f30eb993b7d26adce9d3d6cdb3acddeb9f85941",
+          "retrievedAt": "2026-10-22T22:05:08.816Z",
+          "lastModified": "Thu, 05 Jun 2025 12:31:10 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-05-31-prior-week-revised-2025-06-12",
+      "seriesId": "claimsAdvance",
+      "period": "2025-05-31",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-06-12",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 248,
+      "sourceValue": "248,000",
+      "previouslyPublishedSourceValue": "247,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/061225.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/061225.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-06-12 release, not an advance observation for this week. Previously published count: 247,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/061225.pdf",
+          "sha256": "08028ce637c411404d911b62901571aefd9b86f51640fce8209d1cc3374fc18b",
+          "retrievedAt": "2026-10-22T22:05:09.373Z",
+          "lastModified": "Thu, 12 Jun 2025 12:34:59 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-06-07-advance-2025-06-12",
+      "seriesId": "claimsAdvance",
+      "period": "2025-06-07",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-06-12",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 248,
+      "sourceValue": "248,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/061225.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/061225.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-06-12 (day precision). Change versus the same release's revised prior week: 0 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/061225.pdf",
+          "sha256": "08028ce637c411404d911b62901571aefd9b86f51640fce8209d1cc3374fc18b",
+          "retrievedAt": "2026-10-22T22:05:09.373Z",
+          "lastModified": "Thu, 12 Jun 2025 12:34:59 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-05-24-prior-week-revised-2025-06-12",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-05-24",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-06-12",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1902,
+      "sourceValue": "1,902,000",
+      "previouslyPublishedSourceValue": "1,904,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/061225.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/061225.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-06-12 release, not an advance observation for this week. Previously published count: 1,904,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/061225.pdf",
+          "sha256": "08028ce637c411404d911b62901571aefd9b86f51640fce8209d1cc3374fc18b",
+          "retrievedAt": "2026-10-22T22:05:09.373Z",
+          "lastModified": "Thu, 12 Jun 2025 12:34:59 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-05-31-advance-2025-06-12",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-05-31",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-06-12",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1956,
+      "sourceValue": "1,956,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/061225.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/061225.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-06-12 (day precision). Change versus the same release's revised prior week: 54000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/061225.pdf",
+          "sha256": "08028ce637c411404d911b62901571aefd9b86f51640fce8209d1cc3374fc18b",
+          "retrievedAt": "2026-10-22T22:05:09.373Z",
+          "lastModified": "Thu, 12 Jun 2025 12:34:59 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-06-07-prior-week-revised-2025-06-18",
+      "seriesId": "claimsAdvance",
+      "period": "2025-06-07",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-06-18",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 250,
+      "sourceValue": "250,000",
+      "previouslyPublishedSourceValue": "248,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/061825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/061825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-06-18 release, not an advance observation for this week. Previously published count: 248,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/061825.pdf",
+          "sha256": "8edb2696737b1838f8a0f59e12a60f85c035e009880ea033205a3a355da94442",
+          "retrievedAt": "2026-10-22T22:05:09.622Z",
+          "lastModified": "Wed, 18 Jun 2025 12:31:18 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-06-14-advance-2025-06-18",
+      "seriesId": "claimsAdvance",
+      "period": "2025-06-14",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-06-18",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 245,
+      "sourceValue": "245,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/061825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/061825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-06-18 (day precision). Change versus the same release's revised prior week: -5000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/061825.pdf",
+          "sha256": "8edb2696737b1838f8a0f59e12a60f85c035e009880ea033205a3a355da94442",
+          "retrievedAt": "2026-10-22T22:05:09.622Z",
+          "lastModified": "Wed, 18 Jun 2025 12:31:18 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-05-31-prior-week-revised-2025-06-18",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-05-31",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-06-18",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1951,
+      "sourceValue": "1,951,000",
+      "previouslyPublishedSourceValue": "1,956,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/061825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/061825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-06-18 release, not an advance observation for this week. Previously published count: 1,956,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/061825.pdf",
+          "sha256": "8edb2696737b1838f8a0f59e12a60f85c035e009880ea033205a3a355da94442",
+          "retrievedAt": "2026-10-22T22:05:09.622Z",
+          "lastModified": "Wed, 18 Jun 2025 12:31:18 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-06-07-advance-2025-06-18",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-06-07",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-06-18",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1945,
+      "sourceValue": "1,945,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/061825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/061825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-06-18 (day precision). Change versus the same release's revised prior week: -6000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/061825.pdf",
+          "sha256": "8edb2696737b1838f8a0f59e12a60f85c035e009880ea033205a3a355da94442",
+          "retrievedAt": "2026-10-22T22:05:09.622Z",
+          "lastModified": "Wed, 18 Jun 2025 12:31:18 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-06-14-prior-week-revised-2025-06-26",
+      "seriesId": "claimsAdvance",
+      "period": "2025-06-14",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-06-26",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 246,
+      "sourceValue": "246,000",
+      "previouslyPublishedSourceValue": "245,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/062625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/062625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-06-26 release, not an advance observation for this week. Previously published count: 245,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/062625.pdf",
+          "sha256": "e2ac871ddda7ac7c587254e19e4dddab7a556ecbc43260792f39c0fdbcdf15a0",
+          "retrievedAt": "2026-10-22T22:05:10.223Z",
+          "lastModified": "Thu, 26 Jun 2025 12:31:38 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-06-21-advance-2025-06-26",
+      "seriesId": "claimsAdvance",
+      "period": "2025-06-21",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-06-26",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 236,
+      "sourceValue": "236,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/062625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/062625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-06-26 (day precision). Change versus the same release's revised prior week: -10000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/062625.pdf",
+          "sha256": "e2ac871ddda7ac7c587254e19e4dddab7a556ecbc43260792f39c0fdbcdf15a0",
+          "retrievedAt": "2026-10-22T22:05:10.223Z",
+          "lastModified": "Thu, 26 Jun 2025 12:31:38 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-06-07-prior-week-revised-2025-06-26",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-06-07",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-06-26",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1937,
+      "sourceValue": "1,937,000",
+      "previouslyPublishedSourceValue": "1,945,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/062625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/062625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-06-26 release, not an advance observation for this week. Previously published count: 1,945,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/062625.pdf",
+          "sha256": "e2ac871ddda7ac7c587254e19e4dddab7a556ecbc43260792f39c0fdbcdf15a0",
+          "retrievedAt": "2026-10-22T22:05:10.223Z",
+          "lastModified": "Thu, 26 Jun 2025 12:31:38 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-06-14-advance-2025-06-26",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-06-14",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-06-26",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1974,
+      "sourceValue": "1,974,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/062625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/062625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-06-26 (day precision). Change versus the same release's revised prior week: 37000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/062625.pdf",
+          "sha256": "e2ac871ddda7ac7c587254e19e4dddab7a556ecbc43260792f39c0fdbcdf15a0",
+          "retrievedAt": "2026-10-22T22:05:10.223Z",
+          "lastModified": "Thu, 26 Jun 2025 12:31:38 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-06-21-prior-week-revised-2025-07-03",
+      "seriesId": "claimsAdvance",
+      "period": "2025-06-21",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-07-03",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 237,
+      "sourceValue": "237,000",
+      "previouslyPublishedSourceValue": "236,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/070325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/070325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-07-03 release, not an advance observation for this week. Previously published count: 236,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/070325.pdf",
+          "sha256": "42f93aff03d17a37811ff827353107f5066ed6957f672f47d73d430bf236b655",
+          "retrievedAt": "2026-10-22T22:05:10.460Z",
+          "lastModified": "Thu, 03 Jul 2025 12:31:53 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-06-28-advance-2025-07-03",
+      "seriesId": "claimsAdvance",
+      "period": "2025-06-28",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-07-03",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 233,
+      "sourceValue": "233,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/070325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/070325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-07-03 (day precision). Change versus the same release's revised prior week: -4000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/070325.pdf",
+          "sha256": "42f93aff03d17a37811ff827353107f5066ed6957f672f47d73d430bf236b655",
+          "retrievedAt": "2026-10-22T22:05:10.460Z",
+          "lastModified": "Thu, 03 Jul 2025 12:31:53 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-06-14-prior-week-revised-2025-07-03",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-06-14",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-07-03",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1964,
+      "sourceValue": "1,964,000",
+      "previouslyPublishedSourceValue": "1,974,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/070325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/070325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-07-03 release, not an advance observation for this week. Previously published count: 1,974,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/070325.pdf",
+          "sha256": "42f93aff03d17a37811ff827353107f5066ed6957f672f47d73d430bf236b655",
+          "retrievedAt": "2026-10-22T22:05:10.460Z",
+          "lastModified": "Thu, 03 Jul 2025 12:31:53 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-06-21-advance-2025-07-03",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-06-21",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-07-03",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1964,
+      "sourceValue": "1,964,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/070325.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/070325.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-07-03 (day precision). Change versus the same release's revised prior week: 0 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/070325.pdf",
+          "sha256": "42f93aff03d17a37811ff827353107f5066ed6957f672f47d73d430bf236b655",
+          "retrievedAt": "2026-10-22T22:05:10.460Z",
+          "lastModified": "Thu, 03 Jul 2025 12:31:53 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-06-28-prior-week-revised-2025-07-10",
+      "seriesId": "claimsAdvance",
+      "period": "2025-06-28",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-07-10",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 232,
+      "sourceValue": "232,000",
+      "previouslyPublishedSourceValue": "233,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/071025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/071025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-07-10 release, not an advance observation for this week. Previously published count: 233,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/071025.pdf",
+          "sha256": "5eb1fe5eb9988d6c83b93d8d48ddaf97abcd19d16dfd5836903c3e75d61cb5af",
+          "retrievedAt": "2026-10-22T22:05:11.236Z",
+          "lastModified": "Thu, 10 Jul 2025 12:31:12 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-07-05-advance-2025-07-10",
+      "seriesId": "claimsAdvance",
+      "period": "2025-07-05",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-07-10",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 227,
+      "sourceValue": "227,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/071025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/071025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-07-10 (day precision). Change versus the same release's revised prior week: -5000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/071025.pdf",
+          "sha256": "5eb1fe5eb9988d6c83b93d8d48ddaf97abcd19d16dfd5836903c3e75d61cb5af",
+          "retrievedAt": "2026-10-22T22:05:11.236Z",
+          "lastModified": "Thu, 10 Jul 2025 12:31:12 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-06-21-prior-week-revised-2025-07-10",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-06-21",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-07-10",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1955,
+      "sourceValue": "1,955,000",
+      "previouslyPublishedSourceValue": "1,964,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/071025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/071025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-07-10 release, not an advance observation for this week. Previously published count: 1,964,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/071025.pdf",
+          "sha256": "5eb1fe5eb9988d6c83b93d8d48ddaf97abcd19d16dfd5836903c3e75d61cb5af",
+          "retrievedAt": "2026-10-22T22:05:11.236Z",
+          "lastModified": "Thu, 10 Jul 2025 12:31:12 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-06-28-advance-2025-07-10",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-06-28",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-07-10",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1965,
+      "sourceValue": "1,965,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/071025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/071025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-07-10 (day precision). Change versus the same release's revised prior week: 10000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/071025.pdf",
+          "sha256": "5eb1fe5eb9988d6c83b93d8d48ddaf97abcd19d16dfd5836903c3e75d61cb5af",
+          "retrievedAt": "2026-10-22T22:05:11.236Z",
+          "lastModified": "Thu, 10 Jul 2025 12:31:12 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-07-05-prior-week-revised-2025-07-17",
+      "seriesId": "claimsAdvance",
+      "period": "2025-07-05",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-07-17",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 228,
+      "sourceValue": "228,000",
+      "previouslyPublishedSourceValue": "227,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/071725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/071725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-07-17 release, not an advance observation for this week. Previously published count: 227,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/071725.pdf",
+          "sha256": "c6d2a16fcdcc542fa2e6c0f543e086efe68ec4ad7402a83e744cad2652d44c43",
+          "retrievedAt": "2026-10-22T22:05:11.385Z",
+          "lastModified": "Thu, 17 Jul 2025 12:30:54 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-07-12-advance-2025-07-17",
+      "seriesId": "claimsAdvance",
+      "period": "2025-07-12",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-07-17",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 221,
+      "sourceValue": "221,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/071725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/071725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-07-17 (day precision). Change versus the same release's revised prior week: -7000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/071725.pdf",
+          "sha256": "c6d2a16fcdcc542fa2e6c0f543e086efe68ec4ad7402a83e744cad2652d44c43",
+          "retrievedAt": "2026-10-22T22:05:11.385Z",
+          "lastModified": "Thu, 17 Jul 2025 12:30:54 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-06-28-prior-week-revised-2025-07-17",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-06-28",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-07-17",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1954,
+      "sourceValue": "1,954,000",
+      "previouslyPublishedSourceValue": "1,965,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/071725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/071725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-07-17 release, not an advance observation for this week. Previously published count: 1,965,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/071725.pdf",
+          "sha256": "c6d2a16fcdcc542fa2e6c0f543e086efe68ec4ad7402a83e744cad2652d44c43",
+          "retrievedAt": "2026-10-22T22:05:11.385Z",
+          "lastModified": "Thu, 17 Jul 2025 12:30:54 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-07-05-advance-2025-07-17",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-07-05",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-07-17",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1956,
+      "sourceValue": "1,956,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/071725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/071725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-07-17 (day precision). Change versus the same release's revised prior week: 2000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/071725.pdf",
+          "sha256": "c6d2a16fcdcc542fa2e6c0f543e086efe68ec4ad7402a83e744cad2652d44c43",
+          "retrievedAt": "2026-10-22T22:05:11.385Z",
+          "lastModified": "Thu, 17 Jul 2025 12:30:54 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-07-12-prior-week-unrevised-2025-07-24",
+      "seriesId": "claimsAdvance",
+      "period": "2025-07-12",
+      "estimate": "Unrevised prior",
+      "releaseStage": "prior-week-unrevised",
+      "publicationDate": "2025-07-24",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 221,
+      "sourceValue": "221,000",
+      "previouslyPublishedSourceValue": "221,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/072425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/072425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week unrevised comparison in the 2025-07-24 release, not an advance observation for this week. Previously published count: 221,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/072425.pdf",
+          "sha256": "29fbf4b05e21fea426e30818b81a4248d69cf6c4d0213fe5f6751851a32ac739",
+          "retrievedAt": "2026-10-22T22:05:11.965Z",
+          "lastModified": "Thu, 24 Jul 2025 12:31:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-07-19-advance-2025-07-24",
+      "seriesId": "claimsAdvance",
+      "period": "2025-07-19",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-07-24",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 217,
+      "sourceValue": "217,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/072425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/072425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-07-24 (day precision). Change versus the same release's unrevised prior week: -4000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/072425.pdf",
+          "sha256": "29fbf4b05e21fea426e30818b81a4248d69cf6c4d0213fe5f6751851a32ac739",
+          "retrievedAt": "2026-10-22T22:05:11.965Z",
+          "lastModified": "Thu, 24 Jul 2025 12:31:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-07-05-prior-week-revised-2025-07-24",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-07-05",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-07-24",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1951,
+      "sourceValue": "1,951,000",
+      "previouslyPublishedSourceValue": "1,956,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/072425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/072425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-07-24 release, not an advance observation for this week. Previously published count: 1,956,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/072425.pdf",
+          "sha256": "29fbf4b05e21fea426e30818b81a4248d69cf6c4d0213fe5f6751851a32ac739",
+          "retrievedAt": "2026-10-22T22:05:11.965Z",
+          "lastModified": "Thu, 24 Jul 2025 12:31:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-07-12-advance-2025-07-24",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-07-12",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-07-24",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1955,
+      "sourceValue": "1,955,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/072425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/072425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-07-24 (day precision). Change versus the same release's revised prior week: 4000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/072425.pdf",
+          "sha256": "29fbf4b05e21fea426e30818b81a4248d69cf6c4d0213fe5f6751851a32ac739",
+          "retrievedAt": "2026-10-22T22:05:11.965Z",
+          "lastModified": "Thu, 24 Jul 2025 12:31:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-07-19-prior-week-unrevised-2025-07-31",
+      "seriesId": "claimsAdvance",
+      "period": "2025-07-19",
+      "estimate": "Unrevised prior",
+      "releaseStage": "prior-week-unrevised",
+      "publicationDate": "2025-07-31",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 217,
+      "sourceValue": "217,000",
+      "previouslyPublishedSourceValue": "217,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/073125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/073125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week unrevised comparison in the 2025-07-31 release, not an advance observation for this week. Previously published count: 217,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/073125.pdf",
+          "sha256": "a140889fcc365603a8e88832ac0aca9a071daffad2e1e45ad221c5781590379d",
+          "retrievedAt": "2026-10-22T22:05:12.054Z",
+          "lastModified": "Thu, 31 Jul 2025 12:39:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-07-26-advance-2025-07-31",
+      "seriesId": "claimsAdvance",
+      "period": "2025-07-26",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-07-31",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 218,
+      "sourceValue": "218,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/073125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/073125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-07-31 (day precision). Change versus the same release's unrevised prior week: 1000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/073125.pdf",
+          "sha256": "a140889fcc365603a8e88832ac0aca9a071daffad2e1e45ad221c5781590379d",
+          "retrievedAt": "2026-10-22T22:05:12.054Z",
+          "lastModified": "Thu, 31 Jul 2025 12:39:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-07-12-prior-week-revised-2025-07-31",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-07-12",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-07-31",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1946,
+      "sourceValue": "1,946,000",
+      "previouslyPublishedSourceValue": "1,955,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/073125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/073125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-07-31 release, not an advance observation for this week. Previously published count: 1,955,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/073125.pdf",
+          "sha256": "a140889fcc365603a8e88832ac0aca9a071daffad2e1e45ad221c5781590379d",
+          "retrievedAt": "2026-10-22T22:05:12.054Z",
+          "lastModified": "Thu, 31 Jul 2025 12:39:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-07-19-advance-2025-07-31",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-07-19",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-07-31",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1946,
+      "sourceValue": "1,946,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/073125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/073125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-07-31 (day precision). Change versus the same release's revised prior week: 0 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/073125.pdf",
+          "sha256": "a140889fcc365603a8e88832ac0aca9a071daffad2e1e45ad221c5781590379d",
+          "retrievedAt": "2026-10-22T22:05:12.054Z",
+          "lastModified": "Thu, 31 Jul 2025 12:39:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-07-26-prior-week-revised-2025-08-07",
+      "seriesId": "claimsAdvance",
+      "period": "2025-07-26",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-08-07",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 219,
+      "sourceValue": "219,000",
+      "previouslyPublishedSourceValue": "218,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/080725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/080725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-08-07 release, not an advance observation for this week. Previously published count: 218,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/080725.pdf",
+          "sha256": "fbab58965afa335f24f8b48af9723b85027bc748e222bb15f118b1d755ce390a",
+          "retrievedAt": "2026-10-22T22:05:12.585Z",
+          "lastModified": "Thu, 07 Aug 2025 12:31:17 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-08-02-advance-2025-08-07",
+      "seriesId": "claimsAdvance",
+      "period": "2025-08-02",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-08-07",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 226,
+      "sourceValue": "226,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/080725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/080725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-08-07 (day precision). Change versus the same release's revised prior week: 7000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/080725.pdf",
+          "sha256": "fbab58965afa335f24f8b48af9723b85027bc748e222bb15f118b1d755ce390a",
+          "retrievedAt": "2026-10-22T22:05:12.585Z",
+          "lastModified": "Thu, 07 Aug 2025 12:31:17 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-07-19-prior-week-revised-2025-08-07",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-07-19",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-08-07",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1936,
+      "sourceValue": "1,936,000",
+      "previouslyPublishedSourceValue": "1,946,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/080725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/080725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-08-07 release, not an advance observation for this week. Previously published count: 1,946,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/080725.pdf",
+          "sha256": "fbab58965afa335f24f8b48af9723b85027bc748e222bb15f118b1d755ce390a",
+          "retrievedAt": "2026-10-22T22:05:12.585Z",
+          "lastModified": "Thu, 07 Aug 2025 12:31:17 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-07-26-advance-2025-08-07",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-07-26",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-08-07",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1974,
+      "sourceValue": "1,974,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/080725.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/080725.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-08-07 (day precision). Change versus the same release's revised prior week: 38000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/080725.pdf",
+          "sha256": "fbab58965afa335f24f8b48af9723b85027bc748e222bb15f118b1d755ce390a",
+          "retrievedAt": "2026-10-22T22:05:12.585Z",
+          "lastModified": "Thu, 07 Aug 2025 12:31:17 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-08-02-prior-week-revised-2025-08-14",
+      "seriesId": "claimsAdvance",
+      "period": "2025-08-02",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-08-14",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 227,
+      "sourceValue": "227,000",
+      "previouslyPublishedSourceValue": "226,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/081425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/081425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-08-14 release, not an advance observation for this week. Previously published count: 226,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/081425.pdf",
+          "sha256": "9a14288d4f136ce711c6f65f05a7b421228848e03028339a586f572ff1c0307c",
+          "retrievedAt": "2026-10-22T22:05:12.892Z",
+          "lastModified": "Thu, 14 Aug 2025 12:31:18 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-08-09-advance-2025-08-14",
+      "seriesId": "claimsAdvance",
+      "period": "2025-08-09",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-08-14",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 224,
+      "sourceValue": "224,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/081425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/081425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-08-14 (day precision). Change versus the same release's revised prior week: -3000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/081425.pdf",
+          "sha256": "9a14288d4f136ce711c6f65f05a7b421228848e03028339a586f572ff1c0307c",
+          "retrievedAt": "2026-10-22T22:05:12.892Z",
+          "lastModified": "Thu, 14 Aug 2025 12:31:18 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-07-26-prior-week-revised-2025-08-14",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-07-26",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-08-14",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1968,
+      "sourceValue": "1,968,000",
+      "previouslyPublishedSourceValue": "1,974,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/081425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/081425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-08-14 release, not an advance observation for this week. Previously published count: 1,974,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/081425.pdf",
+          "sha256": "9a14288d4f136ce711c6f65f05a7b421228848e03028339a586f572ff1c0307c",
+          "retrievedAt": "2026-10-22T22:05:12.892Z",
+          "lastModified": "Thu, 14 Aug 2025 12:31:18 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-08-02-advance-2025-08-14",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-08-02",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-08-14",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1953,
+      "sourceValue": "1,953,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/081425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/081425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-08-14 (day precision). Change versus the same release's revised prior week: -15000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/081425.pdf",
+          "sha256": "9a14288d4f136ce711c6f65f05a7b421228848e03028339a586f572ff1c0307c",
+          "retrievedAt": "2026-10-22T22:05:12.892Z",
+          "lastModified": "Thu, 14 Aug 2025 12:31:18 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-08-09-prior-week-unrevised-2025-08-21",
+      "seriesId": "claimsAdvance",
+      "period": "2025-08-09",
+      "estimate": "Unrevised prior",
+      "releaseStage": "prior-week-unrevised",
+      "publicationDate": "2025-08-21",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 224,
+      "sourceValue": "224,000",
+      "previouslyPublishedSourceValue": "224,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/082125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/082125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week unrevised comparison in the 2025-08-21 release, not an advance observation for this week. Previously published count: 224,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/082125.pdf",
+          "sha256": "ed30e5658ea292e548ccd0358443172b152fc45e60fba2e0c8ce1989a0bb1f31",
+          "retrievedAt": "2026-10-22T22:05:13.136Z",
+          "lastModified": "Thu, 21 Aug 2025 12:31:43 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-08-16-advance-2025-08-21",
+      "seriesId": "claimsAdvance",
+      "period": "2025-08-16",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-08-21",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 235,
+      "sourceValue": "235,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/082125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/082125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-08-21 (day precision). Change versus the same release's unrevised prior week: 11000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/082125.pdf",
+          "sha256": "ed30e5658ea292e548ccd0358443172b152fc45e60fba2e0c8ce1989a0bb1f31",
+          "retrievedAt": "2026-10-22T22:05:13.136Z",
+          "lastModified": "Thu, 21 Aug 2025 12:31:43 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-08-02-prior-week-revised-2025-08-21",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-08-02",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-08-21",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1942,
+      "sourceValue": "1,942,000",
+      "previouslyPublishedSourceValue": "1,953,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/082125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/082125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-08-21 release, not an advance observation for this week. Previously published count: 1,953,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/082125.pdf",
+          "sha256": "ed30e5658ea292e548ccd0358443172b152fc45e60fba2e0c8ce1989a0bb1f31",
+          "retrievedAt": "2026-10-22T22:05:13.136Z",
+          "lastModified": "Thu, 21 Aug 2025 12:31:43 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-08-09-advance-2025-08-21",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-08-09",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-08-21",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1972,
+      "sourceValue": "1,972,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/082125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/082125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-08-21 (day precision). Change versus the same release's revised prior week: 30000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/082125.pdf",
+          "sha256": "ed30e5658ea292e548ccd0358443172b152fc45e60fba2e0c8ce1989a0bb1f31",
+          "retrievedAt": "2026-10-22T22:05:13.136Z",
+          "lastModified": "Thu, 21 Aug 2025 12:31:43 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-08-16-prior-week-revised-2025-08-28",
+      "seriesId": "claimsAdvance",
+      "period": "2025-08-16",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-08-28",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 234,
+      "sourceValue": "234,000",
+      "previouslyPublishedSourceValue": "235,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/082825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/082825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-08-28 release, not an advance observation for this week. Previously published count: 235,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/082825.pdf",
+          "sha256": "346880c13cd26c19aadfd169fba071188b775c06dbd905aa01dfc5a8503587a9",
+          "retrievedAt": "2026-10-22T22:05:13.426Z",
+          "lastModified": "Thu, 28 Aug 2025 12:30:55 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-08-23-advance-2025-08-28",
+      "seriesId": "claimsAdvance",
+      "period": "2025-08-23",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-08-28",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 229,
+      "sourceValue": "229,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/082825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/082825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-08-28 (day precision). Change versus the same release's revised prior week: -5000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/082825.pdf",
+          "sha256": "346880c13cd26c19aadfd169fba071188b775c06dbd905aa01dfc5a8503587a9",
+          "retrievedAt": "2026-10-22T22:05:13.426Z",
+          "lastModified": "Thu, 28 Aug 2025 12:30:55 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-08-09-prior-week-revised-2025-08-28",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-08-09",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-08-28",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1961,
+      "sourceValue": "1,961,000",
+      "previouslyPublishedSourceValue": "1,972,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/082825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/082825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-08-28 release, not an advance observation for this week. Previously published count: 1,972,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/082825.pdf",
+          "sha256": "346880c13cd26c19aadfd169fba071188b775c06dbd905aa01dfc5a8503587a9",
+          "retrievedAt": "2026-10-22T22:05:13.426Z",
+          "lastModified": "Thu, 28 Aug 2025 12:30:55 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-08-16-advance-2025-08-28",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-08-16",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-08-28",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1954,
+      "sourceValue": "1,954,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/082825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/082825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-08-28 (day precision). Change versus the same release's revised prior week: -7000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/082825.pdf",
+          "sha256": "346880c13cd26c19aadfd169fba071188b775c06dbd905aa01dfc5a8503587a9",
+          "retrievedAt": "2026-10-22T22:05:13.426Z",
+          "lastModified": "Thu, 28 Aug 2025 12:30:55 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-08-23-prior-week-unrevised-2025-09-04",
+      "seriesId": "claimsAdvance",
+      "period": "2025-08-23",
+      "estimate": "Unrevised prior",
+      "releaseStage": "prior-week-unrevised",
+      "publicationDate": "2025-09-04",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 229,
+      "sourceValue": "229,000",
+      "previouslyPublishedSourceValue": "229,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/090425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/090425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week unrevised comparison in the 2025-09-04 release, not an advance observation for this week. Previously published count: 229,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/090425.pdf",
+          "sha256": "e4818569964b7f6b7d51ce30d81c581dc5984873a430d428b7589745dd97a5ed",
+          "retrievedAt": "2026-10-22T22:05:13.648Z",
+          "lastModified": "Thu, 04 Sep 2025 12:34:34 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-08-30-advance-2025-09-04",
+      "seriesId": "claimsAdvance",
+      "period": "2025-08-30",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-09-04",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 237,
+      "sourceValue": "237,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/090425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/090425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-09-04 (day precision). Change versus the same release's unrevised prior week: 8000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/090425.pdf",
+          "sha256": "e4818569964b7f6b7d51ce30d81c581dc5984873a430d428b7589745dd97a5ed",
+          "retrievedAt": "2026-10-22T22:05:13.648Z",
+          "lastModified": "Thu, 04 Sep 2025 12:34:34 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-08-16-prior-week-revised-2025-09-04",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-08-16",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-09-04",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1944,
+      "sourceValue": "1,944,000",
+      "previouslyPublishedSourceValue": "1,954,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/090425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/090425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-09-04 release, not an advance observation for this week. Previously published count: 1,954,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/090425.pdf",
+          "sha256": "e4818569964b7f6b7d51ce30d81c581dc5984873a430d428b7589745dd97a5ed",
+          "retrievedAt": "2026-10-22T22:05:13.648Z",
+          "lastModified": "Thu, 04 Sep 2025 12:34:34 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-08-23-advance-2025-09-04",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-08-23",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-09-04",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1940,
+      "sourceValue": "1,940,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/090425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/090425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-09-04 (day precision). Change versus the same release's revised prior week: -4000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/090425.pdf",
+          "sha256": "e4818569964b7f6b7d51ce30d81c581dc5984873a430d428b7589745dd97a5ed",
+          "retrievedAt": "2026-10-22T22:05:13.648Z",
+          "lastModified": "Thu, 04 Sep 2025 12:34:34 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-08-30-prior-week-revised-2025-09-11",
+      "seriesId": "claimsAdvance",
+      "period": "2025-08-30",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-09-11",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 236,
+      "sourceValue": "236,000",
+      "previouslyPublishedSourceValue": "237,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/091125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/091125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-09-11 release, not an advance observation for this week. Previously published count: 237,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/091125.pdf",
+          "sha256": "f4ba1484bf28e725205ef24c3ddb0c25e279c25349fe07d3db0e6e8571f53f1a",
+          "retrievedAt": "2026-10-22T22:05:14.250Z",
+          "lastModified": "Thu, 11 Sep 2025 13:02:17 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-09-06-advance-2025-09-11",
+      "seriesId": "claimsAdvance",
+      "period": "2025-09-06",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-09-11",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 263,
+      "sourceValue": "263,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/091125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/091125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-09-11 (day precision). Change versus the same release's revised prior week: 27000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/091125.pdf",
+          "sha256": "f4ba1484bf28e725205ef24c3ddb0c25e279c25349fe07d3db0e6e8571f53f1a",
+          "retrievedAt": "2026-10-22T22:05:14.250Z",
+          "lastModified": "Thu, 11 Sep 2025 13:02:17 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-08-23-prior-week-revised-2025-09-11",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-08-23",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-09-11",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1939,
+      "sourceValue": "1,939,000",
+      "previouslyPublishedSourceValue": "1,940,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/091125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/091125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-09-11 release, not an advance observation for this week. Previously published count: 1,940,000. Release date has day precision.",
+        "The printed September 11 continued-SA table change cell is 0, verified on PDF page 4. Text extraction omits that glyph; restoration is restricted to the exact reviewed PDF hash and row. The narrative explicitly says unchanged and both printed count cells are 1,939,000."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": "The printed September 11 continued-SA table change cell is 0, verified on PDF page 4. Text extraction omits that glyph; restoration is restricted to the exact reviewed PDF hash and row. The narrative explicitly says unchanged and both printed count cells are 1,939,000.",
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/091125.pdf",
+          "sha256": "f4ba1484bf28e725205ef24c3ddb0c25e279c25349fe07d3db0e6e8571f53f1a",
+          "retrievedAt": "2026-10-22T22:05:14.250Z",
+          "lastModified": "Thu, 11 Sep 2025 13:02:17 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-08-30-advance-2025-09-11",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-08-30",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-09-11",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1939,
+      "sourceValue": "1,939,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/091125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/091125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-09-11 (day precision). Change versus the same release's revised prior week: 0 claims.",
+        "The printed September 11 continued-SA table change cell is 0, verified on PDF page 4. Text extraction omits that glyph; restoration is restricted to the exact reviewed PDF hash and row. The narrative explicitly says unchanged and both printed count cells are 1,939,000."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": "The printed September 11 continued-SA table change cell is 0, verified on PDF page 4. Text extraction omits that glyph; restoration is restricted to the exact reviewed PDF hash and row. The narrative explicitly says unchanged and both printed count cells are 1,939,000.",
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/091125.pdf",
+          "sha256": "f4ba1484bf28e725205ef24c3ddb0c25e279c25349fe07d3db0e6e8571f53f1a",
+          "retrievedAt": "2026-10-22T22:05:14.250Z",
+          "lastModified": "Thu, 11 Sep 2025 13:02:17 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-09-06-prior-week-revised-2025-09-18",
+      "seriesId": "claimsAdvance",
+      "period": "2025-09-06",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-09-18",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 264,
+      "sourceValue": "264,000",
+      "previouslyPublishedSourceValue": "263,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/091825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/091825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-09-18 release, not an advance observation for this week. Previously published count: 263,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/091825.pdf",
+          "sha256": "9c44685ad08a5f2c9759c929a7f027266d7140d782c3e4fa48aa5a596542af81",
+          "retrievedAt": "2026-10-22T22:05:14.474Z",
+          "lastModified": "Thu, 18 Sep 2025 12:30:48 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-09-13-advance-2025-09-18",
+      "seriesId": "claimsAdvance",
+      "period": "2025-09-13",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-09-18",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 231,
+      "sourceValue": "231,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/091825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/091825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-09-18 (day precision). Change versus the same release's revised prior week: -33000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/091825.pdf",
+          "sha256": "9c44685ad08a5f2c9759c929a7f027266d7140d782c3e4fa48aa5a596542af81",
+          "retrievedAt": "2026-10-22T22:05:14.474Z",
+          "lastModified": "Thu, 18 Sep 2025 12:30:48 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-08-30-prior-week-revised-2025-09-18",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-08-30",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-09-18",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1927,
+      "sourceValue": "1,927,000",
+      "previouslyPublishedSourceValue": "1,939,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/091825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/091825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-09-18 release, not an advance observation for this week. Previously published count: 1,939,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/091825.pdf",
+          "sha256": "9c44685ad08a5f2c9759c929a7f027266d7140d782c3e4fa48aa5a596542af81",
+          "retrievedAt": "2026-10-22T22:05:14.474Z",
+          "lastModified": "Thu, 18 Sep 2025 12:30:48 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-09-06-advance-2025-09-18",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-09-06",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-09-18",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1920,
+      "sourceValue": "1,920,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/091825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/091825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-09-18 (day precision). Change versus the same release's revised prior week: -7000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/091825.pdf",
+          "sha256": "9c44685ad08a5f2c9759c929a7f027266d7140d782c3e4fa48aa5a596542af81",
+          "retrievedAt": "2026-10-22T22:05:14.474Z",
+          "lastModified": "Thu, 18 Sep 2025 12:30:48 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-09-13-prior-week-revised-2025-09-25",
+      "seriesId": "claimsAdvance",
+      "period": "2025-09-13",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-09-25",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 232,
+      "sourceValue": "232,000",
+      "previouslyPublishedSourceValue": "231,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/092525.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/092525.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-09-25 release, not an advance observation for this week. Previously published count: 231,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/092525.pdf",
+          "sha256": "a5ee3eb9712e480a09307f00fa2a818ba2b30f119b93bfa4f74d948782244558",
+          "retrievedAt": "2026-10-22T22:05:14.859Z",
+          "lastModified": "Thu, 25 Sep 2025 12:32:08 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-09-20-advance-2025-09-25",
+      "seriesId": "claimsAdvance",
+      "period": "2025-09-20",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-09-25",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 218,
+      "sourceValue": "218,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/092525.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/092525.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-09-25 (day precision). Change versus the same release's revised prior week: -14000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/092525.pdf",
+          "sha256": "a5ee3eb9712e480a09307f00fa2a818ba2b30f119b93bfa4f74d948782244558",
+          "retrievedAt": "2026-10-22T22:05:14.859Z",
+          "lastModified": "Thu, 25 Sep 2025 12:32:08 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-09-06-prior-week-revised-2025-09-25",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-09-06",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-09-25",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1928,
+      "sourceValue": "1,928,000",
+      "previouslyPublishedSourceValue": "1,920,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/092525.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/092525.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-09-25 release, not an advance observation for this week. Previously published count: 1,920,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/092525.pdf",
+          "sha256": "a5ee3eb9712e480a09307f00fa2a818ba2b30f119b93bfa4f74d948782244558",
+          "retrievedAt": "2026-10-22T22:05:14.859Z",
+          "lastModified": "Thu, 25 Sep 2025 12:32:08 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-09-13-advance-2025-09-25",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-09-13",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-09-25",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1926,
+      "sourceValue": "1,926,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/092525.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/092525.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-09-25 (day precision). Change versus the same release's revised prior week: -2000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/092525.pdf",
+          "sha256": "a5ee3eb9712e480a09307f00fa2a818ba2b30f119b93bfa4f74d948782244558",
+          "retrievedAt": "2026-10-22T22:05:14.859Z",
+          "lastModified": "Thu, 25 Sep 2025 12:32:08 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-11-08-prior-week-status-unknown-2025-11-20",
+      "seriesId": "claimsAdvance",
+      "period": "2025-11-08",
+      "estimate": "Prior comparison (status unknown)",
+      "releaseStage": "prior-week-status-unknown",
+      "publicationDate": "2025-11-20",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 228,
+      "sourceValue": "228,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/112025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/112025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week comparison in the 2025-11-20 release, not an advance observation for this week. Revision status is not stated and no previously published count is supplied. Release date has day precision.",
+        "DOL states that no weekly claims news releases were published for October 2 through November 13, 2025 because of the lapse in appropriations. Revised historical data for that interval are separate from unavailable advance releases. This November 20 release does not specify whether its prior-week comparison values are revised or unrevised."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/112025.pdf",
+          "sha256": "7d02bdbd386763679f73260ed403956ca93b8bdc27460ddaa1664da2f0ec24c0",
+          "retrievedAt": "2026-10-22T22:05:15.079Z",
+          "lastModified": "Thu, 20 Nov 2025 13:31:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-11-15-advance-2025-11-20",
+      "seriesId": "claimsAdvance",
+      "period": "2025-11-15",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-11-20",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 220,
+      "sourceValue": "220,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/112025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/112025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-11-20 (day precision). Change versus the same release's prior-week comparison (revision status unspecified): -8000 claims.",
+        "DOL states that no weekly claims news releases were published for October 2 through November 13, 2025 because of the lapse in appropriations. Revised historical data for that interval are separate from unavailable advance releases. This November 20 release does not specify whether its prior-week comparison values are revised or unrevised."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/112025.pdf",
+          "sha256": "7d02bdbd386763679f73260ed403956ca93b8bdc27460ddaa1664da2f0ec24c0",
+          "retrievedAt": "2026-10-22T22:05:15.079Z",
+          "lastModified": "Thu, 20 Nov 2025 13:31:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-11-01-prior-week-status-unknown-2025-11-20",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-11-01",
+      "estimate": "Prior comparison (status unknown)",
+      "releaseStage": "prior-week-status-unknown",
+      "publicationDate": "2025-11-20",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1946,
+      "sourceValue": "1,946,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/112025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/112025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week comparison in the 2025-11-20 release, not an advance observation for this week. Revision status is not stated and no previously published count is supplied. Release date has day precision.",
+        "DOL states that no weekly claims news releases were published for October 2 through November 13, 2025 because of the lapse in appropriations. Revised historical data for that interval are separate from unavailable advance releases. This November 20 release does not specify whether its prior-week comparison values are revised or unrevised."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/112025.pdf",
+          "sha256": "7d02bdbd386763679f73260ed403956ca93b8bdc27460ddaa1664da2f0ec24c0",
+          "retrievedAt": "2026-10-22T22:05:15.079Z",
+          "lastModified": "Thu, 20 Nov 2025 13:31:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-11-08-advance-2025-11-20",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-11-08",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-11-20",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1974,
+      "sourceValue": "1,974,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/112025.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/112025.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-11-20 (day precision). Change versus the same release's prior-week comparison (revision status unspecified): 28000 claims.",
+        "DOL states that no weekly claims news releases were published for October 2 through November 13, 2025 because of the lapse in appropriations. Revised historical data for that interval are separate from unavailable advance releases. This November 20 release does not specify whether its prior-week comparison values are revised or unrevised."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/112025.pdf",
+          "sha256": "7d02bdbd386763679f73260ed403956ca93b8bdc27460ddaa1664da2f0ec24c0",
+          "retrievedAt": "2026-10-22T22:05:15.079Z",
+          "lastModified": "Thu, 20 Nov 2025 13:31:20 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-11-15-prior-week-revised-2025-11-26",
+      "seriesId": "claimsAdvance",
+      "period": "2025-11-15",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-11-26",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 222,
+      "sourceValue": "222,000",
+      "previouslyPublishedSourceValue": "220,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/112625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/112625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-11-26 release, not an advance observation for this week. Previously published count: 220,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/112625.pdf",
+          "sha256": "9d07d8ac8d09a2dd25acae5b0689867a220d0373bd55d563018d8f6292379f29",
+          "retrievedAt": "2026-10-22T22:05:15.443Z",
+          "lastModified": "Wed, 26 Nov 2025 13:33:33 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-11-22-advance-2025-11-26",
+      "seriesId": "claimsAdvance",
+      "period": "2025-11-22",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-11-26",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 216,
+      "sourceValue": "216,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/112625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/112625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-11-26 (day precision). Change versus the same release's revised prior week: -6000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/112625.pdf",
+          "sha256": "9d07d8ac8d09a2dd25acae5b0689867a220d0373bd55d563018d8f6292379f29",
+          "retrievedAt": "2026-10-22T22:05:15.443Z",
+          "lastModified": "Wed, 26 Nov 2025 13:33:33 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-11-08-prior-week-revised-2025-11-26",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-11-08",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-11-26",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1953,
+      "sourceValue": "1,953,000",
+      "previouslyPublishedSourceValue": "1,974,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/112625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/112625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-11-26 release, not an advance observation for this week. Previously published count: 1,974,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/112625.pdf",
+          "sha256": "9d07d8ac8d09a2dd25acae5b0689867a220d0373bd55d563018d8f6292379f29",
+          "retrievedAt": "2026-10-22T22:05:15.443Z",
+          "lastModified": "Wed, 26 Nov 2025 13:33:33 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-11-15-advance-2025-11-26",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-11-15",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-11-26",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1960,
+      "sourceValue": "1,960,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/112625.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/112625.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-11-26 (day precision). Change versus the same release's revised prior week: 7000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/112625.pdf",
+          "sha256": "9d07d8ac8d09a2dd25acae5b0689867a220d0373bd55d563018d8f6292379f29",
+          "retrievedAt": "2026-10-22T22:05:15.443Z",
+          "lastModified": "Wed, 26 Nov 2025 13:33:33 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-11-22-prior-week-revised-2025-12-04",
+      "seriesId": "claimsAdvance",
+      "period": "2025-11-22",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-12-04",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 218,
+      "sourceValue": "218,000",
+      "previouslyPublishedSourceValue": "216,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/120425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/120425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-12-04 release, not an advance observation for this week. Previously published count: 216,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/120425.pdf",
+          "sha256": "d82905cd083f390f0cefaba8a8857bda0dc85851b1831f5653428b3ab7455235",
+          "retrievedAt": "2026-10-22T22:05:15.635Z",
+          "lastModified": "Thu, 04 Dec 2025 13:31:03 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-11-29-advance-2025-12-04",
+      "seriesId": "claimsAdvance",
+      "period": "2025-11-29",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-12-04",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 191,
+      "sourceValue": "191,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/120425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/120425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-12-04 (day precision). Change versus the same release's revised prior week: -27000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/120425.pdf",
+          "sha256": "d82905cd083f390f0cefaba8a8857bda0dc85851b1831f5653428b3ab7455235",
+          "retrievedAt": "2026-10-22T22:05:15.635Z",
+          "lastModified": "Thu, 04 Dec 2025 13:31:03 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-11-15-prior-week-revised-2025-12-04",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-11-15",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-12-04",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1943,
+      "sourceValue": "1,943,000",
+      "previouslyPublishedSourceValue": "1,960,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/120425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/120425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-12-04 release, not an advance observation for this week. Previously published count: 1,960,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/120425.pdf",
+          "sha256": "d82905cd083f390f0cefaba8a8857bda0dc85851b1831f5653428b3ab7455235",
+          "retrievedAt": "2026-10-22T22:05:15.635Z",
+          "lastModified": "Thu, 04 Dec 2025 13:31:03 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-11-22-advance-2025-12-04",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-11-22",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-12-04",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1939,
+      "sourceValue": "1,939,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/120425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/120425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-12-04 (day precision). Change versus the same release's revised prior week: -4000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/120425.pdf",
+          "sha256": "d82905cd083f390f0cefaba8a8857bda0dc85851b1831f5653428b3ab7455235",
+          "retrievedAt": "2026-10-22T22:05:15.635Z",
+          "lastModified": "Thu, 04 Dec 2025 13:31:03 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-11-29-prior-week-revised-2025-12-11",
+      "seriesId": "claimsAdvance",
+      "period": "2025-11-29",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-12-11",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 192,
+      "sourceValue": "192,000",
+      "previouslyPublishedSourceValue": "191,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/121125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/121125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-12-11 release, not an advance observation for this week. Previously published count: 191,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/121125.pdf",
+          "sha256": "020ff6b8b3c4d66882b655c8dc76433c0374ee9ce02dfb4ac61a0f3dcf8263c9",
+          "retrievedAt": "2026-10-22T22:05:15.937Z",
+          "lastModified": "Thu, 11 Dec 2025 13:31:00 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-12-06-advance-2025-12-11",
+      "seriesId": "claimsAdvance",
+      "period": "2025-12-06",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-12-11",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 236,
+      "sourceValue": "236,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/121125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/121125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-12-11 (day precision). Change versus the same release's revised prior week: 44000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/121125.pdf",
+          "sha256": "020ff6b8b3c4d66882b655c8dc76433c0374ee9ce02dfb4ac61a0f3dcf8263c9",
+          "retrievedAt": "2026-10-22T22:05:15.937Z",
+          "lastModified": "Thu, 11 Dec 2025 13:31:00 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-11-22-prior-week-revised-2025-12-11",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-11-22",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-12-11",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1937,
+      "sourceValue": "1,937,000",
+      "previouslyPublishedSourceValue": "1,939,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/121125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/121125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-12-11 release, not an advance observation for this week. Previously published count: 1,939,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/121125.pdf",
+          "sha256": "020ff6b8b3c4d66882b655c8dc76433c0374ee9ce02dfb4ac61a0f3dcf8263c9",
+          "retrievedAt": "2026-10-22T22:05:15.937Z",
+          "lastModified": "Thu, 11 Dec 2025 13:31:00 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-11-29-advance-2025-12-11",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-11-29",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-12-11",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1838,
+      "sourceValue": "1,838,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/121125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/121125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-12-11 (day precision). Change versus the same release's revised prior week: -99000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/121125.pdf",
+          "sha256": "020ff6b8b3c4d66882b655c8dc76433c0374ee9ce02dfb4ac61a0f3dcf8263c9",
+          "retrievedAt": "2026-10-22T22:05:15.937Z",
+          "lastModified": "Thu, 11 Dec 2025 13:31:00 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-12-06-prior-week-revised-2025-12-18",
+      "seriesId": "claimsAdvance",
+      "period": "2025-12-06",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-12-18",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 237,
+      "sourceValue": "237,000",
+      "previouslyPublishedSourceValue": "236,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/121825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/121825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-12-18 release, not an advance observation for this week. Previously published count: 236,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/121825.pdf",
+          "sha256": "3fe452c96fae919e1fda6985ea3c341ff6708f01495e26e371f559578dad8216",
+          "retrievedAt": "2026-10-22T22:05:16.138Z",
+          "lastModified": "Thu, 18 Dec 2025 13:31:36 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-12-13-advance-2025-12-18",
+      "seriesId": "claimsAdvance",
+      "period": "2025-12-13",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-12-18",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 224,
+      "sourceValue": "224,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/121825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/121825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-12-18 (day precision). Change versus the same release's revised prior week: -13000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/121825.pdf",
+          "sha256": "3fe452c96fae919e1fda6985ea3c341ff6708f01495e26e371f559578dad8216",
+          "retrievedAt": "2026-10-22T22:05:16.138Z",
+          "lastModified": "Thu, 18 Dec 2025 13:31:36 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-11-29-prior-week-revised-2025-12-18",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-11-29",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-12-18",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1830,
+      "sourceValue": "1,830,000",
+      "previouslyPublishedSourceValue": "1,838,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/121825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/121825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-12-18 release, not an advance observation for this week. Previously published count: 1,838,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/121825.pdf",
+          "sha256": "3fe452c96fae919e1fda6985ea3c341ff6708f01495e26e371f559578dad8216",
+          "retrievedAt": "2026-10-22T22:05:16.138Z",
+          "lastModified": "Thu, 18 Dec 2025 13:31:36 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-12-06-advance-2025-12-18",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-12-06",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-12-18",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1897,
+      "sourceValue": "1,897,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/121825.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/121825.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-12-18 (day precision). Change versus the same release's revised prior week: 67000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/121825.pdf",
+          "sha256": "3fe452c96fae919e1fda6985ea3c341ff6708f01495e26e371f559578dad8216",
+          "retrievedAt": "2026-10-22T22:05:16.138Z",
+          "lastModified": "Thu, 18 Dec 2025 13:31:36 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-12-13-prior-week-unrevised-2025-12-24",
+      "seriesId": "claimsAdvance",
+      "period": "2025-12-13",
+      "estimate": "Unrevised prior",
+      "releaseStage": "prior-week-unrevised",
+      "publicationDate": "2025-12-24",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 224,
+      "sourceValue": "224,000",
+      "previouslyPublishedSourceValue": "224,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/122425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/122425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week unrevised comparison in the 2025-12-24 release, not an advance observation for this week. Previously published count: 224,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/122425.pdf",
+          "sha256": "ef883c9f07035bd35a72b9e336a9244e33716e358f679fe95c43764738da1152",
+          "retrievedAt": "2026-10-22T22:05:16.399Z",
+          "lastModified": "Wed, 24 Dec 2025 13:32:12 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-12-20-advance-2025-12-24",
+      "seriesId": "claimsAdvance",
+      "period": "2025-12-20",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-12-24",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 214,
+      "sourceValue": "214,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/122425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/122425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-12-24 (day precision). Change versus the same release's unrevised prior week: -10000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/122425.pdf",
+          "sha256": "ef883c9f07035bd35a72b9e336a9244e33716e358f679fe95c43764738da1152",
+          "retrievedAt": "2026-10-22T22:05:16.399Z",
+          "lastModified": "Wed, 24 Dec 2025 13:32:12 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-12-06-prior-week-revised-2025-12-24",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-12-06",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-12-24",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1885,
+      "sourceValue": "1,885,000",
+      "previouslyPublishedSourceValue": "1,897,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/122425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/122425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-12-24 release, not an advance observation for this week. Previously published count: 1,897,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/122425.pdf",
+          "sha256": "ef883c9f07035bd35a72b9e336a9244e33716e358f679fe95c43764738da1152",
+          "retrievedAt": "2026-10-22T22:05:16.399Z",
+          "lastModified": "Wed, 24 Dec 2025 13:32:12 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-12-13-advance-2025-12-24",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-12-13",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-12-24",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1923,
+      "sourceValue": "1,923,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/122425.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/122425.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-12-24 (day precision). Change versus the same release's revised prior week: 38000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/122425.pdf",
+          "sha256": "ef883c9f07035bd35a72b9e336a9244e33716e358f679fe95c43764738da1152",
+          "retrievedAt": "2026-10-22T22:05:16.399Z",
+          "lastModified": "Wed, 24 Dec 2025 13:32:12 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-12-20-prior-week-revised-2025-12-31",
+      "seriesId": "claimsAdvance",
+      "period": "2025-12-20",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-12-31",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 215,
+      "sourceValue": "215,000",
+      "previouslyPublishedSourceValue": "214,000",
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/123125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/123125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-12-31 release, not an advance observation for this week. Previously published count: 214,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/123125.pdf",
+          "sha256": "3099d2855e34bfd72cc18aff101099bf20cbd84c5c5465bdfc8eeae078f0f8dc",
+          "retrievedAt": "2026-10-22T22:05:16.586Z",
+          "lastModified": "Wed, 31 Dec 2025 13:31:34 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-claimsAdvance-2025-12-27-advance-2025-12-31",
+      "seriesId": "claimsAdvance",
+      "period": "2025-12-27",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-12-31",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 199,
+      "sourceValue": "199,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/123125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/123125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "InitialClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-12-31 (day precision). Change versus the same release's revised prior week: -16000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/123125.pdf",
+          "sha256": "3099d2855e34bfd72cc18aff101099bf20cbd84c5c5465bdfc8eeae078f0f8dc",
+          "retrievedAt": "2026-10-22T22:05:16.586Z",
+          "lastModified": "Wed, 31 Dec 2025 13:31:34 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-12-13-prior-week-revised-2025-12-31",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-12-13",
+      "estimate": "Revised prior",
+      "releaseStage": "prior-week-revised",
+      "publicationDate": "2025-12-31",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1913,
+      "sourceValue": "1,913,000",
+      "previouslyPublishedSourceValue": "1,923,000",
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/123125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/123125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Prior-week revised comparison in the 2025-12-31 release, not an advance observation for this week. Previously published count: 1,923,000. Release date has day precision."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/123125.pdf",
+          "sha256": "3099d2855e34bfd72cc18aff101099bf20cbd84c5c5465bdfc8eeae078f0f8dc",
+          "retrievedAt": "2026-10-22T22:05:16.586Z",
+          "lastModified": "Wed, 31 Dec 2025 13:31:34 GMT"
+        }
+      ]
+    },
+    {
+      "id": "dol-continuedClaimsAdvance-2025-12-20-advance-2025-12-31",
+      "seriesId": "continuedClaimsAdvance",
+      "period": "2025-12-20",
+      "estimate": "Advance",
+      "releaseStage": "advance",
+      "publicationDate": "2025-12-31",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "value": 1866,
+      "sourceValue": "1,866,000",
+      "previouslyPublishedSourceValue": null,
+      "unit": "Thousands of continued claims",
+      "frequency": "Weekly",
+      "adjustment": "Seasonally adjusted",
+      "sourceUrl": "https://oui.doleta.gov/press/2025/123125.pdf",
+      "releaseEvidenceUrl": "https://oui.doleta.gov/press/2025/123125.pdf",
+      "sourceTitle": "Unemployment Insurance Weekly Claims",
+      "licenseUrl": "https://www.dol.gov/general/aboutdol/copyright",
+      "attribution": "Source: U.S. Department of Labor, Employment and Training Administration.",
+      "calculation": "Published national regular UI seasonally adjusted count / 1000. Publication changes compare the same reference week and measurement. Release field identifiers are Meridian mappings. Kept separate from current revised XML history; no historical-feed splice.",
+      "sourceIds": [
+        "ContinuedClaims/SA/Release"
+      ],
+      "footnotes": [
+        "Advance estimate; subject to revision. Released 2025-12-31 (day precision). Change versus the same release's revised prior week: -47000 claims."
+      ],
+      "seasonalAdjustmentNote": null,
+      "seasonalAdjustmentKind": null,
+      "tableExtractionNote": null,
+      "provenance": [
+        {
+          "url": "https://oui.doleta.gov/press/2025/123125.pdf",
+          "sha256": "3099d2855e34bfd72cc18aff101099bf20cbd84c5c5465bdfc8eeae078f0f8dc",
+          "retrievedAt": "2026-10-22T22:05:16.586Z",
+          "lastModified": "Wed, 31 Dec 2025 13:31:34 GMT"
+        }
+      ]
     }
   ]
 };

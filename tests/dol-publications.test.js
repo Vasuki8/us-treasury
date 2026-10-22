@@ -8,12 +8,26 @@ const receipt=url=>({url,sha256:'a'.repeat(64),retrievedAt:'2026-10-22T22:00:00.
 const now=new Date('2026-10-22T22:00:00Z');
 const fixture=()=>parseClaimsPublication(releaseFixture(),{provenance:receipt(current),now});
 
-test('reviewed scope is 42 discovered releases and 168 separate series/week/publication/role facts',()=>{
- assert.equal(policy.claimsPublicationScope.length,168);assert.equal(new Set(policy.claimsPublicationScope.map(x=>x.sourceUrl)).size,42);
- assert.equal(new Set(policy.claimsPublicationScope.map(x=>x.id)).size,168);
- assert.deepEqual([...new Set(policy.claimsPublicationScope.map(x=>x.publicationDate))].sort().slice(0,1),['2026-01-08']);
+test('reviewed scope is 88 discovered releases and 352 separate facts, preserving the original 2026 scope prefix',()=>{
+ assert.equal(policy.claimsPublicationScope.length,352);assert.equal(new Set(policy.claimsPublicationScope.map(x=>x.sourceUrl)).size,88);
+ assert.equal(new Set(policy.claimsPublicationScope.map(x=>x.id)).size,352);
+ assert.deepEqual([...new Set(policy.claimsPublicationScope.map(x=>x.publicationDate))].sort().slice(0,1),['2025-01-02']);
+ assert.ok(policy.claimsPublicationScope.slice(0,168).every(x=>x.publicationDate.startsWith('2026')));
+ assert.ok(policy.claimsPublicationScope.slice(168).every(x=>x.publicationDate.startsWith('2025')));
+ const unknown=policy.claimsPublicationScope.filter(x=>x.releaseStage==='prior-week-status-unknown');assert.equal(unknown.length,2);
+ for(const scope of unknown){const row=policy.claimsPublicationMetadataFor(scope);assert.equal(row.estimate,'Prior comparison (status unknown)');assert.equal(row.previouslyPublishedSourceValue,null);assert.match(row.footnotes.join(' '),/October 2.*November 13/);assert.equal(row.seasonalAdjustmentNote,null);}
  assert.ok(policy.claimsPublicationScope.every(x=>['claimsAdvance','continuedClaimsAdvance'].includes(x.seriesId)));
  assert.throws(()=>policy.requestedClaimsPublicationIds(['unreviewed']),/scope|unknown|requested/i);
+});
+
+test('printed September11 continued-SA zero is restricted to its reviewed bytes and source row',()=>{
+ const input={firstPage:'Unchanged source text',tableText:'Insured Unemployment (SA) 1,939,000 1,939,000 1,944,000 1,845,000 Insured Unemployment (NSA)'};
+ const source={...receipt('https://oui.doleta.gov/press/2025/091125.pdf'),sha256:'f4ba1484bf28e725205ef24c3ddb0c25e279c25349fe07d3db0e6e8571f53f1a'};
+ const corrected=reviewedClaimsText(input,source);assert.match(corrected.tableText,/1,939,000 1,939,000 0 1,944,000/);assert.equal(input.tableText.includes(' 0 '),false);
+ assert.equal(reviewedClaimsText(input,{...source,sha256:'a'.repeat(64)}),input);
+ assert.throws(()=>reviewedClaimsText({...input,tableText:input.tableText.replace('1,939,000','1,940,000')},source),/zero|table|cell/i);
+ const notes=policy.claimsPublicationScope.filter(row=>row.publicationDate==='2025-09-11').map(row=>policy.claimsPublicationMetadataFor(row));
+ assert.equal(notes.filter(row=>row.tableExtractionNote).length,2);assert.ok(notes.filter(row=>row.tableExtractionNote).every(row=>row.seriesId==='continuedClaimsAdvance'&&/September 11/.test(row.tableExtractionNote)));
 });
 test('archived release adapter preserves both measures, explicit roles and known release day with actual source receipt',()=>{
  const result=fixture();assert.equal(result.releases.length,4);policy.assertClaimsPublicationData(result);

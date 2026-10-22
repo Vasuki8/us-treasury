@@ -11,9 +11,16 @@ async function temporary(t){const directory=await mkdtemp(path.join(tmpdir(),'me
 
 test('append-only DOL capture retains earlier records exactly, orders missing identities, and never refetches a complete archive',async()=>{
  const previous=fixture([claimsPublicationScope.at(-1).id]),before=JSON.stringify(previous);let calls=0;
- const archive=await captureClaimsPublicationArchive({previous,collect:async({ids})=>{calls++;assert.equal(ids.length,167);return fixture(ids.toReversed());}});
- assert.equal(calls,1);assert.equal(archive.releases[0],previous.releases[0]);assert.equal(JSON.stringify(previous),before);assert.equal(archive.releases.length,168);assertClaimsPublicationData(archive,{complete:true});
+ const archive=await captureClaimsPublicationArchive({previous,collect:async({ids})=>{calls++;assert.equal(ids.length,351);return fixture(ids.toReversed());}});
+ assert.equal(calls,1);assert.equal(archive.releases[0],previous.releases[0]);assert.equal(JSON.stringify(previous),before);assert.equal(archive.releases.length,352);assertClaimsPublicationData(archive,{complete:true});
  assert.equal(await captureClaimsPublicationArchive({previous:archive,collect:()=>{throw Error('No refetch');}}),archive);
+});
+
+test('a retained 2026 archive appends only the 184 admitted 2025 facts without refetching or replacing legacy objects',async()=>{
+ const previous=fixture(claimsPublicationScope.slice(0,168).map(row=>row.id)),before=JSON.stringify(previous);let calls=0;
+ const result=await captureClaimsPublicationArchive({previous,collect:async({ids})=>{calls++;assert.equal(ids.length,184);assert.ok(ids.every(id=>claimsPublicationScope.find(row=>row.id===id).publicationDate.startsWith('2025')));return fixture(ids);}});
+ assert.equal(calls,1);assert.equal(JSON.stringify(previous),before);assert.equal(result.releases.length,352);
+ for(let i=0;i<168;i++)assert.equal(result.releases[i],previous.releases[i]);
 });
 test('incomplete, duplicate, extra and conflicting source batches reject without changing retained records',async()=>{
  const previous=fixture([claimsPublicationScope[0].id]),before=JSON.stringify(previous);
