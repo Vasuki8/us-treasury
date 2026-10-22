@@ -45,7 +45,7 @@ test('unchanged builds reuse asset URLs while a refreshed snapshot changes the e
   const {snapshot:projected}=await import(pathToFileURL(path.join(root,'dist',refreshed.directory,'src','official-snapshot.js')).href);
   assert.equal(projected.generatedAt,'2026-10-22T02:00:00.000Z');
   assert.equal(projected.vintages,undefined,'the browser only loads history on demand');assert.equal(projected.vintageArchive,undefined);
-  assert.ok(projected.historyArchive.compressed.url.endsWith('.json.gz'));
+  assert.equal(projected.historyArchive.version,2);assert.ok(Object.values(projected.historyArchive.sources).every(source=>source.compressed.url.endsWith('.json.gz')));
   const modules = (await readdir(path.join(root, 'dist', refreshed.directory, 'src'))).filter(name => name.endsWith('.js'));
   for (const name of modules) {
     const moduleURL = new URL(`src/${name}`, `https://example.test/us-treasury/${refreshed.directory}`);

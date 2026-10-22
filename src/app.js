@@ -145,7 +145,7 @@ root.addEventListener('click',async event=>{
   }
   else if('save' in d)save(d.save);
   else if('retryHistory' in d){
-    if(historyLoader.getState().status!=='error')return;
+    if(historyController.context(state).historyState.status!=='error')return;
     historyController.sync(state,{retry:true});
     preserveHistoryView(main,()=>render());
   }
@@ -176,9 +176,9 @@ root.addEventListener('click',async event=>{
   else if('exportMarket' in d)downloadCsv(marketFunctioningCsv(dataStatus.sources.marketFunctioning),'meridian-market.csv','Market CSV downloaded with reporting bases, missing and suppressed values, source titles and reuse conditions.');
   else if('exportVintages' in d){
     try {
-      const history = historyLoader.getState();
+      const history = historyController.context(state).historyState;
       if(history.status!=='ready')throw new Error('Capture history is not ready.');
-      downloadCsv(vintagesCsv(history.history,{cutoff:state.vintageCutoff,seriesId:state.vintageSeries}),'meridian-vintages.csv','Vintage CSV downloaded at the selected UTC retrieval cutoff. First captured is distinct from first released.');
+      downloadCsv(vintagesCsv(history.history,{cutoff:state.vintageCutoff??history.latestCaptureAt,seriesId:state.vintageSeries}),'meridian-vintages.csv','Vintage CSV downloaded at the selected UTC retrieval cutoff. First captured is distinct from first released.');
     } catch(error) {announce(`Export unavailable: ${error.message}`);}
   }
   else if('exportMacro' in d)downloadCsv(macroContributionsCsv(dataStatus.sources.macroContributions),'meridian-macro.csv','Macro CSV downloaded with published GDP contributions and unavailable CPI effects labeled.');

@@ -103,10 +103,16 @@ export function vintagesPage(state = {}, vintages, historyState = { status:vinta
   const ready = historyState.status === 'ready';
   const hasHistory = ready && Boolean(vintages?.captures?.length), seriesId = Object.hasOwn(registry, state.vintageSeries) ? state.vintageSeries : 'gdp', metadata = registry[seriesId];
   let cutoff = null, result = null, error = '';
-  try { if (hasHistory) { cutoff = normalizedCutoff(state.vintageCutoff, vintages); result = view(vintages, cutoff, seriesId); } } catch (failure) { error = failure.message; }
+  const requestedCutoff=state.vintageCutoff??historyState.latestCaptureAt;
+  try {
+    if (hasHistory) { cutoff = normalizedCutoff(requestedCutoff, vintages); result = view(vintages, cutoff, seriesId); }
+    else if (requestedCutoff !== undefined && requestedCutoff !== null) cutoff=normalizedCutoff(requestedCutoff,vintages);
+  } catch (failure) { error = failure.message; }
   const cutoffValue = cutoff ? cutoff.slice(0, -1) : (state.vintageCutoff ?? '').replace(/Z$/, '');
   const options = Object.values(registry).sort((a, b) => a.name.localeCompare(b.name)).map(item => `<option value="${esc(item.id)}"${item.id === seriesId ? ' selected' : ''}>${esc(item.name)}</option>`).join('');
-  const controls = `<div class="filter-body"><label for="vintage-cutoff">Cutoff (UTC)<input id="vintage-cutoff" type="datetime-local" step="0.001" value="${esc(cutoffValue)}" aria-describedby="vintage-cutoff-note"></label><label for="vintage-series">Registered series<select id="vintage-series">${options}</select></label></div><p class="panel-note" id="vintage-cutoff-note">The entered date and time are UTC, independent of your device timezone. Captures at the exact cutoff are included. ${cutoff ? `Selected cutoff: ${esc(cutoff)}.` : 'Select a valid cutoff after captures are available.'}</p>`;
+  const sourceCount=historyState.sourceIds?.length;
+  const scope=sourceCount===undefined?'':`<p class="panel-note">Selected series history · ${sourceCount} source archive${sourceCount===1?'':'s'}. Other sources load when selected. The default cutoff is the latest retained retrieval across all sources.</p>`;
+  const controls = `<div class="filter-body"><label for="vintage-cutoff">Cutoff (UTC)<input id="vintage-cutoff" type="datetime-local" step="0.001" value="${esc(cutoffValue)}" aria-describedby="vintage-cutoff-note"></label><label for="vintage-series">Registered series<select id="vintage-series">${options}</select></label></div><p class="panel-note" id="vintage-cutoff-note">The entered date and time are UTC, independent of your device timezone. Captures at the exact cutoff are included. ${cutoff ? `Selected cutoff: ${esc(cutoff)}.` : 'Select a valid cutoff after captures are available.'}</p>${scope}`;
   const available = result?.observations ?? [];
   const knownRows = available.map(({ sourceId, source, series, observation, first }) => {
     const captured = capturedMetadata(metadata, source, series), initial = capturedMetadata(metadata, first?.source, first?.series);

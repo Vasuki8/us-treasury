@@ -1,24 +1,33 @@
+import {registry} from './registry.js';
+
 export const needsHistory = route => route.page === 'vintages' || route.page === 'indicator' && route.tab === 'revisions';
+export function historySeriesId(route) {
+  const id = route.page === 'vintages' ? route.vintageSeries : route.seriesId;
+  return Object.hasOwn(registry, id) ? id : 'gdp';
+}
 
 /** Route changes keep current inputs authoritative while a shared request finishes. */
 export function createHistoryController(loader, { getRoute, onChange }) {
-  let pending = false;
+  const pending = new Set();
   return {
     sync(route, { retry = false } = {}) {
-      const status = loader.getState().status;
-      if (!needsHistory(route) || pending || status === 'ready' || status === 'loading' || status === 'error' && !retry) return;
-      pending = true;
+      if (!needsHistory(route)) return;
+      const seriesId=historySeriesId(route),status = loader.getState(seriesId).status;
+      if (pending.has(seriesId) || status === 'ready' || status === 'error' && !retry) return;
+      pending.add(seriesId);
       const complete = () => {
-        pending = false;
-        if (needsHistory(getRoute())) onChange();
+        pending.delete(seriesId);
+        const current=getRoute();
+        if (needsHistory(current) && historySeriesId(current) === seriesId) onChange();
       };
-      loader.load({ retry }).then(complete, complete);
+      loader.load(seriesId,{ retry }).then(complete, complete);
     },
     context(route) {
-      const historyState = loader.getState();
+      if (!needsHistory(route)) return {historyState:{status:'idle',history:null,error:null},revisions:[]};
+      const seriesId=historySeriesId(route),historyState = loader.getState(seriesId);
       return {
         historyState,
-        revisions:historyState.status === 'ready' && route.page === 'indicator' && route.tab === 'revisions' ? loader.revisions(route.seriesId) : [],
+        revisions:historyState.status === 'ready' && route.page === 'indicator' && route.tab === 'revisions' ? loader.revisions(seriesId) : [],
       };
     },
   };

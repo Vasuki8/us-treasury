@@ -1,15 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHistoryController, preserveHistoryView } from '../src/history-controller.js';
+import { createHistoryController, preserveHistoryView, historySeriesId } from '../src/history-controller.js';
 import { renderPage } from '../src/pages.js';
 
 const ready={status:'ready',history:{version:1,captures:[]},error:null};
 function fixture(){
- let route={page:'overview'},historyState={status:'idle',history:null,error:null},complete,fail,loads=0;
- const loader={getState:()=>historyState,revisions:id=>[{id}],load:()=>{loads++;historyState={...historyState,status:'loading'};return new Promise((resolve,reject)=>{complete=()=>{historyState=ready;resolve(ready.history);};fail=()=>{historyState={status:'error',history:null,error:new Error('offline')};reject(historyState.error);};});}};
+ let route={page:'overview'},loads=0;
+ const groups={gdp:'bea',pce:'bea',debt:'treasury',unrate:'bls',cpi:'bls'},states=new Map(),requests=new Map();
+ const group=id=>groups[id??'gdp'];
+ const loader={getState:id=>states.get(group(id))??{status:'idle',history:null,error:null},revisions:id=>[{id}],load:(id,{retry=false}={})=>{
+  const key=group(id),state=states.get(key);if(state?.status==='loading'||state?.status==='ready')return requests.get(key).promise;
+  if(state?.status==='error'&&!retry)return Promise.reject(state.error);
+  loads++;states.set(key,{status:'loading',history:null,error:null});
+  let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});requests.set(key,{promise,resolve,reject});return promise;
+ }};
  const changes=[];
  const controller=createHistoryController(loader,{getRoute:()=>route,onChange:()=>changes.push({...route})});
- return {controller,changes,setRoute:value=>{route=value;controller.sync(route);},complete:()=>complete(),fail:()=>fail(),get loads(){return loads;}};
+ return {controller,changes,setRoute:value=>{route=value;controller.sync(route);},complete:(key='bea')=>{states.set(key,{...ready,sourceIds:[key]});requests.get(key).resolve(ready.history);},fail:(key='bea')=>{const error=new Error('offline');states.set(key,{status:'error',history:null,error});requests.get(key).reject(error);},get loads(){return loads;}};
 }
 
 test('only revision routes request history; late completion never repaints another route',async()=>{
@@ -26,12 +33,34 @@ test('only revision routes request history; late completion never repaints anoth
  assert.deepEqual(f.controller.context({page:'indicator',seriesId:'gdp',tab:'revisions'}).revisions,[{id:'gdp'}]);
 });
 
-test('completion uses the current cutoff and selected series without restarting a shared load',async()=>{
+test('different source selections load independently and an old completion cannot repaint the new selection',async()=>{
  const f=fixture();
  f.setRoute({page:'vintages',vintageSeries:'gdp',vintageCutoff:'2026-10-20T12:00:00.000Z'});
  f.setRoute({page:'vintages',vintageSeries:'debt',vintageCutoff:'2026-10-21T12:00:00.000Z'});
- assert.equal(f.loads,1);f.complete();await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(f.loads,2);f.complete();await new Promise(resolve=>setImmediate(resolve));assert.deepEqual(f.changes,[]);
+ assert.equal(f.controller.context({page:'vintages',vintageSeries:'debt'}).historyState.status,'loading');
+ f.complete('treasury');await new Promise(resolve=>setImmediate(resolve));
  assert.deepEqual(f.changes,[{page:'vintages',vintageSeries:'debt',vintageCutoff:'2026-10-21T12:00:00.000Z'}]);
+});
+
+test('series sharing a source complete the current route without restarting its request',async()=>{
+ const f=fixture();f.setRoute({page:'vintages',vintageSeries:'gdp'});f.setRoute({page:'vintages',vintageSeries:'pce',vintageCutoff:'2026-10-20T12:00:00.000Z'});
+ assert.equal(f.loads,1);f.complete();await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(f.changes,[{page:'vintages',vintageSeries:'pce',vintageCutoff:'2026-10-20T12:00:00.000Z'}]);
+});
+
+test('a failed source does not block another source and retry targets only the selected one',async()=>{
+ const f=fixture();f.setRoute({page:'vintages',vintageSeries:'gdp'});f.fail();await new Promise(resolve=>setImmediate(resolve));
+ f.setRoute({page:'indicator',seriesId:'unrate',tab:'revisions'});assert.equal(f.loads,2);f.complete('bls');await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(f.controller.context({page:'indicator',seriesId:'unrate',tab:'revisions'}).historyState.status,'ready');
+ f.setRoute({page:'vintages',vintageSeries:'gdp'});assert.equal(f.loads,2);f.controller.sync({page:'vintages',vintageSeries:'gdp'},{retry:true});assert.equal(f.loads,3);
+ f.complete();await new Promise(resolve=>setImmediate(resolve));assert.equal(f.controller.context({page:'vintages',vintageSeries:'gdp'}).historyState.status,'ready');
+});
+
+test('history selection uses the correct route field and registered GDP fallback',()=>{
+ assert.equal(historySeriesId({page:'vintages',vintageSeries:'debt',seriesId:'gdp'}),'debt');
+ assert.equal(historySeriesId({page:'indicator',seriesId:'cpi',vintageSeries:'debt'}),'cpi');
+ assert.equal(historySeriesId({page:'vintages',vintageSeries:'unknown'}),'gdp');
 });
 
 test('load failure only retries explicitly and leaves the current route selected',async()=>{

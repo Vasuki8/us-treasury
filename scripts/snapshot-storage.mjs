@@ -250,20 +250,31 @@ export async function writeStoredSnapshot(fullSnapshot, { destination, previous 
 export function browserSnapshotAssets(fullSnapshot) {
   if (fullSnapshot?.vintageArchive !== undefined && fullSnapshot?.vintages === undefined) fail('browser projection requires hydrated capture history');
   const history = validateHistory(fullSnapshot?.vintages ?? { version: 1, captures: [] });
-  const fallback = Buffer.from(jsonValue(history));
-  if (fallback.length > MAX_ARCHIVE_BYTES) fail('public archive content bytes exceed output limit');
-  const compressed = canonicalGzip(fallback), files = new Map();
-  if (compressed.length > MAX_ARCHIVE_BYTES) fail('public archive compressed bytes exceed output limit');
+  const groups = new Map(), files = new Map();
+  let latestCaptureAt = null, contentBytes = 0, compressedBytes = 0;
+  history.captures.forEach((capture, index) => {
+    if (!groups.has(capture.sourceId)) groups.set(capture.sourceId, { captureIndexes: [], captures: [], seriesIds: new Set(), latestCaptureAt: null });
+    const group = groups.get(capture.sourceId), normalized = normalizeVintageTimestamp(capture.capturedAt);
+    group.captureIndexes.push(index);
+    group.captures.push(capture);
+    for (const id of [...Object.keys(capture.series), ...capture.removedSeries]) group.seriesIds.add(id);
+    if (group.latestCaptureAt === null || normalized > group.latestCaptureAt) group.latestCaptureAt = normalized;
+    if (latestCaptureAt === null || normalized > latestCaptureAt) latestCaptureAt = normalized;
+  });
   const descriptor = (bytes, extension) => {
     const sha256 = digest(bytes), basename = `history-${sha256}.json${extension}`;
     files.set(basename, bytes);
     return { url: `./${basename}`, sha256, bytes: bytes.length };
   };
+  const sources = Object.fromEntries([...groups.keys()].sort().map(sourceId => {
+    const group = groups.get(sourceId);
+    const fallback = Buffer.from(jsonValue({ version: 1, sourceId, captureIndexes: group.captureIndexes, captures: group.captures }));
+    if ((contentBytes += fallback.length) > MAX_ARCHIVE_BYTES) fail('public archive content bytes exceed output limit');
+    const compressed = canonicalGzip(fallback);
+    if ((compressedBytes += compressed.length) > MAX_ARCHIVE_BYTES) fail('public archive compressed bytes exceed output limit');
+    return [sourceId, { captureCount: group.captures.length, latestCaptureAt: group.latestCaptureAt, seriesIds: [...group.seriesIds].sort(), compressed: descriptor(compressed, '.gz'), fallback: descriptor(fallback, '') }];
+  }));
   const { vintages: _history, vintageArchive: _storedArchive, historyArchive: _oldArchive, ...current } = fullSnapshot;
-  const latestCaptureAt = history.captures.reduce((latest, capture) => {
-    const normalized = normalizeVintageTimestamp(capture.capturedAt);
-    return latest === null || normalized > latest ? normalized : latest;
-  }, null);
-  const snapshot = { ...current, historyArchive: { version: 1, compressed: descriptor(compressed, '.gz'), fallback: descriptor(fallback, ''), captureCount: history.captures.length, latestCaptureAt } };
+  const snapshot = { ...current, historyArchive: { version: 2, captureCount: history.captures.length, latestCaptureAt, sources } };
   return { snapshot, module: snapshotModule(snapshot), files };
 }

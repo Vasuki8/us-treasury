@@ -39,7 +39,7 @@ npm run build
 node server.mjs --dist --port 4174
 ```
 
-The build writes a self-contained static app to `dist/`. Its stylesheet, icon, native modules and lazy history bundles live under a content-versioned asset directory, so a changed snapshot gets new asset URLs instead of reusing a cached module. Ordinary pages receive current observations only; Revision history and indicator Revisions load and verify the archive on demand, with explicit loading, error and retry states. Native gzip decompression has a plain JSON fallback. Hash routes support ordinary static hosting without rewrite rules. The preview server binds only to this computer's loopback interface. It intentionally serves only app assets, not the original design files or project internals.
+The build writes a self-contained static app to `dist/`. Its stylesheet, icon, native modules and lazy history bundles live under a content-versioned asset directory, so a changed snapshot gets new asset URLs instead of reusing a cached module. Ordinary pages receive current observations only; Revision history and indicator Revisions load and verify only the source archives needed by the selected series. Sources share cached requests across their series and have independent error/retry states. Historical source mappings include moved and removed series; the default UTC cutoff stays global. Native gzip decompression has a plain JSON fallback for each source. Hash routes support ordinary static hosting without rewrite rules. The preview server binds only to this computer's loopback interface. It intentionally serves only app assets, not the original design files or project internals.
 
 ## Refresh official data
 

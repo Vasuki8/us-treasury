@@ -116,3 +116,17 @@ test('live verification includes both lazy history bundles under the deployment 
 test('missing, corrupt or incorrectly served lazy history stops release verification',async t=>{
  for(const variant of ['plain','compressed'])for(const failure of ['missing','corrupt','mime']){const setup=await lazyFixture(t),name='src/'+setup[variant];if(failure==='missing')setup.remote.delete(name);else setup.remote.set(name,{body:failure==='corrupt'?'wrong':setup.remote.get(name).body,type:failure==='mime'?'text/html':setup.remote.get(name).type});await assert.rejects(verifyLiveBuild('https://meridian.example/preview/',setup),/404|differs|MIME/);}
 });
+
+test('live verification follows every v2 source archive, including an unselected source',async t=>{
+ const sha=bytes=>createHash('sha256').update(bytes).digest('hex'),files={},sources={};
+ for(const sourceId of ['bea','bls']){
+  const plain=Buffer.from(JSON.stringify({version:1,sourceId,captureIndexes:[],captures:[]})),gzip=gzipSync(plain);
+  const json=`history-${sha(plain)}.json`,gz=`history-${sha(gzip)}.json.gz`;
+  sources[sourceId]={fallback:{url:'./'+json},compressed:{url:'./'+gz}};files['src/'+json]=plain;files['src/'+gz]=gzip;
+ }
+ const setup=await fixture(t,{...files,'src/data.js':`export {value} from './nested/value.js';export const historyArchive=${JSON.stringify({version:2,sources})};`});
+ for(const [name,item] of setup.remote)if(name.endsWith('.json')||name.endsWith('.gz'))item.type=name.endsWith('.gz')?'application/gzip':'application/json';
+ assert.equal((await verifyLiveBuild('https://meridian.example/preview/',setup)).assets,10);
+ setup.remote.delete('src/'+sources.bls.compressed.url.slice(2));
+ await assert.rejects(verifyLiveBuild('https://meridian.example/preview/',setup),/404/);
+});

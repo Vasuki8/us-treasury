@@ -11,6 +11,19 @@ const t1 = '2026-10-20T12:00:00.123Z', t2 = '2026-10-21T12:00:00.456Z';
 const source = (fetchedAt, value) => ({ id: 'bea', fetchedAt, coverageNote: 'Only captured GDP values; no historical first releases.', provenance: [{ url: 'https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt', sha256: 'b'.repeat(64), retrievedAt: fetchedAt }], series: { gdp: { sourceIds: ['A191RL'], sourceUrl: 'https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt', calculation: 'Published real GDP annualized growth', dataStatus: 'official', observations: [{ date: '2026-04-01', value, publishedAt: null }] } } });
 const fixture = () => recordVintages(null, { bea: source(t1, 2.2) }, { bea: source(t2, 2.4) }, { checkedAt: '2026-10-21T13:00:00.000Z' });
 
+test('source-partition history retains the global default cutoff before and after loading and honors an explicit cutoff',()=>{
+ const globalCutoff='2026-10-22T03:49:37.148Z',history=fixture();
+ for(const status of ['loading','ready']){
+  const context={status,history:status==='ready'?history:null,latestCaptureAt:globalCutoff,sourceIds:['bea']};
+  const html=vintagesPage({vintageSeries:'gdp'},context.history,context);
+  assert.match(html,/id="vintage-cutoff"[^>]*value="2026-10-22T03:49:37.148"/);
+  assert.match(html,/Selected series history.*1 source archive/is);
+  assert.match(html,/default cutoff.*all sources/is);
+ }
+ const explicit=vintagesPage({vintageSeries:'gdp',vintageCutoff:t1},history,{status:'ready',history,latestCaptureAt:globalCutoff,sourceIds:['bea']});
+ assert.ok(explicit.includes(`Selected cutoff: ${t1}.`));assert.ok(!explicit.includes('2.4%'));
+});
+
 test('vintage views and CSV keep first and previous values in their captured units after rescaling', () => {
   const first = source(t1, 2000), next = source(t2, 2);
   Object.assign(first.series.gdp, { unit: 'USD millions', format: 'millions', precision: 2, definition: 'Captured Treasury exposure' });

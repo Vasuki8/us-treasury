@@ -46,7 +46,7 @@ try {
       assert.match(result.headers.get('content-type'),/^application\/(?:gzip|octet-stream)(?:;|$)/,'Lazy gzip history MIME');
     }
   }
-  console.log(`Built application smoke check passed (${visited.size} assets), including both lazy archive history bundles.`);
+  console.log(`Built application smoke check passed (${visited.size} assets), including all source history bundles.`);
 } finally {
   await new Promise(resolve => server.close(resolve));
 }

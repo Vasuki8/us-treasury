@@ -3,137 +3,241 @@ import assert from 'node:assert/strict';
 import { createHash, webcrypto } from 'node:crypto';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { createHistoryLoader } from '../src/history-loader.js';
-import { recordVintages, revisionHistory } from '../src/vintages.js';
+import { asKnownOn, recordVintages, revisionHistory } from '../src/vintages.js';
 
 const at = '2026-10-20T12:00:00.000Z';
-const source = (value, fetchedAt = at) => ({ id:'bea', fetchedAt, series:{gdp:{observations:[{date:'2026-04-01',value,publishedAt:null}]}} });
-const baseline = recordVintages(null, {}, {bea:source(2.1)}, {checkedAt:at});
 const nextAt = '2026-10-21T12:00:00.000Z';
-const history = recordVintages(baseline, {}, {bea:source(2.2,nextAt)}, {checkedAt:nextAt});
+const latestAt = '2026-10-22T12:00:00.000Z';
+const source = (id, series, fetchedAt = at) => ({ id, fetchedAt, series:Object.fromEntries(Object.entries(series).map(([key,value])=>[key,{observations:[{date:'2026-04-01',value,publishedAt:null}]}])) });
+const baseline = recordVintages(null, {}, {bea:source('bea',{gdp:2.1,gdi:2}),bls:source('bls',{cpi:3})}, {checkedAt:at});
+const history = recordVintages(baseline, {}, {bea:source('bea',{gdp:2.2,gdi:2},nextAt),bls:source('bls',{cpi:3.1},latestAt)}, {checkedAt:latestAt});
+const beaHistory = {version:1,captures:[history.captures[0],history.captures[2]]};
+const blsHistory = {version:1,captures:[history.captures[1],history.captures[3]]};
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
-function fixture(value = history) {
-  const plain = Buffer.from(JSON.stringify(value)), compressed = gzipSync(plain);
-  const descriptor = {version:1,compressed:{url:`./history-${sha(compressed)}.json.gz`,sha256:sha(compressed),bytes:compressed.length},fallback:{url:`./history-${sha(plain)}.json`,sha256:sha(plain),bytes:plain.length},captureCount:value.captures?.length??0,latestCaptureAt:value.captures?.at(-1)?.capturedAt??null};
-  const requests = [];
-  const fetchImpl = async (url, options) => {requests.push({url,options});return {ok:true,arrayBuffer:async()=>Uint8Array.from(url.pathname.endsWith('.gz')?compressed:plain).buffer};};
-  return {plain,compressed,descriptor,requests,fetchImpl};
-}
+const copy = value => JSON.parse(JSON.stringify(value));
 const decompress = bytes => gunzipSync(bytes);
 
-test('history stays idle until requested; concurrent reads share a verified gzip load and memoized selected revisions', async () => {
-  const f = fixture();
-  let resolve;
-  const loader = createHistoryLoader(f.descriptor,{fetchImpl:async (...args)=>{await new Promise(done=>{resolve=done;});return f.fetchImpl(...args);},cryptoImpl:webcrypto,decompress});
-  assert.equal(loader.getState().status,'idle');
-  assert.equal(f.requests.length,0);
+function fixture(value = history) {
+  const groups = new Map();
+  value.captures.forEach((capture,index)=>{
+    if(!groups.has(capture.sourceId))groups.set(capture.sourceId,{version:1,sourceId:capture.sourceId,captureIndexes:[],captures:[]});
+    const group=groups.get(capture.sourceId);group.captureIndexes.push(index);group.captures.push(capture);
+  });
+  const descriptor={version:2,captureCount:value.captures.length,latestCaptureAt:value.captures.reduce((latest,capture)=>latest===null||capture.capturedAt>latest?capture.capturedAt:latest,null),sources:{}};
+  const assets=new Map(), requests=[];
+  const replaceBundle=(id,bundle)=>{
+    const plain=Buffer.from(typeof bundle==='string'?bundle:JSON.stringify(bundle)), compressed=gzipSync(plain);
+    const entry=descriptor.sources[id]??={};
+    entry.compressed={url:`./history-${sha(compressed)}.json.gz`,sha256:sha(compressed),bytes:compressed.length};
+    entry.fallback={url:`./history-${sha(plain)}.json`,sha256:sha(plain),bytes:plain.length};
+    assets.set(entry.compressed.url.slice(2),{id,bytes:compressed});assets.set(entry.fallback.url.slice(2),{id,bytes:plain});
+    return {plain,compressed};
+  };
+  for(const [id,bundle]of groups){
+    descriptor.sources[id]={captureCount:bundle.captures.length,latestCaptureAt:bundle.captures.reduce((latest,capture)=>latest===null||capture.capturedAt>latest?capture.capturedAt:latest,null),seriesIds:[...new Set(bundle.captures.flatMap(capture=>[...Object.keys(capture.series),...capture.removedSeries]))]};
+    replaceBundle(id,bundle);
+  }
+  const fetchImpl=async(url,options)=>{
+    const asset=assets.get(url.pathname.split('/').at(-1));
+    if(!asset)throw new Error('Unexpected history resource');
+    requests.push({url,options,sourceId:asset.id});
+    return {ok:true,arrayBuffer:async()=>Uint8Array.from(asset.bytes).buffer};
+  };
+  return {descriptor,requests,fetchImpl,replaceBundle,bundles:Object.fromEntries(groups),assets};
+}
+
+test('construction stays idle; a selected source shares one verified load and memoized revisions', async()=>{
+  const f=fixture();let resolve;
+  const loader=createHistoryLoader(f.descriptor,{fetchImpl:async(...args)=>{await new Promise(done=>{resolve=done;});return f.fetchImpl(...args);},cryptoImpl:webcrypto,decompress});
+  assert.equal(loader.getState().status,'idle');assert.equal(f.requests.length,0);
   assert.throws(()=>loader.revisions('gdp'),/not ready/i);
-  const first = loader.load(), second = loader.load();
-  assert.equal(first,second);
-  assert.equal(loader.getState().status,'loading');
+  const first=loader.load(),second=loader.load();
+  assert.equal(first,second);assert.equal(loader.getState().status,'loading');
   resolve();
-  assert.deepEqual(await first,history);
+  assert.deepEqual(await first,beaHistory);
   assert.equal(loader.getState().status,'ready');
-  assert.equal(f.requests.length,1);
+  assert.deepEqual(loader.getState().sourceIds,['bea']);
+  assert.equal(loader.getState().latestCaptureAt,latestAt);
+  assert.equal(f.requests.length,1);assert.equal(f.requests[0].sourceId,'bea');
   assert.match(f.requests[0].url.pathname,/\/src\/history-[a-f0-9]{64}\.json\.gz$/);
-  assert.equal(f.requests[0].options.credentials,'same-origin');
-  assert.deepEqual(loader.revisions('gdp'),revisionHistory(history,'gdp'));
+  assert.equal(f.requests[0].options.credentials,'same-origin');assert.equal(f.requests[0].options.redirect,'error');
+  assert.deepEqual(loader.revisions('gdp'),revisionHistory(beaHistory,'gdp'));
   assert.equal(loader.revisions('gdp'),loader.revisions('gdp'));
-  await loader.load();
+  assert.equal(loader.getState().history,await loader.load());assert.equal(f.requests.length,1);
+});
+
+test('series in one source share in-flight requests and cached source captures',async()=>{
+  const f=fixture();let resolve;
+  const loader=createHistoryLoader(f.descriptor,{fetchImpl:async(...args)=>{await new Promise(done=>{resolve=done;});return f.fetchImpl(...args);},cryptoImpl:webcrypto,decompress});
+  const gdp=loader.load('gdp'),gdi=loader.load('gdi');
+  assert.equal(loader.getState('gdi').status,'loading');resolve();
+  assert.deepEqual(await gdp,beaHistory);assert.deepEqual(await gdi,beaHistory);
+  assert.equal(f.requests.length,1);assert.equal(loader.getState('cpi').status,'idle');
+  assert.deepEqual(loader.revisions('gdi'),[]);
+});
+
+test('different sources load concurrently and completing one never exposes the other as ready',async()=>{
+  const f=fixture(),pending=new Map();
+  const loader=createHistoryLoader(f.descriptor,{fetchImpl:async(url,options)=>{const id=f.assets.get(url.pathname.split('/').at(-1)).id;await new Promise(resolve=>pending.set(id,resolve));return f.fetchImpl(url,options);},cryptoImpl:webcrypto,decompress});
+  const gdp=loader.load('gdp'),cpi=loader.load('cpi');
+  assert.deepEqual([...pending.keys()],['bea','bls']);
+  pending.get('bls')();assert.deepEqual(await cpi,blsHistory);
+  assert.equal(loader.getState('gdp').status,'loading');assert.equal(loader.getState('cpi').status,'ready');
+  pending.get('bea')();assert.deepEqual(await gdp,beaHistory);
+  assert.deepEqual(f.requests.map(item=>item.sourceId),['bls','bea']);
+});
+
+test('historically moved and removed series load every mapping and restore original global payload order',async()=>{
+  const first=recordVintages(null,{}, {old:source('old',{gdp:1}),other:source('other',{other:9})},{checkedAt:at});
+  const moved=recordVintages(first,{}, {old:source('old',{},nextAt),new:source('new',{gdp:2},nextAt)},{checkedAt:nextAt});
+  // Global payload order is immutable, even when it differs from timestamp/source sorting.
+  const value={version:1,captures:[moved.captures[3],moved.captures[1],moved.captures[0],moved.captures[2]]};
+  const f=fixture(value),loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto,decompress});
+  const expected={version:1,captures:[value.captures[0],value.captures[2],value.captures[3]]};
+  assert.deepEqual(await loader.load('gdp'),expected);
+  assert.deepEqual(loader.getState('gdp').sourceIds,['new','old']);
+  assert.deepEqual(f.requests.map(item=>item.sourceId),['new','old']);
+  assert.deepEqual(asKnownOn(loader.getState('gdp').history,nextAt).sources, {new:{id:'new',series:{gdp:{observations:[{date:'2026-04-01',value:2,publishedAt:null}]}},fetchedAt:nextAt,provenance:[]},old:{id:'old',series:{},fetchedAt:nextAt,provenance:[]}});
+  assert.equal(loader.getState('gdp').history,await loader.load('gdp'));
+});
+
+test('a multiple-source selection remains unavailable until every selected source verifies',async()=>{
+  const first=recordVintages(null,{}, {bea:source('bea',{gdp:1}),bls:source('bls',{gdp:2})},{checkedAt:at});
+  const f=fixture(first);let resolveBls;
+  const loader=createHistoryLoader(f.descriptor,{fetchImpl:async(url,options)=>{if(f.assets.get(url.pathname.split('/').at(-1)).id==='bls')await new Promise(resolve=>{resolveBls=resolve;});return f.fetchImpl(url,options);},cryptoImpl:webcrypto,decompress});
+  const loading=loader.load();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(loader.getState().status,'loading');assert.equal(loader.getState().history,null);
+  resolveBls();assert.deepEqual(await loading,first);
+});
+
+test('unmapped series and an empty manifest are ready without fetching unrelated archives',async()=>{
+  for(const f of [fixture(),fixture({version:1,captures:[]})]){
+    const loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto,decompress});
+    const state=loader.getState('unmapped');
+    assert.equal(state.status,'ready');assert.deepEqual(state.sourceIds,[]);
+    assert.equal(state.latestCaptureAt,f.descriptor.latestCaptureAt);
+    assert.deepEqual(await loader.load('unmapped'),{version:1,captures:[]});
+    assert.equal(state.history,loader.getState('unmapped').history);
+    assert.deepEqual(loader.revisions('unmapped'),[]);assert.equal(f.requests.length,0);
+  }
+});
+
+test('browsers without native gzip support verify only the selected JSON fallback',async()=>{
+  const f=fixture(),loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto,decompress:null});
+  assert.deepEqual(await loader.load(),beaHistory);assert.equal(f.requests.length,1);assert.match(f.requests[0].url.pathname,/\.json$/);
+});
+
+test('native DecompressionStream decodes exact selected browser archive bytes',async()=>{
+  const f=fixture(),loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto});
+  assert.deepEqual(await loader.load(),beaHistory);assert.match(f.requests[0].url.pathname,/\.json\.gz$/);
+});
+
+test('source failures stay isolated and require explicit retry without refetching ready sources',async()=>{
+  const f=fixture();let broken=true,beaCalls=0;
+  const loader=createHistoryLoader(f.descriptor,{fetchImpl:async(url,options)=>{const id=f.assets.get(url.pathname.split('/').at(-1)).id;if(id==='bea'){beaCalls++;if(broken)throw new Error('offline');}return f.fetchImpl(url,options);},cryptoImpl:webcrypto,decompress});
+  await assert.rejects(loader.load('gdp'),/offline/);assert.equal(loader.getState('gdp').status,'error');
+  assert.deepEqual(await loader.load('cpi'),blsHistory);assert.equal(loader.getState('cpi').status,'ready');
+  await assert.rejects(loader.load('gdi'),/offline/);assert.equal(beaCalls,1);
+  broken=false;
+  assert.deepEqual(await loader.load('gdi',{retry:true}),beaHistory);
+  assert.equal(loader.getState('gdp').status,'ready');assert.equal(beaCalls,2);
+  assert.deepEqual(await loader.load('gdp'),beaHistory);
+  await loader.load('cpi',{retry:true});assert.equal(f.requests.filter(item=>item.sourceId==='bls').length,1);
+});
+
+test('a failed multi-source selection retries only its failed source and never exposes partial history',async()=>{
+  const value=recordVintages(null,{}, {bea:source('bea',{gdp:1}),bls:source('bls',{gdp:2})},{checkedAt:at});
+  const f=fixture(value);let broken=true;
+  const loader=createHistoryLoader(f.descriptor,{fetchImpl:async(url,options)=>{if(f.assets.get(url.pathname.split('/').at(-1)).id==='bls'&&broken)throw new Error('offline');return f.fetchImpl(url,options);},cryptoImpl:webcrypto,decompress});
+  await assert.rejects(loader.load(),/offline/);await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(loader.getState().status,'error');assert.equal(loader.getState().history,null);
+  await assert.rejects(loader.load(),/offline/);broken=false;
+  assert.deepEqual(await loader.load('gdp',{retry:true}),value);
+  assert.deepEqual(f.requests.map(item=>item.sourceId),['bea','bls']);
+});
+
+for(const kind of ['version','capture count limit','source ID','source count','total count','global latest','source latest','duplicate series ID','invalid series ID','compressed bytes','fallback bytes','compressed total bytes','fallback total bytes','path'])test(`manifest ${kind} is rejected before any source request`,async()=>{
+  const f=fixture(),entry=f.descriptor.sources.bea;
+  if(kind==='version')f.descriptor.version=1;
+  if(kind==='capture count limit')f.descriptor.captureCount=100001;
+  if(kind==='source ID'){f.descriptor.sources['bad/id']=entry;delete f.descriptor.sources.bea;}
+  if(kind==='source count')entry.captureCount=0;
+  if(kind==='total count')f.descriptor.captureCount++;
+  if(kind==='global latest')f.descriptor.latestCaptureAt=nextAt;
+  if(kind==='source latest')entry.latestCaptureAt='invalid';
+  if(kind==='duplicate series ID')entry.seriesIds.push('gdp');
+  if(kind==='invalid series ID')entry.seriesIds.push('../gdp');
+  if(kind==='compressed bytes')entry.compressed.bytes=512*1024*1024+1;
+  if(kind==='fallback bytes')entry.fallback.bytes=512*1024*1024+1;
+  if(kind==='compressed total bytes')for(const value of Object.values(f.descriptor.sources))value.compressed.bytes=256*1024*1024+1;
+  if(kind==='fallback total bytes')for(const value of Object.values(f.descriptor.sources))value.fallback.bytes=256*1024*1024+1;
+  if(kind==='path')entry.compressed.url=`../history-${entry.compressed.sha256}.json.gz`;
+  const loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto,decompress});
+  await assert.rejects(loader.load());assert.equal(loader.getState().status,'error');assert.equal(f.requests.length,0);
+});
+
+for(const kind of ['source identity','bundle version','capture count','latest capture','series union','removed series union','index count','index range','index integer','index duplicate','index order','capture identity','shape','missing baseline','duplicate immutable key','invalid observation'])test(`source bundle ${kind} fails closed`,async()=>{
+  const f=fixture(),bundle=copy(f.bundles.bea),entry=f.descriptor.sources.bea;
+  if(kind==='source identity')bundle.sourceId='bls';
+  if(kind==='bundle version')bundle.version=2;
+  if(kind==='capture count')bundle.captures.pop();
+  if(kind==='latest capture')entry.latestCaptureAt=at;
+  if(kind==='series union')entry.seriesIds.push('missing');
+  if(kind==='removed series union')bundle.captures[1].removedSeries.push('retired');
+  if(kind==='index count')bundle.captureIndexes.pop();
+  if(kind==='index range')bundle.captureIndexes[1]=f.descriptor.captureCount;
+  if(kind==='index integer')bundle.captureIndexes[1]=1.5;
+  if(kind==='index duplicate')bundle.captureIndexes[1]=bundle.captureIndexes[0];
+  if(kind==='index order')bundle.captureIndexes.reverse();
+  if(kind==='capture identity')bundle.captures[0].sourceId='bls';
+  if(kind==='shape')bundle.captures[0]={capturedAt:at};
+  if(kind==='missing baseline')bundle.captures[0].baseline=false;
+  if(kind==='duplicate immutable key')bundle.captures[1].capturedAt=at;
+  if(kind==='invalid observation')bundle.captures[0].series.gdp.upserts[0].date='2026-02-30';
+  f.replaceBundle('bea',bundle);
+  const loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto,decompress});
+  await assert.rejects(loader.load());assert.equal(loader.getState().status,'error');assert.equal(loader.getState().history,null);
   assert.equal(f.requests.length,1);
 });
 
-test('browsers without native gzip support load and verify only the JSON fallback', async () => {
-  const f=fixture();
-  const loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto,decompress:null});
-  assert.deepEqual(await loader.load(),history);
-  assert.equal(f.requests.length,1);
-  assert.match(f.requests[0].url.pathname,/\.json$/);
+test('duplicate global indexes across selected source bundles fail without a partial ready state',async()=>{
+  const value=recordVintages(null,{}, {bea:source('bea',{gdp:1}),bls:source('bls',{gdp:2})},{checkedAt:at});
+  const f=fixture(value),bundle=copy(f.bundles.bls);bundle.captureIndexes=[0];f.replaceBundle('bls',bundle);
+  const loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto,decompress});
+  await assert.rejects(loader.load(),/index/i);assert.equal(loader.getState().status,'error');assert.equal(loader.getState().history,null);
 });
 
-test('native DecompressionStream decodes the exact browser archive bytes', async()=>{
-  const f=fixture();
+test('native gzip output stops when it exceeds the selected declared decoded byte length',async()=>{
+  const f=fixture(),bundle={...f.bundles.bea,padding:'x'.repeat(1024*1024)};f.replaceBundle('bea',bundle);f.descriptor.sources.bea.fallback.bytes=128;
   const loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto});
-  assert.deepEqual(await loader.load(),history);
-  assert.match(f.requests[0].url.pathname,/\.json\.gz$/);
+  await assert.rejects(loader.load(),/exceeds declared byte length/i);assert.equal(loader.getState().history,null);
 });
 
-for(const field of ['compressed','fallback','captureCount'])test(`archive ${field} exceeds the browser limit before fetching`,async()=>{
-  const f=fixture();
-  if(field==='captureCount')f.descriptor.captureCount=100001;
-  else f.descriptor[field].bytes=512*1024*1024+1;
-  const loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto});
-  await assert.rejects(loader.load(),/descriptor|unsupported/i);
-  assert.equal(f.requests.length,0);
-  assert.equal(loader.getState().status,'error');
-});
-
-test('native gzip output stops as soon as it exceeds the declared decoded byte length',async()=>{
-  const f=fixture({...history,padding:'x'.repeat(1024*1024)});
-  f.descriptor.fallback.bytes=128;
-  const loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto});
-  await assert.rejects(loader.load(),/exceeds declared byte length/i);
-  assert.equal(loader.getState().status,'error');
-  assert.equal(loader.getState().history,null);
-});
-
-test('streamed fetch stops and cancels when it exceeds the declared resource bytes',async()=>{
-  const f=fixture();let cancelled=false;
-  const body=new ReadableStream({start(controller){controller.enqueue(f.compressed);controller.enqueue(new Uint8Array([0]));},cancel(){cancelled=true;}});
+test('streamed fetch stops and cancels when it exceeds selected resource bytes',async()=>{
+  const f=fixture(),bytes=f.assets.get(f.descriptor.sources.bea.compressed.url.slice(2)).bytes;let cancelled=false;
+  const body=new ReadableStream({start(controller){controller.enqueue(bytes);controller.enqueue(new Uint8Array([0]));},cancel(){cancelled=true;}});
   const loader=createHistoryLoader(f.descriptor,{fetchImpl:async()=>({ok:true,body}),cryptoImpl:webcrypto});
-  await assert.rejects(loader.load(),/exceeds declared byte length/i);
-  assert.equal(cancelled,true);
-  assert.equal(loader.getState().status,'error');
+  await assert.rejects(loader.load(),/exceeds declared byte length/i);assert.equal(cancelled,true);assert.equal(loader.getState().status,'error');
 });
 
-test('streamed resources retain exact bytes across multiple chunks',async()=>{
+test('streamed selected resources retain exact bytes across multiple chunks',async()=>{
   for(const compressed of [true,false]){
-    const f=fixture(),bytes=compressed?f.compressed:f.plain;
+    const f=fixture(),entry=f.descriptor.sources.bea,bytes=f.assets.get((compressed?entry.compressed:entry.fallback).url.slice(2)).bytes;
     const body=new ReadableStream({start(controller){controller.enqueue(bytes.subarray(0,10));controller.enqueue(bytes.subarray(10));controller.close();}});
     const loader=createHistoryLoader(f.descriptor,{fetchImpl:async()=>({ok:true,body}),cryptoImpl:webcrypto,...(compressed?{}:{decompress:null})});
-    assert.deepEqual(await loader.load(),history);
+    assert.deepEqual(await loader.load(),beaHistory);
   }
 });
 
-test('failure remains an error until an explicit retry, then caches the successful archive', async () => {
-  const f=fixture();let broken=true,calls=0;
-  const loader=createHistoryLoader(f.descriptor,{fetchImpl:async(...args)=>{calls++;if(broken)throw new Error('offline');return f.fetchImpl(...args);},cryptoImpl:webcrypto,decompress});
-  await assert.rejects(loader.load(),/offline/);
-  assert.equal(loader.getState().status,'error');
-  await assert.rejects(loader.load(),/offline/);
-  assert.equal(calls,1);
-  broken=false;
-  assert.deepEqual(await loader.load({retry:true}),history);
-  assert.equal(loader.getState().status,'ready');
-  assert.equal(calls,2);
-});
-
-test('a verified empty archive is ready and distinct from unavailable history',async()=>{
-  const f=fixture({version:1,captures:[]});
-  const loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto,decompress});
-  assert.deepEqual(await loader.load(),{version:1,captures:[]});
-  assert.equal(loader.getState().status,'ready');
-  assert.deepEqual(loader.revisions('gdp'),[]);
-});
-
-for(const kind of ['compressed hash','compressed length','decoded hash','decoded length','capture count','latest capture','version','shape','malformed JSON','HTTP','redirect','path'])test(`archive ${kind} corruption fails closed`,async()=>{
-  const f=fixture();let fetchImpl=f.fetchImpl;
-  if(kind==='compressed hash')f.descriptor.compressed.sha256='0'.repeat(64);
-  if(kind==='compressed length')f.descriptor.compressed.bytes++;
-  if(kind==='decoded hash')f.descriptor.fallback.sha256='0'.repeat(64);
-  if(kind==='decoded length')f.descriptor.fallback.bytes++;
-  if(kind==='capture count')f.descriptor.captureCount++;
-  if(kind==='latest capture')f.descriptor.latestCaptureAt=at;
-  if(kind==='version')f.descriptor.version=2;
-  if(kind==='shape'||kind==='malformed JSON'){
-    const bytes=Buffer.from(kind==='shape'?JSON.stringify({version:1,captures:[{capturedAt:at}]}):'{');
-    f.descriptor.fallback={url:`./history-${sha(bytes)}.json`,sha256:sha(bytes),bytes:bytes.length};
-    fetchImpl=async()=>({ok:true,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)});
-  }
+for(const kind of ['compressed hash','compressed length','decoded hash','decoded length','malformed JSON','HTTP','redirect','integrity unavailable'])test(`selected resource ${kind} corruption fails closed`,async()=>{
+  const f=fixture(),entry=f.descriptor.sources.bea;let fetchImpl=f.fetchImpl;
+  if(kind==='compressed hash')entry.compressed.sha256='0'.repeat(64);
+  if(kind==='compressed length')entry.compressed.bytes++;
+  if(kind==='decoded hash')entry.fallback.sha256='0'.repeat(64);
+  if(kind==='decoded length')entry.fallback.bytes++;
+  if(kind==='malformed JSON')f.replaceBundle('bea','{');
   if(kind==='HTTP')fetchImpl=async()=>({ok:false,status:404});
-  if(kind==='redirect')fetchImpl=async()=>({ok:true,url:'https://other.example/history.json',arrayBuffer:async()=>f.compressed});
-  if(kind==='path')f.descriptor.compressed.url=`../history-${sha(f.compressed)}.json.gz`;
-  const loader=createHistoryLoader(f.descriptor,{fetchImpl,cryptoImpl:webcrypto,decompress:kind==='shape'||kind==='malformed JSON'?null:decompress});
-  await assert.rejects(loader.load());
-  assert.equal(loader.getState().status,'error');
-  assert.equal(loader.getState().history,null);
+  if(kind==='redirect')fetchImpl=async()=>({ok:true,url:'https://other.example/history.json',arrayBuffer:async()=>new Uint8Array()});
+  const loader=createHistoryLoader(f.descriptor,{fetchImpl,cryptoImpl:kind==='integrity unavailable'?null:webcrypto,decompress});
+  await assert.rejects(loader.load());assert.equal(loader.getState().status,'error');assert.equal(loader.getState().history,null);
 });
