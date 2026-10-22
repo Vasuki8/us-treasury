@@ -1,4 +1,6 @@
 import {publicationScope} from './publication-policy.mjs';
+import {publicationExplanationScope2024} from './publication-explanation-scope-2024.mjs';
+import {publicationExplanationScope2023And2025} from './publication-explanation-scope-2023-2025.mjs';
 
 const base='https://www.bea.gov/news/2026/';
 const thirdTitle=quarter=>'GDP (Third Estimate), Industries, Corporate Profits, State GDP, and State Personal Income, '+quarter;
@@ -100,9 +102,10 @@ const definitions=[
 const fail=message=>{throw new Error('Invalid publication explanation archive: '+message);};
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
 const publications=new Map(publicationScope.map(row=>[row.id,row]));
-export const publicationExplanationScope=freeze(definitions.map(definition=>{
+export const publicationExplanationScope=freeze([...definitions,...publicationExplanationScope2024,...publicationExplanationScope2023And2025].map(definition=>{
  const release=publications.get(definition.publicationId);if(!release)fail('unreviewed publication identity');
- return {...definition,seriesId:'gdp',period:release.period,estimate:release.estimate,publicationDate:release.publicationDate,sourceValue:release.sourceValue,sourceUrl:base+definition.slug,annualUpdate:definition.annualUpdate??null};
+ for(const key of ['seriesId','period','estimate','publicationDate','sourceValue'])if(Object.hasOwn(definition,key)&&definition[key]!==({...release,seriesId:'gdp'})[key])fail('mismatched reviewed publication '+key);
+ return {...definition,seriesId:'gdp',period:release.period,estimate:release.estimate,publicationDate:release.publicationDate,sourceValue:release.sourceValue,sourceUrl:definition.sourceUrl??base+definition.slug,annualUpdate:definition.annualUpdate??null};
 }));
 const byId=new Map(publicationExplanationScope.map(row=>[row.publicationId,row]));
 const metadataKeys=['publicationId','seriesId','period','estimate','publicationDate','kind','sourceValue','previousValue','summary','details','annualUpdate','sourceUrl','sourceTitle','sourceSection'];

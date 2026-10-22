@@ -59,7 +59,7 @@ test('a retry uses a new module attempt because browsers cache failed native imp
 });
 
 test('captured explanations preserve rounded revisions and annual boundaries in real scoped exports',()=>{
- assert.equal(capturedExplanations.explanations.length,10);
+ assert.equal(capturedExplanations.explanations.length,30);
  for(const item of capturedExplanations.explanations){const row=publicationArchive.releases.find(row=>row.id===item.publicationId);assert.equal(publicationExplanation(row,capturedExplanations),item);}
  const q2=publicationExplanationRows(publicationArchive,capturedExplanations,'2026-08-26','2026-04-01');assert.equal(q2.length,2);assert.equal(q2[0].publication.value,q2[1].publication.value);assert.equal(q2[1].explanation.kind,'revision');assert.match(q2[1].explanation.summary,/less than 0\.1/);
  const csv=publicationExplanationsCsv(publicationArchive,capturedExplanations,'2026-08-26','2026-04-01');assert.doesNotMatch(csv,/2026-09-30|Annual update/);

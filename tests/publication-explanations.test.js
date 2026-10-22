@@ -10,16 +10,17 @@ const escape=value=>value.replaceAll('&','&amp;').replaceAll('<','&lt;').replace
 function page(url){
  const scopes=publicationExplanationScope.filter(row=>row.sourceUrl===url),first=scopes[0];
  const sections=new Map();
- for(const scope of scopes){const texts=sections.get(scope.sectionHeading)||[];sections.set(scope.sectionHeading,[...texts,...scope.sectionPassages]);}
- return '<!doctype html><html><body><article about="'+new URL(url).pathname+'"><h1>News Release</h1><div class="field field--name-field-release-date field--item">'+escape(first.releaseDateText)+'</div><h1>'+escape(first.sourceTitle)+'</h1>'+scopes.flatMap(row=>row.sourcePassages).map(text=>'<p>'+escape(text)+'</p>').join('')+[...sections].map(([heading,texts])=>'<h2>'+escape(heading)+'</h2>'+[...new Set(texts)].map(text=>'<p>'+escape(text)+'</p>').join('')).join('')+'</article></body></html>';
+ for(const scope of scopes){if(scope.sectionHeading===null)continue;const texts=sections.get(scope.sectionHeading)||[];sections.set(scope.sectionHeading,[...texts,...scope.sectionPassages]);}
+ const paragraphs=[...new Set(scopes.flatMap(row=>[...row.sourcePassages,...(row.sectionHeading===null?row.sectionPassages:[])]))];
+ return '<!doctype html><html><body><article about="'+new URL(url).pathname+'"><h1>News Release</h1><div class="field field--name-field-release-date field--item">'+escape(first.releaseDateText)+'</div><h1>'+escape(first.sourceTitle)+'</h1>'+paragraphs.map(text=>'<p>'+escape(text)+'</p>').join('')+[...sections].map(([heading,texts])=>'<h2>'+escape(heading)+'</h2>'+[...new Set(texts)].map(text=>'<p>'+escape(text)+'</p>').join('')).join('')+'</article></body></html>';
 }
 function provenance(url,html=page(url)){
  return {url,sha256:createHash('sha256').update(html).digest('hex'),retrievedAt:'2026-10-22T19:00:00.000Z',lastModified:null};
 }
 const fixture=selected=>({version:1,explanations:publicationExplanationScope.filter(row=>selected===undefined||selected.includes(row.publicationId)).map(scope=>({...explanationMetadataFor(scope),provenance:[provenance(scope.sourceUrl)]}))});
 
-test('ten exact explanations join retained GDP identities and source-reported prior estimates',()=>{
- assert.equal(publicationExplanationScope.length,10);assert.equal(new Set(ids()).size,10);
+test('thirty exact explanations join retained GDP identities and source-reported prior estimates',()=>{
+ assert.equal(publicationExplanationScope.length,30);assert.equal(new Set(ids()).size,30);
  const byId=new Map(publicationArchive.releases.map(row=>[row.id,row]));
  for(const scope of publicationExplanationScope){
   const release=byId.get(scope.publicationId);assert.ok(release);
@@ -95,7 +96,7 @@ test('one requested explanation still validates every reviewed passage on its so
 test('collector fetches only exact reviewed pages, preserves requested order and rejects redirects or gaps',async()=>{
  const fetched=[];
  const fetchImpl=async(url,options)=>{fetched.push(url);assert.equal(options.method,'GET');return new Response(page(url),{status:200,headers:{'last-modified':'Thu, 22 Oct 2026 18:00:00 GMT'}});};
- const all=await collectPublicationExplanations({fetchImpl});assert.equal(fetched.length,9);assert.deepEqual(all.explanations.map(row=>row.publicationId),ids());
+ const all=await collectPublicationExplanations({fetchImpl});assert.equal(fetched.length,29);assert.deepEqual(all.explanations.map(row=>row.publicationId),ids());
  const selected=[ids().at(-1),ids()[0]];fetched.length=0;
  const subset=await collectPublicationExplanations({fetchImpl,ids:selected});assert.deepEqual(subset.explanations.map(row=>row.publicationId),selected);assert.equal(fetched.length,2);
  assert.equal(subset.explanations[0].provenance[0].sha256,createHash('sha256').update(page(fetched[0])).digest('hex'));
@@ -103,4 +104,13 @@ test('collector fetches only exact reviewed pages, preserves requested order and
  for(const invalid of [['unknown'],[ids()[0],ids()[0]],null])await assert.rejects(collectPublicationExplanations({fetchImpl,ids:invalid}),/scope|requested/i);
  await assert.rejects(collectPublicationExplanations({ids:[ids()[0]],fetchImpl:async()=>({ok:true,redirected:true,url:'https://example.com'})}),/redirect|source/i);
  await assert.rejects(collectPublicationExplanations({ids:[ids()[0]],fetchImpl:async()=>new Response('unavailable',{status:503})}),/503/);
+});
+
+test('larger source reviews fetch at most four official pages concurrently',async()=>{
+ let active=0,maximum=0,calls=0;
+ const result=await collectPublicationExplanations({fetchImpl:async url=>{
+  calls++;active++;maximum=Math.max(maximum,active);await new Promise(resolve=>setImmediate(resolve));active--;
+  return new Response(page(url),{status:200});
+ }});
+ assert.equal(calls,29);assert.equal(result.explanations.length,30);assert.ok(maximum>1);assert.ok(maximum<=4,`Observed ${maximum} concurrent requests`);
 });

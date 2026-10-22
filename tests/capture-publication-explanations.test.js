@@ -45,7 +45,7 @@ test('file capture locks before rereading and preserves repeated archive bytes a
  const first=capturePublicationExplanationFile({target,collect:async({ids:requested})=>{started();await waiting;return fixture(requested);}});
  await collecting;
  try{await assert.rejects(capturePublicationExplanationFile({target,collect:()=>{throw Error('Must not collect while locked');}}),/lock|progress/i);}finally{release();}
- const result=await first;assert.equal(result.captured,true);assert.equal(result.archive.explanations.length,10);
+ const result=await first;assert.equal(result.captured,true);assert.equal(result.archive.explanations.length,30);
  const bytes=await readFile(target,'utf8');assert.equal(bytes,source(result.archive));
  const repeated=await capturePublicationExplanationFile({target,collect:()=>{throw Error('Repeated capture must not fetch');}});assert.equal(repeated.captured,false);
  assert.equal(await readFile(target,'utf8'),bytes);assert.deepEqual(await readdir(path.dirname(target)),['publication-explanations.js']);

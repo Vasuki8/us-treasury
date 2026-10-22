@@ -30,6 +30,14 @@ function reviewPage(html,scopes){
  for(const scope of scopes){
   if(scope.sourceTitle!==first.sourceTitle||scope.releaseDateText!==first.releaseDateText)fail('reviewed page identity');
   for(const passage of scope.sourcePassages)if(!allText.includes(passage))fail('missing reviewed release passage');
+  if(scope.sectionHeading===null){
+   // Older dated releases can use a bold paragraph label instead of a heading.
+   // Admit one complete reviewed paragraph, never an article-wide fallback.
+   if(scope.sectionPassages.length!==1||!scope.sectionPassages[0])fail('reviewed paragraph scope');
+   const paragraphs=[...article.matchAll(/<p\b[^>]*>([^]*?)<\/p\s*>/gi)].map(match=>decodeHtmlText(match[1]));
+   if(paragraphs.filter(text=>text===scope.sectionPassages[0]).length!==1)fail('missing or ambiguous reviewed revision paragraph');
+   continue;
+  }
   const selected=headings.filter(match=>decodeHtmlText(match[2])===scope.sectionHeading);
   if(selected.length!==1)fail('reviewed source section heading');
   const heading=selected[0],start=heading.index+heading[0].length;
@@ -52,13 +60,15 @@ export function parsePublicationExplanationPage(input,{provenance,ids}={}){
 export async function collectPublicationExplanations({ids,fetchImpl=globalThis.fetch}={}){
  const requested=requestedExplanationIds(ids),byId=new Map(publicationExplanationScope.map(scope=>[scope.publicationId,scope]));
  const urls=[...new Set(requested.map(id=>byId.get(id).sourceUrl))];
- const batches=await Promise.all(urls.map(async url=>{
+ const batches=[];
+ // Keep an expanded historical review bounded at the official source.
+ for(let offset=0;offset<urls.length;offset+=4)batches.push(...await Promise.all(urls.slice(offset,offset+4).map(async url=>{
   const response=await requestText(url,{maxBytes,headers:{Accept:'text/html'},fetchImpl:async(source,options)=>{
    const result=await fetchImpl(source,options);if(result.redirected||result.url&&result.url!==source)fail('unreviewed source redirect');return result;
   }});
   const {text,...provenance}=response;
   return parsePublicationExplanationPage(text,{provenance,ids:requested.filter(id=>byId.get(id).sourceUrl===url)});
- }));
+ })));
  const records=new Map(batches.flatMap(batch=>batch.explanations).map(record=>[record.publicationId,record]));
  const archive={version:1,explanations:requested.map(id=>records.get(id))};assertPublicationExplanations(archive,{ids:requested});return archive;
 }
