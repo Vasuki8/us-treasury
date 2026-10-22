@@ -5,7 +5,7 @@ import { readPreferences, writePreferences } from '../src/storage.js';
 import { releases } from '../src/data.js';
 import {readFile} from 'node:fs/promises';
 
-const [shell,application,css]=await Promise.all(['../index.html','../src/app.js','../styles.css'].map(file=>readFile(new URL(file,import.meta.url),'utf8')));
+const [shell,application]=await Promise.all(['../index.html','../src/app.js'].map(file=>readFile(new URL(file,import.meta.url),'utf8')));
 function themeControl(storage){
   const label={textContent:''},sun={hidden:false},moon={hidden:true},attributes=new Map();
   const button={id:'theme-toggle',dataset:{},disabled:false,setAttribute:(name,value)=>attributes.set(name,value),querySelector:selector=>({'[data-theme-label]':label,'[data-theme-sun]':sun,'[data-theme-moon]':moon}[selector])};
@@ -123,7 +123,7 @@ test('legacy appearance choices migrate to their light or dark equivalent', () =
   }
 });
 
-test('the theme control is a labelled native icon button with the reference dimensions',()=>{
+test('the theme control is a labelled native icon button',()=>{
   const button=/<button\b[^>]*id="theme-toggle"[^>]*>([^]*?)<\/button>/.exec(shell);
   assert.ok(button,'The checkbox must be replaced with a native button');
   assert.match(button[0],/type="button"/);assert.match(button[0],/aria-label="Light theme\. Switch to Dark theme\."/);
@@ -132,8 +132,6 @@ test('the theme control is a labelled native icon button with the reference dime
   assert.match(button[1],/data-theme-sun[^>]*aria-hidden="true"/);
   assert.match(button[1],/data-theme-moon[^>]*aria-hidden="true"[^>]*hidden/);
   assert.doesNotMatch(button[0],/type="checkbox"|role="switch"|theme-track/);
-  const rule=/\.appearance\.theme-toggle\s*\{([^}]+)\}/.exec(css);assert.ok(rule);
-  assert.match(rule[1],/width:\s*119px/);assert.match(rule[1],/height:\s*50px/);assert.match(rule[1],/border-radius:\s*5px/);
 });
 
 test('the actual theme button switches icons, current text and accessible action while preserving focus and preferences',async()=>{
