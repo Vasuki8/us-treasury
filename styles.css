@@ -174,6 +174,9 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
 .date-window-inputs label { display:grid; gap:4px; flex:1; min-width:160px; }
 .date-window-inputs input { width:100%; min-width:0; }
 .date-window-controls .actions { flex-wrap:wrap; }
+.macro-family-controls > label { display:grid; gap:5px; flex:1; min-width:180px; }
+.macro-family-controls select { width:100%; min-width:0; }
+.macro-family-controls .date-window-controls { flex-basis:100%; }
 .window-error { line-height:1.5; }
 .return-context { margin-bottom:8px; }
 .coverage-summary { overflow-wrap:anywhere; }
@@ -182,6 +185,7 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
   .mobile-workspace a,.date-window-controls .action { min-height:44px; }
   .date-window-inputs input { min-height:44px; font-size:16px; }
   .date-window-inputs label { min-width:130px; }
+  .macro-family-controls select { min-height:44px; font-size:16px; }
   .watchlist-workspace table,.watchlist-workspace tbody,.watchlist-workspace tr,.watchlist-workspace td,.watchlist-workspace tbody th { display:block; width:auto; white-space:normal; height:auto; }
   .watchlist-workspace .table-wrap { overflow:visible; }
   .watchlist-workspace thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }

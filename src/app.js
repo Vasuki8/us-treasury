@@ -18,6 +18,7 @@ import { readPreferences, writePreferences } from './storage.js';
 import { createHistoryLoader } from './history-loader.js';
 import { createHistoryController, preserveHistoryView } from './history-controller.js';
 import {viewRange,indicatorHref,createWorkspaceMemory,updateWorkspaceSelection} from './workspace-context.js';
+import {coverageFamilies} from './macro-registry.js';
 
 const root = document.getElementById('app');
 const main = document.getElementById('main-content');
@@ -34,7 +35,7 @@ const historyController = createHistoryController(historyLoader, {
   getRoute:() => state,
   onChange:() => preserveHistoryView(main, () => render()),
 });
-const pageNames = {overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',watchlist:'Watchlist',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Yield explanations',auctions:'Auction demand',ownership:'Debt ownership',macro:'Macro drivers',vintages:'Captured by',market:'Market functioning'};
+const pageNames = {macroCoverage:'Macro coverage',overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',watchlist:'Watchlist',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Yield explanations',auctions:'Auction demand',ownership:'Debt ownership',macro:'Macro drivers',vintages:'Captured by',market:'Market functioning'};
 
 document.querySelector('.skip-link').addEventListener('click',event=>{
   event.preventDefault();
@@ -152,7 +153,7 @@ function exportCsv(selection=null) {
   if(!ids.length){announce('Select at least one series to export.');return;}
   try {
     const comparison=state.page==='explore' && state.exploreMode==='compare'?state.comparison:'native';
-    const content=toCsv(ids,{transform:state.page==='indicator'?state.transform:'level',range:['indicator','explore','watchlist'].includes(state.page)?viewRange(state):state.range,comparison});
+    const content=toCsv(ids,{transform:state.page==='indicator'?state.transform:'level',range:['indicator','explore','watchlist','macroCoverage'].includes(state.page)?viewRange(state):state.range,comparison});
     downloadCsv(content,`meridian-${ids.join('-')}.csv`,'CSV downloaded with displayed observations, units, official source identifiers, retrieval times and per-series data status. Unknown publication dates remain empty.');
   } catch(error) {announce(`Export unavailable: ${error.message}`);}
 }
@@ -181,7 +182,7 @@ root.addEventListener('click',async event=>{
     navigate({page:'explore',exploreMode:'compare',selected,returnTo});
   }
   else if('page' in d && pageNames[d.page])navigate({page:d.page});
-  else if('compare' in d)navigate({page:'explore',selected:[...new Set(d.compare.split(',').filter(id=>getSeries(id)))].slice(0,4),exploreMode:'compare',comparison:'native'});
+  else if('compare' in d)navigate({page:'explore',selected:[...new Set(d.compare.split(',').filter(id=>getSeries(id)))].slice(0,4),exploreMode:'compare',comparison:'native',returnTo:state.page==='macroCoverage'?routeFor(state):state.returnTo});
   else if('event' in d){
     const selected=releases.find(release=>release.id===d.event);
     if(selected)navigate(state.page==='calendar'?{eventId:selected.id}:{page:'calendar',eventId:selected.id,calendarMonth:selected.date.slice(0,7),day:'all',calendarTopic:'All topics',watchOnly:false});
@@ -196,6 +197,7 @@ root.addEventListener('click',async event=>{
   else if('resetFilters' in d)navigate({query:'',topic:'All topics',frequency:'All frequencies'});
   else if('resetCalendar' in d)navigate({calendarMonth:'upcoming',day:'all',calendarTopic:'All topics',watchOnly:false});
   else if('export' in d)exportCsv();
+  else if('exportMacroMeasure' in d)exportCsv([state.macroMeasure]);
   else if('exportFiscal' in d)exportCsv(['receipts','outlays','netInterest','budgetDeficit','primaryDeficit','receiptsTtm','outlaysTtm','netInterestTtm','primaryDeficitTtm','interestRevenueRatio','publicDebt']);
   else if('exportFiscalFinancing' in d){
     downloadCsv(fiscalFinancingCsv(dataStatus.sources.fiscal),'meridian-fiscal-financing.csv','MTS financing CSV downloaded with reported amounts and calculated residuals; release dates remain unknown.');
@@ -231,7 +233,9 @@ root.addEventListener('change',event=>{
     return;
   }
   const fields={'topic-filter':'topic','frequency-filter':'frequency','transform-select':'transform','comparison-select':'comparison','calendar-topic':'calendarTopic','yield-curve-date-a':'yieldDateA','yield-curve-date-b':'yieldDateB','auction-type':'auctionType','vintage-cutoff':'vintageCutoff','vintage-series':'vintageSeries'};
-  if(target.id==='refinancing-horizon')navigate({refinancingHorizon:Number(target.value)});
+  if(target.id==='macro-family'&&Object.hasOwn(coverageFamilies,target.value))navigate({macroFamily:target.value,macroMeasure:coverageFamilies[target.value].defaultMeasure});
+  else if(target.id==='macro-measure'&&coverageFamilies[state.macroFamily].ids.includes(target.value))navigate({macroMeasure:target.value});
+  else if(target.id==='refinancing-horizon')navigate({refinancingHorizon:Number(target.value)});
   else if(['window-start','window-end'].includes(target.id))navigate({window:'custom',startDate:document.getElementById('window-start').value,endDate:document.getElementById('window-end').value});
   else if(target.id==='refinancing-shock')navigate({refinancingShock:Number(target.value)});
   else if(target.id==='calendar-month')navigate({calendarMonth:target.value,day:'all'});
@@ -253,7 +257,7 @@ document.getElementById('command-form').addEventListener('submit',event=>{
   event.preventDefault();
   const input=document.getElementById('command-input'), query=input.value.trim().replace(/<go>/ig,'').trim();
   const command=query.toUpperCase();
-  const pages={US:'overview',OVERVIEW:'overview',LABOR:'labor',CAL:'calendar',CALENDAR:'calendar',FIND:'explore',EXPLORE:'explore',WATCHLIST:'watchlist'};
+  const pages={US:'overview',OVERVIEW:'overview',LABOR:'labor',MACRO:'macroCoverage',CAL:'calendar',CALENDAR:'calendar',FIND:'explore',EXPLORE:'explore',WATCHLIST:'watchlist'};
   if(pages[command])navigate({page:pages[command],returnTo:null});
   else {
     const matches=filterSeries({query});

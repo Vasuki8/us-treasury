@@ -3,8 +3,10 @@ import { decodeHtmlText, easternFields, easternInstant } from './calendar-utils.
 
 const MAX_BYTES=2*1024*1024;
 const canonical='https://www.census.gov/economic-indicators/calendar-listview.html';
-const name='Advance Monthly Sales for Retail and Food Services';
-const credit='U.S. Census Bureau, Advance Monthly Retail Trade Survey';
+const programs=[
+  {name:'Advance Monthly Sales for Retail and Food Services',program:'retail-sales',credit:'Advance Monthly Retail Trade Survey',seriesId:'retail',seriesIds:['retail'],topic:'Growth'},
+  {name:'New Residential Construction',sourceName:'New Residential Construction (Building Permits, Housing Starts, and Housing Completions)',program:'housing-construction',credit:'New Residential Construction',seriesId:'housingStarts',seriesIds:['housingStarts','housingPermits','housingCompletions'],topic:'Housing'},
+];
 const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const order=(a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)||a.id.localeCompare(b.id);
 
@@ -46,7 +48,7 @@ function timeField(text) {
   return `${String(Number(match[1])%12+(match[3]==='PM'?12:0)).padStart(2,'0')}:${match[2]}`;
 }
 
-/** Extract only factual advance-retail metadata from the official annual table. */
+/** Extract only factual metadata for the reviewed retail and housing programs. */
 export function parseCensusCalendar(input,{year,sourceUrl}={}) {
   if(!Number.isInteger(year)||year<2000||year>2100) throw new Error('Invalid Census calendar source year');
   sourceAddress(sourceUrl,year);
@@ -66,13 +68,15 @@ export function parseCensusCalendar(input,{year,sourceUrl}={}) {
     const cells=[...row[1].matchAll(/<td\b([^>]*)>([^]*?)<\/td>/gi)];
     const title=cells[0]?decodeHtmlText(cells[0][2]):'';
     const titleLink=cells[0]?/<a\b[^>]*>([^]*?)<\/a>/i.exec(cells[0][2]):null;
-    if(title!==name && (!titleLink || decodeHtmlText(titleLink[1])!==name)) continue;
+    const definition=programs.find(item=>[item.name,item.sourceName].filter(Boolean).some(accepted=>title===accepted || (titleLink&&decodeHtmlText(titleLink[1])===accepted)));
+    if(!definition) continue;
+    const {name,program,seriesId,seriesIds,topic}=definition;
     selected++;
-    if(title!==name || cells.length<4 || cells.length>6 || cells.length!==(row[1].match(/<td\b/gi)||[]).length || cells.slice(0,4).some(cell=>hidden(cell[1])) || cells.slice(4).some(cell=>!hidden(cell[1]))) throw new Error('Malformed Census selected release row schema');
+    if(![name,definition.sourceName].includes(title) || cells.length<4 || cells.length>6 || cells.length!==(row[1].match(/<td\b/gi)||[]).length || cells.slice(0,4).some(cell=>hidden(cell[1])) || cells.slice(4).some(cell=>!hidden(cell[1]))) throw new Error('Malformed Census selected release row schema');
     const periodLabel=decodeHtmlText(cells[3][2]);
     const reference=/^([A-Za-z]+) (\d{4})$/.exec(periodLabel);
     if(!reference || !months.includes(reference[1]) || Number(reference[2])<2000 || Number(reference[2])>2100) throw new Error('Invalid or missing explicit Census reference period');
-    const id=`census-retail-sales-${periodLabel.toLowerCase().replaceAll(' ','-')}`;
+    const id=`census-${program}-${periodLabel.toLowerCase().replaceAll(' ','-')}`;
     if(ids.has(id)) throw new Error(`Duplicate Census release program/reference period: ${id}`);
     ids.add(id);
     const dateText=decodeHtmlText(cells[1][2]);
@@ -81,10 +85,10 @@ export function parseCensusCalendar(input,{year,sourceUrl}={}) {
       continue;
     }
     const date=dateField(dateText,year),time=timeField(decodeHtmlText(cells[2][2]));
-    events.push({id,sourceId:'census',program:'retail-sales',name,agency:'Census',seriesId:'retail',seriesIds:['retail'],topic:'Growth',date,time,
+    events.push({id,sourceId:'census',program,name,agency:'Census',seriesId,seriesIds:[...seriesIds],topic,date,time,
       scheduledAt:easternInstant(date,time),period:null,periodLabel,sourceUrl,sourceUid:null,scheduleBasis:'listed-date'});
   }
-  if(!selected) throw new Error('No matching Census retail releases or usable calendar coverage');
+  if(!selected) throw new Error('No matching Census retail or housing releases or usable calendar coverage');
   return {events:events.sort(order),warnings};
 }
 
@@ -114,9 +118,11 @@ export async function collectCensusCalendar({fetchImpl=globalThis.fetch,now=new 
   if(new Set(events.map(event=>event.id)).size!==events.length) throw new Error('Duplicate Census release reference period across calendar years');
   const warnings=sources.flatMap(source=>source.warnings);
   if(latest.year===currentYear) warnings.push(`Census ${currentYear+1} calendar is not yet published in the current annual calendar; no dates are inferred.`);
-  if(!events.some(event=>Date.parse(event.scheduledAt)>=now.getTime())) warnings.push('The Census calendar contains no upcoming mapped retail releases; check the official schedule for new dates.');
+  if(!events.some(event=>Date.parse(event.scheduledAt)>=now.getTime())) warnings.push('The Census calendar contains no upcoming mapped retail or housing releases; check the official schedule for new dates.');
   const provenance=sources.map(source=>source.provenance);
+  const included=programs.filter(item=>events.some(event=>event.program===item.program)||warnings.some(warning=>warning.startsWith(`Census ${item.name},`)));
+  const credit=`U.S. Census Bureau, ${included.map(item=>item.credit).join('; ')}`;
   return {id:'census',agency:credit,events,provenance,warnings,fetchedAt:provenance.at(-1).retrievedAt,
     coveredYears:sources.map(source=>source.year).sort((a,b)=>a-b),
-    coverageNote:`${credit}: official annual release calendar for ${name}${events.length?`, through ${events.at(-1).date}`:''}. Only explicitly dated releases are included. Times are Eastern; dates can change. Calendar records do not establish publication of statistical results.`};
+    coverageNote:`${credit}: official annual release calendar for ${included.map(item=>item.name).join('; ')}${events.length?`, through ${events.at(-1).date}`:''}. Only explicitly dated releases are included. Times are Eastern; dates can change. Calendar records do not establish publication of statistical results.`};
 }

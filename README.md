@@ -1,14 +1,20 @@
 # Meridian — Graphite US Macro Workspace
 
-A compact Graphite US fiscal and macro research dashboard. The original Overview, Labor Market, Indicator Detail, Calendar and Explore Data views remain available alongside eight research views.
+A compact Graphite US fiscal and macro research dashboard. The original Overview, Labor Market, Indicator Detail, Calendar and Explore Data views remain available alongside eight specialist research views and a five-family macro workspace.
 
 Uses official Treasury, BLS, BEA, DOL ETA, Census, Federal Reserve Board and reviewed New York Fed observations captured by the data refresh command. The app serves a committed snapshot, with observation periods, source identifiers and actual retrieval times. It does not stream live market quotes.
 
 ## Commercial data reuse
 
-The site is intended for advertising revenue. Only datasets reviewed for commercial display, derived use and downloadable redistribution may be connected. The 48 registered indicators use dataset-specific admissions. See the [original dataset rights review](docs/data-sources.md) and [research source ledger](docs/research-dashboard-sources.md) for exact feeds, evidence and limitations. New York Fed data use conditional business redistribution, with titles, copyright, reference-rate disclaimers and downstream terms retained; they are not described as public domain.
+The site is intended for advertising revenue. Only datasets reviewed for commercial display, derived use and downloadable redistribution may be connected. The 77 registered indicators use dataset-specific admissions. See the [original dataset rights review](docs/data-sources.md) and [research source ledger](docs/research-dashboard-sources.md) for exact feeds, evidence and limitations. New York Fed data use conditional business redistribution, with titles, copyright, reference-rate disclaimers and downstream terms retained; they are not described as public domain.
 
 The app credits the agencies and Census's originating program, shows the required BLS disclaimer and retrieval date, and includes the disclaimer in exported BLS rows. Build and refresh commands reject data outside the reviewed dataset, identifier and feed scope in `scripts/data-policy.mjs`. Recheck terms when adding or changing a source. Claims coverage limitations accompany the displayed data and CSV exports. Research additions have separate scoped reviews in the [research source ledger](docs/research-dashboard-sources.md).
+
+## Balanced macro coverage
+
+The [Macro coverage workspace](https://vasuki8.github.io/us-treasury/#/economy) connects Prices, Policy rates, Activity & income, Housing and Labor. It adds 29 measurements: core/monthly CPI and PCE, explicit price indexes, policy target bounds and IORB, real spending/income levels and published monthly growth, industrial production/utilization, housing permits/starts/completions, payroll levels, U-6, employment/population, private weekly hours and continued claims. Focused histories reuse shared date windows, native comparisons, details, watchlists and matching CSV exports. Family tables show latest retained reference periods separately from the selected chart window.
+
+New captures preserve earlier immutable history. Newly retrieved historical observations were first captured now; they do not establish historical publication vintages. Data freshness now requires 21 outcomes (15 data collectors and six calendar/timing sources). Census housing events use published dates; Board policy/G.17 schedules remain external links. The existing BLS calendar 403 exception remains visible. See the [source mapping](docs/research-dashboard-sources.md) and [milestone plan](docs/superpowers/plans/2026-10-22-balanced-macro-coverage.md).
 
 ## Research modules
 
@@ -27,7 +33,7 @@ All modules distinguish observations, calculations and assumptions. Source/retri
 
 Indicator details and comparisons offer **1Y, 3Y, 5Y, All history and exact inclusive UTC reference dates**. Presets end at the latest retained observation across the selected series. All history exposes retained coverage; it does not request additional agency history. Coverage summaries distinguish retained/displayed observations and retrieval timestamps. Legacy `range=6/12` links remain explicit observation-count windows. Charts, tables and CSV use the same window and preserve source frequency and missing values. Calendar comparison panels share date bounds while retaining separate native scales.
 
-Search covers all 48 indicators, official IDs, agency/measurement metadata and calculation descriptions. Aliases expand results, and exact identifiers rank ahead of loose matches. Catalog, comparison and watchlist detail links retain date settings, selection and a safe return route; same-session returns restore list position. Related links follow each measure's subject and research module.
+Search covers all 77 indicators, official IDs, agency/measurement metadata and calculation descriptions. Aliases expand results, and exact identifiers rank ahead of loose matches. Catalog, comparison and watchlist detail links retain date settings, selection and a safe return route; same-session returns restore list position. Related links follow each measure's subject and research module.
 
 Native comparisons remain the default. Ratio indexing admits only classified positive levels/counts/amounts with an exact shared positive baseline. Rates, growth, contributions and balances instead use native values or **change from baseline**, with separate units and a shared finite reference date. No interpolation or frequency aggregation is performed. CSV includes the selected window, comparison formula, baseline and existing source/rights provenance.
 
@@ -71,7 +77,7 @@ node scripts/check-refresh-due.mjs
 node scripts/check-bls-calendar-access.mjs
 ```
 
-Refresh and then reload the browser. No API keys or dependency installation are needed. Refresh uses Node's server-side fetch; the browser does not contact agency APIs. BEA's two public bulk files total about 70 MB, so refreshing may take several seconds. BLS unauthenticated requests are rate-limited; all six BLS series are batched into one request.
+Refresh and then reload the browser. No API keys or dependency installation are needed. Refresh uses Node's server-side fetch; the browser does not contact agency APIs. BEA's two public bulk files total about 70 MB, so refreshing may take several seconds. BLS unauthenticated requests are rate-limited; the 12 unique BLS source IDs are batched into one unregistered request covering ten calendar years.
 
 The refresh command writes new immutable, content-addressed gzip captures under `src/history/`, verifies retained files, then atomically replaces `src/official-snapshot.js` with current data and an ordered storage index. All original captures, confirmations, provenance and timestamps remain available; no history is pruned. Build, refresh and publication hydrate the archive before commercial-data admission. The command exits with an error if an agency fails. Other successful agencies still update. A failed agency retains its last successful values, original retrieval time and provenance; its cached status and refresh error are visible. A first failure leaves that agency unavailable. Do not hand-edit snapshot observations or archive files. See the [storage and replay contract](docs/vintages-design.md).
 
@@ -124,7 +130,7 @@ Yield timing has a separate factual-metadata commercial-use review; the statisti
 
 - Global data freshness banner with the latest successful source retrieval, latest recorded attempt, named stale/cached/unavailable feeds, and expandable capture details for all 18 data/calendar/timing capture outcomes. Times display Eastern daylight/standard time; snapshot assembly and observation periods do not stand in for refresh timestamps.
 - Connected original navigation and compact research navigation, deep links, browser back/forward, refresh, F1–F5 shortcuts, and Ctrl/Cmd+K search.
-- 48 registered indicators, with definitions, source identifiers, units, adjustment, observation periods, retrieval times, source footnotes and coverage limitations.
+- 77 registered indicators, with definitions, source identifiers, units, adjustment, observation periods, retrieval times, source footnotes and coverage limitations.
 - Indicator level/change controls, six/twelve-observation ranges, exact-value pointer and keyboard chart readouts, and data/methodology/revision tabs.
 - Browser watchlists and appearance/density preferences. Saving falls back to session state with an explicit message if browser storage is unavailable.
 - Official release calendar with upcoming and monthly windows, date/topic/watchlist filters, related indicators, verified source links, reference periods, EST/EDT times and cached-source status.

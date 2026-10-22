@@ -4,6 +4,7 @@ const fail=message=>{throw new Error(`Invalid vintage archive: ${message}`);};
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 const provenanceFields=new Set(['url','sha256','retrievedAt','lastModified']);
 const censusProvenanceFields=new Set(['filename','fileUpdatedAt','usageNote']);
+const censusZipMembers={census:'MARTS-mf.csv',housing:'RESCONST-mf.csv'};
 
 function canonical(value){
   if(value===null||typeof value==='string'||typeof value==='boolean')return JSON.stringify(value);
@@ -15,12 +16,13 @@ function canonical(value){
 
 function retrievalProvenance(capture,capturedAt){
   if(!Array.isArray(capture.provenance)||!capture.provenance.length)fail('capture has no original retrieval provenance');
+  const zipMember=Object.hasOwn(censusZipMembers,capture.sourceId)?censusZipMembers[capture.sourceId]:null;
   const retrievals=capture.provenance.map(item=>{
-    if(!object(item)||Object.keys(item).some(key=>!provenanceFields.has(key)&&!(capture.sourceId==='census'&&censusProvenanceFields.has(key)))||typeof item.url!=='string'||!/^[a-f0-9]{64}$/.test(item.sha256))fail('invalid provenance fields, content or SHA256');
+    if(!object(item)||Object.keys(item).some(key=>!provenanceFields.has(key)&&!(zipMember&&censusProvenanceFields.has(key)))||typeof item.url!=='string'||!/^[a-f0-9]{64}$/.test(item.sha256))fail('invalid provenance fields, content or SHA256');
     if(item.lastModified!==undefined&&item.lastModified!==null&&typeof item.lastModified!=='string')fail('invalid provenance last-modified metadata');
-    if(capture.sourceId==='census'){
+    if(zipMember){
       if([...censusProvenanceFields].some(key=>item[key]!==undefined&&typeof item[key]!=='string'))fail('invalid Census provenance metadata');
-      if(item.filename!==undefined&&item.filename!=='MARTS-mf.csv')fail('unreviewed Census provenance ZIP member');
+      if(item.filename!==undefined&&item.filename!==zipMember)fail('unreviewed Census provenance ZIP member');
       if(item.usageNote!==undefined&&(!item.usageNote.includes('U.S. Census Bureau')||!item.usageNote.includes('originating')))fail('missing Census provenance attribution conditions');
     }
     return normalizeVintageTimestamp(item.retrievedAt);

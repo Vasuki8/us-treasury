@@ -3,6 +3,10 @@ const measurementFields = ['name', 'unit', 'frequency', 'format', 'precision', '
 const sharedMetadata = ['sourceNotice', 'licenseUrl', 'termsUrl', 'redistributionNotice', 'attribution', 'sourceTitle', 'sourceUrls', ...measurementFields, 'measure'];
 const sourceFields = ['agency', 'sourceUrl', 'coverageStart', 'coverageEnd', 'coverageNote', 'structuralBreak', ...sharedMetadata];
 const seriesFields = ['sourceIds', 'sourceUrl', 'calculation', 'dataStatus', 'coverageNote', ...sharedMetadata];
+// Existing providers keep their historical normalization contract. RESCONST is
+// newly admitted and needs its originating program in replayed rights metadata.
+const housingSeriesFields = [...seriesFields, 'programName'];
+const seriesFieldsFor = source => source === 'housing' ? housingSeriesFields : seriesFields;
 const clone = value => JSON.parse(JSON.stringify(value));
 const own = (value, key) => Object.hasOwn(value, key);
 
@@ -59,7 +63,7 @@ function normalizedSource(source, id, seriesMetadata = {}) {
     sourceId(key);
     if (!item || typeof item !== 'object') throw new Error('Invalid vintage series');
     const defaults = own(seriesMetadata, key) ? metadata(seriesMetadata[key] ?? {}, measurementFields) : {};
-    return [key, { ...defaults, ...metadata(item, seriesFields), observations: observations(item.observations) }];
+    return [key, { ...defaults, ...metadata(item, seriesFieldsFor(id)), observations: observations(item.observations) }];
   }));
   const result = { id, fetchedAt, ...metadata(source, sourceFields), provenance: clone(source.provenance ?? []), series };
   canonical(result);
@@ -113,14 +117,15 @@ export function asKnownOn(vintages, cutoffISOString) {
 
 function deltaCapture(previous, next, recordedAt) {
   const series = {}, removedSeries = Object.keys(previous?.series ?? {}).filter(id => !own(next.series, id)).sort();
+  const fields = seriesFieldsFor(next.id);
   for (const [id, current] of Object.entries(next.series)) {
     const prior = previous?.series[id];
     const before = new Map((prior?.observations ?? []).map(row => [row.date, row]));
     const after = new Map(current.observations.map(row => [row.date, row]));
     const upserts = current.observations.filter(row => !before.has(row.date) || !equal(before.get(row.date), row));
     const deletedDates = [...before.keys()].filter(date => !after.has(date)).sort();
-    const nextMetadata = metadata(current, seriesFields);
-    if (!prior || upserts.length || deletedDates.length || !equal(metadata(prior, seriesFields), nextMetadata)) series[id] = { metadata: nextMetadata, upserts: clone(upserts), deletedDates };
+    const nextMetadata = metadata(current, fields);
+    if (!prior || upserts.length || deletedDates.length || !equal(metadata(prior, fields), nextMetadata)) series[id] = { metadata: nextMetadata, upserts: clone(upserts), deletedDates };
   }
   return { sourceId: next.id, capturedAt: next.fetchedAt, recordedAt, baseline: !previous, metadata: metadata(next, sourceFields), provenance: clone(next.provenance), series, removedSeries };
 }

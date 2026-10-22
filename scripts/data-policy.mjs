@@ -1,11 +1,13 @@
 import { easternFields } from './sources/calendar-utils.mjs';
 import { researchPolicies, matchesResearchFeed, assertResearchData } from './research-policy.mjs';
 import { assertVintageData } from './vintage-policy.mjs';
+import {macroCoveragePolicies,matchesMacroCoverageFeed,assertMacroCoverageData} from './macro-coverage-policy.mjs';
 
 // Dataset-specific commercial reuse review. Evidence and limitations: docs/data-sources.md.
 // An official-looking hostname alone does not establish reuse rights.
 export const dataPolicies = [
   ...researchPolicies,
+  ...macroCoveragePolicies,
   {
     id:'bls-statistics', agency:'bls', reviewedOn:'2026-10-21', commercialUse:true,
     basis:'Public-domain BLS statistics; API attribution and disclaimer conditions apply',
@@ -46,6 +48,7 @@ export const dataPolicies = [
 ];
 
 function matchesFeed(value, feed) {
+  if(matchesMacroCoverageFeed(value,feed))return true;
   if(matchesResearchFeed(value,feed))return true;
   try {
     const url=new URL(value);
@@ -76,9 +79,9 @@ export const calendarPolicies = {
   },
   census: {
     reviewedOn:'2026-10-21',commercialUse:true,
-    basis:'Scoped review of factual federal retail release titles, dates, times and reference periods; Census employee-work policy and Copyright Office exclusions for facts/names, with Census program credit. This is not a calendar CC0 claim.',
+    basis:'Scoped factual federal retail and New Residential Construction release metadata; Census employee-work policy and Copyright Office exclusions for facts/names, with originating program credit. Housing extension reviewed 2026-10-22 in macro-coverage-source-review.md. This is not a calendar CC0 claim.',
     terms:['https://www2.census.gov/foia/ds_policies/ds027.pdf','https://www.copyright.gov/what-is-copyright/','https://www.census.gov/about/policies/citation.html'],
-    programs:{'retail-sales':['retail']},
+    programs:{'retail-sales':['retail'],'housing-construction':['housingStarts','housingPermits','housingCompletions']},
   },
   dol: {
     reviewedOn:'2026-10-21',commercialUse:true,
@@ -193,6 +196,7 @@ function assertCalendarData(snapshot) {
 
 /** Stop publication or snapshot replacement when data exceed the reviewed scope. */
 export function assertCommercialData(snapshot) {
+  assertMacroCoverageData(snapshot);
   assertResearchData(snapshot);
   assertCalendarData(snapshot);
   for(const [agency,source] of Object.entries(snapshot.sources ?? {})) {

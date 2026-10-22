@@ -1,4 +1,5 @@
 import { series, releases } from './data.js';
+import {coverageFamilies} from './macro-registry.js';
 
 const validIds = ids => [...new Set(ids.filter(id => Object.hasOwn(series, id)))].slice(0, 4);
 const topics = ['All topics', ...new Set(Object.values(series).map(s => s.topic))];
@@ -13,17 +14,18 @@ export const defaults = {
   auctionType:'All',auctionId:'',
   vintageCutoff:null,vintageSeries:'gdp',
   window:'1y',startDate:'',endDate:'',returnTo:null,
+  macroFamily:'prices',macroMeasure:'cpiMonthly',
 };
 
-/** Only local catalog/watchlist contexts can be offered as a return destination. */
+/** Only local research workspaces can be offered as a return destination. */
 export function safeReturnTo(value) {
-  if(typeof value!=='string'||value.length>4000||/[\u0000-\u001f\u007f]/.test(value)||!/^#\/(?:explore|watchlist)(?:\?|$)/.test(value))return null;
+  if(typeof value!=='string'||value.length>4000||/[\u0000-\u001f\u007f]/.test(value)||!/^#\/(?:explore|watchlist|economy)(?:\?|$)/.test(value))return null;
   const [path,query='']=value.split('?'),params=new URLSearchParams(query);
   const origin=params.get('return');params.delete('return');
-  // One bounded watchlist origin may accompany a catalog/comparison return.
-  // Watchlists drop nested returns, so recursive workspace chains cannot grow.
-  if(path==='#/explore'&&/^#\/watchlist(?:\?|$)/.test(origin??'')){
-    const watchlist=safeReturnTo(origin);if(watchlist)params.set('return',watchlist);
+  // One terminal watchlist/family origin may accompany an explore return.
+  // Terminal workspaces discard nested returns, preventing recursive chains.
+  if(path==='#/explore'&&/^#\/(?:watchlist|economy)(?:\?|$)/.test(origin??'')){
+    const terminal=safeReturnTo(origin);if(terminal)params.set('return',terminal);
   }
   return path+(params.size?'?'+params.toString():'');
 }
@@ -36,6 +38,7 @@ export function parseRoute(hash = '') {
     const path = decodeURIComponent(encodedPath).replace(/\/$/, '');
     const p = new URLSearchParams(query);
     if (path === '/economy/labor') state.page = 'labor';
+    else if(path==='/economy')state.page='macroCoverage';
     else if (path.startsWith('/series/')) {
       state.page = 'indicator';
       const id = path.slice('/series/'.length);
@@ -52,6 +55,8 @@ export function parseRoute(hash = '') {
     else if (path === '/market') state.page = 'market';
     else if (path === '/watchlist') state.page = 'watchlist';
     state.vintageCutoff=p.has('cutoff')?p.get('cutoff').slice(0,64):null;
+    state.macroFamily=Object.hasOwn(coverageFamilies,p.get('family'))?p.get('family'):'prices';
+    state.macroMeasure=coverageFamilies[state.macroFamily].ids.includes(p.get('measure'))?p.get('measure'):coverageFamilies[state.macroFamily].defaultMeasure;
     state.vintageSeries=Object.hasOwn(series,p.get('series'))?p.get('series'):'gdp';
     state.auctionType=['All','Bill','Note','Bond','FRN','TIPS'].includes(p.get('type'))?p.get('type'):'All';
     state.auctionId=(p.get('auction')??'').slice(0,200);
@@ -86,8 +91,11 @@ export function parseRoute(hash = '') {
 
 export function routeFor(input) {
   const state = { ...defaults, ...input };
-  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',watchlist:'/watchlist',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',macro:'/macro',vintages:'/vintages',market:'/market'}[state.page] || '/overview';
+  const path = {macroCoverage:'/economy',overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',watchlist:'/watchlist',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',macro:'/macro',vintages:'/vintages',market:'/market'}[state.page] || '/overview';
   const p = new URLSearchParams();
+  if(state.page==='macroCoverage'){
+    p.set('family',state.macroFamily);p.set('measure',state.macroMeasure);
+  }
   if(state.page==='vintages'){
     if(state.vintageCutoff!==null)p.set('cutoff',state.vintageCutoff);
     if(state.vintageSeries!=='gdp')p.set('series',state.vintageSeries);
@@ -118,11 +126,11 @@ export function routeFor(input) {
     if (state.exploreMode === 'compare') p.set('mode', 'compare');
     if (['indexed','difference'].includes(state.comparison)) p.set('comparison', state.comparison);
   }
-  if(state.page==='watchlist'){
+  if(['watchlist','macroCoverage'].includes(state.page)){
     p.set('selected',validIds(state.selected||[]).join(','));
     if(['indexed','difference'].includes(state.comparison))p.set('comparison',state.comparison);
   }
-  if(['indicator','explore','watchlist'].includes(state.page)){
+  if(['indicator','explore','watchlist','macroCoverage'].includes(state.page)){
     if(state.window==='observations')p.set('range',String(state.range===6?6:12));
     else if(state.window!=='1y')p.set('window',state.window);
     if(state.window==='custom'){p.set('start',state.startDate);p.set('end',state.endDate);}

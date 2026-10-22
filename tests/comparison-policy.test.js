@@ -7,7 +7,7 @@ import { compareSeries } from '../src/model.js';
 test('every admitted measurement has an explicit comparison classification', async () => {
   const policy = await import('../src/model.js');
   assert.equal(typeof policy.comparisonClassification, 'function');
-  assert.equal(Object.keys(registry).length, 48);
+  assert.deepEqual(Object.keys(series).sort(),Object.keys(registry).sort(),'every registered measurement participates in the policy check');
   for (const s of Object.values(series)) assert.notEqual(policy.comparisonClassification(s), 'unknown', s.id);
   assert.equal(policy.comparisonClassification({ id: 'unregistered', format: 'billions' }), 'unknown');
 });

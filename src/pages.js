@@ -12,6 +12,8 @@ import {viewRange,workspaceReturn,indicatorHref} from './workspace-context.js';
 import {rangeControls,coverageSummary,measureLabel,changeLabel} from './research-controls.js';
 import {relatedIndicators} from './related.js';
 import {watchlistPage} from './watchlist-page.js';
+import {macroCoveragePage} from './macro-coverage-page.js';
+import {calendarRelatedIds} from './macro-calendar.js';
 import { researchNavigation } from './research-navigation.js';
 import { series, releases, yieldCurve, dataStatus } from './data.js';
 import { getSeries, filterSeries, latest, formatValue, formatChange, periodLabel, transformSeries, compareSeries, observationCoverageLabel } from './model.js';
@@ -30,12 +32,12 @@ const finite = value => typeof value === 'number' && Number.isFinite(value);
 const scheduleLinks = () => (dataStatus.calendar?.links ?? []).map(source => `<a class="action" href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.name)} ↗</a>`).join('');
 const calendarSourceNames = {
   bls: 'Bureau of Labor Statistics', bea: 'Bureau of Economic Analysis',
-  census: 'U.S. Census Bureau, Advance Monthly Retail Trade Survey',
+  census: 'U.S. Census Bureau, Advance Monthly Retail Trade Survey and New Residential Construction',
   dol: 'U.S. Department of Labor, Employment and Training Administration',
   treasury: 'U.S. Department of the Treasury, Bureau of the Fiscal Service',
   'treasury-yield-timing': 'U.S. Department of the Treasury, Office of Debt Management',
 };
-const relatedSeries = event => seriesIds(event.seriesIds ?? [event.seriesId]);
+const relatedSeries = event => seriesIds(calendarRelatedIds(event));
 const scheduledPeriod = event => event.periodLabel || 'Observation period not supplied';
 const scheduleSource = event => dataStatus.calendar?.sources?.[event.sourceId];
 const scheduleBasisLabel = event => event.scheduleBasis === 'recurring-rule' ? 'AGENCY RULE' : event.scheduleBasis === 'published-exception' ? 'AGENCY EXCEPTION' : event.scheduleBasis === 'calendar-estimate' ? 'ESTIMATED' : '';
@@ -87,7 +89,7 @@ function overview() {
   const tenYear = yieldCurve.find(point => point.years === 10);
   const spread = finite(twoYear?.value) && finite(tenYear?.value) ? `${tenYear.value - twoYear.value >= 0 ? '+' : ''}${number(tenYear.value - twoYear.value, 2)} pp` : '—';
   const trends = `<div class="chart-stack"><section class="chart-small"><h3 class="chart-caption"><span class="swatch"></span>CPI · ${esc(getSeries('cpi').unit)}</h3>${chart(['cpi'], { height: 122 })}</section><section class="chart-small"><h3 class="chart-caption"><span class="swatch blue"></span>Unemployment · ${esc(getSeries('unrate').unit)}</h3>${chart(['unrate'], { height: 122 })}</section></div>`;
-  return heading('US ECONOMIC OVERVIEW', 'National accounts / labor / prices / fiscal / funding', link('CALENDAR ↗', '#/calendar') + link('EXPLORE ↗', '#/explore'))
+  return heading('US ECONOMIC OVERVIEW', 'National accounts / labor / prices / fiscal / funding', link('MACRO COVERAGE ↗','#/economy')+link('CALENDAR ↗', '#/calendar') + link('EXPLORE ↗', '#/explore'))
     + metrics(['gdp', 'unrate', 'pce', 'yield', 'debt', 'payroll'])
     + `<div class="grid g21">${panel('01', 'INFLATION & LABOR', trends, button('COMPARE ↗', 'data-compare="cpi,unrate"', 'link-button'), 'Separate native-unit scales · official monthly observations')}${panel('02', 'TREASURY YIELD CURVE', `<div class="context-strip"><span class="mono">10Y–2Y <strong class="amber">${esc(spread)}</strong></span><span class="muted">${esc(dataStatus.curveDate ?? 'Date unavailable')} / ${esc(dataStatus.previousCurveDate ?? 'Prior unavailable')}</span></div>${chart([], { kind: 'curve', height: 254 })}`, seriesLink('yield', '10Y DETAIL ↗', 'link-button'), 'Official par yields · schematic tenor spacing · solid: latest / dashed: prior')}</div>`
     + `<div class="grid g21">${panel('03', 'MACRO MONITOR', seriesTable(['gdp', 'cpi', 'pce', 'unrate', 'claims', 'retail', 'debt']), link('ALL SERIES ↗', '#/explore', 'link-button'), 'Period changes preserve units; definitions are available on each indicator page.')}${panel('04', 'RELEASE WATCH', releaseWatch() + `<nav class="mini-nav" aria-label="Featured indicators">${link('LABOR', '#/economy/labor')}${seriesLink('cpi', 'PRICES', 'action')}${seriesLink('debt', 'DEBT', 'action')}</nav>`, link('CALENDAR ↗', '#/calendar', 'link-button'), 'Upcoming planned dates; calendar estimates, agency rules and posted exceptions are labeled.')}</div>`
@@ -160,7 +162,7 @@ function calendar(state) {
   const windowEvents = month === 'upcoming' ? upcomingReleases() : orderedReleases().filter(event => event.date.startsWith(month));
   const days = [...new Set(windowEvents.map(event => event.date))];
   const filtered = windowEvents.filter(event => (state.day === 'all' || event.date === state.day)
-    && (state.calendarTopic === 'All topics' || event.topic === state.calendarTopic)
+    && (state.calendarTopic === 'All topics' || event.topic === state.calendarTopic || relatedSeries(event).some(id=>getSeries(id).topic===state.calendarTopic))
     && (!state.watchOnly || relatedSeries(event).some(id => state.saved.includes(id))));
   const selected = filtered.find(event => event.id === state.eventId) ?? filtered[0];
   let previousDay = '';
@@ -222,6 +224,6 @@ export function renderPage(input = {}, historyContext = {}) {
   if(Object.hasOwn(input,'range')&&!Object.hasOwn(input,'window'))state.window='observations';
   state.selected = seriesIds(Array.isArray(state.selected) ? state.selected : []).slice(0, 4);
   state.saved = seriesIds(Array.isArray(state.saved) ? state.saved : []);
-  return researchNavigation(state.page)+({ overview, labor, indicator:()=>indicator(state, historyContext), calendar, explore,watchlist:()=>`<div class="watchlist-workspace">${watchlistPage(state)}</div>`, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage(),macro:()=>macroPage(),vintages:()=>vintagesPage(state, historyContext.historyState?.history, historyContext.historyState),market:()=>marketFunctioningPage() }[state.page] ?? overview)(state);
+  return researchNavigation(state.page)+({ overview, labor, macroCoverage:macroCoveragePage, indicator:()=>indicator(state, historyContext), calendar, explore,watchlist:()=>`<div class="watchlist-workspace">${watchlistPage(state)}</div>`, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage(),macro:()=>macroPage(),vintages:()=>vintagesPage(state, historyContext.historyState?.history, historyContext.historyState),market:()=>marketFunctioningPage() }[state.page] ?? overview)(state);
 }
 function refinancing(state){return refinancingPage(state);}

@@ -59,6 +59,7 @@ function changeValue(s, current, prior) {
 }
 
 function changeUnit(s) {
+  if(s.format==='index')return `Index-point change (${s.unit})`;
   if (s.format !== 'percent') return s.unit;
   return isYield(s) ? 'Basis points' : 'Percentage points';
 }

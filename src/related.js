@@ -1,4 +1,5 @@
 import { registry } from './registry.js';
+import {coverageFamilies} from './macro-registry.js';
 
 const inputs = {
   budgetDeficit: ['outlays', 'receipts', 'primaryDeficit', 'netInterest'],
@@ -53,8 +54,9 @@ const topicModules = {
 export function relatedIndicators(seriesId) {
   if (!Object.hasOwn(registry, seriesId)) return { seriesIds: [], module: null };
   const current = registry[seriesId];
-  const candidates = [...(inputs[seriesId] ?? []), ...(topicContext[current.topic] ?? []),
+  const family=Object.entries(coverageFamilies).find(([,item])=>item.ids.includes(seriesId));
+  const candidates = [...(inputs[seriesId] ?? []), ...(family?.[1].ids??[]), ...(topicContext[current.topic] ?? []),
     ...Object.values(registry).filter(item => item.topic === current.topic).map(item => item.id)];
   const seriesIds = [...new Set(candidates)].filter(id => id !== seriesId && Object.hasOwn(registry, id)).slice(0, 4);
-  return { seriesIds, module: modules[current.agency] ?? topicModules[current.topic] ?? null };
+  return { seriesIds, module: modules[current.agency] ?? (family?{label:family[1].label+' coverage',href:'#/economy?family='+family[0]}:null) ?? topicModules[current.topic] ?? null };
 }

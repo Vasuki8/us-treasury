@@ -1,0 +1,68 @@
+# Official policy, industrial activity and housing source review
+
+Reviewed October 22, 2026. This review covers the eight measurements listed below for Meridian's commercial display and CSV exports. It does not admit other Federal Reserve or Census products, narratives, seals, photographs, third-party forecasts, transaction records or FRED redistributions. The collectors use public official downloads without credentials, dependencies or new infrastructure.
+
+## Exact dataset scope and working interfaces
+
+| Source / collector | Admitted series | Official field / selection | Native measurement |
+| --- | --- | --- | --- |
+| `policyRates` / `collectPolicyRates` | `policyTargetLower`, `policyTargetUpper` | New York Fed EFFR `targetRateFrom`, `targetRateTo` | Percent; published effective business dates |
+| `policyRates` / `collectPolicyRates` | `iorb` | Board PRATES `RESBM_N.D` | Percent; source-published daily effective dates |
+| `activity` / `collectActivity` | `industrialProduction` | G.17 `B50001` in `ip_sa.txt` | Monthly seasonally adjusted index, 2017=100 |
+| `activity` / `collectActivity` | `capacityUtilization` | G.17 `B50001` in `utl_sa.txt` | Monthly seasonally adjusted percent |
+| `housing` / `collectHousing` | `housingStarts`, `housingPermits`, `housingCompletions` | Census RESCONST `ASTARTS`, `APERMITS`, `ACOMPLETIONS`; `TOTAL`; `US`; `is_adj=1`; `et_idx=0` | Monthly thousands of housing units, seasonally adjusted annual rate |
+
+All collectors accept `{fetchImpl, now}` and return `id`, actual `fetchedAt`, ordinary `series`, complete response SHA256/URL/retrieval provenance and warnings. Missing or invalid selected feeds reject the candidate capture, allowing the existing refresh pipeline to retain its last successful source capture. HTTP redirects, malformed schemas, duplicate dates, nonfinite numbers and unknown selected metadata fail closed.
+
+Source identifiers in app exports qualify the source field by dataset or filename: `EFFR:targetRateFrom`, `EFFR:targetRateTo`, `RESBM_N.D`, `IP.B50001.SA`, `CAPUTL.B50001.SA`, and `RESCONST:<category>:TOTAL:US:SA`. The two G.17 identifiers are Meridian's unambiguous dataset-qualified references to the **actual text-file code `B50001`**, not claims that the Board publishes those exact combined strings as DDP series names. The original filename, URL and calculation metadata remain attached.
+
+## Policy rates: scoped conditional reuse and Board public-domain data
+
+The [official EFFR page](https://www.newyorkfed.org/markets/reference-rates/effr) identifies the FOMC target range and links the [Markets Data API](https://markets.newyorkfed.org/static/docs/markets-api.html). The reviewed API request is:
+
+`https://markets.newyorkfed.org/api/rates/unsecured/effr/search.json?startDate=2017-01-01&endDate=YYYY-MM-DD`
+
+An October 22 request returned HTTP 200 and 2,461 source business-date rows, January 3, 2017 through October 20, 2026, with both numeric target fields. This is the target range **published alongside EFFR effective business dates**, not a calendar of FOMC announcements. The collector does not create weekend/holiday rows or infer announcement timestamps. Zero lower bounds remain zero. The revision indicator remains attached.
+
+[New York Fed Terms of Use](https://www.newyorkfed.org/privacy/termsofuse) grant business copying, distribution and modification subject to attribution, retained source identifiers/free-source links, unchanged original source titles, identification of modifications, downstream terms and no implied endorsement. These target fields are reference-rate-related information and carry the reference-rate republication disclaimer as well as the existing copyright and product notices. This is **conditional commercial reuse, not public domain**. Source title `Effective Federal Funds Rate`, copyright, terms URL and source URLs accompany the series for shared, dedicated and historical views and CSV export. No Staff Reports or restricted third-party material is collected.
+
+IORB comes from the Board's [Interest on Reserve Balances page](https://www.federalreserve.gov/monetarypolicy/reserve-balances.htm), which links the exact [PRATES SDMX ZIP](https://www.federalreserve.gov/releases/prates/data/FRB_PRATES_xml.zip). The ZIP's `PRATES_data.xml` identifies `SERIES_NAME="RESBM_N.D"`, `UNIT="Percent"`, `UNIT_MULT="1"`, `FREQ="8"` and `INT_RATES_PAID="IOR"`. The public download returned HTTP 200. It contained 1,912 IORB daily effective-date rows from **July 29, 2021** through October 22, 2026. IORB has no 2017 history; discontinued IOER/IORR are excluded and never spliced into it. Source-published weekend rows are retained; future effective dates are excluded.
+
+The Board's [copyright disclaimer](https://www.federalreserve.gov/disclaimer.htm) permits copying/distribution of its public-domain website information unless otherwise marked, with Board attribution. No contrary notice was found on the reviewed Board-authored PRATES or G.17 statistical data. Commercial numeric display and CSV redistribution fit this scoped review; Board logos and third-party content remain excluded. IORB attribution is `Board of Governors of the Federal Reserve System, Interest on Reserve Balances`.
+
+The Board says IORB data generally update each business day at 4:30 p.m. Eastern with the next business day's rate. Effective dates and actual retrievals remain distinct from unknown historical publication timestamps. The page also announces DDP retirement preparation beginning in November 2026. The linked complete-release ZIP works on the review date; its future removal must fail explicitly and trigger review, without substituting FRED or another series.
+
+## Industrial activity: direct G.17 text histories
+
+The [Board G.17 download page](https://www.federalreserve.gov/releases/g17/download.htm) links the historical text data through [production tables](https://www.federalreserve.gov/releases/g17/Current/ipdisk/table1_2.htm) and [capacity/utilization tables](https://www.federalreserve.gov/releases/g17/Current/ipdisk/caputl.htm). Exact reviewed files, both HTTP 200:
+
+- [Seasonally adjusted production](https://www.federalreserve.gov/releases/g17/Current/ipdisk/ip_sa.txt).
+- [Seasonally adjusted capacity utilization](https://www.federalreserve.gov/releases/g17/Current/ipdisk/utl_sa.txt).
+
+Both files name `B50001: Total index` and use quoted series code, year and up to twelve consecutive monthly values. Complete upstream history begins in 1919 for production and 1967 for utilization. The small application scope retains **January 2017 onward**, using genuine rows from the current source vintage, without reconstructing historical releases. Each file yielded 117 retained months through September 2026. The [current production table](https://www.federalreserve.gov/releases/g17/Current/table4.htm) identifies the 2017=100 basis; the collector also verifies the complete base-year monthly average before retaining that label. A changed base must be reviewed.
+
+These are Board-published estimates covering manufacturing, mining and utilities, not all economic output. G.17 updates monthly and revises earlier estimates, including annual revisions. The collector keeps four-decimal source precision and original tokens, without rounding into percent growth, reannualizing or filling missing dates. Capacity utilization stays a percentage rate rather than an index. Attribution names the Board and G.17. Direct text files avoid dependence on DDP custom packages.
+
+## Housing: Census New Residential Construction bulk download
+
+The [Census bulk-download page](https://www.census.gov/econ_datasets/) publishes the exact credential-free [RESCONST ZIP](https://www.census.gov/econ_getzippedfile/?programCode=RESCONST). The [official dataset catalog](https://catalog.data.gov/dataset/time-series-economic-indicators-time-series-new-residential-construction), identifier `http://api.census.gov/data/id/EITSRESCONST`, records CC0 1.0. Applying that dataset license to the same Census-authored program's bulk statistical values, with the ZIP's usage instructions, is the scoped commercial display/CSV reuse judgment. No blanket permission for unrelated Census products is inferred.
+
+The ZIP returned HTTP 200 and contained `RESCONST-mf.csv` and `/README`. Its sectioned CSV defines the exact categories and native `TOTAL` unit `K` (thousands of housing units). Only U.S. total, seasonally adjusted **annual-rate categories** are selected; NSA, single-family, regional and standard-error rows are excluded. All three retained series contained 117 monthly rows, January 2017 through September 2026. Native annual-rate estimates are preserved directly; the application never multiplies by twelve again or presents them as actual monthly counts.
+
+The README requires the agency and originating program names and preservation of published precision. Every series carries `Source: U.S. Census Bureau, New Residential Construction.` The captured usage text and file-update metadata remain in provenance. Census [historical-series documentation](https://www.census.gov/construction/nrc/data/series.html) distinguishes permits, starts and completions for new privately owned units. Permits concern permit-issuing places; starts/completions come from the Survey of Construction. These monthly estimates are subject to sampling uncertainty and revisions. File-update/retrieval timestamps do not establish historical release dates. Missing/suppressed source markers stay null.
+
+## Verification and exclusions
+
+Deterministic tests use minimal structurally correct examples of the reviewed source formats, with ZIP fixtures produced by the existing test helper. Separately, each real downloaded Board/Census response was parsed successfully; the NY Fed target fields were inspected in a real official response. No fixture observations enter production. Tests cover field selection, exact values, native units, future dates, missing markers, duplicates, unit/schema drift, rights metadata, redirects and source failures.
+
+Historical captures remain immutable. These new current histories provide reference-date coverage; they do not establish what was available to Meridian in 2017 or any other time before the first actual retrieval. No paid credentials, FRED feed, interpolation, vintage backfill, IOER/IORR splice or alternative agency family is authorized by this review. Calendar scope is limited to the factual housing addition below and the existing reviewed programs.
+
+## Census housing calendar: factual metadata only
+
+The existing Census collector reads the [official annual calendar](https://www.census.gov/economic-indicators/calendar-listview.html) and follows its published [2026 archive link](https://www.census.gov/economic-indicators/calendar-listview-2026.html) after the canonical page rolls to 2027. The current pages returned HTTP 200 and the extended collector produced 27 dated housing events across those two source years. A real response uses the full exact title `New Residential Construction (Building Permits, Housing Starts, and Housing Completions)`, including source line wrapping. The collector accepts that exact title and the concise exact title `New Residential Construction`; it outputs the concise program name without matching other housing titles or annual revisions.
+
+This narrowly extends the existing [factual Census calendar review](data-sources.md): names, listed date/time, explicit reference month, originating program and retrieval/source metadata only. Census [DS027](https://www2.census.gov/foia/ds_policies/ds027.pdf) addresses employee-created federal works, while the [Copyright Office](https://www.copyright.gov/help/faq/faq-protect.html) distinguishes unprotected facts/names from protected expression. Applying those grounds to factual housing schedule fields is the recorded commercial display/CSV reuse judgment, with U.S. Census Bureau/New Residential Construction credit. This is not a new claim of calendar-specific CC0 permission, or permission for copied narrative, imagery or page design.
+
+Housing events use `program='housing-construction'`, `seriesId='housingStarts'`, `seriesIds=['housingStarts','housingPermits','housingCompletions']`, `topic='Housing'` and stable program/reference-month IDs. Existing retail IDs and mappings are unchanged. Both program families can coexist in the same reference month. Exact source rows govern dates, including Eastern daylight/standard conversion; suspended/TBA rows produce warnings and no dated event. Hidden sort keys cannot revive withdrawn dates, and malformed or duplicate selected rows fail explicitly.
+
+An official calendar lists planned publication timing, not proof that results were released. Statistical observation periods, schedule times and actual retrieval timestamps remain separate. The source can return an unusable response: verification observed two heading-validation failures before a successful complete live collection. Such failures reject the candidate and preserve last-good calendar data through the existing refresh mechanism; the collector does not invent or salvage dates from an unrecognized page. No Federal Reserve dated events or other Census calendar programs are added.

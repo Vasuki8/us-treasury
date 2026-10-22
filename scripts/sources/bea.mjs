@@ -7,6 +7,11 @@ const NUMBER = /^[+-]?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/;
 
 /** BEA publishes these keyless flat files as CSV despite the .txt extension. */
 export function parseBea(text, seriesCode, frequency) {
+  return parseBeaBatch(text,[seriesCode],frequency)[seriesCode];
+}
+
+/** Select a coherent family in one scan of BEA's large monthly file. */
+export function parseBeaBatch(text, seriesCodes, frequency) {
   if (typeof text !== 'string' || text.trimStart().startsWith('<')) {
     throw new Error('BEA returned HTML or an invalid flat-file response');
   }
@@ -22,10 +27,12 @@ export function parseBea(text, seriesCode, frequency) {
     throw new Error('BEA flat-file header must contain %SeriesCode,Period,Value');
   }
 
-  const observations = [];
-  const periods = new Set();
+  const selected=new Map([...new Set(seriesCodes)].map(seriesCode=>[seriesCode,{observations:[],periods:new Set()}]));
+  if(!selected.size||[...selected.keys()].some(value=>typeof value!=='string'||!value))throw new Error('Invalid BEA series selection');
   for (const row of rows) {
-    if (row[seriesColumn]?.trim() !== seriesCode) continue;
+    const seriesCode=row[seriesColumn]?.trim(),target=selected.get(seriesCode);
+    if (!target) continue;
+    const {observations,periods}=target;
     const period = row[periodColumn]?.trim() ?? '';
     if (/^\d{4}$/.test(period)) continue;
     if (code === 'Q' && /^\d{4}M(?:0[1-9]|1[0-2])$/.test(period)) continue;
@@ -46,8 +53,10 @@ export function parseBea(text, seriesCode, frequency) {
     const month = code === 'Q' ? (Number(match[2]) - 1) * 3 + 1 : Number(match[2]);
     observations.push({ date: `${match[1]}-${String(month).padStart(2, '0')}-01`, value, publishedAt: null, sourceValue });
   }
-  if (!observations.length) throw new Error(`Missing BEA series ${seriesCode} at ${frequency} frequency`);
-  return observations.sort((a, b) => a.date.localeCompare(b.date));
+  return Object.fromEntries([...selected].map(([seriesCode,{observations}])=>{
+    if(!observations.length)throw new Error(`Missing BEA series ${seriesCode} at ${frequency} frequency`);
+    return [seriesCode,observations.sort((a,b)=>a.date.localeCompare(b.date))];
+  }));
 }
 
 function pceInflation(indexes) {
@@ -72,7 +81,12 @@ export async function collectBea({ fetchImpl = globalThis.fetch, now = new Date(
     requestText(MONTHLY_URL, { fetchImpl }),
   ]);
   const gdp = parseBea(quarterly.text, 'A191RL', 'Q').filter(observation => observation.date <= cutoff);
-  const pce = pceInflation(parseBea(monthly.text, 'DPCERG', 'M').filter(observation => observation.date <= cutoff));
+  const raw=parseBeaBatch(monthly.text,['DPCERG','DPCCRG','DPCERGM','DPCCRGM','DPCERX','DPCERAM','A067RX','A067RM'],'M');
+  for(const code of Object.keys(raw))raw[code]=raw[code].filter(observation=>observation.date<=cutoff);
+  const pce = pceInflation(raw.DPCERG);
+  const measure=(code,calculation,{observations=raw[code],observationType='official'}={})=>({observations:observations.slice(-120),sourceUrl:MONTHLY_URL,sourceIds:[code],calculation,observationType,dataStatus:'official'});
+  const real=(code,label)=>measure(code,`Published ${label}, NIPA ${code==='DPCERX'?'Table 2.8.6 line 1':'Table 2.6 line 37'}; raw chained-2017-dollar millions / 1000 = billions at seasonally adjusted annual rates. Do not sum chained-dollar components.`,{observations:raw[code].map(o=>({...o,value:o.value===null?null:o.value/1000}))});
+  const monthlyRate=(code,label,table)=>measure(code,`Published ${label}, NIPA ${table}; percent change from the preceding month, seasonally adjusted, not annualized. Uses published quantity-index changes for real activity, not growth recomputed from rounded dollar levels.`);
   return {
     id: 'bea',
     fetchedAt: [quarterly.retrievedAt, monthly.retrievedAt].sort().at(-1),
@@ -85,14 +99,25 @@ export async function collectBea({ fetchImpl = globalThis.fetch, now = new Date(
         dataStatus: 'official',
       },
       pce: {
-        observations: pce.slice(-36),
+        observations: pce.slice(-120),
         sourceUrl: MONTHLY_URL,
         sourceIds: ['DPCERG'],
         calculation: '100 * (index / exact year-ago index - 1); headline PCE price index (NIPA Table 2.8.4, line 1).',
         dataStatus: 'official',
+        observationType:'calculated',
       },
+      pceIndex:measure('DPCERG','Published headline PCE price index, NIPA Table 2.8.4 line 1; index 2017=100, seasonally adjusted.'),
+      pceCoreIndex:measure('DPCCRG','Published PCE price index excluding food and energy, NIPA Table 2.8.4 line 25; index 2017=100, seasonally adjusted.'),
+      pceCore:measure('DPCCRG','100 × (core PCE price index / exact year-ago month index − 1); NIPA Table 2.8.4 line 25; not a monthly annualized rate.',{observations:pceInflation(raw.DPCCRG),observationType:'calculated'}),
+      pceMonthly:monthlyRate('DPCERGM','headline PCE price inflation','Table 2.8.7 line 1'),
+      pceCoreMonthly:monthlyRate('DPCCRGM','core PCE price inflation excluding food and energy','Table 2.8.7 line 25'),
+      realSpending:real('DPCERX','real personal consumption expenditures'),
+      realSpendingMonthly:monthlyRate('DPCERAM','real personal consumption expenditure growth','Table 2.8.1 line 1'),
+      realDisposableIncome:real('A067RX','real disposable personal income'),
+      realDisposableIncomeMonthly:monthlyRate('A067RM','real disposable personal income growth','Table 2.6 line 43'),
     },
     provenance: [quarterly, monthly].map(({ text: _text, ...metadata }) => metadata),
+    coverageNote:'Monthly price, real spending and real disposable-income families retain up to 120 observations. Real-dollar levels are annual rates; monthly percentage changes are not annualized. Reference dates are month starts, not release times.',
     warnings: [],
   };
 }

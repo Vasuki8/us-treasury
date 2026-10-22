@@ -17,6 +17,9 @@ const targets = [
   ['data', 'ownership', 'Federal Reserve Treasury ownership'],
   ['data', 'macroContributions', 'BEA GDP contributions'],
   ['data', 'marketFunctioning', 'New York Fed dealer and funding data'],
+  ['data', 'policyRates', 'Federal Reserve policy rates'],
+  ['data', 'activity', 'Federal Reserve industrial activity'],
+  ['data', 'housing', 'Census housing construction'],
 ];
 
 export const DAILY_REFRESH_SCHEDULE = Object.freeze({ hourUTC: 23, minuteUTC: 37, graceMinutes: 60 });

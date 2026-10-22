@@ -144,8 +144,11 @@ test('captured official measures reconcile with their retained source values and
 test('search recognizes ordinary-language aliases, source names, and codes', () => {
   assert.equal(getSeries('missing'), undefined);
   // Aliases expand the catalog instead of excluding other matching measures.
-  assert.deepEqual(filterSeries({ query: 'jobs' }).map((s) => s.id).sort(), ['claims', 'payroll', 'unrate']);
-  assert.deepEqual(filterSeries({ query: 'unemployment' }).map((s) => s.id), ['unrate', 'claims']);
+  const jobs = filterSeries({ query: 'jobs' }).map(s => s.id);
+  for (const id of ['claims','payroll','unrate','payrollLevel','underemployment','employmentPopulation','continuedClaims']) assert.ok(jobs.includes(id), id);
+  assert.ok(!jobs.includes('housingStarts'));
+  const unemployment = filterSeries({ query: 'unemployment' }).map(s => s.id);
+  for (const id of ['unrate','claims','continuedClaims','underemployment']) assert.ok(unemployment.includes(id), id);
   assert.ok(filterSeries({ query: 'GDP' }).some((s) => s.id === 'gdp'));
   assert.ok(filterSeries({ query: 'treasury' }).some((s) => s.id === 'yield'));
   assert.ok(filterSeries({ query: 'treasury' }).some((s) => s.id === 'marketableDebt'));

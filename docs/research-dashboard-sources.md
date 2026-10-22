@@ -2,6 +2,19 @@
 
 This is a working admission ledger, not a blanket license approval. Existing reviews in [data-sources.md](data-sources.md) and executable allowlists in `scripts/data-policy.mjs` remain authoritative. A candidate becomes admitted only after exact feed, fields, coverage, cadence, units, commercial display/export scope and validation are recorded and enforced.
 
+## Website review milestone 2: balanced macro coverage
+
+Admitted on 22 October 2026, extending 48 to 77 registered measurements. The existing admission module delegates new exact-feed and metadata checks to `scripts/macro-coverage-policy.mjs`. Ordinary daily refresh and freshness require the new policy, activity and housing collectors.
+
+| Family | Source review | Coverage and constraints |
+| --- | --- | --- |
+| CPI/core/monthly and labor | [BLS review](bls-macro-family-source-review.md) | Twelve unique official API IDs; one unregistered request, ten calendar years. SA/NSA and calculated exact-month/year changes remain distinct. |
+| PCE/core/monthly, real spending and real disposable income | [BEA monthly review](bea-monthly-macro-source-review.md) | Up to 120 retained months; published nonannualized monthly rates, explicit SAAR real-dollar levels and 2017 price/quantity conventions. |
+| Continued claims | [DOL review](dol-continued-claims-source-review.md) | National SA historical XML, independent week-ending dates and lag limitations; raw counts converted to thousands. |
+| Target bounds, IORB, industrial activity and housing | [Exact feeds and commercial terms](macro-coverage-source-review.md) | Conditional New York Fed redistribution notices, Board official series, Census CC0 and originating-program attribution. IORB has no pre-2021 splice; housing is SAAR rather than monthly counts. |
+
+Calendar associations connect the existing BLS/BEA/DOL programs to related measurements without altering original cached event evidence. Census adds explicitly dated New Residential Construction events. Board policy/G.17 official schedule links are external; dated events are not inferred. New historical backfills have genuine current retrieval timestamps and do not invent earlier vintages. CPI category effects, TIC country tables and ACM term premium retain the limitations below.
+
 | Milestone | Primary candidate | Required distinctions | Status |
 | --- | --- | --- | --- |
 | Fiscal pressure | Treasury Fiscal Data MTS table 9/table 2/explicit-million cross-check; Debt to the Penny | Monthly versus fiscal-year-to-date; net budget interest versus gross interest expense; public versus gross debt; financing/cash reconciliation | Admitted: [exact feeds, units, cadence, rights and limits](fiscal-source-review.md); executable scope in `scripts/research-policy.mjs` |

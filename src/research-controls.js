@@ -18,4 +18,4 @@ export function coverageSummary(panel) {
 }
 
 export function measureLabel(current){return current.observationType==='calculated'?'Calculated metric':current.observationType==='modeled'?'Model estimate':'Official observation';}
-export function changeLabel(current){return current.format==='percent'?(current.id==='yield'||current.changeInBasisPoints?'Basis-point change':'Percentage-point change'):['percentagePoints','basisPoints'].includes(current.format)?`${current.format==='basisPoints'?'Basis-point':'Percentage-point'} change`:'Change between observations';}
+export function changeLabel(current){return current.format==='index'?'Index-point change':current.format==='percent'?(current.id==='yield'||current.changeInBasisPoints?'Basis-point change':'Percentage-point change'):['percentagePoints','basisPoints'].includes(current.format)?`${current.format==='basisPoints'?'Basis-point':'Percentage-point'} change`:'Change between observations';}

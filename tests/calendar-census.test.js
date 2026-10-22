@@ -12,12 +12,54 @@ const name='Advance Monthly Sales for Retail and Food Services';
 const row=({title=name,date='November 17, 2026',time='8:30 AM',period='October 2026',hidden='A202611170830'}={})=>`<tr><td><a href="/retail">${title}</a></td><td sorttable_customkey="202611170830">${date}</td><td>${time}</td><td>${period}</td><td class="hiden">${hidden}</td><td class="hiden">A202610</td></tr>`;
 const page=(rows=[row()],year=2026,links='')=>`<!DOCTYPE html><html><h3>US Census Bureau: ${year} Economic Indicator Release Schedule: List View</h3>${links}<table id="calendar"><tr><th><span>Indicator</span></th><th>Release Date</th><th>Time</th><th>Period Covered</th><td class="hiden">A202601021000</td><td class="hiden">A202511</td></tr>${rows.join('\n')}</table></html>`;
 
-test('Census parses only advance retail factual schedule fields with an explicit reference month',()=>{
+test('Census parses advance retail factual schedule fields with an explicit reference month',()=>{
   const result=census().parseCensusCalendar(page([row(),row({title:'Monthly Retail Trade Report',date:'not a selected date'})]),{year:2026,sourceUrl:archive});
   assert.deepEqual(result,{events:[{
     id:'census-retail-sales-october-2026',sourceId:'census',program:'retail-sales',name,agency:'Census',seriesId:'retail',seriesIds:['retail'],topic:'Growth',
     date:'2026-11-17',time:'08:30',scheduledAt:'2026-11-17T13:30:00.000Z',period:null,periodLabel:'October 2026',sourceUrl:archive,sourceUid:null,scheduleBasis:'listed-date',
   }],warnings:[]});
+});
+
+test('Census adds exact New Residential Construction events alongside retail without colliding on reference month',()=>{
+  const result=census().parseCensusCalendar(page([row(),row({title:'New Residential Construction',date:'November 18, 2026'})]),{year:2026,sourceUrl:archive});
+  assert.equal(result.events.length,2);
+  const event=result.events[1];
+  assert.deepEqual(event,{
+    id:'census-housing-construction-october-2026',sourceId:'census',program:'housing-construction',name:'New Residential Construction',agency:'Census',seriesId:'housingStarts',seriesIds:['housingStarts','housingPermits','housingCompletions'],topic:'Housing',
+    date:'2026-11-18',time:'08:30',scheduledAt:'2026-11-18T13:30:00.000Z',period:null,periodLabel:'October 2026',sourceUrl:archive,sourceUid:null,scheduleBasis:'listed-date',
+  });
+  assert.equal(result.events[0].id,'census-retail-sales-october-2026');
+});
+
+test('Census accepts the complete official housing release title with wrapped source whitespace',()=>{
+  const title='New Residential Construction (Building Permits, Housing Starts,\n and Housing Completions)';
+  const result=census().parseCensusCalendar(page([row({title})]),{year:2026,sourceUrl:archive});
+  assert.equal(result.events.length,1);
+  assert.equal(result.events[0].name,'New Residential Construction');
+  assert.deepEqual(result.events[0].seriesIds,['housingStarts','housingPermits','housingCompletions']);
+});
+
+test('Census accepts housing-only calendars and retains suspended housing rows as warnings',()=>{
+  const html=page([row({title:'New Residential Construction'}),row({title:'New Residential Construction',date:'To be announced at a later date',period:'December 2026'})]);
+  const result=census().parseCensusCalendar(html,{year:2026,sourceUrl:archive});
+  assert.equal(result.events.length,1);assert.equal(result.events[0].seriesId,'housingStarts');
+  assert.match(result.warnings.join(' '),/New Residential Construction.*December 2026/);
+  const suspended=census().parseCensusCalendar(page([row({title:'New Residential Construction',date:'Suspended'})]),{year:2026,sourceUrl:archive});
+  assert.equal(suspended.events.length,0);assert.match(suspended.warnings[0],/Suspended/);
+});
+
+test('Census housing rows retain strict schemas, exact names and duplicate program/reference validation',()=>{
+  const housing=row({title:'New Residential Construction'});
+  for(const html of [page([housing,housing]),page([housing.replace('<td>8:30 AM</td>','<td hidden>8:30 AM</td>')]),page([row({title:'New Residential Construction',period:'Autumn 2026'})])])assert.throws(()=>census().parseCensusCalendar(html,{year:2026,sourceUrl:archive}),/duplicate|schema|period/i);
+  assert.throws(()=>census().parseCensusCalendar(page([row({title:'Annual Revision to New Residential Construction'})]),{year:2026,sourceUrl:archive}),/matching|coverage/i);
+});
+
+test('Census housing-only collection attributes its originating program and exact annual source',async()=>{
+  const result=await census().collectCensusCalendar({now:new Date('2026-10-22T15:00:00Z'),fetchImpl:async url=>{assert.equal(url,canonical);return new Response(page([row({title:'New Residential Construction'})]));}});
+  assert.equal(result.events[0].program,'housing-construction');
+  assert.match(result.agency,/U\.S\. Census Bureau.*New Residential Construction/);
+  assert.match(result.coverageNote,/New Residential Construction/);
+  assert.doesNotMatch(result.coverageNote,/Advance Monthly Retail Trade Survey/);
 });
 
 test('Census preserves the source period and stable identity through corrected dates and hidden-key errors',()=>{

@@ -29,7 +29,7 @@ test('all related context uses unique existing series and unknown IDs fail close
     assert.equal(seriesIds.length, new Set(seriesIds).size);
     assert.ok(seriesIds.length <= 4);
     assert.ok(seriesIds.every(value => value !== id && Object.hasOwn(registry, value)), id);
-    if (module) assert.match(module.href, /^#\/(?:[a-z]+|economy\/labor)$/);
+    if (module) assert.match(module.href, /^#\/(?:[a-z]+|economy\/labor|economy\?family=(?:prices|policy|activity|housing|labor))$/);
   }
   assert.deepEqual(relatedIndicators('not-a-series'), { seriesIds: [], module: null });
 });

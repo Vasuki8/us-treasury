@@ -1,8 +1,10 @@
 const aliases = {
+  u6:{ids:['underemployment'],phrases:['labor underutilization']},
+  'fed policy':{ids:['policyTargetLower','policyTargetUpper','iorb'],phrases:['federal funds target','reserve balances']},
   jobs: { ids: ['payroll', 'unrate'], phrases: ['employment', 'jobs'] },
   employment: { ids: ['payroll', 'unrate'], phrases: ['employment', 'jobs'] },
   'jobs data': { ids: ['payroll', 'unrate'], phrases: ['employment', 'jobs'] },
-  unemployment: { ids: ['unrate'], phrases: ['unemployment'] },
+  unemployment: { ids: ['unrate','underemployment'], phrases: ['unemployment'] },
   'unemployment rate': { ids: ['unrate'], phrases: ['unemployment rate'] },
   inflation: { ids: ['cpi', 'pce'], phrases: ['inflation'] },
   'consumer prices': { ids: ['cpi'], phrases: ['consumer price', 'cpi'] },

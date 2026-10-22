@@ -4,6 +4,10 @@
  * New catalog entries fail closed until their measurement is classified here.
  */
 export const comparisonClasses = Object.freeze({
+  cpiIndex:'level',cpiCoreIndex:'level',cpiSaIndex:'level',cpiCoreSaIndex:'level',cpiCore:'growth',cpiMonthly:'growth',cpiCoreMonthly:'growth',
+  payrollLevel:'count',underemployment:'rate',employmentPopulation:'rate',weeklyHours:'level',continuedClaims:'count',
+  pceIndex:'level',pceCoreIndex:'level',pceCore:'growth',pceMonthly:'growth',pceCoreMonthly:'growth',realSpending:'amount',realSpendingMonthly:'growth',realDisposableIncome:'amount',realDisposableIncomeMonthly:'growth',
+  policyTargetLower:'rate',policyTargetUpper:'rate',iorb:'rate',industrialProduction:'level',capacityUtilization:'rate',housingStarts:'count',housingPermits:'count',housingCompletions:'count',
   receipts: 'amount', outlays: 'amount', netInterest: 'amount',
   budgetDeficit: 'balance', primaryDeficit: 'balance',
   receiptsTtm: 'amount', outlaysTtm: 'amount', netInterestTtm: 'amount', primaryDeficitTtm: 'balance',

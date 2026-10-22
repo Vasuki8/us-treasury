@@ -13,8 +13,8 @@ function dol() {
 }
 
 const endpoint = 'https://oui.doleta.gov/unemploy/wkclaims/report.asp';
-function week(date, value = '198,000') {
-  return `<week><weekEnded>${date}</weekEnded><InitialClaims><NSA>164,717</NSA><SF>83.0</SF>${value === null ? '' : `<SA>${value}</SA>`}<SA4WK>202,500</SA4WK></InitialClaims><ContinuedClaims><NSA>1,497,243</NSA><SF>88.1</SF><SA>1,699,000</SA><SA4WK>1,723,250</SA4WK></ContinuedClaims><IUR><NSA>1.0</NSA><SA>1.1</SA></IUR><CoveredEmployment>153,732,307</CoveredEmployment></week>`;
+function week(date, value = '198,000', continued = '1,699,000') {
+  return `<week><weekEnded>${date}</weekEnded><InitialClaims><NSA>164,717</NSA><SF>83.0</SF>${value === null ? '' : `<SA>${value}</SA>`}<SA4WK>202,500</SA4WK></InitialClaims><ContinuedClaims><NSA>1,497,243</NSA><SF>88.1</SF>${continued === null ? '' : `<SA>${continued}</SA>`}<SA4WK>1,723,250</SA4WK></ContinuedClaims><IUR><NSA>1.0</NSA><SA>1.1</SA></IUR><CoveredEmployment>153,732,307</CoveredEmployment></week>`;
 }
 function xml(rows, reportDate = '10/21/2026') {
   return `<r539cyNational rundate="${reportDate}">\n${rows.join('\n')}\n</r539cyNational>`;
@@ -154,4 +154,81 @@ test('DOL source warns when its actual latest observation trails the as-of date 
 test('DOL collector rejects unavailable HTTP responses and exports without usable observations before the cutoff', async () => {
   await assert.rejects(dol().collectDol({ now: new Date('2026-10-21T12:00:00Z'), fetchImpl: async () => new Response('Unavailable', { status: 503 }) }), /HTTP.*503/i);
   await assert.rejects(dol().collectDol({ now: new Date('2026-10-21T12:00:00Z'), fetchImpl: fixtureFetch(xml([week('10/24/2026')])) }), /usable|numeric|observations/i);
+});
+
+test('continued claims preserve their own source values and Saturday reference dates in thousands',()=>{
+  const result=dol().parseDol(xml([week('09/19/2026','198,000','1,720,000'),week('09/05/2026','0','0'),week('09/12/2026','1,234','1,700,123')]));
+  assert.deepEqual(result.continuedObservations,[
+    {date:'2026-09-05',value:0,publishedAt:null,sourceValue:'0'},
+    {date:'2026-09-12',value:1700.123,publishedAt:null,sourceValue:'1,700,123'},
+    {date:'2026-09-19',value:1720,publishedAt:null,sourceValue:'1,720,000'},
+  ]);
+  assert.equal(result.observations.at(-1).value,198,'initial-claims values remain independent');
+});
+
+test('continued claims trim only their empty edges and retain internal missing weeks without copying initial counts',()=>{
+  const result=dol().parseDol(xml([
+    week('08/29/2026','197,000',null),week('09/05/2026','198,000','1,700,000'),
+    week('09/12/2026','199,000','&#160;'),week('09/19/2026','200,000','0'),week('09/26/2026','201,000',''),
+  ]));
+  assert.deepEqual(result.continuedObservations,[
+    {date:'2026-09-05',value:1700,publishedAt:null,sourceValue:'1,700,000'},
+    {date:'2026-09-12',value:null,publishedAt:null,sourceValue:''},
+    {date:'2026-09-19',value:0,publishedAt:null,sourceValue:'0'},
+  ]);
+  assert.equal(result.observations.length,5);
+  const newerContinued=dol().parseDol(xml([week('09/12/2026','198,000','1,700,000'),week('09/19/2026',null,'1,701,000')]));
+  assert.equal(newerContinued.observations.at(-1).date,'2026-09-12');
+  assert.equal(newerContinued.continuedObservations.at(-1).date,'2026-09-19');
+});
+
+test('continued-claims malformed numeric values and a wholly missing required measure fail closed',()=>{
+  for(const value of ['-1','1.5','1,23','1e3','NaN','Infinity','9007199254740992']){
+    assert.throws(()=>dol().parseDol(xml([week('09/19/2026','198,000',value)])),/numeric|count/i,value);
+  }
+  assert.throws(()=>dol().parseDol(xml([week('09/19/2026','198,000',null)])),/continued|usable|numeric/i);
+});
+
+test('collector retains each measure\'s own latest 52 past observations with the same one-request source provenance',async()=>{
+  const start=Date.parse('2025-06-21T00:00:00Z');
+  const rows=Array.from({length:71},(_,i)=>{
+    const date=new Date(start+i*7*86400000).toISOString().slice(0,10);
+    return week(`${date.slice(5,7)}/${date.slice(8)}/${date.slice(0,4)}`,String(200000+i*1000),i===69?null:String(1700000+i*1000));
+  });
+  let requests=0;
+  const fetch=fixtureFetch(xml(rows));
+  const result=await dol().collectDol({now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async(...args)=>{requests++;return fetch(...args);}});
+  const initial=result.series.claims,continued=result.series.continuedClaims;
+  assert.ok(continued,'collector publishes the continued-claims family member');
+  assert.equal(requests,1);
+  assert.equal(initial.observations.at(-1).date,'2026-10-17');
+  assert.equal(continued.observations.length,52);
+  assert.equal(continued.observations[0].date,'2025-10-18');
+  assert.equal(continued.observations.at(-1).date,'2026-10-10');
+  assert.equal(continued.observations.at(-1).value,1768);
+  assert.equal(continued.latestObservationDate,'2026-10-10');
+  assert.equal(continued.sourceUrl,endpoint);
+  assert.deepEqual(continued.sourceIds,['ContinuedClaims/SA']);
+  assert.equal(continued.observationType,'official');
+  assert.match(continued.measure,/insured unemployment|continued/i);
+  assert.match(continued.calculation,/1000|1,000/);
+  assert.match(continued.coverageNote,/2026-10-10/);
+  assert.doesNotMatch(continued.coverageNote,/2026-10-17/);
+  assert.ok(continued.observations.every(o=>o.publishedAt===null));
+});
+
+test('continued-claims freshness warnings use their own latest observation even when initial claims are current',async()=>{
+  const result=await dol().collectDol({now:new Date('2026-10-21T12:00:00Z'),fetchImpl:fixtureFetch(xml([
+    week('10/03/2026','198,000','1,700,000'),week('10/10/2026','199,000',null),week('10/17/2026','200,000',null),
+  ]))});
+  assert.equal(result.latestObservationDate,'2026-10-17');
+  assert.equal(result.series.continuedClaims?.latestObservationDate,'2026-10-03');
+  assert.equal(result.warnings.length,1);
+  assert.match(result.warnings[0],/continued.*2026-10-03.*18 days/i);
+});
+
+test('collector does not use a future continued-claims observation as a current value',async()=>{
+  await assert.rejects(dol().collectDol({now:new Date('2026-10-21T12:00:00Z'),fetchImpl:fixtureFetch(xml([
+    week('10/17/2026','198,000',null),week('10/24/2026','199,000','1,700,000'),
+  ]))}),/usable|numeric|continued|observations/i);
 });

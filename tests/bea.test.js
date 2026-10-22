@@ -60,13 +60,14 @@ test('BEA parser rejects duplicate periods, invalid periods and malformed number
   assert.throws(() => parseBea(header + 'DPCERG,2026M13,1', 'DPCERG', 'M'), /period|invalid/i);
 });
 
-function fixtureFetch({ quarterly = header + 'A191RL,2026Q2,"2.2"\nA191RL,2027Q1,"9.9"', monthly } = {}) {
+const companions='DPCCRG,2026M08,130.455\nDPCERGM,2026M08,0.3\nDPCCRGM,2026M08,0.2\nDPCERX,2026M08,"16,955,276"\nDPCERAM,2026M08,0.6\nA067RX,2026M08,"18,410,473"\nA067RM,2026M08,0.0\n';
+function fixtureFetch({ quarterly = header + 'A191RL,2026Q2,"2.2"\nA191RL,2027Q1,"9.9"', monthly, familyDefaults=true } = {}) {
   return async url => {
     if (url === 'https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt') {
       return new Response(quarterly, { headers: { 'content-type': 'text/plain', 'last-modified': 'Wed, 30 Sep 2026 12:30:00 GMT' } });
     }
     if (url === 'https://apps.bea.gov/national/Release/TXT/NipaDataM.txt') {
-      return new Response(monthly, { headers: { 'content-type': 'text/plain' } });
+      return new Response(monthly+(familyDefaults?'\n'+companions:''), { headers: { 'content-type': 'text/plain' } });
     }
     throw new Error(`Unexpected official BEA URL ${url}`);
   };
@@ -108,9 +109,9 @@ test('collector filters future periods and truncates only after calculating annu
     return `DPCERG,${year}M${month},"${100 + index}"`;
   }).join('\n');
   const result = await bea().collectBea({ now: new Date('2026-08-21T12:00:00Z'), fetchImpl: fixtureFetch({ monthly }) });
-  assert.equal(result.series.pce.observations.length, 36);
-  assert.equal(result.series.pce.observations[0].date, '2023-09-01');
-  assert.ok(Math.abs(result.series.pce.observations[0].value - 11.111111111111116) < 1e-10);
+  assert.equal(result.series.pce.observations.length, 56);
+  assert.equal(result.series.pce.observations[0].date, '2022-01-01');
+  assert.equal(result.series.pce.observations[0].value,null,'the earliest retained year stays missing without its exact annual baseline');
   assert.equal(result.series.pce.observations.at(-1).date, '2026-08-01');
   assert.equal(result.series.pce.observations.at(-1).sourceValue, '155');
   assert.equal(result.series.pce.observations.at(-1).yearAgoSourceValue, '143');
@@ -119,4 +120,40 @@ test('collector filters future periods and truncates only after calculating annu
 
 test('BEA collector propagates upstream failure rather than supplying sample values', async () => {
   await assert.rejects(bea().collectBea({ fetchImpl: async () => new Response('Unavailable', { status: 503 }) }), /503|HTTP|request/i);
+});
+
+test('BEA coherent family preserves published monthly rates, exact core annual changes and annualized real-dollar scale',async()=>{
+ const monthly=header+'DPCERG,2025M08,125\nDPCERG,2026M08,131.579\nDPCCRG,2025M08,125\n'+companions;
+ const result=await bea().collectBea({now:new Date('2026-10-21T12:00:00Z'),fetchImpl:fixtureFetch({monthly,familyDefaults:false})});
+ assert.equal(Object.keys(result.series).length,11);
+ assert.equal(result.series.pceIndex.observations.at(-1).value,131.579);
+ assert.equal(result.series.pceCoreIndex.observations.at(-1).value,130.455);
+ assert.ok(Math.abs(result.series.pceCore.observations.at(-1).value-4.364)<1e-10);
+ assert.equal(result.series.pceCore.observationType,'calculated');
+ for(const [id,expected] of [['pceMonthly',.3],['pceCoreMonthly',.2],['realSpendingMonthly',.6],['realDisposableIncomeMonthly',0]]){
+  assert.equal(result.series[id].observations.at(-1).value,expected);
+  assert.equal(result.series[id].observationType,'official');
+  assert.match(result.series[id].calculation,/published.*not annualized/i);
+ }
+ assert.equal(result.series.realSpending.observations.at(-1).value,16955.276);
+ assert.equal(result.series.realDisposableIncome.observations.at(-1).value,18410.473);
+ assert.equal(result.series.realSpending.observations.at(-1).sourceValue,'16,955,276');
+ assert.match(result.series.realSpending.calculation,/1000.*annual/i);
+ assert.ok(result.series.pceCore.observations.every(o=>o.publishedAt===null));
+});
+
+test('BEA new family rejects missing required series and keeps missing or zero core annual baselines unavailable',async()=>{
+ const complete=header+'DPCERG,2026M08,131.579\n'+companions;
+ await assert.rejects(bea().collectBea({fetchImpl:fixtureFetch({monthly:complete.replace('DPCCRGM,2026M08,0.2\n',''),familyDefaults:false})}),/missing.*DPCCRGM/i);
+ const monthly=header+'DPCERG,2026M08,131.579\nDPCCRG,2025M08,0\nDPCCRG,2025M09,(NA)\nDPCCRG,2026M09,131\n'+companions;
+ const result=await bea().collectBea({now:new Date('2026-10-21T12:00:00Z'),fetchImpl:fixtureFetch({monthly,familyDefaults:false})});
+ assert.deepEqual(result.series.pceCore.observations.slice(-2).map(o=>o.value),[null,null]);
+});
+
+test('BEA batch parser selects all reviewed series in one pass with independent duplicate and missing checks',()=>{
+ assert.equal(typeof bea().parseBeaBatch,'function');
+ const result=bea().parseBeaBatch(header+'DPCERG,2026M08,131.579\nDPCCRG,2026M08,130.455',['DPCERG','DPCCRG'],'M');
+ assert.equal(result.DPCERG[0].value,131.579);assert.equal(result.DPCCRG[0].value,130.455);
+ assert.throws(()=>bea().parseBeaBatch(header+'DPCERG,2026M08,131',['DPCERG','DPCCRG'],'M'),/missing.*DPCCRG/i);
+ assert.throws(()=>bea().parseBeaBatch(header+'DPCERG,2026M08,131\nDPCERG,2026M08,132',['DPCERG'],'M'),/duplicate/i);
 });
