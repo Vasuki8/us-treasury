@@ -19,15 +19,21 @@ function provenance(url,html=page(url)){
 }
 const fixture=selected=>({version:1,explanations:publicationExplanationScope.filter(row=>selected===undefined||selected.includes(row.publicationId)).map(scope=>({...explanationMetadataFor(scope),provenance:[provenance(scope.sourceUrl)]}))});
 
-test('thirty exact explanations join retained GDP identities and source-reported prior estimates',()=>{
- assert.equal(publicationExplanationScope.length,30);assert.equal(new Set(ids()).size,30);
+test('thirty-three exact explanations join retained GDP identities and source-reported prior estimates',()=>{
+ assert.equal(publicationExplanationScope.length,33);assert.equal(new Set(ids()).size,33);
+ const updateKinds=new Map([
+  ['bea-gdp-2023q1-revised-2023-09-28','comprehensive-update'],
+  ['bea-gdp-2024q1-revised-2024-09-26','annual-update'],
+  ['bea-gdp-2025q1-revised-2025-09-25','annual-update'],
+  ['bea-gdp-2026q1-revised-2026-09-30','annual-update'],
+ ]);
  const byId=new Map(publicationArchive.releases.map(row=>[row.id,row]));
  for(const scope of publicationExplanationScope){
   const release=byId.get(scope.publicationId);assert.ok(release);
   for(const key of ['period','estimate','publicationDate','sourceValue'])assert.equal(scope[key],release[key]);
   const earlier=publicationArchive.releases.filter(row=>row.period===scope.period&&row.publicationDate<scope.publicationDate).sort((a,b)=>b.publicationDate.localeCompare(a.publicationDate))[0];
   assert.equal(scope.previousValue,earlier?.sourceValue??null);
-  assert.equal(scope.kind,scope.previousValue===null?'first-publication':scope.estimate==='Revised'?'annual-update':'revision');
+  assert.equal(scope.kind,updateKinds.get(scope.publicationId)??(scope.previousValue===null?'first-publication':'revision'));
  }
  const rounded=publicationExplanationScope.find(row=>row.publicationId==='bea-gdp-2026q2-second-2026-08-26');
  assert.equal(rounded.sourceValue,rounded.previousValue);assert.equal(rounded.kind,'revision');assert.match(rounded.summary,/less than 0\.1/);
@@ -112,5 +118,5 @@ test('larger source reviews fetch at most four official pages concurrently',asyn
   calls++;active++;maximum=Math.max(maximum,active);await new Promise(resolve=>setImmediate(resolve));active--;
   return new Response(page(url),{status:200});
  }});
- assert.equal(calls,29);assert.equal(result.explanations.length,30);assert.ok(maximum>1);assert.ok(maximum<=4,`Observed ${maximum} concurrent requests`);
+ assert.equal(calls,29);assert.equal(result.explanations.length,33);assert.ok(maximum>1);assert.ok(maximum<=4,`Observed ${maximum} concurrent requests`);
 });

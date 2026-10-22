@@ -59,6 +59,45 @@ test('publication explanations are dated, scoped, attributed and separate from c
  assert.doesNotMatch(early,/Reviewed &lt;revision&gt;/);assert.match(early,/No reviewed BEA explanation/);
 });
 
+test('exact Q1 update identities show their publication year and reviewed annual or comprehensive type',()=>{
+ const cases=[
+  ['bea-gdp-2023q1-revised-2023-09-28','comprehensive-update','2023 comprehensive update','Comprehensive update · quarter-specific explanation'],
+  ['bea-gdp-2024q1-revised-2024-09-26','annual-update','2024 annual update','Annual update · quarter-specific explanation'],
+  ['bea-gdp-2025q1-revised-2025-09-25','annual-update','2025 annual update','Annual update · quarter-specific explanation'],
+  ['bea-gdp-2026q1-revised-2026-09-30','annual-update','2026 annual update','Annual update · quarter-specific explanation'],
+  ['bea-gdp-2023q1-revised-2024-09-26','annual-update','2024 annual update','Annual update · quarter-specific explanation'],
+ ];
+ const publicationExplanations={version:1,explanations:cases.map(([id,kind])=>{
+  const row=publicationArchive.releases.find(item=>item.id===id);assert.ok(row,id);
+  return {publicationId:row.id,seriesId:row.seriesId,period:row.period,estimate:row.estimate,publicationDate:row.publicationDate,kind,
+   summary:`Test-only ${row.period.slice(0,4)} Q1 update explanation.`,details:[],annualUpdate:null,sourceUrl:row.releaseEvidenceUrl,
+   sourceTitle:'Test-only dated BEA release',sourceSection:'Quarter-specific update paragraph',licenseUrl:row.licenseUrl,attribution:row.attribution,provenance:row.provenance};
+ })};
+ for(const [id,,context,badge]of cases){
+  const row=publicationArchive.releases.find(item=>item.id===id),state=parseRoute(`#/research?view=publications&period=${row.period}&publishedBy=${row.publicationDate}`);
+  const html=researchPage(state,{publicationArchive,publicationExplanations,explanationState:{status:'ready'}});
+  assert.ok(html.includes(`<td>${context}`),`${id} source-context label must use its publication year and reviewed kind`);
+  assert.ok(html.includes(`<span class="coverage-badge">${badge}</span>`),`${id} needs a readable update badge`);
+  assert.ok(html.includes(`Test-only ${row.period.slice(0,4)} Q1 update explanation.`));
+  assert.match(html,/General annual or comprehensive update scope does not establish the cause of every quarter/);
+  if(!id.includes('2026q1'))assert.doesNotMatch(html,/<td>2026 annual update/);
+ }
+});
+
+test('update explanations remain unavailable before their exact date and never spill into Q2 on the same release date',()=>{
+ for(const [id,kind]of [['bea-gdp-2023q1-revised-2023-09-28','comprehensive-update'],['bea-gdp-2024q1-revised-2024-09-26','annual-update'],['bea-gdp-2025q1-revised-2025-09-25','annual-update']]){
+  const row=publicationArchive.releases.find(item=>item.id===id),summary=`Only ${id} has this test explanation.`;
+  const publicationExplanations={version:1,explanations:[{publicationId:row.id,seriesId:row.seriesId,period:row.period,estimate:row.estimate,publicationDate:row.publicationDate,kind,summary,details:[],annualUpdate:null,sourceUrl:row.releaseEvidenceUrl,sourceTitle:'Dated release',sourceSection:'Quarter-specific update',licenseUrl:row.licenseUrl,attribution:row.attribution,provenance:row.provenance}]};
+  const before=new Date(Date.parse(row.publicationDate+'T00:00:00Z')-86400000).toISOString().slice(0,10);
+  const earlier=researchPage(parseRoute(`#/research?view=publications&period=${row.period}&publishedBy=${before}`),{publicationArchive,publicationExplanations,explanationState:{status:'ready'}});
+  assert.ok(!earlier.includes(summary));assert.match(earlier,/No reviewed BEA explanation retained/);
+  const otherQuarter=row.period.slice(0,4)+'-04-01';
+  const other=researchPage(parseRoute(`#/research?view=publications&period=${otherQuarter}&publishedBy=${row.publicationDate}`),{publicationArchive,publicationExplanations,explanationState:{status:'ready'}});
+  assert.ok(!other.includes(summary));assert.match(other,/No reviewed BEA explanation retained/);
+  assert.doesNotMatch(other,/<span class="coverage-badge">(?:Annual|Comprehensive) update/);
+ }
+});
+
 test('explanation loading and errors do not suppress publication observations and offer independent retry',()=>{
  const state=parseRoute('#/research?view=publications&period=2026-01-01&publishedBy=2026-06-25');
  const loading=researchPage(state,{publicationArchive,explanationState:{status:'loading'}});

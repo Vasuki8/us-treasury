@@ -27,10 +27,10 @@ const earlierFacts=publicationArchive.releases.filter(row=>row.period>='2023-01-
 const earlierIds=earlierFacts.map(row=>row.id).sort();
 
 test('twenty earlier revisions append without changing any of the ten original explanation records',()=>{
- assert.equal(earlierFacts.length,20);assert.equal(publicationExplanations.explanations.length,30);
+ assert.equal(earlierFacts.length,20);assert.equal(publicationExplanations.explanations.length,33);
  assert.deepEqual(publicationExplanations.explanations.slice(0,10).map(row=>createHash('sha256').update(JSON.stringify(row)).digest('hex')),retainedHashes);
- assert.deepEqual(publicationExplanations.explanations.slice(10).map(row=>row.publicationId).sort(),earlierIds);
- for(const row of publicationExplanations.explanations.slice(10)){
+ assert.deepEqual(publicationExplanations.explanations.slice(10,30).map(row=>row.publicationId).sort(),earlierIds);
+ for(const row of publicationExplanations.explanations.slice(10,30)){
   assert.equal(row.kind,'revision');assert.equal(row.textType,'paraphrase');assert.equal(row.annualUpdate,null);assert.equal(row.publishedAt,null);
   assert.ok(row.provenance[0].retrievedAt>'2026-10-22T19:00:11.781Z');assert.equal(row.provenance[0].url,row.sourceUrl);assert.equal(row.licenseUrl,'https://www.bea.gov/help/faq/147');
  }
@@ -41,7 +41,7 @@ test('expansion requests only new identities and retains the original evidence p
  const result=await capturePublicationExplanationArchive({previous,collect:async({ids})=>{
   requested=ids;return{version:1,explanations:ids.map(id=>{const scope=publicationExplanationScope.find(row=>row.publicationId===id);return{...explanationMetadataFor(scope),provenance:[{url:scope.sourceUrl,sha256:'a'.repeat(64),retrievedAt:'2026-10-22T20:00:00.000Z',lastModified:null}]};})};
  }});
- assert.deepEqual(requested.sort(),earlierIds);assert.equal(JSON.stringify(previous),before);assert.equal(result.explanations.length,30);
+ assert.deepEqual(requested.sort(),publicationExplanationScope.slice(10).map(row=>row.publicationId).sort());assert.equal(JSON.stringify(previous),before);assert.equal(result.explanations.length,33);
  previous.explanations.forEach((row,index)=>assert.equal(result.explanations[index],row));
 });
 

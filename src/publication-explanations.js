@@ -951,6 +951,99 @@ export const publicationExplanations = {
           "lastModified": "Thu, 22 Oct 2026 20:05:00 GMT"
         }
       ]
+    },
+    {
+      "publicationId": "bea-gdp-2023q1-revised-2023-09-28",
+      "seriesId": "gdp",
+      "period": "2023-01-01",
+      "estimate": "Revised",
+      "publicationDate": "2023-09-28",
+      "kind": "comprehensive-update",
+      "sourceValue": "2.2",
+      "previousValue": "2.0",
+      "summary": "In its 2023 comprehensive update, BEA raised 2023Q1 real GDP growth from 2.0% to 2.2%. Higher nonresidential fixed investment was partly offset by lower consumer spending.",
+      "details": [
+        "BEA explicitly reports a 0.2 percentage point upward revision for this quarter. Its separate second-quarter revision discussion does not provide the causes retained here."
+      ],
+      "annualUpdate": null,
+      "sourceUrl": "https://www.bea.gov/news/2023/gross-domestic-product-third-estimate-corporate-profits-revised-estimate-second-quarter",
+      "sourceTitle": "Gross Domestic Product (Third Estimate), Corporate Profits (Revised Estimate), Second Quarter 2023 and Comprehensive Update",
+      "sourceSection": "Updates for the First Quarter of 2023 / uniquely identified release paragraph",
+      "textType": "paraphrase",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "licenseUrl": "https://www.bea.gov/help/faq/147",
+      "attribution": "Source: U.S. Bureau of Economic Analysis. Explanation paraphrased by Meridian from the cited BEA release.",
+      "provenance": [
+        {
+          "url": "https://www.bea.gov/news/2023/gross-domestic-product-third-estimate-corporate-profits-revised-estimate-second-quarter",
+          "sha256": "ed5744766d7861755ab9f18422251636576bd0cdc0a376117ec53c6cec475c26",
+          "retrievedAt": "2026-10-22T20:26:13.046Z",
+          "lastModified": "Thu, 22 Oct 2026 20:00:57 GMT"
+        }
+      ]
+    },
+    {
+      "publicationId": "bea-gdp-2024q1-revised-2024-09-26",
+      "seriesId": "gdp",
+      "period": "2024-01-01",
+      "estimate": "Revised",
+      "publicationDate": "2024-09-26",
+      "kind": "annual-update",
+      "sourceValue": "1.6",
+      "previousValue": "1.4",
+      "summary": "In its 2024 annual update, BEA raised 2024Q1 real GDP growth from 1.4% to 1.6%. Higher consumer spending was partly offset by lower private inventory investment and residential fixed investment.",
+      "details": [
+        "BEA explicitly reports a 0.2 percentage point upward revision for this quarter. These are revisions to earlier estimates of the same quarter, rather than contributions to growth between two quarters."
+      ],
+      "annualUpdate": null,
+      "sourceUrl": "https://www.bea.gov/news/2024/gross-domestic-product-third-estimate-corporate-profits-revised-estimate-and-gdp-0",
+      "sourceTitle": "Gross Domestic Product (Third Estimate), Corporate Profits (Revised Estimate), and GDP by Industry, Second Quarter 2024 and Annual Update",
+      "sourceSection": "Updates for the First Quarter of 2024",
+      "textType": "paraphrase",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "licenseUrl": "https://www.bea.gov/help/faq/147",
+      "attribution": "Source: U.S. Bureau of Economic Analysis. Explanation paraphrased by Meridian from the cited BEA release.",
+      "provenance": [
+        {
+          "url": "https://www.bea.gov/news/2024/gross-domestic-product-third-estimate-corporate-profits-revised-estimate-and-gdp-0",
+          "sha256": "33a032a3e2746a65806b067ddec865a75d32d4a45a43da8de955319b80db811b",
+          "retrievedAt": "2026-10-22T20:26:13.132Z",
+          "lastModified": "Thu, 22 Oct 2026 20:01:10 GMT"
+        }
+      ]
+    },
+    {
+      "publicationId": "bea-gdp-2025q1-revised-2025-09-25",
+      "seriesId": "gdp",
+      "period": "2025-01-01",
+      "estimate": "Revised",
+      "publicationDate": "2025-09-25",
+      "kind": "annual-update",
+      "sourceValue": "-0.6",
+      "previousValue": "-0.5",
+      "summary": "In its 2025 annual update, BEA lowered 2025Q1 real GDP growth from -0.5% to -0.6%. Lower investment, government spending and exports were partly offset by higher consumer spending.",
+      "details": [
+        "BEA also revised imports upward. It reports a 0.1 percentage point downward revision to this quarter’s GDP growth rate; the retained value remains negative."
+      ],
+      "annualUpdate": null,
+      "sourceUrl": "https://www.bea.gov/news/2025/gross-domestic-product-2nd-quarter-2025-third-estimate-gdp-industry-corporate-profits",
+      "sourceTitle": "Gross Domestic Product, 2nd Quarter 2025 (Third Estimate), GDP by Industry, Corporate Profits (Revised), and Annual Update",
+      "sourceSection": "Updates for the First Quarter of 2025 / uniquely identified release paragraph",
+      "textType": "paraphrase",
+      "publicationDatePrecision": "day",
+      "publishedAt": null,
+      "licenseUrl": "https://www.bea.gov/help/faq/147",
+      "attribution": "Source: U.S. Bureau of Economic Analysis. Explanation paraphrased by Meridian from the cited BEA release.",
+      "provenance": [
+        {
+          "url": "https://www.bea.gov/news/2025/gross-domestic-product-2nd-quarter-2025-third-estimate-gdp-industry-corporate-profits",
+          "sha256": "32d2bac47b93154b223e217c81b47cfad4a7df2dc6a1900a095b91474b8f3b0b",
+          "retrievedAt": "2026-10-22T20:26:12.982Z",
+          "lastModified": "Thu, 22 Oct 2026 20:05:00 GMT"
+        }
+      ]
     }
   ]
 };

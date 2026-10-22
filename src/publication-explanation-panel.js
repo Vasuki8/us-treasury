@@ -2,10 +2,10 @@ import {panel,button,emptyState,escapeHtml as esc} from './ui.js';
 import {periodLabel} from './model.js';
 import {publicationExplanationRows} from './publication-explanation-view.js';
 
-const kinds={'first-publication':'First publication · release context',revision:'Estimate revision','no-revision':'No GDP revision','annual-update':'Annual update · quarter-specific explanation'};
+const kinds={'first-publication':'First publication · release context',revision:'Estimate revision','no-revision':'No GDP revision','annual-update':'Annual update · quarter-specific explanation','comprehensive-update':'Comprehensive update · quarter-specific explanation'};
 
 export function publicationExplanationPanel(publications,archive,cutoff,period,state,sourceAnchor){
- const note='<p class="panel-note">Meridian paraphrases of dated BEA releases and technical notes. These explain revisions to the same quarter, separately from contributors to economic growth. They do not calculate an exact numerical decomposition. First-publication context is labelled separately. General annual-update scope does not establish the cause of every quarter’s revision. Publication dates have day precision; retrieval dates do not indicate when a release became available.</p>';
+ const note='<p class="panel-note">Meridian paraphrases of dated BEA releases and technical notes. These explain revisions to the same quarter, separately from contributors to economic growth. They do not calculate an exact numerical decomposition. First-publication context is labelled separately. General annual or comprehensive update scope does not establish the cause of every quarter’s revision. Publication dates have day precision; retrieval dates do not indicate when a release became available.</p>';
  let body;
  if(state?.status==='error')body=emptyState('BEA revision explanations unavailable.',state.error??'Narrative evidence could not be loaded. Numerical publication history remains available.',button('RETRY EXPLANATIONS','data-retry-publication-explanations'));
  else if(state&&state.status!=='ready')body=emptyState('Loading BEA revision explanations.','Numerical publication history remains available.');
