@@ -10,7 +10,7 @@ export const series=Object.fromEntries(Object.entries(registry).map(([id,metadat
     ...metadata,observationType:official?.observationType??metadata.observationType??'official',
     source:{...metadata.source,seriesIds:official?.sourceIds||[]},observations:official?.observations||[],revisions:revisionHistory(snapshot.vintages,id),dataStatus,
     fetchedAt:source?.fetchedAt||null,lastAttemptAt:source?.lastAttemptAt||null,error:source?.error||(!official?'This official source is not connected.':null),
-    calculation:official?.calculation||'',sourceUrl:official?.sourceUrl||metadata.source.url,sourceUrls:official?.sourceUrls??[],
+    measure:official?.measure??'',provenance:source?.provenance??[],calculation:official?.calculation||'',sourceUrl:official?.sourceUrl||metadata.source.url,sourceUrls:official?.sourceUrls??[],
     sourceNotice:official?.sourceNotice??official?.redistributionNotice??'',licenseUrl:official?.licenseUrl??official?.termsUrl??'',attribution:official?.attribution??'',sourceTitle:official?.sourceTitle??'',
     coverageNote:official?.coverageNote||source?.coverageNote||'',publicationNote,
   }];

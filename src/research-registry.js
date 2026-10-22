@@ -39,3 +39,17 @@ for(const [id,name,code,definition] of [
  ['gdpExportsContribution','GDP contribution: exports','A020RY','Published exports contribution.'],
  ['gdpImportsContribution','GDP contribution: imports','A021RY','Published imports contribution with its original sign. A decrease in imports can contribute positively to GDP growth.'],
 ])researchRegistry[id]={id,name,short:name,code,definition:definition+' Accounting contributions do not establish causation; no chained-dollar levels are summed.',agency:'macroContributions',topic:'Growth',frequency:'Quarterly',unit:id==='gdpTotalContribution'?'Percent q/q annualized':'Percentage points q/q annualized',format:id==='gdpTotalContribution'?'percent':'percentagePoints',precision:id==='gdpTotalContribution'?1:2,adjustment:'Seasonally adjusted annual rate',source:{name:'U.S. Bureau of Economic Analysis, NIPA 1.1.2',url:'https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt'}};
+
+const marketSource={name:'Federal Reserve Bank of New York, Markets Data',url:'https://www.newyorkfed.org/markets/counterparties/primary-dealers-statistics'};
+for(const [id,name,code,definition,stock] of [
+ ['dealerNetTreasury','Net dealer Treasury position','PDPOSGST-TOT','Wednesday net outright position at fair value; long minus short.',true],
+ ['dealerRepo','Dealer repo financing outstanding','PDSORA-UTSETTOT','Wednesday outstanding repurchase financing, dealer perspective.',true],
+ ['dealerReverseRepo','Dealer reverse-repo financing outstanding','PDSIRRA-UTSETTOT','Wednesday outstanding reverse-repurchase financing, dealer perspective.',true],
+ ['dealerFailsDeliver','Weekly dealer failed deliveries','PDFTD-USTET','Cumulative weekly failed-delivery dollar amounts; a fail can persist across days.',false],
+ ['dealerFailsReceive','Weekly dealer failed receipts','PDFTR-USTET','Cumulative weekly failed-receipt dollar amounts; not unique failed trades or issuer defaults.',false],
+])researchRegistry[id]={id,name,short:name,code,definition:definition+' Primary-dealer Treasury securities excluding TIPS; partial market coverage, not a definitive liquidity or default-risk score. Delivery and receipt sides are not added.',agency:'marketFunctioning',topic:'Market functioning',frequency:'Weekly',periodType:stock?'stock':'flow',unit:'USD billions',format:'billions',precision:3,adjustment:'Not seasonally adjusted',source:marketSource};
+for(const [id,name,code,definition] of [
+ ['sofr','Secured overnight financing rate (SOFR)','SOFR:percentRate','Published volume-weighted median secured Treasury repo funding rate.'],
+ ['effr','Effective federal funds rate (EFFR)','EFFR:percentRate','Published volume-weighted median unsecured federal funds rate.'],
+ ['sofrEffrSpread','SOFR minus EFFR','SOFR − EFFR','100 × same-effective-date SOFR minus EFFR. Distinct funding markets; descriptive difference, not an exact credit or liquidity decomposition.'],
+])researchRegistry[id]={id,name,short:name,code,definition:definition+' Effective business dates are not release timestamps; missing dates are not filled.',agency:'marketFunctioning',topic:'Market functioning',frequency:'Daily',unit:id==='sofrEffrSpread'?'Basis points':'Percent',format:id==='sofrEffrSpread'?'basisPoints':'percent',precision:2,changeInBasisPoints:id!=='sofrEffrSpread',observationType:id==='sofrEffrSpread'?'calculated':'official',adjustment:'Not seasonally adjusted',source:{name:'Federal Reserve Bank of New York, Reference Rates',url:'https://www.newyorkfed.org/markets/reference-rates'}};

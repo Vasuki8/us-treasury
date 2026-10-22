@@ -15,6 +15,7 @@ test('ownership admission is scoped and requires conditional SOMA redistribution
  assert.doesNotThrow(()=>assertCommercialData(snapshot));
  for(const key of ['sourceTitle','termsUrl','attribution','redistributionNotice']){const copy=structuredClone(snapshot);delete copy.sources.ownership.series.somaTreasuryHoldings[key];assert.throws(()=>assertCommercialData(copy));}
  const copy=structuredClone(snapshot);copy.sources.ownership.series.somaTreasuryHoldings.sourceUrl='https://markets.newyorkfed.org/api/other.json';assert.throws(()=>assertCommercialData(copy));
+ assert.throws(()=>assertCommercialData({sources:{ownership:{series:{foreignTreasuryHoldings:{sourceIds:['LM263061105.Q'],sourceUrl:'https://www.federalreserve.gov/releases/z1/default.htm'}}}}}),/Unreviewed feed/);
 });
 test('captured ownership joins generic exports with title, terms and provenance',()=>{
  const csv=toCsv(['somaTreasuryHoldings']);assert.match(csv,/SOMA Holdings/);assert.match(csv,/termsofuse/);assert.match(csv,/calculated/);

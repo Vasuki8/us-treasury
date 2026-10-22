@@ -13,8 +13,10 @@ const scratchRoot = path.join(root, 'test-results');
 const now = new Date('2026-10-22T00:17:00.000Z');
 const at = '2026-10-21T23:37:00.000Z';
 const source = () => ({ status: 'ok', fetchedAt: at, lastAttemptAt: at, error: null, failure: null });
+const researchSources={fiscal:'Treasury fiscal pressure',refinancing:'Treasury debt maturity profile',yields:'Treasury yield history',auctions:'Treasury auction results',ownership:'Federal Reserve Treasury ownership',macroContributions:'BEA GDP contributions',marketFunctioning:'New York Fed dealer and funding data'};
+const dataIds=['treasury','bls','bea','dol','census',...Object.keys(researchSources)];
 const snapshot = () => ({
-  sources: Object.fromEntries(['treasury', 'bls', 'bea', 'dol', 'census'].map(id => [id, source()])),
+  sources: Object.fromEntries(dataIds.map(id => [id, source()])),
   calendar: { sources: Object.fromEntries(['bls', 'bea', 'census', 'dol', 'treasury', 'treasury-yield-timing'].map(id => [id, source()])) },
 });
 const cachedBls = () => ({
@@ -37,7 +39,7 @@ async function guard() {
   return module.getDailyRefreshPlan;
 }
 
-test('the guard skips eleven successful captures from the latest scheduled start', async () => {
+test('the guard skips eighteen successful captures from the latest scheduled start', async () => {
   const plan = (await guard())(snapshot(), { now });
   assert.equal(plan.required, false);
   assert.equal(plan.expectedRefreshAt, at);
@@ -58,13 +60,13 @@ test('a missed daily slot is due immediately at its start and remains due at bot
     const plan = getPlan(value, { now: new Date(clock) });
     assert.equal(plan.required, required, clock);
     assert.equal(plan.expectedRefreshAt, expected, clock);
-    assert.equal(plan.pendingSources.length, required ? 11 : 0, clock);
+    assert.equal(plan.pendingSources.length, required ? 18 : 0, clock);
   }
 });
 
 test('every canonical source is required while assembly and recent attempts cannot stand in for captures', async () => {
   const getPlan = await guard();
-  for (const [kind, ids] of [['sources', ['treasury', 'bls', 'bea', 'dol', 'census']], ['calendar', ['bls', 'bea', 'census', 'dol', 'treasury', 'treasury-yield-timing']]]) {
+  for (const [kind, ids] of [['sources', dataIds], ['calendar', ['bls', 'bea', 'census', 'dol', 'treasury', 'treasury-yield-timing']]]) {
     for (const id of ids) {
       const value = snapshot();
       const entry = kind === 'sources' ? value.sources[id] : value.calendar.sources[id];
@@ -77,6 +79,17 @@ test('every canonical source is required while assembly and recent attempts cann
       assert.equal(plan.required, true, `${kind}:${id}`);
       assert.equal(plan.pendingSources.length, 1, `${kind}:${id}`);
     }
+  }
+});
+
+test('deleting any admitted research source requires refresh even with an approved cached BLS calendar',async()=>{
+  const getPlan=await guard();
+  for(const create of [snapshot,approvedSnapshot])for(const [id,label] of Object.entries(researchSources)){
+    const value=create();
+    delete value.sources[id];
+    const plan=getPlan(value,{now});
+    assert.equal(plan.required,true,id);
+    assert.deepEqual(plan.pendingSources,[label],id);
   }
 });
 
@@ -101,7 +114,7 @@ test('missing, malformed, failed and future captures require another refresh', a
   for (const value of [undefined, null, {}, [], { sources: {}, calendar: null }]) {
     const plan = getPlan(value, { now });
     assert.equal(plan.required, true);
-    assert.equal(plan.pendingSources.length, 11);
+    assert.equal(plan.pendingSources.length, 18);
   }
 });
 
@@ -173,11 +186,7 @@ async function withCliFixture(value, run) {
   const directory = await mkdtemp(path.join(scratchRoot, 'refresh-due-'));
   try {
     await cp(path.join(root, 'scripts'), path.join(directory, 'scripts'), { recursive: true });
-    await mkdir(path.join(directory, 'src'));
-    await cp(path.join(root, 'src', 'freshness.js'), path.join(directory, 'src', 'freshness.js'));
-    await cp(path.join(root, 'src', 'vintages.js'), path.join(directory, 'src', 'vintages.js'));
-    await cp(path.join(root, 'src', 'registry.js'), path.join(directory, 'src', 'registry.js'));
-    await cp(path.join(root, 'src', 'research-registry.js'), path.join(directory, 'src', 'research-registry.js'));
+    await cp(path.join(root, 'src'), path.join(directory, 'src'), {recursive:true});
     await writeFile(path.join(directory, 'package.json'), '{"type":"module"}');
     await writeFile(path.join(directory, 'src', 'official-snapshot.js'), `export const snapshot = ${JSON.stringify(value)};\n`);
     await writeFile(path.join(directory, 'clock.mjs'), `const NativeDate=Date; globalThis.Date=class extends NativeDate { constructor(...args){super(...(args.length?args:['2026-10-22T00:17:00.000Z']));} static now(){return NativeDate.parse('2026-10-22T00:17:00.000Z');} };\n`);

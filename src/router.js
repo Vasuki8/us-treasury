@@ -35,6 +35,7 @@ export function parseRoute(hash = '') {
     else if (path === '/ownership') state.page = 'ownership';
     else if (path === '/macro') state.page = 'macro';
     else if (path === '/vintages') state.page = 'vintages';
+    else if (path === '/market') state.page = 'market';
     state.vintageCutoff=p.has('cutoff')?p.get('cutoff').slice(0,64):null;
     state.vintageSeries=Object.hasOwn(series,p.get('series'))?p.get('series'):'gdp';
     state.auctionType=['All','Bill','Note','Bond','FRN','TIPS'].includes(p.get('type'))?p.get('type'):'All';
@@ -67,7 +68,7 @@ export function parseRoute(hash = '') {
 
 export function routeFor(input) {
   const state = { ...defaults, ...input };
-  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',macro:'/macro',vintages:'/vintages'}[state.page] || '/overview';
+  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',macro:'/macro',vintages:'/vintages',market:'/market'}[state.page] || '/overview';
   const p = new URLSearchParams();
   if(state.page==='vintages'){
     if(state.vintageCutoff!==null)p.set('cutoff',state.vintageCutoff);

@@ -9,20 +9,21 @@ const clock = { now: new Date('2026-10-21T23:30:00.000Z') };
 
 const capturedAt = '2026-10-21T23:18:28.455Z';
 const source = (extra = {}) => ({ status: 'ok', fetchedAt: capturedAt, lastAttemptAt: '2026-10-21T23:18:27.753Z', ...extra });
+const researchSources = ['fiscal','refinancing','yields','auctions','ownership','macroContributions','marketFunctioning'];
 const completeSnapshot = () => ({
   generatedAt: '2026-10-22T01:00:00.000Z',
   checkedAt: '2026-10-21T23:18:27.753Z',
-  sources: { treasury: source(), bls: source(), bea: source(), dol: source(), census: source() },
+  sources: Object.fromEntries(['treasury','bls','bea','dol','census',...researchSources].map(id=>[id,source()])),
   calendar: {
     checkedAt: '2026-10-21T23:18:27.753Z',
     sources: { bls: source(), bea: source(), census: source(), dol: source(), treasury: source(), 'treasury-yield-timing': source() },
   },
 });
 
-test('all eleven successful capture targets produce an available summary', () => {
+test('all eighteen successful capture targets produce an available summary', () => {
   const result = getFreshness(completeSnapshot(), clock);
   assert.equal(result.state, 'available');
-  assert.equal(result.entries.length, 11);
+  assert.equal(result.entries.length, 18);
   assert.ok(result.entries.every(entry => entry.status === 'available'));
   assert.deepEqual(result.cached, []);
   assert.deepEqual(result.unavailable, []);
@@ -41,7 +42,25 @@ test('all eleven successful capture targets produce an available summary', () =>
     { id: 'calendar:dol', label: 'DOL claims calendar', kind: 'calendar' },
     { id: 'calendar:treasury', label: 'Treasury debt calendar', kind: 'calendar' },
     { id: 'calendar:treasury-yield-timing', label: 'Treasury yield timing', kind: 'calendar' },
+    { id: 'data:fiscal', label: 'Treasury fiscal pressure', kind: 'data' },
+    { id: 'data:refinancing', label: 'Treasury debt maturity profile', kind: 'data' },
+    { id: 'data:yields', label: 'Treasury yield history', kind: 'data' },
+    { id: 'data:auctions', label: 'Treasury auction results', kind: 'data' },
+    { id: 'data:ownership', label: 'Federal Reserve Treasury ownership', kind: 'data' },
+    { id: 'data:macroContributions', label: 'BEA GDP contributions', kind: 'data' },
+    { id: 'data:marketFunctioning', label: 'New York Fed dealer and funding data', kind: 'data' },
   ]);
+});
+
+test('a missing research source remains a required unavailable outcome',()=>{
+  for(const id of researchSources){
+    const snapshot=completeSnapshot();
+    delete snapshot.sources[id];
+    const result=getFreshness(snapshot,clock);
+    assert.equal(result.state,'partial',id);
+    assert.equal(result.entries.length,18,id);
+    assert.deepEqual(result.unavailable.map(entry=>entry.id),[`data:${id}`],id);
+  }
 });
 
 test('a failed BLS calendar retains its successful capture separately from the successful BLS data feed', () => {
@@ -85,7 +104,7 @@ test('no known successful captures produces an unavailable summary', () => {
     const result = getFreshness(snapshot, clock);
     assert.equal(result.state, 'unavailable');
     assert.equal(result.lastSuccessfulRefresh, null);
-    assert.equal(result.unavailable.length, 11);
+    assert.equal(result.unavailable.length, 18);
     assert.deepEqual(result.cached, []);
   }
 });
@@ -96,7 +115,7 @@ test('retained captures remain the last known successful refresh even if no sour
   snapshot.sources.bls.fetchedAt = '2026-10-22T00:00:00Z';
   const result = getFreshness(snapshot, clock);
   assert.equal(result.state, 'partial');
-  assert.equal(result.cached.length, 11);
+  assert.equal(result.cached.length, 18);
   assert.equal(result.unavailable.length, 0);
   assert.equal(result.lastSuccessfulRefresh, '2026-10-22T00:00:00.000Z');
 });
@@ -196,7 +215,7 @@ test('a missed run becomes stale exactly at its deadline after the midnight grac
     assert.equal(result.entries[0].stale, stale, now);
     assert.equal(result.entries[0].staleSince, stale ? refreshDeadline : null, now);
     assert.equal(result.state, stale ? 'partial' : 'available', now);
-    assert.equal(result.stale.length, stale ? 11 : 0, now);
+    assert.equal(result.stale.length, stale ? 18 : 0, now);
     assert.equal(result.entries[0].status, 'available', now);
   }
 });
@@ -221,7 +240,7 @@ test('new attempts, snapshot assembly and data observation dates cannot make a r
   snapshot.sources.treasury.lastAttemptAt = '2026-10-22T01:19:00Z';
   snapshot.sources.treasury.observationDate = '2026-10-22';
   const result = getFreshness(snapshot, { now: new Date('2026-10-22T01:30:00Z') });
-  assert.equal(result.stale.length, 11);
+  assert.equal(result.stale.length, 18);
   assert.equal(result.entries[0].fetchedAt, capturedAt);
   assert.equal(result.lastSuccessfulRefresh, capturedAt);
   assert.equal(result.lastAttemptAt, '2026-10-22T01:20:00.000Z');
@@ -262,7 +281,7 @@ test('missing or invalid captures are unavailable rather than mislabeled stale',
   const result = getFreshness(snapshot, { now: new Date('2026-10-22T00:40:00Z') });
   assert.deepEqual(result.unavailable.map(entry => entry.id), ['data:census', 'calendar:bls']);
   assert.ok(result.unavailable.every(entry => entry.stale === false && entry.staleSince === null));
-  assert.equal(result.stale.length, 9);
+  assert.equal(result.stale.length, 16);
   const empty = getFreshness({}, { now: new Date('2026-10-22T00:40:00Z') });
   assert.equal(empty.state, 'unavailable');
   assert.deepEqual(empty.stale, []);

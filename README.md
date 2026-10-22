@@ -1,14 +1,27 @@
 # Meridian — Graphite US Macro Workspace
 
-A working frontend foundation for the selected compact Graphite design. Includes Overview, Labor Market, Indicator Detail, Calendar, and Explore Data.
+A compact Graphite US fiscal and macro research dashboard. The original Overview, Labor Market, Indicator Detail, Calendar and Explore Data views remain available alongside eight research views.
 
-Uses official Treasury, BLS, BEA, DOL ETA and Census observations captured by the data refresh command. The app serves a committed snapshot, with observation periods, source identifiers and actual retrieval times. It does not stream live market quotes.
+Uses official Treasury, BLS, BEA, DOL ETA, Census, Federal Reserve Board and reviewed New York Fed observations captured by the data refresh command. The app serves a committed snapshot, with observation periods, source identifiers and actual retrieval times. It does not stream live market quotes.
 
 ## Commercial data reuse
 
-The site is intended for advertising revenue. Only datasets reviewed for commercial display, derived use and downloadable redistribution may be connected. The current twelve indicators and Treasury yield curve qualify under their published policies; see the [dataset rights review](docs/data-sources.md) for official evidence, scope and conditions.
+The site is intended for advertising revenue. Only datasets reviewed for commercial display, derived use and downloadable redistribution may be connected. The 48 registered indicators use dataset-specific admissions. See the [original dataset rights review](docs/data-sources.md) and [research source ledger](docs/research-dashboard-sources.md) for exact feeds, evidence and limitations. New York Fed data use conditional business redistribution, with titles, copyright, reference-rate disclaimers and downstream terms retained; they are not described as public domain.
 
 The app credits the agencies and Census's originating program, shows the required BLS disclaimer and retrieval date, and includes the disclaimer in exported BLS rows. Build and refresh commands reject data outside the reviewed dataset, identifier and feed scope in `scripts/data-policy.mjs`. Recheck terms when adding or changing a source. Claims coverage limitations accompany the displayed data and CSV exports. Research additions have separate scoped reviews in the [research source ledger](docs/research-dashboard-sources.md).
+
+## Research modules
+
+- [Fiscal pressure](https://vasuki8.github.io/us-treasury/#/fiscal): MTS receipts, outlays, net budget interest, primary deficit, TTM metrics, contributor and financing reconciliations.
+- [Refinancing](https://vasuki8.github.io/us-treasury/#/refinancing): observed MSPD maturities and instrument-aware hypothetical rate sensitivities.
+- [Yields](https://vasuki8.github.io/us-treasury/#/yields): dated curve overlays, slope spreads and matched nominal/real inflation compensation.
+- [Auctions](https://vasuki8.github.io/us-treasury/#/auctions): observed demand, competitive allocations and comparable prior auctions.
+- [Ownership](https://vasuki8.github.io/us-treasury/#/ownership): Z.1 sectors and separately valued SOMA holdings.
+- [Macro drivers](https://vasuki8.github.io/us-treasury/#/macro): published BEA GDP contributions; CPI effects remain unavailable after official BLS HTTP 403.
+- [Revision history](https://vasuki8.github.io/us-treasury/#/vintages): immutable registered-series captures, observed changes and UTC as-known retrieval cutoffs.
+- [Market functioning](https://vasuki8.github.io/us-treasury/#/market): dealer positions/financing/fails and SOFR/EFFR context; partial indicators, no composite score.
+
+All modules distinguish observations, calculations and assumptions. Source/retrieval dates, methodology, limitations and downloadable metadata accompany results. The [implementation record](docs/research-dashboard-plan.md) tracks tests and deployments. TIC country tables and ACM term premium remain unadmitted pending further rights/schema review; auction tails have no approved matched when-issued source. First-reported historical vintages are not invented. As-known replay currently covers registered series rather than supplementary profiles or calendars. Cloudflare activation remains deferred; the existing Pages deployment is preserved.
 
 ## Run locally
 
@@ -34,8 +47,8 @@ The build writes a self-contained static app to `dist/`. Its stylesheet, icon an
 npm run data:refresh
 # Optional: refresh one agency without downloading the others
 npm run data:refresh -- --sources=treasury
-# Refresh the new feeds only
-npm run data:refresh -- --sources=dol,census
+# Refresh selected research collectors only
+npm run data:refresh -- --sources=fiscal,refinancing,yields,auctions,ownership,macroContributions,marketFunctioning
 # Refresh official release schedules without downloading indicator data
 npm run data:refresh -- --sources=calendar
 # Require every attempted source to succeed before replacing the snapshot
@@ -95,13 +108,13 @@ Treasury uses the official [Fiscal Data release calendar JSON](https://api.fisca
 
 Treasury par-yield publication timing is captured independently from its official [yield methodology](https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology): usually available by 6 p.m. Eastern each trading day, with possible delays. The calendar and yield detail show this as ongoing guidance with source credit, retrieval time and independent cached/unavailable status. Rates and yield-watchlist filters include the guidance; month/day filters do not turn it into a dated release. No trading days, holidays, early closes or future publication instants are generated, and the 3:30 p.m. input quotation time is not publication timing.
 
-Yield timing has a separate factual-metadata commercial-use review; the statistical dataset's CC0 label is not transferred to methodology prose. Treasury auctions, release results, forecasts, impact ratings and revision ledgers are not ingested. All six schedule/timing captures across five agencies must succeed for an `ok` calendar status without coverage warnings. The approved BLS HTTP 403 exception permits automated publication with its verified calendar visibly cached; other selected sources must succeed. Refresh schedules and timing with `--sources=calendar`, or include them in the default full refresh.
+Yield timing has a separate factual-metadata commercial-use review; the statistical dataset's CC0 label is not transferred to methodology prose. This calendar does not contain Treasury auction events, release results, forecasts, impact ratings or revision explanations. Auction observations and registered-series capture history have separate research views. All six schedule/timing captures across five agencies must succeed for an `ok` calendar status without coverage warnings. The approved BLS HTTP 403 exception permits automated publication with its verified calendar visibly cached; other selected sources must succeed. Refresh schedules and timing with `--sources=calendar`, or include them in the default full refresh.
 
 ## Working features
 
-- Global data freshness banner with the latest successful source retrieval, latest recorded attempt, named stale/cached/unavailable feeds, and expandable capture details for all eleven data/calendar sources. Times display Eastern daylight/standard time; snapshot assembly and observation periods do not stand in for refresh timestamps.
-- Connected five-page navigation, deep links, browser back/forward, refresh, F1–F5 shortcuts, and Ctrl/Cmd+K search.
-- Twelve official indicators, with definitions, source identifiers, units, adjustment, observation periods, retrieval times, source footnotes and coverage limitations.
+- Global data freshness banner with the latest successful source retrieval, latest recorded attempt, named stale/cached/unavailable feeds, and expandable capture details for all 18 data/calendar/timing capture outcomes. Times display Eastern daylight/standard time; snapshot assembly and observation periods do not stand in for refresh timestamps.
+- Connected original navigation and compact research navigation, deep links, browser back/forward, refresh, F1–F5 shortcuts, and Ctrl/Cmd+K search.
+- 48 registered indicators, with definitions, source identifiers, units, adjustment, observation periods, retrieval times, source footnotes and coverage limitations.
 - Indicator level/change controls, six/twelve-observation ranges, exact-value pointer and keyboard chart readouts, and data/methodology/revision tabs.
 - Browser watchlists and appearance/density preferences. Saving falls back to session state with an explicit message if browser storage is unavailable.
 - Official release calendar with upcoming and monthly windows, date/topic/watchlist filters, related indicators, verified source links, reference periods, EST/EDT times and cached-source status.
@@ -148,7 +161,7 @@ Set repository variable `DEPLOY_TARGET=cloudflare` after configuring `CLOUDFLARE
 
 Relative assets and hash routes support both an origin root on Cloudflare and the existing `/us-treasury/` Pages prefix. The static Worker has no server script and does not enable SPA fallback for missing assets.
 
-Scheduled and main-push runs first check whether all eleven daily capture outcomes have completed since the most recent 23:37 UTC start. A missing, failed, invalid, future or older successful capture requests a full refresh. The sole exception is a verified BLS calendar HTTP 403 retained under the approved publication policy, with a new attempt in that daily window; the guard reuses the existing cached-BLS validator. That outcome counts as an attempted daily refresh while its actual old capture stays visibly cached and stale. Attempts and assembly times cannot substitute for the other ten successful captures.
+Scheduled and main-push runs first check whether all 18 daily capture outcomes have completed since the most recent 23:37 UTC start. A missing, failed, invalid, future or older successful capture requests a full refresh. The sole exception is a verified BLS calendar HTTP 403 retained under the approved publication policy, with a new attempt in that daily window; the guard reuses the existing cached-BLS validator. That outcome counts as an attempted daily refresh while its actual old capture stays visibly cached and stale. Attempts and assembly times cannot substitute for the other 17 successful captures.
 
 When due, the run attempts all five statistical collectors and all six calendar/timing collectors with `--allow-cached-bls-calendar`. Normal `main` pushes can therefore recover a missed scheduled run or a refresh rejected after a competing push. Once completed, backup scheduled checks stop after the guard, avoiding agency requests, duplicate builds and deployments. Main pushes with a completed daily capture and pull requests verify the committed snapshot using deterministic source-response fixtures. Manual `main` runs with **refresh_data** enabled force a full refresh even if the daily target is complete; leaving it disabled preserves redeploy-only behavior. Guard or collection failures block publication and deployment.
 

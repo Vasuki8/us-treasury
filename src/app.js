@@ -7,6 +7,7 @@ import {auctionsCsv} from './auctions-page.js';
 import {ownershipCsv} from './ownership-page.js';
 import {macroContributionsCsv} from './macro-page.js';
 import {vintagesCsv} from './vintages-page.js';
+import {marketFunctioningCsv} from './market-functioning-page.js';
 import {isResearchPage} from './research-navigation.js';
 import { renderPage } from './pages.js';
 import { escapeHtml as esc, sourceStatusList, sourceNotice } from './ui.js';
@@ -23,7 +24,7 @@ mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus);
 let storage;
 try { storage = window.localStorage; } catch { /* Session remains usable without persistence. */ }
 let state = { ...parseRoute(location.hash), ...readPreferences(storage) };
-const pageNames = {overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Yield explanations',auctions:'Auction demand',ownership:'Debt ownership',macro:'Macro drivers',vintages:'Revision history'};
+const pageNames = {overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Yield explanations',auctions:'Auction demand',ownership:'Debt ownership',macro:'Macro drivers',vintages:'Revision history',market:'Market functioning'};
 
 document.querySelector('.skip-link').addEventListener('click',event=>{
   event.preventDefault();
@@ -158,6 +159,7 @@ root.addEventListener('click',async event=>{
   else if('exportYieldIndicators' in d)exportCsv(['spread2s10s','spread3m10y','realYield10','inflationComp10','nominalYield2','nominalYield3m']);
   else if('auctionId' in d)navigate({auctionId:d.auctionId});
   else if('exportAuctions' in d||'exportAuctionBenchmark' in d)downloadCsv(auctionsCsv(dataStatus.sources.auctions,{securityType:state.auctionType,auctionId:state.auctionId,benchmark:'exportAuctionBenchmark' in d}),'meridian-auctions.csv','Auction CSV downloaded with matching scope, observed results, calculated allocations and source provenance.');
+  else if('exportMarket' in d)downloadCsv(marketFunctioningCsv(dataStatus.sources.marketFunctioning),'meridian-market.csv','Market CSV downloaded with reporting bases, missing and suppressed values, source titles and reuse conditions.');
   else if('exportVintages' in d)downloadCsv(vintagesCsv(dataStatus.vintages,{cutoff:state.vintageCutoff,seriesId:state.vintageSeries}),'meridian-vintages.csv','Vintage CSV downloaded at the selected UTC retrieval cutoff. First captured is distinct from first released.');
   else if('exportMacro' in d)downloadCsv(macroContributionsCsv(dataStatus.sources.macroContributions),'meridian-macro.csv','Macro CSV downloaded with published GDP contributions and unavailable CPI effects labeled.');
   else if('exportOwnership' in d)downloadCsv(ownershipCsv(dataStatus.sources.ownership),'meridian-ownership.csv','Ownership CSV downloaded with separate reporting dates, valuations and reuse notices.');

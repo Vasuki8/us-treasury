@@ -6,10 +6,11 @@ const captured='2026-10-21T23:18:30.150Z';
 const retained='2026-10-21T22:48:25.560Z';
 const attempt='2026-10-22T23:37:00.000Z';
 const ids=['treasury','bls','bea','dol','census'];
+const researchSources={fiscal:'Treasury fiscal pressure',refinancing:'Treasury debt maturity profile',yields:'Treasury yield history',auctions:'Treasury auction results',ownership:'Federal Reserve Treasury ownership',macroContributions:'BEA GDP contributions',marketFunctioning:'New York Fed dealer and funding data'};
 function snapshot() {
   const source=()=>({status:'ok',fetchedAt:captured,lastAttemptAt:captured});
   return {generatedAt:'2099-01-01T00:00:00.000Z',checkedAt:attempt,
-    sources:Object.fromEntries(ids.map(id=>[id,source()])),
+    sources:Object.fromEntries([...ids,...Object.keys(researchSources)].map(id=>[id,source()])),
     calendar:{checkedAt:attempt,sources:Object.fromEntries([...ids,'treasury-yield-timing'].map(id=>[id,source()]))}};
 }
 function banner(value, now = new Date('2026-10-21T23:20:00.000Z')) {
@@ -26,7 +27,7 @@ test('banner labels the last successful source retrieval separately from a later
   assert.match(html,/Latest attempt/);
   assert.ok(html.includes(`datetime="${attempt}"`));
   assert.doesNotMatch(html,/2099/,'assembly time must not masquerade as source success');
-  assert.match(html,/All 11 sources captured/);
+  assert.match(html,/All 18 sources captured/);
   assert.doesNotMatch(html,/role="alert"|aria-live/,'static snapshot metadata should not repeatedly interrupt navigation');
 });
 
@@ -47,9 +48,9 @@ test('cached calendar is named prominently while current BLS statistics remain d
 test('first failures are unavailable and do not invent a successful refresh',()=>{
   const html=banner({generatedAt:'2026-10-23T01:00:00.000Z',checkedAt:attempt,sources:{bls:{status:'unavailable',fetchedAt:null,error:'Not retrieved'}}});
   assert.match(html,/No successful source refresh recorded/);
-  assert.match(html,/11 unavailable/);
+  assert.match(html,/18 unavailable/);
   assert.match(html,/Unavailable/);
-  assert.doesNotMatch(html,/All 11 sources captured|Cached:/);
+  assert.doesNotMatch(html,/All 18 sources captured|Cached:/);
   assert.doesNotMatch(html,/datetime="2026-10-23T01/);
 });
 
@@ -64,7 +65,7 @@ test('banner escapes source errors and preserves an explicit Eastern standard-ti
 
 test('daily warning starts at the deadline, names stale sources and offers a snapshot reload',()=>{
   const data=snapshot();
-  // Ten sources have already captured this run; the retained BLS calendar has not.
+  // Seventeen sources have already captured this run; the retained BLS calendar has not.
   for (const source of [...Object.values(data.sources),...Object.values(data.calendar.sources)]) source.fetchedAt='2026-10-21T23:40:00.000Z';
   data.calendar.sources.bls={status:'error',fetchedAt:retained,lastAttemptAt:attempt,error:'Official source HTTP 403'};
   const before=banner(data,new Date('2026-10-22T00:36:59.999Z'));
@@ -84,17 +85,29 @@ test('daily warning starts at the deadline, names stale sources and offers a sna
 
 test('successful but old captures get a stale warning without being relabeled as failed or cached',()=>{
   const html=banner(snapshot(),new Date('2026-10-22T00:37:00.000Z'));
-  assert.match(html,/11 stale/);
+  assert.match(html,/18 stale/);
   assert.match(html,/Stale · Captured/);
   assert.match(html,/data-state="partial"/);
-  assert.doesNotMatch(html,/All 11 sources captured|Cached:/);
+  assert.doesNotMatch(html,/All 18 sources captured|Cached:/);
   assert.match(html,/this snapshot/,'the warning describes the displayed capture, not live agency availability');
 });
 
 test('unavailable sources are distinct from a missed daily capture',()=>{
   const html=banner({},new Date('2026-10-22T00:37:00.000Z'));
-  assert.match(html,/11 unavailable/);
+  assert.match(html,/18 unavailable/);
   assert.doesNotMatch(html,/Daily refresh overdue|data-reload-snapshot|\d+ stale/);
+});
+
+test('deleting any admitted research source names it as unavailable in the visible banner summary',()=>{
+  for(const [id,label] of Object.entries(researchSources)){
+    const data=snapshot();
+    delete data.sources[id];
+    const html=banner(data),summary=html.slice(0,html.indexOf('<details'));
+    assert.match(html,/data-state="partial"/,id);
+    assert.match(summary,/1 unavailable/,id);
+    assert.ok(summary.includes(`Unavailable:</strong> ${label}`),id);
+    assert.doesNotMatch(summary,/All \d+ sources captured/,id);
+  }
 });
 
 test('stale deadline uses Eastern standard time in winter',()=>{

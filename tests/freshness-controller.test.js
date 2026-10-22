@@ -5,10 +5,11 @@ import { mountFreshnessBanner } from '../src/freshness-controller.js';
 
 const capturedAt = '2026-10-21T23:18:30.000Z';
 const targetIds = ['treasury', 'bls', 'bea', 'dol', 'census'];
+const researchIds = ['fiscal','refinancing','yields','auctions','ownership','macroContributions','marketFunctioning'];
 function snapshot() {
   const source = () => ({ status: 'ok', fetchedAt: capturedAt, lastAttemptAt: capturedAt });
   return {
-    sources: Object.fromEntries(targetIds.map(id => [id, source()])),
+    sources: Object.fromEntries([...targetIds,...researchIds].map(id => [id, source()])),
     calendar: { sources: Object.fromEntries([...targetIds, 'treasury-yield-timing'].map(id => [id, source()])) },
   };
 }

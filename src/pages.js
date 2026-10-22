@@ -5,6 +5,7 @@ import { auctionsPage } from './auctions-page.js';
 import { ownershipPage } from './ownership-page.js';
 import { macroPage } from './macro-page.js';
 import { vintagesPage } from './vintages-page.js';
+import { marketFunctioningPage } from './market-functioning-page.js';
 import { vintageMeasurementsComparable } from './vintages.js';
 import { researchNavigation } from './research-navigation.js';
 import { series, releases, yieldCurve, dataStatus } from './data.js';
@@ -107,7 +108,7 @@ function detailData(item, state) {
   const originals = new Map(item.series.observations.map(observation => [observation.date, observation]));
   const rows = [...item.observations].reverse().map(observation => {
     const original = originals.get(observation.date);
-    return `<tr><th scope="row"><time datetime="${esc(observation.date)}">${esc(periodLabel(item.series, observation.date))}</time></th><td class="num">${esc(valueForPanel(item, observation.value, state.transform))}</td><td class="mono muted">${esc(original?.publishedAt ?? '—')}</td><td class="muted">${esc([...(original?.footnotes??[]),observationCoverageLabel(original)].filter(Boolean).join('; ') || '—')}</td></tr>`;
+    return `<tr><th scope="row"><time datetime="${esc(observation.date)}">${esc(periodLabel(item.series, observation.date))}</time></th><td class="num">${esc(valueForPanel(item, observation.value, state.transform))}</td><td class="mono muted">${esc(original?.publishedAt ?? '—')}</td><td class="muted">${esc([...(original?.footnotes??[]),observationCoverageLabel(original),original?.suppressed?'SUPPRESSED · withheld by source':'',original?.revisionIndicator==='Y'?'SOURCE REVISION FLAG · reason unknown':''].filter(Boolean).join('; ') || '—')}</td></tr>`;
   }).join('');
   return `<p class="panel-note">${state.transform === 'change' ? 'Period changes from adjacent observations' : item.series.observationType==='calculated'?'Calculated metric':'Published measure'} · ${esc(item.unit)} · most recent first. ${esc(item.series.publicationNote ?? 'Historical publication dates are not supplied by this feed; — means unknown.')}</p>${table(['OBSERVATION PERIOD', state.transform === 'change' ? 'PERIOD CHANGE' : 'VALUE', 'PUBLISHED', 'SOURCE NOTES'], rows, 'Official indicator observations and source footnotes')}`;
 }
@@ -218,6 +219,6 @@ export function renderPage(input = {}) {
   const state = { ...defaults, ...input };
   state.selected = seriesIds(Array.isArray(state.selected) ? state.selected : []).slice(0, 4);
   state.saved = seriesIds(Array.isArray(state.saved) ? state.saved : []);
-  return researchNavigation(state.page)+({ overview, labor, indicator, calendar, explore, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage(),macro:()=>macroPage(),vintages:()=>vintagesPage(state) }[state.page] ?? overview)(state);
+  return researchNavigation(state.page)+({ overview, labor, indicator, calendar, explore, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage(),macro:()=>macroPage(),vintages:()=>vintagesPage(state),market:()=>marketFunctioningPage() }[state.page] ?? overview)(state);
 }
 function refinancing(state){return refinancingPage(state);}

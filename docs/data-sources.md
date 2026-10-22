@@ -2,7 +2,7 @@
 
 The public Meridian website is intended to earn advertising revenue. Display and CSV redistribution must use datasets whose terms permit commercial reuse. Free access, an API key, or an official-looking domain is insufficient evidence by itself.
 
-Review date: **October 21, 2026**. The twelve connected indicators and Treasury par yield curve below fit this policy.
+Review date: **October 21, 2026**. The twelve original indicators and Treasury par yield curve below fit this policy. Additional research indicators have separate scoped reviews and executable admissions in the [research source ledger](research-dashboard-sources.md). This document does not extend public-domain status to conditionally licensed New York Fed data.
 
 | Reviewed dataset scope | Commercial reuse basis | Official evidence |
 | --- | --- | --- |

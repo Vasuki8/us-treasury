@@ -1,9 +1,10 @@
 // Dataset-specific admissions. Evidence: docs/fiscal-source-review.md,
 // docs/yields-source-review.md. This does not license unrelated agency content.
+import {marketPolicies,matchesMarketFeed,assertMarketData} from './market-policy.mjs';
 const fiscalBase='https://api.fiscaldata.treasury.gov/services/api/fiscal_service/';
 const fiscalPaths=['v1/accounting/mts/mts_table_9','v1/accounting/mts/mts_table_2','v1/accounting/mts/mts_receipts_outlays_deficit_surplus','v2/accounting/od/debt_to_penny'];
 const fiscalDerived=['budgetDeficit','primaryDeficit','receiptsTtm','outlaysTtm','netInterestTtm','primaryDeficitTtm','interestRevenueRatio'];
-export const researchPolicies=[{
+export const researchPolicies=[...marketPolicies,{
   id:'treasury-mts-fiscal',agency:'fiscal',reviewedOn:'2026-10-21',commercialUse:true,
   basis:'Fiscal Data explicitly permits commercial copying, adaptation and redistribution; MTS fiscal observations and calculated monthly arithmetic, not copied narrative or imagery',
   terms:['https://fiscaldata.treasury.gov/api-documentation/#license-and-authorization'],feed:'treasury-mts-fiscal',
@@ -28,6 +29,7 @@ export const researchPolicies=[{
 },{
  id:'fed-z1-treasury-positions',agency:'ownership',reviewedOn:'2026-10-21',commercialUse:true,
  basis:'Federal Reserve Board public-domain statistical data with credit; selected Z.1 Treasury sector positions and dictionary only',terms:['https://www.federalreserve.gov/disclaimer.htm'],feed:'fed-z1',
+ seriesFeeds:{foreignTreasuryHoldings:'fed-z1-values',fedTreasuryHoldings:'fed-z1-values'},
  series:{foreignTreasuryHoldings:['LM263061105.Q'],fedTreasuryHoldings:['LM713061103.Q']},
 },{
  id:'nyfed-soma-treasury',agency:'ownership',reviewedOn:'2026-10-21',commercialUse:true,
@@ -39,10 +41,12 @@ export const researchPolicies=[{
  series:{gdpTotalContribution:['A191RL'],gdpConsumptionContribution:['DPCERY'],gdpInvestmentContribution:['A006RY'],gdpGovernmentContribution:['A822RY'],gdpExportsContribution:['A020RY'],gdpImportsContribution:['A021RY']},
 }];
 export function matchesResearchFeed(value,feed){
+  if(matchesMarketFeed(value,feed))return true;
   try{
     const url=new URL(value);if(url.username||url.password||url.hash)return false;
     if(feed==='bea-contributions')return url.href==='https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt';
     if(feed==='fed-z1')return !url.search&&['https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip','https://www.federalreserve.gov/releases/z1/default.htm'].includes(url.href);
+    if(feed==='fed-z1-values')return url.href==='https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip';
     if(feed==='nyfed-soma')return url.href==='https://markets.newyorkfed.org/api/soma/summary.json';
     if(feed==='treasury-mts-fiscal')return fiscalPaths.some(part=>url.origin+url.pathname===fiscalBase+part);
     if(feed==='fiscal-public-debt')return url.origin+url.pathname===fiscalBase+fiscalPaths[3];
@@ -59,6 +63,7 @@ export function matchesResearchFeed(value,feed){
   return false;
 }
 export function assertResearchData(snapshot){
+  assertMarketData(snapshot.sources?.marketFunctioning);
   if((snapshot.sources?.macroContributions?.cpiCategoryEffects?.observations??[]).length)throw new Error('CPI effects observations require separate source admission');
   for(const item of Object.values(snapshot.sources?.ownership?.series??{}))if(item.sourceUrl?.startsWith('https://markets.newyorkfed.org/')){
     if(item.sourceTitle!=='SOMA Holdings'||item.termsUrl!=='https://www.newyorkfed.org/privacy/termsofuse.html'||!item.attribution?.includes('Federal Reserve Bank of New York')||!item.redistributionNotice?.includes('permissions, conditions and restrictions'))throw new Error('Required SOMA commercial redistribution conditions missing');
