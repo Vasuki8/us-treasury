@@ -1,5 +1,6 @@
 import {dolPublicationReleases} from './dol-publication-scope.mjs';
 import {dolPublicationReleases2025} from './dol-publication-scope-2025.mjs';
+import {dolPublicationReleases2024} from './dol-publication-scope-2024.mjs';
 import {DOL_ADVANCE_IDS,DOL_ADVANCE_LICENSE,DOL_ADVANCE_ATTRIBUTION,DOL_SEASONAL_UPDATE_NOTICES,DOL_RELEASE_NOTICES} from './sources/dol-advance.mjs';
 import {easternInstant} from './sources/calendar-utils.mjs';
 import {isDeepStrictEqual} from 'node:util';
@@ -14,9 +15,9 @@ const tableExtractionNotes=Object.freeze({
  'https://oui.doleta.gov/press/2026/030526.pdf':DOL_TABLE_EXTRACTION_NOTE,
  'https://oui.doleta.gov/press/2025/091125.pdf':'The printed September 11 continued-SA table change cell is 0, verified on PDF page 4. Text extraction omits that glyph; restoration is restricted to the exact reviewed PDF hash and row. The narrative explicitly says unchanged and both printed count cells are 1,939,000.',
 });
-export const claimsPublicationScope=Object.freeze([...dolPublicationReleases,...dolPublicationReleases2025].flatMap(release=>release.facts.map(fact=>Object.freeze({...fact,publicationDate:release.publicationDate,sourceUrl:release.sourceUrl,reviewedPdfSha256:release.sha256,id:`dol-${fact.seriesId}-${fact.period}-${fact.releaseStage}-${release.publicationDate}`}))));
+export const claimsPublicationScope=Object.freeze([...dolPublicationReleases,...dolPublicationReleases2025,...dolPublicationReleases2024].flatMap(release=>release.facts.map(fact=>Object.freeze({...fact,publicationDate:release.publicationDate,sourceUrl:release.sourceUrl,reviewedPdfSha256:release.sha256,id:`dol-${fact.seriesId}-${fact.period}-${fact.releaseStage}-${release.publicationDate}`}))));
 const byId=new Map(claimsPublicationScope.map(fact=>[fact.id,fact]));
-if(byId.size!==352||dolPublicationReleases.length!==42||dolPublicationReleases2025.length!==46)fail('reviewed scope manifest');
+if(byId.size!==560||dolPublicationReleases.length!==42||dolPublicationReleases2025.length!==46||dolPublicationReleases2024.length!==52)fail('reviewed scope manifest');
 
 export function requestedClaimsPublicationIds(ids=claimsPublicationScope.map(row=>row.id)){
  if(!Array.isArray(ids)||ids.length>claimsPublicationScope.length||new Set(ids).size!==ids.length||ids.some(id=>!byId.has(id)))fail('unknown or duplicate requested scope');

@@ -8,12 +8,13 @@ const receipt=url=>({url,sha256:'a'.repeat(64),retrievedAt:'2026-10-22T22:00:00.
 const now=new Date('2026-10-22T22:00:00Z');
 const fixture=()=>parseClaimsPublication(releaseFixture(),{provenance:receipt(current),now});
 
-test('reviewed scope is 88 discovered releases and 352 separate facts, preserving the original 2026 scope prefix',()=>{
- assert.equal(policy.claimsPublicationScope.length,352);assert.equal(new Set(policy.claimsPublicationScope.map(x=>x.sourceUrl)).size,88);
- assert.equal(new Set(policy.claimsPublicationScope.map(x=>x.id)).size,352);
- assert.deepEqual([...new Set(policy.claimsPublicationScope.map(x=>x.publicationDate))].sort().slice(0,1),['2025-01-02']);
+test('reviewed scope is 140 discovered releases and 560 separate facts, preserving the 2026/2025 scope prefix',()=>{
+ assert.equal(policy.claimsPublicationScope.length,560);assert.equal(new Set(policy.claimsPublicationScope.map(x=>x.sourceUrl)).size,140);
+ assert.equal(new Set(policy.claimsPublicationScope.map(x=>x.id)).size,560);
+ assert.deepEqual([...new Set(policy.claimsPublicationScope.map(x=>x.publicationDate))].sort().slice(0,1),['2024-01-04']);
  assert.ok(policy.claimsPublicationScope.slice(0,168).every(x=>x.publicationDate.startsWith('2026')));
- assert.ok(policy.claimsPublicationScope.slice(168).every(x=>x.publicationDate.startsWith('2025')));
+ assert.ok(policy.claimsPublicationScope.slice(168,352).every(x=>x.publicationDate.startsWith('2025')));
+ assert.ok(policy.claimsPublicationScope.slice(352).every(x=>x.publicationDate.startsWith('2024')));
  const unknown=policy.claimsPublicationScope.filter(x=>x.releaseStage==='prior-week-status-unknown');assert.equal(unknown.length,2);
  for(const scope of unknown){const row=policy.claimsPublicationMetadataFor(scope);assert.equal(row.estimate,'Prior comparison (status unknown)');assert.equal(row.previouslyPublishedSourceValue,null);assert.match(row.footnotes.join(' '),/October 2.*November 13/);assert.equal(row.seasonalAdjustmentNote,null);}
  assert.ok(policy.claimsPublicationScope.every(x=>['claimsAdvance','continuedClaimsAdvance'].includes(x.seriesId)));

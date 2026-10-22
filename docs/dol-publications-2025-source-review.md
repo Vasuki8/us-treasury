@@ -1,6 +1,6 @@
 # Archived DOL claims publications: 2025 extension
 
-Reviewed October 22, 2026. This extends the [original 2026 admission](dol-publication-history-source-review.md) with **46 official 2025 releases and 184 facts**. The complete archive now has **88 releases / 352 facts**. The original 168 records, their order and actual retrieval receipts are preserved exactly. Revised XML history, current advance context, calendars, GDP publications and immutable snapshot captures are unchanged.
+Reviewed October 22, 2026. This records the addition of **46 official 2025 releases and 184 facts** to the [original 2026 admission](dol-publication-history-source-review.md), reaching 88 releases / 352 facts at this milestone. The [2024 extension](dol-publications-2024-source-review.md) subsequently brings active scope to 140 releases / 560 facts while preserving this entire batch. Counts and verification below describe the 2025 milestone. Revised XML history, current advance context, calendars, GDP publications and immutable snapshot captures remain separate.
 
 ## Discovery and commercial display/export
 
@@ -19,7 +19,7 @@ Publication dates run **January 2–December 31, 2025**. Each PDF retains four f
 
 The [November 20 release](https://oui.doleta.gov/press/2025/112025.pdf) explicitly says no news releases were published for **October 2–November 13, 2025**, because of the lapse in appropriations. Seven advance weeks are unavailable for each measurement: initial September 27–November 8 and continued September 20–November 1, each Saturday. Missing releases are not reconstructed from revised history, later comparisons or assumed weekly publication dates.
 
-That release reports prior initial claims **228,000 for November 8** and continued claims **1,946,000 for November 1** in its regular-state SA tables. Its narrative does not identify either as revised/unrevised and quotes no earlier published count. These two facts retain `prior-week-status-unknown`, label **Prior comparison (status unknown)** and `previouslyPublishedSourceValue:null`. They are facts published November 20, with no invented original advance. Current advances in that PDF are 220,000 for November 15 and1,974,000 for November 8. Table headers, raw counts and signed narrative changes independently reconcile.
+That release reports prior initial claims **228,000 for November 8** and continued claims **1,946,000 for November 1** in its regular-state SA tables. Its narrative does not identify either as revised/unrevised and quotes no earlier published count. These two facts retain `prior-week-status-unknown`, label **Prior comparison (status unknown)** and `previouslyPublishedSourceValue:null`. They are facts published November 20, with no invented original advance. Current advances in that PDF are 220,000 for November 15 and 1,974,000 for November 8. Table headers, raw counts and signed narrative changes independently reconcile.
 
 Five printed Wednesday release dates—January 8, June 18, November 26, December 24 and December 31—are retained exactly, without imposing a Thursday-only rule or assigning an unverified holiday reason. The December 31 release now supplies the original 199,000 initial advance for December 27; its January 2026 comparison remains a separate fact. Earliest edge weeks still lack an original advance.
 
