@@ -26,6 +26,8 @@ node scripts/check-bls-calendar-access.mjs
 
 Or select **Actions → Diagnose official BLS calendar access → Run workflow → main**. This manually checks the current annual HTML and the exact BLS-documented subscription feed, with the same identified client and one-second spacing. It records status, document-format outcome, byte count and SHA-256 for accepted responses, without publishing a snapshot or logging response bodies. Its iCalendar check establishes readable document framing, not a complete event parser. It exits unsuccessfully when neither source document is accepted.
 
+Verified result: [diagnostic run 39707183977](https://github.com/Vasuki8/us-treasury/actions/runs/39707183977), checked at `2026-10-22T01:42:05.168Z` (October 21, 9:42 p.m. Eastern), returned HTTP **403** for both the 2026 annual page and documented subscription feed. The same identified local client was also denied. Switching these two formats does not currently restore access. The ordinary [test/build/deploy run](https://github.com/Vasuki8/us-treasury/actions/runs/39707184216) passed, including the diagnostic's regression tests; its success is not a successful BLS retrieval.
+
 ## Request access restoration
 
 When both official formats return an access denial, changing a parser or marking a retained capture fresh cannot restore access. Use BLS's [official publication-information contact form](https://data.bls.gov/forms/opb.htm). The denial page may include an administrator error code and a contact URL containing that code; include it with the UTC timestamp and the diagnostic Actions link.
@@ -40,6 +42,8 @@ Prepared request for the repository owner to review and submit:
 >
 > The production refresh runs in GitHub Actions, normally once daily. Annual-calendar requests run sequentially with at least one second between them. We display factual Employment Situation, CPI and JOLTS schedule metadata with BLS credit and source/retrieval information, and retain the previous calendar visibly cached when access fails.
 >
-> Could you advise the supported automated calendar access method or review this client's access block? I can supply the diagnostic run URL, UTC timestamp and administrator error code from the denied response.
+> Diagnostic run: https://github.com/Vasuki8/us-treasury/actions/runs/39707183977. Checked at `2026-10-22T01:42:05.168Z`. Both `https://www.bls.gov/schedule/2026/home.htm` and `https://www.bls.gov/schedule/news_release/bls.ics` returned HTTP 403 from the GitHub runner.
+>
+> Could you advise the supported automated calendar access method or review this client's access block? I can provide an administrator error code from the denial page if needed.
 
 Sending this request requires the owner's contact information. Repository code and diagnostics do not submit the form or send a message to BLS.
