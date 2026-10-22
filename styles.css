@@ -215,6 +215,8 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
 .builder-series { display:grid; gap:6px; border-bottom:1px solid var(--divider); padding-bottom:12px; font-size:11px; }
 .explore-tabs { margin-bottom:9px; }
 .comparison-panel + .comparison-panel { border-top:1px solid var(--border); }
+.research-navigation { display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 12px; }
+.research-navigation a[aria-current="page"] { background:var(--selected); border-color:var(--accent); }
 .empty-state p + p { margin-top:4px; }
 .empty-state .actions { margin-top:12px; }
 .result-grid dd { margin-left:0; }

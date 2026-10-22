@@ -21,6 +21,10 @@ export const researchPolicies=[{
   terms:['https://catalog.data.gov/dataset/interest-rate-statistics-daily-treasury-yield-curve-rates','https://catalog.data.gov/dataset/daily-treasury-real-yield-curve-rates','https://creativecommons.org/publicdomain/zero/1.0/'],feed:'research-par-yields',
   seriesFeeds:{realYield10:'research-real-par',spread2s10s:'research-nominal-par',spread3m10y:'research-nominal-par',inflationComp10:'research-nominal-par',nominalYield2:'research-nominal-par',nominalYield3m:'research-nominal-par'},
   series:{spread2s10s:['BC_10YEAR','BC_2YEAR'],spread3m10y:['BC_10YEAR','BC_3MONTH'],realYield10:['TC_10YEAR'],inflationComp10:['BC_10YEAR','TC_10YEAR'],nominalYield2:['BC_2YEAR'],nominalYield3m:['BC_3MONTH']},
+},{
+  id:'treasury-auction-results',agency:'auctions',reviewedOn:'2026-10-21',commercialUse:true,
+  basis:'Fiscal Data permits commercial copying, adaptation and redistribution; auction facts excluding third-party security identifier fields',terms:['https://fiscaldata.treasury.gov/api-documentation/#license-and-authorization'],feed:'treasury-auctions',
+  series:{auctionOfferingMonthly:['offering_amt','auction_date','bid_to_cover_ratio']},
 }];
 export function matchesResearchFeed(value,feed){
   try{
@@ -30,6 +34,7 @@ export function matchesResearchFeed(value,feed){
     if(feed==='fiscal-table9')return url.origin+url.pathname===fiscalBase+fiscalPaths[0];
     if(feed==='treasury-mspd')return ['mspd_table_3_market','mspd_table_1'].some(table=>url.origin+url.pathname===fiscalBase+'v1/debt/mspd/'+table);
     if(feed==='treasury-mspd-market')return url.origin+url.pathname===fiscalBase+'v1/debt/mspd/mspd_table_3_market';
+    if(feed==='treasury-auctions')return url.origin+url.pathname===fiscalBase+'v1/accounting/od/auctions_query';
     if(['research-par-yields','research-nominal-par','research-real-par'].includes(feed)){
       const match=/^\/resource-center\/data-chart-center\/interest-rates\/daily-treasury-rates\.csv\/(\d{4})\/all$/.exec(url.pathname);
       const allowed=feed==='research-nominal-par'?['daily_treasury_yield_curve']:feed==='research-real-par'?['daily_treasury_real_yield_curve']:['daily_treasury_yield_curve','daily_treasury_real_yield_curve'];
@@ -55,5 +60,8 @@ export function assertResearchData(snapshot){
     for(const series of Object.values(yieldSource.series??{}))for(const row of series.observations??[]){
       for(const url of row.sourceUrls??[]){if(!matchesResearchFeed(url,'research-par-yields')||!captured.has(url)||!url.includes(`.csv/${row.date.slice(0,4)}/all`))throw new Error('Unreviewed yield observation input provenance');}
     }
+  }
+  for(const row of snapshot.sources?.auctions?.auctions??[]){
+    if(Object.hasOwn(row,'cusip')||Object.hasOwn(row,'tail')||row.publishedAt!==null||!['Bill','Note','Bond','FRN','TIPS'].includes(row.securityType))throw new Error('Unreviewed auction identifier, tail, publication time or instrument');
   }
 }

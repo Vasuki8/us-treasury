@@ -10,6 +10,7 @@ export const defaults = {
   watchOnly: false, eventId: '',
   refinancingHorizon:12,refinancingShock:100,
   yieldDateA:'',yieldDateB:'',
+  auctionType:'All',auctionId:'',
 };
 
 /** Hash routes work on ordinary static hosts and preserve browser history. */
@@ -29,6 +30,9 @@ export function parseRoute(hash = '') {
     else if (path === '/fiscal') state.page = 'fiscal';
     else if (path === '/refinancing') state.page = 'refinancing';
     else if (path === '/yields') state.page = 'yields';
+    else if (path === '/auctions') state.page = 'auctions';
+    state.auctionType=['All','Bill','Note','Bond','FRN','TIPS'].includes(p.get('type'))?p.get('type'):'All';
+    state.auctionId=(p.get('auction')??'').slice(0,200);
     const validCurveDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
     state.yieldDateA=validCurveDate(p.get('curveA'))?p.get('curveA'):'';
     state.yieldDateB=validCurveDate(p.get('curveB'))?p.get('curveB'):'';
@@ -57,8 +61,12 @@ export function parseRoute(hash = '') {
 
 export function routeFor(input) {
   const state = { ...defaults, ...input };
-  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields'}[state.page] || '/overview';
+  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions'}[state.page] || '/overview';
   const p = new URLSearchParams();
+  if(state.page==='auctions'){
+    if(state.auctionType!=='All')p.set('type',state.auctionType);
+    if(state.auctionId)p.set('auction',state.auctionId);
+  }
   if(state.page==='yields'){
     if(state.yieldDateA)p.set('curveA',state.yieldDateA);
     if(state.yieldDateB)p.set('curveB',state.yieldDateB);

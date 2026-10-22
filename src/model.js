@@ -51,6 +51,14 @@ export function filterSeries({ query = '', topic = 'All topics', frequency = 'Al
 export function latest(s) {
   return s?.observations?.at(-1);
 }
+export function observationCoverageLabel(observation={}){
+  if(observation.partial===false)return 'Complete recorded month';
+  if(observation.partial!==true)return '';
+  const counts=[];
+  if(Number.isInteger(observation.auctionCount))counts.push(`${observation.auctionCount} result auctions`);
+  if(Number.isInteger(observation.pendingCount))counts.push(`${observation.pendingCount} awaiting results`);
+  return ['PARTIAL',...counts].join(' · ');
+}
 
 export function formatValue(s, value) {
   if (!s || !finite(value)) return '—';
@@ -182,13 +190,13 @@ export function toCsv(ids, { transform = 'level', range = 12, comparison = 'nati
     throw new RangeError('Indexed comparisons export indexed levels; choose native panels to export changes.');
   }
   const panels = comparison === 'indexed' ? result.panels : result.panels.map((panel) => transformSeries(panel.series, transform, range));
-  const rows = [['series_id', 'name', 'date', 'value', 'unit', 'frequency', 'adjustment', 'source', 'publication_date', 'transform', 'data_status','retrieved_at','source_url','source_series','calculation','source_value','source_baseline_date','source_baseline_value','index_baseline_date','index_baseline_value','source_notice','coverage_note','observation_type','source_urls','license_url','attribution','source_title']];
+  const rows = [['series_id', 'name', 'date', 'value', 'unit', 'frequency', 'adjustment', 'source', 'publication_date', 'transform', 'data_status','retrieved_at','source_url','source_series','calculation','source_value','source_baseline_date','source_baseline_value','index_baseline_date','index_baseline_value','source_notice','coverage_note','observation_type','source_urls','license_url','attribution','source_title','partial','auction_count','pending_count','revision_indicator','source_notes']];
   for (const panel of panels) {
     const s = panel.series;
     const publications = new Map(s.observations.map((o) => [o.date, o.publishedAt]));
     for (const observation of panel.observations) {
       rows.push([s.id, s.name, observation.date, observation.value, panel.unit, s.frequency, s.adjustment,
-        s.source.name, publications.get(observation.date), comparison === 'indexed' ? 'indexed' : transform, s.dataStatus||'unknown',s.fetchedAt,observation.sourceUrl||s.sourceUrl||s.source.url,(s.source.seriesIds||[]).join('; '),s.calculation,observation.sourceValue,observation.baseDate|| (observation.yearAgoSourceValue!=null?`${Number(observation.date.slice(0,4))-1}${observation.date.slice(4)}`:null),observation.baseValue??observation.yearAgoSourceValue,panel.baselineDate,panel.baselineValue,s.agency === 'bls' ? BLS_DATA_NOTICE : s.sourceNotice??'',s.coverageNote,s.observationType??'official',(observation.sourceUrls??s.sourceUrls??[]).join('; '),s.licenseUrl,s.attribution,s.sourceTitle]);
+        s.source.name, publications.get(observation.date), comparison === 'indexed' ? 'indexed' : transform, s.dataStatus||'unknown',s.fetchedAt,observation.sourceUrl||s.sourceUrl||s.source.url,(s.source.seriesIds||[]).join('; '),s.calculation,observation.sourceValue,observation.baseDate|| (observation.yearAgoSourceValue!=null?`${Number(observation.date.slice(0,4))-1}${observation.date.slice(4)}`:null),observation.baseValue??observation.yearAgoSourceValue,panel.baselineDate,panel.baselineValue,s.agency === 'bls' ? BLS_DATA_NOTICE : s.sourceNotice??'',s.coverageNote,s.observationType??'official',(observation.sourceUrls??s.sourceUrls??[]).join('; '),s.licenseUrl,s.attribution,s.sourceTitle,observation.partial,observation.auctionCount,observation.pendingCount,observation.revisionIndicator,(observation.footnotes??[]).join('; ')]);
     }
   }
   return `${rows.map((row) => row.map((cell,index)=>csvCell(cell,index===15||index===17)).join(',')).join('\r\n')}\r\n`;

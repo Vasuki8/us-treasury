@@ -1,5 +1,5 @@
 import { yieldCurve, dataStatus } from './data.js';
-import { getSeries, compareSeries, transformSeries, formatValue, periodLabel } from './model.js';
+import { getSeries, compareSeries, transformSeries, formatValue, periodLabel, observationCoverageLabel } from './model.js';
 import { selectCurveOverlays, NOMINAL_YIELD_TENORS } from './yields.js';
 
 const ns = 'http://www.w3.org/2000/svg';
@@ -98,7 +98,9 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
       const display = !finite(value)?'—':isIndex?value.toFixed(2):transformed?`${value.toFixed(panel.series.precision)} ${panel.unit}`:formatValue(panel.series,value);
       span.className = `readout-series series-${panelIndex}`;
       span.append(`${label} `);
-      const strong=document.createElement('strong'); strong.textContent=display; span.append(strong); readout.append(span);
+      const strong=document.createElement('strong'); strong.textContent=display; span.append(strong);
+      const coverage=observationCoverageLabel(observation);if(coverage)span.append(` · ${coverage}`);
+      readout.append(span);
     });
     if (announce) svg.setAttribute('aria-label',`${title}. Official snapshot. ${readout.textContent}. Use left and right arrow keys.`);
   }

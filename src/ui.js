@@ -98,13 +98,41 @@ export function seriesStatus(series) {
   return series.dataStatus === 'cached' ? `Cached ${series.observationType==='calculated'?'calculated metric':'official snapshot'}` : series.dataStatus === 'official' ? (series.observationType==='calculated'?'Calculated metric':'Official snapshot') : 'Unavailable';
 }
 
-/** The BLS disclaimer and last successful capture accompany every route. */
+function secureSourceUrl(value) {
+  if(typeof value!=='string')return '';
+  try {
+    const url=new URL(value);
+    return url.protocol==='https:'&&!url.username&&!url.password?value.trim():'';
+  }catch{return '';}
+}
+
+function newYorkFedNotices(sources) {
+  const isNewYorkFed=value=>{
+    try {const {hostname}=new URL(value);return hostname==='newyorkfed.org'||hostname.endsWith('.newyorkfed.org');}
+    catch{return false;}
+  };
+  const groups=new Map();
+  for(const source of Object.values(sources))for(const item of Object.values(source?.series??{})){
+    if(!item?.observations?.length||![item.sourceUrl,item.licenseUrl,item.termsUrl].some(isNewYorkFed))continue;
+    const notice=String(item.sourceNotice||item.redistributionNotice||''),attribution=String(item.attribution??'');
+    const terms=secureSourceUrl(item.licenseUrl||item.termsUrl),key=JSON.stringify([notice,attribution,terms]);
+    if(!groups.has(key))groups.set(key,{notice,attribution,terms,references:new Map()});
+    const title=String(item.sourceTitle||item.title||'New York Fed data'),url=secureSourceUrl(item.sourceUrl);
+    groups.get(key).references.set(JSON.stringify([title,url]),{title,url});
+  }
+  return [...groups.values()].map(({notice,attribution,terms,references})=>{
+    const titles=[...references.values()].map(({title,url})=>url?`<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(title)} ↗</a>`:escapeHtml(title)).join(' · ');
+    return `<div class="source-credit"><p><strong>${titles}</strong></p>${attribution&&!notice.includes(attribution)?`<p>${escapeHtml(attribution)}</p>`:''}<p>${escapeHtml(notice||'New York Fed source notice unavailable.')}</p><p>${terms?`<a href="${escapeHtml(terms)}" target="_blank" rel="noopener noreferrer">New York Fed Terms of Use ↗</a>`:'New York Fed terms unavailable.'}</p></div>`;
+  }).join('');
+}
+
+/** Required notices and last successful source captures accompany every route. */
 export function sourceNotice(sources = {}) {
   const retrieved = sources.bls?.fetchedAt;
   const retrieval = retrieved
     ? `BLS data retrieved <time datetime="${escapeHtml(retrieved)}">${escapeHtml(retrieved)}</time>.`
     : 'BLS retrieval unavailable.';
-  return `<p>Data sources: <a href="https://home.treasury.gov/" target="_blank" rel="noopener noreferrer">U.S. Treasury</a>, <a href="https://www.bls.gov/" target="_blank" rel="noopener noreferrer">Bureau of Labor Statistics</a>, <a href="https://www.bea.gov/" target="_blank" rel="noopener noreferrer">Bureau of Economic Analysis</a>, <a href="https://oui.doleta.gov/unemploy/claims.asp" target="_blank" rel="noopener noreferrer">U.S. Department of Labor, Employment and Training Administration</a> and <a href="https://www.census.gov/retail/index.html" target="_blank" rel="noopener noreferrer">U.S. Census Bureau, Advance Monthly Retail Trade Survey</a>. Meridian is an independent site and is not endorsed by these agencies.</p><p>${escapeHtml(BLS_DATA_NOTICE)} ${retrieval} <a href="https://www.bls.gov/developers/termsOfService.htm" target="_blank" rel="noopener noreferrer">BLS data terms ↗</a></p>`;
+  return `<p>Data sources: <a href="https://home.treasury.gov/" target="_blank" rel="noopener noreferrer">U.S. Treasury</a>, <a href="https://www.bls.gov/" target="_blank" rel="noopener noreferrer">Bureau of Labor Statistics</a>, <a href="https://www.bea.gov/" target="_blank" rel="noopener noreferrer">Bureau of Economic Analysis</a>, <a href="https://oui.doleta.gov/unemploy/claims.asp" target="_blank" rel="noopener noreferrer">U.S. Department of Labor, Employment and Training Administration</a> and <a href="https://www.census.gov/retail/index.html" target="_blank" rel="noopener noreferrer">U.S. Census Bureau, Advance Monthly Retail Trade Survey</a>. Meridian is an independent site and is not endorsed by these agencies.</p><p>${escapeHtml(BLS_DATA_NOTICE)} ${retrieval} <a href="https://www.bls.gov/developers/termsOfService.htm" target="_blank" rel="noopener noreferrer">BLS data terms ↗</a></p>${newYorkFedNotices(sources)}`;
 }
 
 /** Last successful retrieval and latest attempt remain separate after failures. */

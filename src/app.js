@@ -3,6 +3,8 @@ import { filterSeries, getSeries, latest, formatValue, formatChange, toCsv } fro
 import {fiscalFinancingCsv} from './research-exports.js';
 import {refinancingCsv} from './refinancing-page.js';
 import {yieldCurvesCsv} from './yields-page.js';
+import {auctionsCsv} from './auctions-page.js';
+import {isResearchPage} from './research-navigation.js';
 import { renderPage } from './pages.js';
 import { escapeHtml as esc, sourceStatusList, sourceNotice } from './ui.js';
 import { mountFreshnessBanner } from './freshness-controller.js';
@@ -18,7 +20,7 @@ mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus);
 let storage;
 try { storage = window.localStorage; } catch { /* Session remains usable without persistence. */ }
 let state = { ...parseRoute(location.hash), ...readPreferences(storage) };
-const pageNames = {overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Yield explanations'};
+const pageNames = {overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Yield explanations',auctions:'Auction demand'};
 
 document.querySelector('.skip-link').addEventListener('click',event=>{
   event.preventDefault();
@@ -61,7 +63,7 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   document.getElementById('density-select').value=state.density;
   main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${renderPage(state)}`;
   root.querySelectorAll('[data-nav]').forEach(link=>{
-    if(link.dataset.nav===state.page)link.setAttribute('aria-current','page');
+    if(link.dataset.nav===state.page||link.dataset.nav==='research'&&isResearchPage(state.page))link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
   });
   for(const id of ['indicator-nav','indicator-rail']) document.getElementById(id).href=`#/series/${state.seriesId}`;
@@ -151,6 +153,8 @@ root.addEventListener('click',async event=>{
   else if('exportRefinancing' in d||'exportRefinancingScenario' in d)downloadCsv(refinancingCsv(dataStatus.sources.refinancing,{scenario:'exportRefinancingScenario' in d,horizonMonths:state.refinancingHorizon,shockBps:state.refinancingShock}),'meridian-refinancing.csv','Refinancing CSV downloaded with observed principal, generated identifiers and explicitly modeled assumptions.');
   else if('exportYieldCurves' in d)downloadCsv(yieldCurvesCsv(dataStatus.sources.yields,state),'meridian-yield-curves.csv','Selected historical curves downloaded; input URLs and calculated compensation are labeled.');
   else if('exportYieldIndicators' in d)exportCsv(['spread2s10s','spread3m10y','realYield10','inflationComp10','nominalYield2','nominalYield3m']);
+  else if('auctionId' in d)navigate({auctionId:d.auctionId});
+  else if('exportAuctions' in d||'exportAuctionBenchmark' in d)downloadCsv(auctionsCsv(dataStatus.sources.auctions,{securityType:state.auctionType,auctionId:state.auctionId,benchmark:'exportAuctionBenchmark' in d}),'meridian-auctions.csv','Auction CSV downloaded with matching scope, observed results, calculated allocations and source provenance.');
   else if('copyLink' in d) {
     try {await navigator.clipboard.writeText(location.href);announce('Link copied with the current series, range, view and tab.');}
     catch {announce('Copy is unavailable. The address bar contains the shareable link.');}
@@ -166,7 +170,7 @@ root.addEventListener('change',event=>{
     announce(durable?'Appearance saved in this browser.':'Appearance changed for this session; browser storage is unavailable.');
     return;
   }
-  const fields={'topic-filter':'topic','frequency-filter':'frequency','transform-select':'transform','comparison-select':'comparison','calendar-topic':'calendarTopic','yield-curve-date-a':'yieldDateA','yield-curve-date-b':'yieldDateB'};
+  const fields={'topic-filter':'topic','frequency-filter':'frequency','transform-select':'transform','comparison-select':'comparison','calendar-topic':'calendarTopic','yield-curve-date-a':'yieldDateA','yield-curve-date-b':'yieldDateB','auction-type':'auctionType'};
   if(target.id==='refinancing-horizon')navigate({refinancingHorizon:Number(target.value)});
   else if(target.id==='refinancing-shock')navigate({refinancingShock:Number(target.value)});
   else if(target.id==='calendar-month')navigate({calendarMonth:target.value,day:'all'});
