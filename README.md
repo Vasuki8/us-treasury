@@ -26,7 +26,7 @@ npm run build
 node server.mjs --dist --port 4174
 ```
 
-The build writes a self-contained static app to `dist/`. Hash routes support ordinary static hosting without rewrite rules. The preview server binds only to this computer's loopback interface. It intentionally serves only app assets, not the original design files or project internals.
+The build writes a self-contained static app to `dist/`. Its stylesheet, icon and complete native-module graph live under a content-versioned asset directory, so a changed snapshot gets new asset URLs instead of reusing a cached module. Hash routes support ordinary static hosting without rewrite rules. The preview server binds only to this computer's loopback interface. It intentionally serves only app assets, not the original design files or project internals.
 
 ## Refresh official data
 
@@ -157,7 +157,9 @@ The backup triggers and push catch-up reduce missed-run exposure; GitHub schedul
 
 The banner allows **60 minutes** after each 23:37 UTC run for collection, verification and deployment. At **00:37 UTC**, a source's displayed successful capture must be at or after that run's scheduled start; older captures are marked **stale**, including on weekends. Cached status describes a failed attempt and remains independent: a source can be both cached and stale, while missing/invalid capture times remain unavailable. Attempts, assembly times and observation dates never reset this warning. A regression test keeps the banner schedule aligned with the workflow cron.
 
-Warnings describe the snapshot loaded in the tab, using the browser's clock; they do not establish whether an agency released new observations or whether a newer deployment already exists. The banner rechecks every minute and when a hidden/restored tab resumes, preserving expanded details and keyboard focus. **Reload snapshot** checks for a newer deployed snapshot without requesting agency feeds. Reload after a successful deployment to see its updated captures.
+Warnings describe the snapshot loaded in the tab, using the browser's clock; they do not establish whether an agency released new observations or whether a newer deployment already exists. The banner rechecks every minute and when a hidden/restored tab resumes, preserving expanded details and keyboard focus. **Reload snapshot** checks for a newer deployed entry page with a fresh query key, preserving the hash route, without requesting agency feeds. Its versioned module URLs load that build's captures. Reload after a successful deployment to see its updated captures.
+
+Recovery was verified in [Actions run 39704047879](https://github.com/Vasuki8/us-treasury/actions/runs/39704047879). Its first collection rejected an unrecognized Census calendar response and correctly prevented publication; the unchanged collector succeeded on retry. The run tested all 312 tests and published ten new captures around October 22, 01:12 UTC, retaining only the verified BLS calendar after HTTP 403. The completed daily guard then reported no pending sources while the banner correctly retained that calendar's stale warning. This does not establish future scheduled-trigger delivery.
 
 ```powershell
 npm test

@@ -17,7 +17,9 @@ export function createAppServer(root = projectRoot) {
     try { pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname); }
     catch { res.writeHead(400); res.end('Invalid URL'); return; }
     const asset = pathname === '/' ? 'index.html' : pathname.slice(1);
-    const allowed = ['index.html','styles.css','favicon.svg'].includes(asset) || /^src\/[a-zA-Z0-9_-]+\.js$/.test(asset);
+    const allowed = ['index.html','styles.css','favicon.svg'].includes(asset)
+      || /^src\/[a-zA-Z0-9_-]+\.js$/.test(asset)
+      || /^assets\/[a-f0-9]{16}\/(?:styles\.css|favicon\.svg|src\/[a-zA-Z0-9_-]+\.js)$/.test(asset);
     if (!allowed) { res.writeHead(404); res.end('Not found'); return; }
     try {
       const data = await readFile(path.join(root, asset));

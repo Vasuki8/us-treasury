@@ -120,7 +120,11 @@ root.addEventListener('click',async event=>{
   const button=event.target.closest('button');
   if(!button)return;
   const d=button.dataset;
-  if('reloadSnapshot' in d)window.location.reload();
+  if('reloadSnapshot' in d){
+    const url=new URL(window.location.href);
+    url.searchParams.set('_refresh',Date.now().toString(36));
+    window.location.replace(url.href);
+  }
   else if('save' in d)save(d.save);
   else if('series' in d && getSeries(d.series))navigate({page:'indicator',seriesId:d.series,transform:'level',tab:'data'});
   else if('page' in d && pageNames[d.page])navigate({page:d.page});
