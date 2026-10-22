@@ -4,6 +4,7 @@ import {researchPage} from '../src/research-page.js';
 import {createWorkspace} from '../src/research-workspaces.js';
 import {createResearchPackage,exportResearchPackage,importResearchPackage} from '../src/research-packages.js';
 import {series} from '../src/data.js';
+import {publicationArchive} from '../src/publication-archive.js';
 
 test('research routes preserve library views and bounded package/cutoff context',()=>{
  const route=parseRoute('#/research?view=packages&package=sample-1');assert.equal(route.page,'research');assert.equal(route.researchView,'packages');assert.equal(route.packageId,'sample-1');
@@ -46,4 +47,34 @@ test('publication view has a quarter selector, respects unavailable cutoffs and 
  const loading=researchPage(state,{publicationState:{status:'loading'}});assert.match(loading,/Loading.*publication/i);
  const error=researchPage(state,{publicationState:{status:'error',error:'HTTP <503>'}});assert.match(error,/HTTP &lt;503&gt;/);assert.match(error,/data-retry-publications/);
  assert.equal(parseRoute(routeFor(state)).publicationPeriod,state.publicationPeriod);
+});
+
+test('publication explanations are dated, scoped, attributed and separate from calculated differences',()=>{
+ const row=publicationArchive.releases[2],publicationExplanations={version:1,explanations:[{publicationId:row.id,seriesId:row.seriesId,period:row.period,estimate:row.estimate,publicationDate:row.publicationDate,kind:'revision',summary:'Reviewed <revision> summary.',details:['Official source detail.'],annualUpdate:null,sourceUrl:row.releaseEvidenceUrl,sourceTitle:'Dated release',sourceSection:'Sources of revisions',licenseUrl:row.licenseUrl,attribution:row.attribution,provenance:[{retrievedAt:'2026-10-22T18:00:00.000Z',sha256:'a'.repeat(64)}]}]};
+ const state=parseRoute('#/research?view=publications&period=2026-01-01&publishedBy=2026-06-25');
+ const html=researchPage(state,{publicationArchive,publicationExplanations,explanationState:{status:'ready'}});
+ for(const text of ['BEA REVISION EXPLANATIONS','Reviewed &lt;revision&gt; summary.','Official source detail.','Source: U.S. Bureau of Economic Analysis.','2026-10-22T18:00:00.000Z','data-export-publication-explanations','2026-06-25','not reviewed'])assert.ok(html.includes(text),text);
+ assert.doesNotMatch(html,/<revision>/);assert.match(html,/paraphrase/i);
+ const early=researchPage({...state,publicationCutoff:'2026-05-28'},{publicationArchive,publicationExplanations,explanationState:{status:'ready'}});
+ assert.doesNotMatch(early,/Reviewed &lt;revision&gt;/);assert.match(early,/No reviewed BEA explanation/);
+});
+
+test('explanation loading and errors do not suppress publication observations and offer independent retry',()=>{
+ const state=parseRoute('#/research?view=publications&period=2026-01-01&publishedBy=2026-06-25');
+ const loading=researchPage(state,{publicationArchive,explanationState:{status:'loading'}});
+ assert.match(loading,/2\.1%/);assert.match(loading,/Loading.*explanations/i);
+ const error=researchPage(state,{publicationArchive,explanationState:{status:'error',error:'HTTP <503>'}});
+ assert.match(error,/2\.1%/);assert.match(error,/HTTP &lt;503&gt;/);assert.match(error,/data-retry-publication-explanations/);assert.doesNotMatch(error,/data-export-publication-explanations[^>]*>CSV/);
+});
+
+test('pinned explanations remain readable frozen evidence and malformed imported context stays inert',async()=>{
+ const row=publicationArchive.releases[2],entry={publicationId:row.id,period:row.period,estimate:row.estimate,publicationDate:row.publicationDate,summary:'Captured BEA explanation.',sourceUrl:row.releaseEvidenceUrl};
+ const make=async(publicationExplanations,publicationExplanationStatus='ready')=>{
+  const pkg=await importResearchPackage(exportResearchPackage(await createResearchPackage({name:'Pinned evidence',state:{selected:['gdp'],range:1},context:{publicationExplanations,publicationExplanationStatus}})));
+  return researchPage({...parseRoute('#/research?view=packages'),packageId:pkg.id},{library:{packages:[pkg]}});
+ };
+ const html=await make([entry]);assert.match(html,/FROZEN BEA EXPLANATIONS/);assert.match(html,/<p>Captured BEA explanation\.<\/p>/);assert.match(html,/retained|not authenticated/i);
+ for(const malformed of [null,'<script>',[null,1,'x',{summary:'<img src=x>',period:null}]])assert.match(await make(malformed),/READ-ONLY/);
+ for(const patch of [{attribution:{toString:null}},{sourceSection:{toString:null}},{provenance:[{retrievedAt:{toString:null}}]},{details:[{toString:null}]},{annualUpdate:{summary:{toString:null}}}])assert.match(await make([{...entry,...patch}]),/READ-ONLY/);
+ assert.match(await make([entry],{toString:null}),/Capture status: Unavailable/);
 });

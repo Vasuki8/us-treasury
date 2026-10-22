@@ -32,14 +32,10 @@ h2,h3 { font-size:11px; font-weight:500; letter-spacing:.055em; }
 .data-mode span { color:var(--accent); font-size:8px; margin-right:4px; }
 .appearance { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:11px; }
 .appearance select { padding:3px 5px; }
-.theme-toggle { position:relative; cursor:pointer; min-height:32px; gap:8px; color:var(--text); }
-.theme-toggle input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; }
-.theme-track { display:block; width:32px; height:18px; border:1px solid var(--field-border); border-radius:12px; background:var(--raised); pointer-events:none; }
-.theme-track::before { content:''; display:block; width:12px; height:12px; margin:2px; border-radius:50%; background:var(--muted); }
-.theme-toggle input:checked + .theme-track { background:var(--accent); border-color:var(--accent); }
-.theme-toggle input:checked + .theme-track::before { transform:translateX(14px); background:var(--on-accent); }
-.theme-toggle input:focus-visible + .theme-track { outline:2px solid var(--accent); outline-offset:3px; }
-@media(max-width:600px),(pointer:coarse) { .theme-toggle { min-height:44px; } }
+.appearance.theme-toggle { justify-content:center; flex-shrink:0; gap:10px; width:119px; height:50px; min-height:50px; padding:0 16px; border:1px solid var(--border); border-radius:5px; background:var(--panel); color:var(--text); font-size:16px; line-height:1; }
+.theme-icon { display:flex; align-items:center; }
+.theme-icon svg { display:block; width:20px; height:20px; }
+.theme-toggle:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
 .functionbar { display:flex; flex-wrap:wrap; border-bottom:1px solid var(--border); background:var(--head); }
 .functionbar a { padding:9px 13px; border-right:1px solid var(--border); font-size:11px; color:var(--text); min-height:34px; }
 .functionbar a:hover { background:var(--hover); }
@@ -283,3 +279,14 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
 .frozen-observations summary,.panel>details>summary { padding:10px; cursor:pointer; }
 .publication-result { margin:10px; font-size:14px; }
 @media(max-width:600px) { .research-savebar label { max-width:none; flex-basis:100%; } .research-savebar .actions { flex-wrap:wrap; } .research-savebar .action,.research-savebar .link-button,.research-library-nav .action,.research-controls .action,.research-import input,.workspace-label { min-height:44px; } .research-savebar input,.research-controls input,.research-controls select,.workspace-label { font-size:16px; min-height:44px; } .research-controls label { flex-basis:100%; } .research-controls input,.research-controls select { width:100%; } }
+
+/* Dated BEA evidence follows the same restrained Graphite panel hierarchy. */
+.publication-explanation{padding:12px 0;border-top:1px solid var(--border);overflow-wrap:anywhere}
+.publication-explanation header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.publication-explanation h3{font-size:13px;margin:0}
+.publication-explanation p{margin:8px 0}
+.publication-explanation summary{cursor:pointer;min-height:32px;display:flex;align-items:center;width:fit-content}
+.publication-explanation summary::before{content:"+";margin-right:8px;color:var(--accent)}
+.publication-explanation details[open] summary::before{content:"−"}
+.publication-explanation li{margin:6px 0}
+@media(max-width:600px){.publication-explanation summary{min-height:44px}.publication-explanation .panel-note a{display:inline-block;padding:6px 0}}

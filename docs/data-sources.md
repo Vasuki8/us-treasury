@@ -60,3 +60,5 @@ This review concerns statistical data and calendar reuse rights. Google advertis
 ## Initial rights-policy verification
 
 On October 21, 2026: all 86 Node tests passed, the production build passed its rights check, and the built app loaded all 12 checked assets over local HTTP. Browser checks at 1440 px and 390 px confirmed the notice wraps without page overflow, retains the successful BLS retrieval time, and produces no console warnings or errors. An independent code review identified the calendar scope gap; a regression test and rejection rule closed it. No source observations were changed or refreshed for this rights update.
+
+Selected BEA-authored GDP release explanations are separately admitted under FAQ147 for commercial display and export of attributed factual paraphrases. See the [exact release/section and rights review](publication-explanations-source-review.md). A general BEA hostname match or public availability is not admission of other narrative content.

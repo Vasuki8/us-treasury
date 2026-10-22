@@ -26,6 +26,8 @@ import {buildPinContext,buildPublicationPin} from './research-context.js';
 import {captureChanges,changesCsv,readChangeCheckpoint,writeChangeCheckpoint} from './capture-changes.js';
 import {createPublicationLoader} from './publication-loader.js';
 import {publicationCsv,selectPublicationHistory} from './publication-history.js';
+import {createPublicationExplanationLoader} from './publication-explanation-loader.js';
+import {publicationExplanationsCsv} from './publication-explanation-view.js';
 
 const root = document.getElementById('app');
 const main = document.getElementById('main-content');
@@ -40,6 +42,8 @@ let changeCheckpoint=readChangeCheckpoint(storage,dataStatus.generatedAt),change
 let changeRowsCache=null;
 let publicationArchive=null,publicationState={status:'idle',error:null};
 const publicationLoader=createPublicationLoader();
+let publicationExplanations=null,explanationState={status:'idle',error:null};
+const explanationLoader=createPublicationExplanationLoader();
 const workspaceMemory=createWorkspaceMemory();
 if('scrollRestoration' in history)history.scrollRestoration='manual';
 const historyLoader = createHistoryLoader(dataStatus.historyArchive);
@@ -73,8 +77,19 @@ function applyAppearance() {
   root.dataset.density=state.density;
   document.documentElement.dataset.theme=state.theme;
   document.querySelector('meta[name="theme-color"]').content=state.theme==='Graphite'?'#17191f':'#f4f6fa';
-  document.getElementById('theme-toggle').checked=state.theme==='Graphite';
+  const dark=state.theme==='Graphite',themeButton=document.getElementById('theme-toggle');
+  themeButton.querySelector('[data-theme-label]').textContent=dark?'Dark':'Light';
+  themeButton.querySelector('[data-theme-sun]').hidden=dark;
+  themeButton.querySelector('[data-theme-moon]').hidden=!dark;
+  themeButton.setAttribute('aria-label',`${dark?'Dark':'Light'} theme. Switch to ${dark?'Light':'Dark'} theme.`);
+  themeButton.setAttribute('title',`Switch to ${dark?'Light':'Dark'} theme`);
   document.getElementById('density-select').value=state.density;
+}
+
+function toggleTheme() {
+  state.theme=state.theme==='Graphite'?'Light':'Graphite';
+  const durable=persist();applyAppearance();
+  announce(`${state.theme==='Graphite'?'Dark':'Light'} theme enabled. ${durable?'Saved in this browser.':'Changed for this session; browser storage is unavailable.'}`);
 }
 
 function rememberFocus() {
@@ -104,6 +119,17 @@ function syncPublications({retry=false}={}){
     if(state.page==='research'&&state.researchView==='publications')preserveHistoryView(main,()=>render());
   }).catch(error=>{
     publicationState={status:'error',error:error.message};
+    if(state.page==='research'&&state.researchView==='publications')preserveHistoryView(main,()=>render());
+  });
+}
+function syncPublicationExplanations({retry=false}={}){
+  if(state.page!=='research'||state.researchView!=='publications'||explanationState.status==='loading'||!retry&&explanationState.status!=='idle')return;
+  explanationState={status:'loading',error:null};
+  explanationLoader.load({retry}).then(archive=>{
+    publicationExplanations=archive;explanationState={status:'ready',error:null};
+    if(state.page==='research'&&state.researchView==='publications')preserveHistoryView(main,()=>render());
+  }).catch(error=>{
+    explanationState={status:'error',error:error.message};
     if(state.page==='research'&&state.researchView==='publications')preserveHistoryView(main,()=>render());
   });
 }
@@ -147,10 +173,11 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   historyController.sync(state);
   syncChanges();
   syncPublications();
+  syncPublicationExplanations();
   applyAppearance();
   const agencies=new Set(trackedChanges().map(id=>series[id].agency));
   const failures=Object.entries(dataStatus.sources).filter(([id,source])=>agencies.has(id)&&source.status!=='ok').map(([id,source])=>({id,...source}));
-  main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${researchActions()}${renderPage(state,{...historyController.context(state),library:researchLibrary.getState(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationArchive,publicationState})}`;
+  main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${researchActions()}${renderPage(state,{...historyController.context(state),library:researchLibrary.getState(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationArchive,publicationState,publicationExplanations,explanationState})}`;
   root.querySelectorAll('[data-nav]').forEach(link=>{
     if(link.dataset.nav===state.page||link.dataset.nav==='research'&&isResearchPage(state.page))link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
@@ -252,7 +279,7 @@ async function handleResearchAction(d){
   }else if('removeWorkspace' in d){stored(await researchLibrary.removeWorkspace(d.removeWorkspace),'Workspace removal');if(activeWorkspaceId===d.removeWorkspace){activeWorkspaceId=null;researchLabel='';}}
   else if('pinResult' in d||'pinPublication' in d){
     if(pinBusy)return;
-    const args='pinPublication' in d?buildPublicationPin(publicationArchive,state.publicationCutoff,state.publicationPeriod):buildPinContext(state,historyController.context(state));
+    const args='pinPublication' in d?buildPublicationPin(publicationArchive,state.publicationCutoff,state.publicationPeriod,{explanationArchive:publicationExplanations,explanationStatus:explanationState.status}):buildPinContext(state,historyController.context(state));
     const name='pinPublication' in d?`GDP ${periodLabel({frequency:'Quarterly'},args.context.publicationPeriod)} published by ${args.context.publicationCutoff}`:document.getElementById('research-name').value;
     pinBusy=true;render({preserveFocus:true});
     try{
@@ -277,6 +304,11 @@ async function handleResearchAction(d){
   else if('exportChanges' in d){const view=changesContext();if(view.status!=='ready')throw new Error('Verified capture changes are unavailable.');downloadCsv(changesCsv(view.rows),'meridian-capture-changes.csv','Capture-change CSV downloaded. Retrieval changes do not establish publication times or revision causes.');}
   else if('exportPublications' in d){const view=selectPublicationHistory(publicationArchive,state.publicationCutoff,state.publicationPeriod);if(!view.releases.length)throw new Error('No official publication is available for the selected quarter and date.');downloadCsv(publicationCsv(publicationArchive,state.publicationCutoff,view.period),`meridian-gdp-publications-${view.period}.csv`,'Selected-quarter official GDP publication history downloaded with original source cells and separate retrieval provenance.');}
   else if('retryPublications' in d)syncPublications({retry:true});
+  else if('exportPublicationExplanations' in d){
+    if(explanationState.status!=='ready')throw new Error('Reviewed BEA explanations are unavailable.');
+    const view=selectPublicationHistory(publicationArchive,state.publicationCutoff,state.publicationPeriod);if(!view.releases.length)throw new Error('No official publication is available for the selected quarter and date.');
+    downloadCsv(publicationExplanationsCsv(publicationArchive,publicationExplanations,state.publicationCutoff,view.period),`meridian-gdp-revision-explanations-${view.period}.csv`,'Selected-quarter BEA explanation CSV downloaded with separate release and retrieval evidence. Missing explanations remain explicit.');
+  }else if('retryPublicationExplanations' in d)syncPublicationExplanations({retry:true});
 }
 
 root.addEventListener('click',async event=>{
@@ -284,7 +316,8 @@ root.addEventListener('click',async event=>{
   if(!button)return;
   const d=button.dataset;
   if(button.disabled)return;
-  const researchKeys=['saveWorkspace','clearWorkspace','pinResult','pinPublication','openWorkspace','renameWorkspace','removeWorkspace','openPackage','removePackage','packageJson','packageCsv','packageAttachment','enableChanges','disableChanges','markChanges','reviewAllChanges','retryChanges','changePage','exportChanges','exportPublications','retryPublications'];
+  if(button.id==='theme-toggle'){toggleTheme();return;}
+  const researchKeys=['saveWorkspace','clearWorkspace','pinResult','pinPublication','openWorkspace','renameWorkspace','removeWorkspace','openPackage','removePackage','packageJson','packageCsv','packageAttachment','enableChanges','disableChanges','markChanges','reviewAllChanges','retryChanges','changePage','exportChanges','exportPublications','retryPublications','exportPublicationExplanations','retryPublicationExplanations'];
   if(researchKeys.some(key=>key in d)){
     const before=location.hash;
     try{await handleResearchAction(d);}catch(error){state.researchError=error.message;announce(`Research action unavailable: ${error.message}`);}
@@ -365,12 +398,6 @@ root.addEventListener('change',async event=>{
   if(target.id==='change-since'){
     try{navigate({changeSince:normalizedCutoff(target.value,changeState.history),changePage:1});}
     catch(error){state.researchError=error.message;render({preserveFocus:true});}return;
-  }
-  if(target.id==='theme-toggle') {
-    state.theme=target.checked?'Graphite':'Light';
-    const durable=persist();applyAppearance();
-    announce(`${state.theme} theme enabled. ${durable?'Saved in this browser.':'Changed for this session; browser storage is unavailable.'}`);
-    return;
   }
   if(target.id==='density-select') {
     state.density=target.value;

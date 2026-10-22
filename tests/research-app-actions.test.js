@@ -13,6 +13,7 @@ import {normalizeVintageTimestamp} from '../src/vintages.js';
 import {dataStatus} from '../src/data.js';
 import {publicationArchive} from '../src/publication-archive.js';
 import {publicationCsv,selectPublicationHistory} from '../src/publication-history.js';
+import {publicationExplanationsCsv} from '../src/publication-explanation-view.js';
 import {changesCsv,writeChangeCheckpoint} from '../src/capture-changes.js';
 import {periodLabel} from '../src/model.js';
 
@@ -42,11 +43,11 @@ test('actual publication synchronization requests no archive on ordinary views a
 
 // Run the actual delegated handlers and chart/resize helpers. Browser element
 // boundaries are replaced; model, package, storage and route contracts stay real.
-async function app(hash='#/series/gdp?window=all',{archive=publicationArchive}={}){
+async function app(hash='#/series/gdp?window=all',{archive=publicationArchive,explanations={version:1,explanations:[]},explanationStatus='ready'}={}){
  const values=new Map(),storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
  const researchLibrary=await createResearchLibrary(storage),inputs=new Map([['research-name',{value:'Handler research'}]]),downloads=[],chartCalls=[],listeners=new Map(),announcements=[];
  const location={hash},history={pushState:(_state,_title,route)=>{location.hash=route;},replaceState:(_state,_title,route)=>{location.hash=route;}};
- const env={createWorkspace,openWorkspace,createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,MAX_RESEARCH_JSON_BYTES,buildPinContext,buildPublicationPin,normalizedCutoff,normalizeVintageTimestamp,researchLibrary,parseRoute,routeFor,updateWorkspaceSelection,dataStatus,publicationArchive:archive,publicationCsv,selectPublicationHistory,periodLabel,changesCsv,writeChangeCheckpoint,storage,
+ const env={createWorkspace,openWorkspace,createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,MAX_RESEARCH_JSON_BYTES,buildPinContext,buildPublicationPin,normalizedCutoff,normalizeVintageTimestamp,researchLibrary,parseRoute,routeFor,updateWorkspaceSelection,dataStatus,publicationArchive:archive,publicationExplanations:explanations,explanationState:{status:explanationStatus},publicationExplanationsCsv,publicationCsv,selectPublicationHistory,periodLabel,changesCsv,writeChangeCheckpoint,storage,
   state:{...parseRoute(hash),saved:[]},activeWorkspaceId:null,researchLabel:'',pinBusy:false,changeCheckpoint:{enabled:true,since:'2026-10-01T12:00:00.000Z',snapshotAt:'2026-10-01T12:00:00.000Z'},changeState:{status:'ready',history:{captures:[]}},historyController:{context:()=>({historyState:{status:'idle'}})},
   document:{getElementById:id=>inputs.get(id)},location,history,main:{},window:{addEventListener:(name,callback)=>listeners.set(name,callback)},cancelAnimationFrame(){},requestAnimationFrame(callback){callback();return 1;},render(){},rememberWorkspace(){},announce:message=>announcements.push(message),renderCharts:(root,options)=>chartCalls.push(options),downloadCsv:(content,name)=>downloads.push({content,name}),downloadJson:pkg=>downloads.push({content:exportResearchPackage(pkg),name:'json'}),changesContext:()=>({status:'ready',rows:[]}),syncChanges(){}};
  const change=/root\.addEventListener\('change',async event=>\{([^]*?)\n\}\);/.exec(source);assert.ok(change,'App change delegation must exist');
@@ -69,6 +70,22 @@ test('checkpoint mark, enable and disable clear the displayed cutoff/page in the
   assert.equal(current.checkpoint().enabled,action!=='disableChanges');assert.ok(current.values.has('meridian.change-checkpoint.v1'));
   if(action!=='disableChanges')assert.equal(current.checkpoint().since,dataStatus.generatedAt);
  }
+});
+
+test('actual explanation export and pin actions share the same selected quarter/date evidence',async()=>{
+ const row=publicationArchive.releases[2],evidence={publicationId:row.id,seriesId:row.seriesId,period:row.period,estimate:row.estimate,publicationDate:row.publicationDate,kind:'revision',summary:'Test source explanation.',details:[],annualUpdate:null,sourceTitle:'Test',sourceSection:'Technical notes',sourceUrl:row.releaseEvidenceUrl,licenseUrl:row.licenseUrl,attribution:row.attribution,provenance:row.provenance};
+ const explanations={version:1,explanations:[evidence]},current=await app('#/research?view=publications&period=2026-01-01&publishedBy=2026-06-25',{explanations});
+ await current.handleResearchAction({exportPublicationExplanations:''});assert.equal(current.downloads.at(-1)?.content,publicationExplanationsCsv(publicationArchive,explanations,'2026-06-25','2026-01-01'));assert.match(current.downloads.at(-1).name,/2026-01-01/);
+ await current.handleResearchAction({pinPublication:''});const pkg=current.researchLibrary.getPackage(current.state().packageId);assert.equal(pkg.context.publicationExplanations[0].summary,evidence.summary);assert.equal(pkg.context.attachments[1].content,current.downloads[0].content);
+ const unavailable=await app('#/research?view=publications&period=2026-01-01&publishedBy=2026-06-25',{explanationStatus:'error'});
+ await assert.rejects(unavailable.handleResearchAction({exportPublicationExplanations:''}),/explanation.*unavailable/i);assert.equal(unavailable.downloads.length,0);
+});
+
+test('actual explanation synchronization is independent, demand-loaded and retries without discarding numerical history',async()=>{
+ let calls=0,renders=0;const env={state:{page:'overview'},explanationState:{status:'idle',error:null},publicationExplanations:null,explanationLoader:{load:async()=>{if(++calls===1)throw Error('HTTP503');return {version:1,explanations:[]};}},main:{},preserveHistoryView:(_main,fn)=>fn(),render:()=>{renders++;}};
+ const view=new Function('env',`let {${Object.keys(env).join(',')}}=env;${section('function syncPublicationExplanations(', 'function syncChanges(')};return{sync:syncPublicationExplanations,route:next=>{state=next},context:()=>({explanationState,publicationExplanations})};`)(env);
+ view.sync();assert.equal(calls,0);view.route({page:'research',researchView:'publications'});view.sync();await Promise.resolve();await Promise.resolve();assert.equal(view.context().explanationState.status,'error');assert.equal(renders,1);
+ view.sync();assert.equal(calls,1);view.sync({retry:true});view.route({page:'overview'});await Promise.resolve();await Promise.resolve();assert.equal(calls,2);assert.equal(view.context().explanationState.status,'ready');assert.equal(renders,1);
 });
 
 test('publication actions retain the chosen quarter across cutoff changes, scoped CSV and frozen pins',async()=>{

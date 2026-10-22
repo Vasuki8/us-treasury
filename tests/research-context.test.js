@@ -22,6 +22,18 @@ test('publication package uses selected official estimate rather than current re
  assert.throws(()=>buildPublicationPin(publicationArchive,'2026-04-01','2026-01-01'),/unavailable|publication/i);
 });
 
+test('new publication pins freeze only in-scope explanation evidence and a separate CSV',async()=>{
+ const row=publicationArchive.releases[2],evidence={publicationId:row.id,seriesId:row.seriesId,period:row.period,estimate:row.estimate,publicationDate:row.publicationDate,kind:'revision',summary:'Test reviewed explanation.',details:['Test source detail.'],annualUpdate:null,sourceUrl:row.releaseEvidenceUrl,sourceTitle:'Test release',sourceSection:'Technical notes',licenseUrl:row.licenseUrl,attribution:row.attribution,provenance:[{url:row.releaseEvidenceUrl,sha256:'a'.repeat(64),retrievedAt:'2026-10-22T18:00:00.000Z',lastModified:null}]};
+ const explanationArchive={version:1,explanations:[evidence]},options={explanationArchive,explanationStatus:'ready'};
+ const args=buildPublicationPin(publicationArchive,'2026-06-25','2026-01-01',options);
+ assert.equal(args.context.publicationExplanations.length,1);assert.equal(args.context.publicationExplanationStatus,'ready');assert.equal(args.context.attachments.length,2);
+ assert.equal(args.context.attachments[1].name,'gdp-revision-explanations.csv');assert.match(args.context.attachments[1].content,/Test reviewed explanation/);
+ const pkg=await createResearchPackage({name:'GDP plus evidence',...args}),text=exportResearchPackage(pkg);evidence.summary='Later mutation';
+ assert.equal(exportResearchPackage(await importResearchPackage(text)),text);assert.equal(pkg.context.publicationExplanations[0].summary,'Test reviewed explanation.');
+ const early=buildPublicationPin(publicationArchive,'2026-05-28','2026-01-01',options);assert.deepEqual(early.context.publicationExplanations,[]);assert.doesNotMatch(early.context.attachments[1].content,/Later mutation/);
+ const failed=buildPublicationPin(publicationArchive,'2026-06-25','2026-01-01',{explanationArchive:null,explanationStatus:'error'});assert.equal(failed.context.publicationExplanationStatus,'error');assert.deepEqual(failed.context.publicationExplanations,[]);assert.equal(failed.context.attachments.length,1);
+});
+
 test('publication pins retain the selected quarter and its exact as-published CSV independently of other quarters',async()=>{
  const row={...publicationArchive.releases[0],id:'older-quarter',period:'2025-01-01',publicationDate:'2025-04-30',estimate:'Advance',value:1.5};
  const archive={version:1,releases:[...publicationArchive.releases.slice(0,3),row]};

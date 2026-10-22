@@ -2,7 +2,7 @@
 
 A compact US fiscal and macro research dashboard with Light and Graphite themes. The original Overview, Labor Market, Indicator Detail, Calendar and Explore Data views remain available alongside eight specialist research views and a five-family macro workspace.
 
-The header's **Dark mode** switch turns Graphite on or returns to Light. New visitors start in Light; the choice is saved in the same browser alongside density and watchlist preferences. Switching preserves the current page, filters and unsaved inputs. Existing Graphite/Midnight preferences open Graphite, and Paper preferences open Light. With browser storage blocked, the switch still works for the current session.
+The header's outlined sun/moon **Light / Dark** button switches between Light and Graphite. New visitors start in Light; the choice is saved in the same browser alongside density and watchlist preferences. Switching preserves the current page, filters and unsaved inputs. Existing Graphite/Midnight preferences open Graphite, and Paper preferences open Light. With browser storage blocked, the button still works for the current session.
 
 Uses official Treasury, BLS, BEA, DOL ETA, Census, Federal Reserve Board and reviewed New York Fed observations captured by the data refresh command. The app serves a committed snapshot, with observation periods, source identifiers and actual retrieval times. It does not stream live market quotes.
 
@@ -243,3 +243,11 @@ The deeper research expansion is tracked in the [incremental roadmap](docs/resea
 Expand selected official publication-vintage coverage only after a separate source/date/measurement review. Historical supplemental-profile/calendar replay, longer DOL/Treasury backfills, a research API, multi-device accounts, external alerts and advertising remain subsequent work. The BLS calendar remains visibly cached pending the owner's access request.
 
 Design and implementation scope are recorded in `docs/superpowers/`.
+
+## BEA publication revision explanations
+
+Publication history now includes a separately reviewed set of ten BEA explanations from nine dated releases, spanning selected 2025Q3–2026Q2 estimates and the specific 2026Q1 annual-update revision. [Source admission and exact coverage](docs/publication-explanations-source-review.md) document commercial reuse, official endpoints, section evidence and exclusions. Summaries are attributed Meridian paraphrases. Unreviewed publications stay explicit; rounded equal values do not imply no underlying revision. General annual-update scope is separate from quarter-specific attribution.
+
+The explanation archive loads only on the publication-history view. Its loading failure leaves numerical history available, with an independent retry. The selected quarter and publication cutoff apply to the narrative CSV and new frozen packages. Existing numerical CSVs, all 1,076 numerical publication records and older pinned packages remain unchanged. New packages retain original explanation evidence, retrieval hashes and a separate CSV.
+
+After reviewing a new source scope, use `node scripts/capture-publication-explanations.mjs` to append only missing approved explanations. A complete rerun does not refetch or rewrite earlier evidence. The production build admits the complete reviewed scope; this selected narrative archive is outside daily statistical freshness and is not an automatic news scraper.

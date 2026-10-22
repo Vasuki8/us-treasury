@@ -3,6 +3,21 @@ import assert from 'node:assert/strict';
 import { parseRoute, routeFor } from '../src/router.js';
 import { readPreferences, writePreferences } from '../src/storage.js';
 import { releases } from '../src/data.js';
+import {readFile} from 'node:fs/promises';
+
+const [shell,application,css]=await Promise.all(['../index.html','../src/app.js','../styles.css'].map(file=>readFile(new URL(file,import.meta.url),'utf8')));
+function themeControl(storage){
+  const label={textContent:''},sun={hidden:false},moon={hidden:true},attributes=new Map();
+  const button={id:'theme-toggle',dataset:{},disabled:false,setAttribute:(name,value)=>attributes.set(name,value),querySelector:selector=>({'[data-theme-label]':label,'[data-theme-sun]':sun,'[data-theme-moon]':moon}[selector])};
+  const root={dataset:{}},meta={content:''},density={value:''},notices=[];
+  const document={documentElement:{dataset:{}},activeElement:button,querySelector:()=>meta,getElementById:id=>id==='theme-toggle'?button:id==='density-select'?density:null};
+  const start=application.indexOf('function persist()'),end=application.indexOf('function rememberFocus()',start);
+  assert.ok(start>=0&&end>start,'Theme helpers must remain independently usable');
+  const click=/root\.addEventListener\('click',async event=>\{([^]*?)\n\}\);/.exec(application);assert.ok(click,'Native button click dispatch must exist');
+  const env={state:readPreferences(storage),storage,writePreferences,root,document,announce:message=>notices.push(message),render:()=>{throw Error('Theme changes must preserve the focused native control');}};
+  const handlers=new Function('env',`let {${Object.keys(env).join(',')}}=env;${application.slice(start,end)};return {apply:applyAppearance,click:async event=>{${click[1]}},state:()=>state};`)(env);
+  return {...handlers,button,label,sun,moon,attributes,root,document,meta,density,notices};
+}
 
 test('deep links restore a series, transformation, range and tab', () => {
   const state = parseRoute('#/series/gdp?range=6&transform=change&tab=methodology');
@@ -106,4 +121,41 @@ test('legacy appearance choices migrate to their light or dark equivalent', () =
   for (const [previous, expected] of [['Paper','Light'], ['Midnight','Graphite'], ['Graphite','Graphite'], ['unknown','Light']]) {
     assert.equal(readPreferences({getItem:()=>JSON.stringify({theme:previous})}).theme, expected);
   }
+});
+
+test('the theme control is a labelled native icon button with the reference dimensions',()=>{
+  const button=/<button\b[^>]*id="theme-toggle"[^>]*>([^]*?)<\/button>/.exec(shell);
+  assert.ok(button,'The checkbox must be replaced with a native button');
+  assert.match(button[0],/type="button"/);assert.match(button[0],/aria-label="Light theme\. Switch to Dark theme\."/);
+  assert.match(button[1],/data-theme-label[^>]*>Light<\/span>/);
+  assert.equal([...button[1].matchAll(/<svg\b/g)].length,2);
+  assert.match(button[1],/data-theme-sun[^>]*aria-hidden="true"/);
+  assert.match(button[1],/data-theme-moon[^>]*aria-hidden="true"[^>]*hidden/);
+  assert.doesNotMatch(button[0],/type="checkbox"|role="switch"|theme-track/);
+  const rule=/\.appearance\.theme-toggle\s*\{([^}]+)\}/.exec(css);assert.ok(rule);
+  assert.match(rule[1],/width:\s*119px/);assert.match(rule[1],/height:\s*50px/);assert.match(rule[1],/border-radius:\s*5px/);
+});
+
+test('the actual theme button switches icons, current text and accessible action while preserving focus and preferences',async()=>{
+  const values=new Map(),storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
+  const view=themeControl(storage);view.apply();
+  assert.equal(view.label.textContent,'Light');assert.equal(view.sun.hidden,false);assert.equal(view.moon.hidden,true);
+  assert.equal(view.attributes.get('aria-label'),'Light theme. Switch to Dark theme.');
+  await view.click({target:{closest:()=>view.button}});
+  assert.equal(view.state().theme,'Graphite');assert.equal(view.label.textContent,'Dark');
+  assert.equal(view.sun.hidden,true);assert.equal(view.moon.hidden,false);
+  assert.equal(view.attributes.get('aria-label'),'Dark theme. Switch to Light theme.');
+  assert.equal(view.root.dataset.theme,'Graphite');assert.equal(view.document.documentElement.dataset.theme,'Graphite');assert.equal(view.meta.content,'#17191f');
+  assert.equal(view.document.activeElement,view.button);assert.equal(readPreferences(storage).theme,'Graphite');assert.match(view.notices.at(-1),/Dark theme enabled.*Saved in this browser/);
+  await view.click({target:{closest:()=>view.button}});
+  assert.equal(view.state().theme,'Light');assert.equal(view.label.textContent,'Light');assert.equal(view.sun.hidden,false);assert.equal(view.moon.hidden,true);
+  assert.equal(view.meta.content,'#f4f6fa');assert.equal(readPreferences(storage).theme,'Light');assert.equal(view.document.activeElement,view.button);
+});
+
+test('legacy dark preferences restore the moon control and unavailable persistence remains session-only',async()=>{
+  const view=themeControl({getItem:()=>JSON.stringify({theme:'Midnight',saved:['cpi'],density:'comfortable'}),setItem:()=>{throw Error('quota');}});
+  view.apply();assert.equal(view.label.textContent,'Dark');assert.equal(view.moon.hidden,false);assert.equal(view.density.value,'comfortable');
+  await view.click({target:{closest:()=>view.button}});
+  assert.equal(view.state().theme,'Light');assert.equal(view.label.textContent,'Light');assert.equal(view.state().storageAvailable,false);
+  assert.deepEqual(view.state().saved,['cpi']);assert.equal(view.state().density,'comfortable');assert.match(view.notices.at(-1),/session.*storage is unavailable/i);
 });
