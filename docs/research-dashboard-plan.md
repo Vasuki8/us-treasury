@@ -46,3 +46,7 @@ Milestone 4 local acceptance: 902 auction rows / 898 reported results / 4 pendin
 Milestone 4 released as `f0c86b9`: 405 local tests passed, production smoke covered 25 imported assets. [Actions succeeded](https://github.com/Vasuki8/us-treasury/actions/runs/39716322817); exact live assets matched and the live Auction demand route displayed partial coverage.
 
 Milestone 5 local acceptance: 36 Z.1 quarter ends / 25 nonoverlapping sectors and 104 actual SOMA dates. Sector assets plus published valuation discrepancy reconcile to liabilities; SOMA adjusted par remains separate. Five responsive widths, keyboard chart readout, CSV dispatch and console checks passed. Baseline plus new checks passed except a catalog expectation that was updated for additional quarterly series; final regression and deployment verification follow. TIC country figures remain unconnected pending rights review.
+
+Milestone 5 released as `d53a00c`: all 422 tests passed in the clean committed checkout and production smoke covered 27 assets. [Actions succeeded](https://github.com/Vasuki8/us-treasury/actions/runs/39717380077), all 27 live assets matched the exact build.
+
+Milestone 6 GDP portion local acceptance: six published BEA series / 36 quarters, original import sign, exact preceding-quarter changes and disclosed rounding reconciliation. Five responsive widths, keyboard readout and macro CSV dispatch passed; source/missing/error/export tests passed. CPI effects remain incomplete due to official-source HTTP 403; no approximation is substituted. Deployment verification pending.

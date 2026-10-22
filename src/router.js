@@ -32,6 +32,7 @@ export function parseRoute(hash = '') {
     else if (path === '/yields') state.page = 'yields';
     else if (path === '/auctions') state.page = 'auctions';
     else if (path === '/ownership') state.page = 'ownership';
+    else if (path === '/macro') state.page = 'macro';
     state.auctionType=['All','Bill','Note','Bond','FRN','TIPS'].includes(p.get('type'))?p.get('type'):'All';
     state.auctionId=(p.get('auction')??'').slice(0,200);
     const validCurveDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
@@ -62,7 +63,7 @@ export function parseRoute(hash = '') {
 
 export function routeFor(input) {
   const state = { ...defaults, ...input };
-  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership'}[state.page] || '/overview';
+  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',macro:'/macro'}[state.page] || '/overview';
   const p = new URLSearchParams();
   if(state.page==='auctions'){
     if(state.auctionType!=='All')p.set('type',state.auctionType);

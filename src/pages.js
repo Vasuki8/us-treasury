@@ -3,6 +3,7 @@ import { refinancingPage } from './refinancing-page.js';
 import { yieldsPage } from './yields-page.js';
 import { auctionsPage } from './auctions-page.js';
 import { ownershipPage } from './ownership-page.js';
+import { macroPage } from './macro-page.js';
 import { researchNavigation } from './research-navigation.js';
 import { series, releases, yieldCurve, dataStatus } from './data.js';
 import { getSeries, filterSeries, latest, formatValue, formatChange, periodLabel, transformSeries, compareSeries, observationCoverageLabel } from './model.js';
@@ -211,6 +212,6 @@ export function renderPage(input = {}) {
   const state = { ...defaults, ...input };
   state.selected = seriesIds(Array.isArray(state.selected) ? state.selected : []).slice(0, 4);
   state.saved = seriesIds(Array.isArray(state.saved) ? state.saved : []);
-  return researchNavigation(state.page)+({ overview, labor, indicator, calendar, explore, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage() }[state.page] ?? overview)(state);
+  return researchNavigation(state.page)+({ overview, labor, indicator, calendar, explore, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage(),macro:()=>macroPage() }[state.page] ?? overview)(state);
 }
 function refinancing(state){return refinancingPage(state);}

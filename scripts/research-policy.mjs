@@ -33,10 +33,15 @@ export const researchPolicies=[{
  id:'nyfed-soma-treasury',agency:'ownership',reviewedOn:'2026-10-21',commercialUse:true,
  basis:'Conditional commercial/business reuse under New York Fed Terms of Use; titles, copyright, source/terms links and downstream same-conditions notice retained; modified aggregation labeled',terms:['https://www.newyorkfed.org/privacy/termsofuse.html'],feed:'nyfed-soma',
  series:{somaTreasuryHoldings:['SOMA:treasury-adjusted-par']},
+},{
+ id:'bea-published-growth-contributions',agency:'macroContributions',reviewedOn:'2026-10-21',commercialUse:true,
+ basis:'BEA public-domain NIPA 1.1.2 published statistical contributions with citation; no chained-dollar approximations',terms:['https://www.bea.gov/help/faq/147','https://www.bea.gov/help/guidelines-for-citing-bea'],feed:'bea-contributions',
+ series:{gdpTotalContribution:['A191RL'],gdpConsumptionContribution:['DPCERY'],gdpInvestmentContribution:['A006RY'],gdpGovernmentContribution:['A822RY'],gdpExportsContribution:['A020RY'],gdpImportsContribution:['A021RY']},
 }];
 export function matchesResearchFeed(value,feed){
   try{
     const url=new URL(value);if(url.username||url.password||url.hash)return false;
+    if(feed==='bea-contributions')return url.href==='https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt';
     if(feed==='fed-z1')return !url.search&&['https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip','https://www.federalreserve.gov/releases/z1/default.htm'].includes(url.href);
     if(feed==='nyfed-soma')return url.href==='https://markets.newyorkfed.org/api/soma/summary.json';
     if(feed==='treasury-mts-fiscal')return fiscalPaths.some(part=>url.origin+url.pathname===fiscalBase+part);
@@ -54,6 +59,7 @@ export function matchesResearchFeed(value,feed){
   return false;
 }
 export function assertResearchData(snapshot){
+  if((snapshot.sources?.macroContributions?.cpiCategoryEffects?.observations??[]).length)throw new Error('CPI effects observations require separate source admission');
   for(const item of Object.values(snapshot.sources?.ownership?.series??{}))if(item.sourceUrl?.startsWith('https://markets.newyorkfed.org/')){
     if(item.sourceTitle!=='SOMA Holdings'||item.termsUrl!=='https://www.newyorkfed.org/privacy/termsofuse.html'||!item.attribution?.includes('Federal Reserve Bank of New York')||!item.redistributionNotice?.includes('permissions, conditions and restrictions'))throw new Error('Required SOMA commercial redistribution conditions missing');
   }

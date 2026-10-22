@@ -71,6 +71,7 @@ export function formatValue(s, value) {
     case 'trillions': return `$${number}T`;
     case 'billions': return `$${number}B`;
     case 'basisPoints': return `${number} bp`;
+    case 'percentagePoints': return `${number} pp`;
     case 'thousands': return `${number}k`;
     case 'millions': return `${number}M`;
     default: return number;
