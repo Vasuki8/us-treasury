@@ -44,6 +44,8 @@ npm run data:refresh -- --require-all
 npm run data:refresh -- --allow-cached-bls-calendar
 # Read-only check: has the latest scheduled daily refresh completed?
 node scripts/check-refresh-due.mjs
+# Manual, read-only check of official BLS calendar document access
+node scripts/check-bls-calendar-access.mjs
 ```
 
 Refresh and then reload the browser. No API keys or dependency installation are needed. Refresh uses Node's server-side fetch; the browser does not contact agency APIs. BEA's two public bulk files total about 70 MB, so refreshing may take several seconds. BLS unauthenticated requests are rate-limited; all six BLS series are batched into one request.
@@ -83,6 +85,8 @@ Calendar retrievals and their SHA256 provenance remain separate from indicator r
 
 BLS annual-calendar requests identify the refresh bot and link to the repository's enabled issue tracker for owner contact. They run sequentially with a one-second pause, following [BLS's automated retrieval policy](https://www.bls.gov/bls/blsterms.htm). A source access denial remains an error; it is never replaced by a generated schedule.
 
+The manual **Diagnose official BLS calendar access** workflow checks the current annual page and BLS's documented iCalendar subscription from a GitHub runner without publishing data. See the [BLS access diagnostic and prepared recovery request](docs/bls-calendar-access.md). Commercial reuse rights and permission to access an endpoint remain separate; changing to a blocked official format does not restore access.
+
 Census entries come from displayed dates, times and reference months on its annual calendar. The connector follows the current-year archive link when the canonical page rolls forward and omits suspended/TBA rows even if obsolete hidden sort keys remain. Source credits identify the U.S. Census Bureau and originating Advance Monthly Retail Trade Survey program. Its factual calendar metadata has a separate commercial-use review; the statistical dataset's CC0 label is not transferred to the calendar.
 
 DOL publishes a recurring Thursday 08:30 Eastern rule plus individually listed Wednesday holiday exceptions. The connector expands only the next 90 calendar days, applies the posted exceptions, drops elapsed dates and never backfills older schedules whose exceptions may have been removed. The UI distinguishes `AGENCY RULE` from `AGENCY EXCEPTION` and explains the basis in the preview, including the nominal Thursday. DOL's generic EST wording is normalized to Eastern daylight/standard time using `America/New_York`, consistent with its release embargo. Observation weeks remain unknown because this schedule does not supply them. Coverage stops at the posted exception-year horizon.
@@ -116,6 +120,7 @@ Yield timing has a separate factual-metadata commercial-use review; the statisti
 | `scripts/refresh-data.mjs`, `scripts/sources/` | Official agency retrieval, parsing, transformations and last-good retention |
 | `scripts/publish-snapshot.mjs` | Snapshot-only bot commits, expected-commit checks and normal pushes |
 | `scripts/check-refresh-due.mjs` | Daily capture completion guard for scheduled, backup and main-push refreshes |
+| `scripts/check-bls-calendar-access.mjs` | Manual, metadata-only checks of documented official BLS calendar access |
 | `scripts/data-policy.mjs`, `docs/data-sources.md` | Reviewed commercial reuse scope, evidence and build/refresh validation |
 | `src/model.js` | Search, formatting, transformations, comparison, CSV |
 | `src/router.js` | Validated shareable hash routes |
