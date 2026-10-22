@@ -1,7 +1,7 @@
 import {extractZipEntry} from './zip.mjs';
 import {requestBytes} from './http.mjs';
-import {GDP_PUBLICATION_URL,GDP_PUBLICATION_TITLE,publicationMetadata,publicationScope,publicationId,publicationCells,publicationNumber,publicationDateFromSource,assertPublicationData} from '../publication-policy.mjs';
-export {GDP_PUBLICATION_URL};
+import {GDP_PUBLICATION_URL,GDP_LEGACY_PUBLICATION_URL,GDP_PUBLICATION_TITLE,publicationMetadataFor,publicationScope,septemberWorkbookScope,legacyPublicationScope,publicationId,publicationCells,publicationNumber,publicationDateFromSource,requestedPublicationIds,assertPublicationData} from '../publication-policy.mjs';
+export {GDP_PUBLICATION_URL,GDP_LEGACY_PUBLICATION_URL};
 const sheetNamespace='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
 const fail=message=>{throw new Error(`Invalid BEA publication workbook: ${message}`);};
 
@@ -94,26 +94,65 @@ function workbookCells(bytes){
   return cells;
 }
 
-/** Exact, deliberately small selection from BEA's dated official vintage table. */
-export function parseGdpPublicationWorkbook(bytes,{provenance}={}){
-  const cells=workbookCells(bytes),headers={A1:GDP_PUBLICATION_TITLE,A2:'Last Updated June 25, 2026',A6:'2026Q1',E7:'Percent Change',B8:'Vintage',C8:'Billions of Current Dollars',E8:'from Preceding Period',C9:'GDP',D9:'GDI',E9:'Real GDP',F9:'Real GDI',G9:'Release Date'};
+function reviewedTable(cells,scopes,legacy){
+  const headers={A1:GDP_PUBLICATION_TITLE,A2:legacy?'Last Updated June 25, 2026':'Last Updated September 30, 2026'};
+  const quarters=new Map(scopes.map(scope=>[scope.periodRow,scope.period]));
+  for(const [p,period]of quarters){
+    const quarter=period.slice(0,4)+'Q'+(Number(period.slice(5,7))+2)/3;
+    Object.assign(headers,{['A'+p]:quarter,['E'+(p+1)]:'Percent Change',['B'+(p+2)]:'Vintage',['C'+(p+2)]:'Billions of Current Dollars',['E'+(p+2)]:'from Preceding Period',['C'+(p+3)]:'GDP',['D'+(p+3)]:'GDI',['E'+(p+3)]:'Real GDP',['F'+(p+3)]:'Real GDI',['G'+(p+3)]:'Release Date'});
+    if([...cells].filter(([ref,value])=>/^A\d+$/.test(ref)&&value===quarter).length!==1)fail('duplicate or missing estimate quarter');
+  }
   for(const [ref,value]of Object.entries(headers))if(cells.get(ref)!==value)fail(`unreviewed header ${ref}`);
-  if([...cells].filter(([ref,value])=>ref.startsWith('A')&&value==='2026Q1').length!==1)fail('duplicate estimate quarter');
-  const selectedEstimates=[...cells].filter(([ref])=>/^B(?:10|11|12|13)$/.test(ref)).map(([,value])=>value);
-  if(selectedEstimates.length!==3||new Set(selectedEstimates).size!==3)fail('missing or duplicate selected estimate');
-  const releases=publicationScope.map(scope=>{
+  if(!legacy){
+    if(!cells.get('A4')?.includes('first quarter of 2002'))fail('unreviewed historical coverage header');
+    const markers=[...cells].filter(([ref,value])=>/^A\d+$/.test(ref)&&/^\d{4}Q[1-4]$/.test(value));
+    if(markers.length!==quarters.size)fail('unreviewed estimate quarter coverage');
+    const rows=new Set(scopes.map(scope=>scope.row));
+    for(const [ref,value]of cells)if(/^B\d+$/.test(ref)&&value&&value!=='Vintage'&&!rows.has(Number(ref.slice(1))))fail('unreviewed publication row');
+  }else if(cells.get('B13'))fail('duplicate selected estimate row');
+  const values=new Map();
+  for(const scope of scopes){
     const refs=publicationCells(scope),sourceValue=cells.get(refs.value),sourcePublicationDate=cells.get(refs.publicationDate);
     if(cells.get(refs.estimate)!==scope.estimate)fail('unreviewed estimate header');
-    return {...publicationMetadata,id:publicationId(scope),estimate:scope.estimate,publicationDate:publicationDateFromSource(sourcePublicationDate),value:publicationNumber(sourceValue),sourceValue,sourcePublicationDate,sourceIds:['A191RL'],releaseEvidenceUrl:scope.releaseEvidenceUrl,sourceCells:refs,provenance:[provenance]};
-  });
-  const result={version:1,releases};assertPublicationData(result);return result;
+    if(publicationDateFromSource(sourcePublicationDate)!==scope.publicationDate||sourcePublicationDate!==scope.sourcePublicationDate&&!(legacy&&/^\d+$/.test(sourcePublicationDate)))fail('unreviewed publication date or annotation scope');
+    if(sourceValue!==scope.sourceValue)fail('unreviewed publication source value token');
+    const value=publicationNumber(sourceValue),old=legacyPublicationScope.find(item=>item.id===scope.id);
+    // These three facts already exist immutably under the June source. A newer
+    // compilation cannot silently contradict them while default output omits them.
+    if(!legacy&&old&&value!==publicationNumber(old.sourceValue))fail('legacy publication overlap value changed');
+    values.set(scope.id,{sourceValue,sourcePublicationDate,value});
+  }
+  return values;
 }
 
-/** One static official publication workbook; never used as a latest-data feed. */
-export async function collectPublications({fetchImpl=globalThis.fetch}={}){
-  const response=await requestBytes(GDP_PUBLICATION_URL,{maxBytes:2*1024*1024,headers:{Accept:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'},fetchImpl:async(url,options)=>{
-    const result=await fetchImpl(url,options);
-    if(result.redirected||result.url&&result.url!==url)fail('unreviewed source URL or redirect');return result;
-  }});
-  const {bytes,...provenance}=response;return parseGdpPublicationWorkbook(bytes,{provenance});
+/** Validate every reviewed row before returning a requested subset. */
+export function parseGdpPublicationWorkbook(bytes,{provenance,ids}={}){
+  const legacy=provenance?.url===GDP_LEGACY_PUBLICATION_URL;
+  if(!legacy&&provenance?.url!==GDP_PUBLICATION_URL)fail('unreviewed source URL');
+  const eligible=publicationScope.filter(scope=>scope.sourceUrl===provenance.url);
+  const requested=requestedPublicationIds(ids??eligible.map(publicationId));
+  if(requested.some(id=>!eligible.some(scope=>scope.id===id)))fail('requested publication has a different reviewed source workbook');
+  const values=reviewedTable(workbookCells(bytes),legacy?legacyPublicationScope:septemberWorkbookScope,legacy);
+  const byId=new Map(eligible.map(scope=>[scope.id,scope]));
+  const releases=requested.map(id=>{
+    const scope=byId.get(id),{sourceValue,sourcePublicationDate,value}=values.get(id);
+    return {...publicationMetadataFor(scope),id,estimate:scope.estimate,publicationDate:scope.publicationDate,value,sourceValue,sourcePublicationDate,sourceIds:['A191RL'],releaseEvidenceUrl:scope.releaseEvidenceUrl,sourceCells:publicationCells(scope),provenance:[provenance]};
+  });
+  const result={version:1,releases};assertPublicationData(result,{ids:requested});return result;
+}
+
+/** Defaults to only the new September facts; June is fetched for explicit legacy IDs. */
+export async function collectPublications({fetchImpl=globalThis.fetch,ids}={}){
+  const requested=requestedPublicationIds(ids===undefined?publicationScope.filter(scope=>scope.sourceUrl===GDP_PUBLICATION_URL).map(publicationId):ids);
+  const byId=new Map(publicationScope.map(scope=>[scope.id,scope]));
+  const urls=[...new Set(requested.map(id=>byId.get(id).sourceUrl))];
+  const results=await Promise.all(urls.map(async sourceUrl=>{
+    const response=await requestBytes(sourceUrl,{maxBytes:2*1024*1024,headers:{Accept:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'},fetchImpl:async(url,options)=>{
+      const result=await fetchImpl(url,options);if(result.redirected||result.url&&result.url!==url)fail('unreviewed source URL or redirect');return result;
+    }});
+    const {bytes,...provenance}=response;
+    return parseGdpPublicationWorkbook(bytes,{provenance,ids:requested.filter(id=>byId.get(id).sourceUrl===sourceUrl)});
+  }));
+  const records=new Map(results.flatMap(result=>result.releases).map(release=>[release.id,release]));
+  const result={version:1,releases:requested.map(id=>records.get(id))};assertPublicationData(result,{ids:requested});return result;
 }

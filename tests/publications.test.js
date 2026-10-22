@@ -32,6 +32,32 @@ function workbook({mutate=()=>{},numericDates=false}={}) {
   return {parts,zip:()=>zipFixture(Object.entries(parts).map(([name,text])=>({name,text})))};
 }
 const parse=fixture=>use().parseGdpPublicationWorkbook(fixture.zip(),{provenance});
+const legacyIds=()=>usePolicy().legacyPublicationScope.map(usePolicy().publicationId);
+const septemberUrl='https://www.bea.gov/sites/default/files/2026-09/gdp-gdi-vintage-history.xlsx';
+const septemberProvenance={...provenance,url:septemberUrl};
+function septemberWorkbook({mutate=()=>{},richDates=true}={}){
+  const cells={A1:title,A2:'Last Updated September 30, 2026',A4:'Historical quarters descend to the first quarter of 2002.'};
+  for(const scope of usePolicy().septemberWorkbookScope){
+    const p=scope.periodRow,r=scope.row;
+    Object.assign(cells,{['A'+p]:scope.period.slice(0,4)+'Q'+(Number(scope.period.slice(5,7))+2)/3,['E'+(p+1)]:'Percent Change',['B'+(p+2)]:'Vintage',['C'+(p+2)]:'Billions of Current Dollars',['E'+(p+2)]:'from Preceding Period',['C'+(p+3)]:'GDP',['D'+(p+3)]:'GDI',['E'+(p+3)]:'Real GDP',['F'+(p+3)]:'Real GDI',['G'+(p+3)]:'Release Date',['B'+r]:scope.estimate,['E'+r]:scope.sourceValue,['G'+r]:scope.sourcePublicationDate});
+  }
+  mutate(cells);
+  const strings=[],rows=new Map();
+  for(const [ref,value]of Object.entries(cells)){
+    const row=Number(ref.match(/\d+$/)[0]);if(!rows.has(row))rows.set(row,[]);
+    let string=`<si><t xml:space="preserve">${xmlText(value)}</t></si>`;
+    if(richDates&&ref.startsWith('G')&&/^[A-Z][a-z]{2} /.test(value)){
+      const split=value.match(/^([A-Z][a-z]{2} +\d{1,2}, +\d{4})(.*)$/);
+      string=`<si><r><t>${xmlText(split[1])}</t></r><r><rPr><color rgb="FFFF0000"/></rPr><t xml:space="preserve">${xmlText(split[2])}</t></r></si>`;
+    }
+    rows.get(row).push(`<c r="${ref}" t="s"><v>${strings.length}</v></c>`);strings.push(string);
+  }
+  const fixture=workbook();
+  fixture.parts['xl/sharedStrings.xml']=`<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${strings.length}" uniqueCount="${strings.length}">${strings.join('')}</sst>`;
+  fixture.parts['xl/worksheets/sheet2.xml']=`<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${[...rows].sort((a,b)=>a[0]-b[0]).map(([r,c])=>`<row r="${r}">${c.join('')}</row>`).join('')}</sheetData></worksheet>`;
+  return fixture;
+}
+const parseSeptember=(fixture,ids)=>use().parseGdpPublicationWorkbook(fixture.zip(),{provenance:septemberProvenance,...(ids===undefined?{}:{ids})});
 
 test('selected BEA publication history retains native values, exact dates and original cells',()=>{
   const result=parse(workbook());
@@ -78,7 +104,7 @@ test('XML comments are excluded and malformed XML, declarations, entities and wo
 
 test('collector makes one exact public workbook request and hashes actual bytes and retrieval time',async()=>{
   const bytes=workbook().zip(),requests=[];
-  const result=await use().collectPublications({fetchImpl:async(u,options)=>{requests.push([u,options]);return new Response(bytes,{headers:{'last-modified':'Thu, 25 Jun 2026 13:00:00 GMT'}});}});
+  const result=await use().collectPublications({ids:legacyIds(),fetchImpl:async(u,options)=>{requests.push([u,options]);return new Response(bytes,{headers:{'last-modified':'Thu, 25 Jun 2026 13:00:00 GMT'}});}});
   assert.equal(requests.length,1);assert.equal(requests[0][0],url);
   assert.equal(result.releases[0].provenance[0].sha256,createHash('sha256').update(bytes).digest('hex'));
   assert.equal(result.releases[0].provenance[0].lastModified,'Thu, 25 Jun 2026 13:00:00 GMT');
@@ -89,7 +115,7 @@ test('collector makes one exact public workbook request and hashes actual bytes 
 test('collector rejects redirects, failed requests and incomplete workbook instead of publishing a partial archive',async()=>{
   await assert.rejects(()=>use().collectPublications({fetchImpl:async()=>new Response('bad',{status:503})}),/503/);
   await assert.rejects(()=>use().collectPublications({fetchImpl:async()=>({ok:true,redirected:true,url:'https://example.com/wrong'})}),/redirect|URL/i);
-  const bytes=workbook({mutate:c=>delete c.E11}).zip();await assert.rejects(()=>use().collectPublications({fetchImpl:async()=>new Response(bytes)}),/publication|numeric|missing/i);
+  const bytes=workbook({mutate:c=>delete c.E11}).zip();await assert.rejects(()=>use().collectPublications({ids:legacyIds(),fetchImpl:async()=>new Response(bytes)}),/publication|numeric|missing/i);
 });
 
 test('publication admission accepts an empty initial archive and only the three scoped official records',()=>{
@@ -97,4 +123,53 @@ test('publication admission accepts an empty initial archive and only the three 
   const changes=[r=>r.sourceIds=['wrong'],r=>r.sourceUrl='https://www.bea.gov/other.xlsx',r=>r.licenseUrl='https://example.com/license',r=>r.attribution='',r=>r.period='2025-01-01',r=>r.publicationDate='2026-04-29',r=>r.value=Infinity,r=>r.unit='Percent year over year',r=>r.publishedAt='2026-04-30T12:30:00Z',r=>r.provenance[0].sha256='',r=>r.sourceCells.value='D12',r=>r.extra='unreviewed'];
   for(const change of changes){const archive=structuredClone(parse(workbook()));change(archive.releases[0]);assert.throws(()=>assertPublicationData(archive),/publication|scope|source|metadata|provenance|date|value|field/i);}
   const duplicate=parse(workbook());duplicate.releases.push(duplicate.releases[0]);assert.throws(()=>assertPublicationData(duplicate),/duplicate|publication/i);
+});
+
+test('publication scope expands to the complete reviewed 2002Q1–2026Q2 official GDP history while preserving the legacy three identities',()=>{
+  const {publicationScope,publicationId}=usePolicy();
+  assert.equal(publicationScope.length,1076);
+  assert.equal(new Set(publicationScope.map(publicationId)).size,1076);
+  assert.equal(new Set(publicationScope.map(scope=>scope.period)).size,98);
+  assert.equal(publicationScope.filter(scope=>scope.sourceUrl===url).length,3);
+  assert.ok(publicationScope.some(scope=>scope.period==='2002-01-01'&&scope.estimate==='Final'));
+  assert.ok(publicationScope.some(scope=>scope.period==='2025-07-01'&&scope.estimate==='Updated'));
+});
+
+test('September full-table parser preserves all stages, exact rich-text annotations and independent legacy source identities',()=>{
+ const archive=parseSeptember(septemberWorkbook());assert.equal(archive.releases.length,1073);
+ assert.ok(archive.releases.every(r=>r.sourceUrl===septemberUrl&&!legacyIds().includes(r.id)));
+ assert.equal(new Set(archive.releases.map(r=>r.period)).size,98);
+ assert.equal(archive.releases.filter(r=>/GDP not open for revision|GDP not revised/.test(r.sourcePublicationDate)).length,141);
+ assert.equal(archive.releases.find(r=>r.period==='2002-01-01'&&r.estimate==='Final').value,6.1);
+ assert.equal(archive.releases.find(r=>r.period==='2002-01-01'&&r.estimate==='Advance').sourceCells.value,'E1570');
+ assert.deepEqual(archive.releases.filter(r=>r.period==='2025-07-01'&&r.estimate!=='Revised').map(r=>r.estimate),['Updated','Initial']);
+ const complete={version:1,releases:[...parse(workbook()).releases,...archive.releases]};assert.equal(usePolicy().assertPublicationData(complete,{complete:true}),true);
+ assert.ok(archive.releases.every(r=>r.publishedAt===null&&r.publicationDatePrecision==='day'));
+});
+
+test('requested batches are exact and the entire September workbook is checked before filtering output',()=>{
+ const all=usePolicy().septemberWorkbookScope,selected=all.find(s=>s.period==='2002-01-01'&&s.estimate==='Advance').id;
+ const result=parseSeptember(septemberWorkbook(),[selected]);assert.deepEqual(result.releases.map(r=>r.id),[selected]);
+ assert.equal(usePolicy().assertPublicationData(result,{ids:[selected]}),true);
+ assert.throws(()=>usePolicy().assertPublicationData(result,{complete:true}),/incomplete|batch/i);
+ assert.throws(()=>usePolicy().assertPublicationData(result,{ids:[]}),/unrequested|batch/i);
+ for(const mutate of [c=>delete c.E10,c=>c.G10='Sep 30, 2026 GDP not open for revision',c=>c.B10='Final',c=>c.E9='Real GDI',c=>c.A1553='2001Q4',c=>{c.B1572='Revised';c.E1572='1.0';c.G1572='Sep 30, 2026';},c=>c.E19='99.0',c=>c.E27='99.0'])assert.throws(()=>parseSeptember(septemberWorkbook({mutate}),[selected]),/publication|scope|header|row|overlap|value/i);
+ assert.throws(()=>parseSeptember(septemberWorkbook(),[legacyIds()[0]]),/source|workbook|scope|request/i);
+});
+
+test('exact reviewed publication tokens reject jointly altered values and source values',()=>{
+ const archive=parse(workbook());archive.releases[0].value=9;archive.releases[0].sourceValue='9.0';
+ assert.throws(()=>usePolicy().assertPublicationData(archive),/source value|reviewed.*value/i);
+ const changed=workbook({mutate:c=>c.E10='2.10'});assert.throws(()=>parse(changed),/source value|reviewed.*value/i);
+});
+
+test('collector defaults to only new September facts, uses exact requested feeds and rejects unreviewed requests before fetching',async()=>{
+ const september=septemberWorkbook().zip(),june=workbook().zip(),requests=[];
+ const fetchImpl=async u=>{requests.push(u);return new Response(u===septemberUrl?september:june);};
+ const result=await use().collectPublications({fetchImpl});assert.equal(result.releases.length,1073);assert.deepEqual(requests,[septemberUrl]);
+ const newer=result.releases[0].id,older=legacyIds()[0];requests.length=0;
+ const mixed=await use().collectPublications({ids:[newer,older],fetchImpl});assert.deepEqual(mixed.releases.map(r=>r.id),[newer,older]);assert.deepEqual(new Set(requests),new Set([septemberUrl,url]));
+ assert.equal(mixed.releases[1].sourceCells.value,'E12');assert.equal(mixed.releases[1].sourceUrl,url);
+ for(const ids of [['unknown-id'],[newer,newer],null])await assert.rejects(()=>use().collectPublications({ids,fetchImpl:()=>{throw new Error('must not fetch');}}),/requested|duplicate|unknown/i);
+ assert.deepEqual(await use().collectPublications({ids:[],fetchImpl:()=>{throw new Error('must not fetch');}}),{version:1,releases:[]});
 });

@@ -12,7 +12,8 @@ import {ownershipCsv} from './ownership-page.js';
 import {macroContributionsCsv} from './macro-page.js';
 import {marketFunctioningCsv} from './market-functioning-page.js';
 import {fiscalFinancingCsv} from './research-exports.js';
-import {selectPublicationHistory,publicationCsv} from './publication-history.js';
+import {selectPublicationHistory,publicationCsv,publicationContext} from './publication-history.js';
+import {periodLabel} from './model.js';
 
 const moduleIds={overview:['unrate','cpi','gdp','yield'],labor:['payroll','unrate','underemployment','weeklyHours'],fiscal:['receipts','outlays','netInterest','primaryDeficit'],refinancing:['marketableDebt'],yields:['yield','realYield10','spread2s10s','inflationComp10'],auctions:['auctionOfferingMonthly'],ownership:['foreignTreasuryHoldings','fedTreasuryHoldings','somaTreasuryHoldings'],macro:['gdpTotalContribution','gdpConsumptionContribution','gdpInvestmentContribution','gdpGovernmentContribution'],market:['dealerNetTreasury','dealerRepo','dealerFailsDeliver','sofr']};
 const sourceIds={fiscal:['fiscal','treasury'],refinancing:['refinancing'],yields:['yields','treasury'],auctions:['auctions'],ownership:['ownership'],macro:['macroContributions'],market:['marketFunctioning']};
@@ -73,9 +74,10 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
  return {state:{...pinState,selected},catalog:capturedCatalog,sources:capturedSources,snapshot:{generatedAt:snapshot.generatedAt,checkedAt:snapshot.checkedAt},context,assumptions};
 }
 
-export function buildPublicationPin(archive,cutoff){
- const view=selectPublicationHistory(archive,cutoff),row=view.latest;
+export function buildPublicationPin(archive,cutoff,period){
+ const view=selectPublicationHistory(archive,cutoff,period),row=view.latest;
  if(!row)throw new Error('No official publication is available by this date.');
- const captured={...series.gdp,name:`Real GDP · 2026 Q1 ${row.estimate} estimate`,source:{name:'U.S. Bureau of Economic Analysis',url:row.sourceUrl,seriesIds:row.sourceIds},sourceUrl:row.sourceUrl,sourceTitle:row.sourceTitle,licenseUrl:row.licenseUrl,attribution:row.attribution,calculation:row.calculation,fetchedAt:row.provenance.at(-1).retrievedAt,provenance:row.provenance,dataStatus:'official',publicationNote:`Official publication date ${row.publicationDate}, day precision; exact publication instant unavailable.`,observations:[{date:row.period,value:row.value,sourceValue:row.sourceValue,publishedAt:null}],error:null};
- return {state:{page:'indicator',seriesId:'gdp',selected:['gdp'],window:'all',transform:'level',comparison:'native'},catalog:{gdp:captured},sources:{},snapshot:{generatedAt:dataStatus.generatedAt},context:{publicationCutoff:view.cutoff,publicationReleases:view.releases,attachments:[attachment('gdp-publication-history.csv',publicationCsv(archive,cutoff))]},assumptions:{publicationDatePrecision:'day',scope:'Selected official GDP publication estimates; separate from current GDP and local capture replay.'}};
+ const quarter=periodLabel({frequency:'Quarterly'},row.period);
+ const captured={...series.gdp,name:`Real GDP · ${quarter} ${row.estimate} estimate`,sourceUrls:[row.sourceUrl],lastAttemptAt:null,warnings:[],coverageNote:`Official publication estimate for ${quarter}, published ${row.publicationDate}; selected dated workbook evidence through ${view.cutoff}. Retrieval is separate from publication; this is a historical published value, not the latest NIPA series.`,source:{name:'U.S. Bureau of Economic Analysis',url:row.sourceUrl,seriesIds:row.sourceIds},sourceUrl:row.sourceUrl,sourceTitle:row.sourceTitle,licenseUrl:row.licenseUrl,attribution:row.attribution,calculation:row.calculation,fetchedAt:row.provenance.at(-1).retrievedAt,provenance:row.provenance,dataStatus:'official',publicationNote:`Official publication date ${row.publicationDate}, day precision; exact publication instant unavailable.`,observations:[{date:row.period,value:row.value,sourceValue:row.sourceValue,publishedAt:null}],error:null};
+ return {state:{page:'indicator',seriesId:'gdp',selected:['gdp'],window:'all',transform:'level',comparison:'native'},catalog:{gdp:captured},sources:{},snapshot:{generatedAt:dataStatus.generatedAt},context:{publicationCutoff:view.cutoff,publicationPeriod:view.period,publicationSourceContext:publicationContext(row),publicationReleases:view.releases,attachments:[attachment('gdp-publication-history.csv',publicationCsv(archive,cutoff,view.period))]},assumptions:{publicationDatePrecision:'day',scope:'Selected official GDP publication estimates; separate from current GDP and local capture replay.'}};
 }

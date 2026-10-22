@@ -2,6 +2,8 @@
 
 Implemented October 22, 2026 against the review's third milestone and saved-result acceptance task. Graphite remains the default; existing research, watchlist, search, comparison, export and deployment paths remain in place.
 
+This document records the initial milestone release. Its original three-publication sample was subsequently expanded without altering those records; see the [GDP publication expansion and acceptance evidence](gdp-publication-history-expansion.md) for current coverage and limits.
+
 ## Delivered behavior
 
 - Named workspaces retain validated configuration and reopen current observations. Updating or renaming a workspace preserves its identity.

@@ -11,7 +11,7 @@ import {assertPublicationData} from './publication-policy.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fullSnapshot={...snapshot,vintages:await loadSnapshotHistory(snapshot,{directory:path.join(root,'src')})};
 assertCommercialData(fullSnapshot);
-assertPublicationData(publicationArchive);
+assertPublicationData(publicationArchive,{complete:true});
 const projected=browserSnapshotAssets(fullSnapshot);
 const output = path.join(root, 'dist');
 const modules = (await readdir(path.join(root, 'src'), { withFileTypes: true }))

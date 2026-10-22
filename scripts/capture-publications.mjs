@@ -1,28 +1,34 @@
 import {open,readFile,rename,unlink} from 'node:fs/promises';
 import path from 'node:path';import {fileURLToPath} from 'node:url';
 import {publicationArchive} from '../src/publication-archive.js';
-import {assertPublicationData} from './publication-policy.mjs';
+import {assertPublicationData,publicationScope,publicationId} from './publication-policy.mjs';
 import {collectPublications} from './sources/publications.mjs';
 
 const archiveTarget=fileURLToPath(new URL('../src/publication-archive.js',import.meta.url));
 const header='// Immutable selected official publication facts; distinct from local capture history.\n';
 const archiveSource=archive=>header+'export const publicationArchive = '+JSON.stringify(archive,null,2)+';\n';
+const archiveByteLimit=4*1024*1024;
 
 function parseArchiveModule(text){
- if(Buffer.byteLength(text)>256*1024)throw new Error('Publication archive module exceeds its byte limit.');
+ if(Buffer.byteLength(text)>archiveByteLimit)throw new Error('Publication archive module exceeds its byte limit.');
  const match=/^(?:\/\/ Immutable selected official publication facts; distinct from local capture history\.\r?\n)?export const publicationArchive = ([^]*);\s*$/.exec(text.replace(/^\ufeff/,''));
  if(!match)throw new Error('Invalid publication archive module; expected a data-only JSON export.');
  let archive;try{archive=JSON.parse(match[1]);}catch{throw new Error('Invalid publication archive module JSON.');}
  assertPublicationData(archive);return archive;
 }
 
-/** This deliberately selected historical sample is immutable after first capture. */
+/** Append reviewed missing facts without replacing retained values or provenance. */
 export async function capturePublicationArchive({previous=publicationArchive,collect=collectPublications}={}){
- assertPublicationData(previous);
- if(previous.releases.length)return previous;
- const result=await collect();assertPublicationData(result);
- if(result.releases.length!==3)throw new Error('A complete official publication sample is required.');
- return result;
+ assertPublicationData(previous,{complete:false});
+ const retained=new Set(previous.releases.map(release=>release.id));
+ const missing=publicationScope.map(publicationId).filter(id=>!retained.has(id));
+ if(!missing.length)return previous;
+ const batch=await collect({ids:missing});
+ assertPublicationData(batch,{ids:missing});
+ const byId=new Map(batch.releases.map(release=>[release.id,release]));
+ const archive={version:previous.version,releases:[...previous.releases,...missing.map(id=>byId.get(id))]};
+ assertPublicationData(archive,{complete:true});
+ return archive;
 }
 
 /** All cooperating writers lock before reading; module imports can be stale. */
@@ -38,8 +44,10 @@ export async function capturePublicationFile({target=archiveTarget,collect=colle
   const previous=parseArchiveModule(await readFile(destination,'utf8'));
   const archive=await capturePublicationArchive({previous,collect});
   if(archive===previous)return {archive,captured:false};
+  const contents=archiveSource(archive);
+  if(Buffer.byteLength(contents)>archiveByteLimit)throw new Error('Publication archive module exceeds its byte limit.');
   temporaryHandle=await open(temporary,'wx');ownsTemporary=true;
-  await temporaryHandle.writeFile(archiveSource(archive),'utf8');await temporaryHandle.close();temporaryHandle=null;
+  await temporaryHandle.writeFile(contents,'utf8');await temporaryHandle.close();temporaryHandle=null;
   await rename(temporary,destination);ownsTemporary=false;
   return {archive,captured:true};
  }finally{
@@ -53,6 +61,6 @@ export async function capturePublicationFile({target=archiveTarget,collect=colle
 
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const {archive,captured}=await capturePublicationFile();
- if(!captured)console.log('Publication archive already captured; original facts and retrieval provenance retained without refetching.');
- else console.log(`Captured ${archive.releases.length} official GDP publication estimates with original source cells, dates and provenance.`);
+ if(!captured)console.log('All approved publication facts already retained; original values and retrieval provenance preserved without refetching.');
+ else console.log(`Retained ${archive.releases.length} official GDP publication facts, appending missing IDs while preserving earlier captures.`);
 }

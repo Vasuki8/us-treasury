@@ -36,3 +36,14 @@ test('change view exposes archive loading/errors and differentiates capture evid
  const html=researchPage(state,{library:{},changes:{status:'error',error:'HTTP <503>',ids:['gdp']},checkpoint:{enabled:false,since:'2026-10-21T12:00:00.000Z'}});
  assert.match(html,/HTTP &lt;503&gt;/);assert.match(html,/data-retry-changes/);assert.match(html,/not.*release|does not.*release/i);assert.match(html,/data-enable-changes/);
 });
+
+test('publication view has a quarter selector, respects unavailable cutoffs and labels GDP confirmations',()=>{
+ const row={id:'one',period:'2025-01-01',publicationDate:'2025-04-30',estimate:'Advance',value:1,unit:'Percent',sourceIds:['A191RL'],releaseEvidenceUrl:'https://www.bea.gov/workbook.xlsx',provenance:[{retrievedAt:'2026-10-22T12:00:00.000Z'}]};
+ const publicationArchive={releases:[row,{...row,id:'two',publicationDate:'2025-05-30',estimate:'Revised',sourcePublicationDate:'May 30, 2025 GDP not open for revision'}]};
+ const state={...parseRoute('#/research?view=publications'),publicationPeriod:'2025-01-01',publicationCutoff:'2025-05-30'};
+ const html=researchPage(state,{publicationArchive});assert.match(html,/id="publication-period" aria-label="Reference quarter"/);assert.match(html,/Q1 2025/);assert.match(html,/GDP not open for revision/);assert.match(html,/confirmation/i);assert.doesNotMatch(html,/2026 Q1, Advance/);
+ const unavailable=researchPage({...state,publicationCutoff:'2025-04-29'},{publicationArchive});assert.match(unavailable,/No selected publication/);assert.match(unavailable,/data-pin-publication disabled/);
+ const loading=researchPage(state,{publicationState:{status:'loading'}});assert.match(loading,/Loading.*publication/i);
+ const error=researchPage(state,{publicationState:{status:'error',error:'HTTP <503>'}});assert.match(error,/HTTP &lt;503&gt;/);assert.match(error,/data-retry-publications/);
+ assert.equal(parseRoute(routeFor(state)).publicationPeriod,state.publicationPeriod);
+});

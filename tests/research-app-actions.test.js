@@ -12,8 +12,9 @@ import {normalizedCutoff} from '../src/vintages-page.js';
 import {normalizeVintageTimestamp} from '../src/vintages.js';
 import {dataStatus} from '../src/data.js';
 import {publicationArchive} from '../src/publication-archive.js';
-import {publicationCsv} from '../src/publication-history.js';
+import {publicationCsv,selectPublicationHistory} from '../src/publication-history.js';
 import {changesCsv,writeChangeCheckpoint} from '../src/capture-changes.js';
+import {periodLabel} from '../src/model.js';
 
 const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8');
 function section(start,end){
@@ -30,13 +31,22 @@ test('change feed replay is reused across pagination and rebuilt only when its e
  view.setHistory({captures:[]});view.context();assert.equal(calls,3);
 });
 
+test('actual publication synchronization requests no archive on ordinary views and ignores navigation while loading',async()=>{
+ let finish,calls=0,renders=0;const env={state:{page:'overview'},publicationState:{status:'idle',error:null},publicationArchive:null,publicationLoader:{load:()=>{calls++;return new Promise(resolve=>{finish=resolve;});}},main:{},preserveHistoryView:(_main,callback)=>callback(),render:()=>{renders++;}};
+ const view=new Function('env',`let {${Object.keys(env).join(',')}}=env;${section('function syncPublications(', 'function syncChanges(')};return{sync:syncPublications,route:next=>{state=next},context:()=>({publicationState,publicationArchive})};`)(env);
+ view.sync();view.route({page:'research',researchView:'changes'});view.sync();assert.equal(calls,0);
+ view.route({page:'research',researchView:'publications'});view.sync();view.sync();assert.equal(calls,1);assert.equal(view.context().publicationState.status,'loading');
+ view.route({page:'overview'});const archive={version:1,releases:[]};finish(archive);await Promise.resolve();await Promise.resolve();assert.equal(view.context().publicationArchive,archive);assert.equal(view.context().publicationState.status,'ready');assert.equal(renders,0);
+ view.route({page:'research',researchView:'publications'});view.sync();assert.equal(calls,1);
+});
+
 // Run the actual delegated handlers and chart/resize helpers. Browser element
 // boundaries are replaced; model, package, storage and route contracts stay real.
-async function app(hash='#/series/gdp?window=all'){
+async function app(hash='#/series/gdp?window=all',{archive=publicationArchive}={}){
  const values=new Map(),storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
  const researchLibrary=await createResearchLibrary(storage),inputs=new Map([['research-name',{value:'Handler research'}]]),downloads=[],chartCalls=[],listeners=new Map(),announcements=[];
  const location={hash},history={pushState:(_state,_title,route)=>{location.hash=route;},replaceState:(_state,_title,route)=>{location.hash=route;}};
- const env={createWorkspace,openWorkspace,createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,MAX_RESEARCH_JSON_BYTES,buildPinContext,buildPublicationPin,normalizedCutoff,normalizeVintageTimestamp,researchLibrary,parseRoute,routeFor,updateWorkspaceSelection,dataStatus,publicationArchive,publicationCsv,changesCsv,writeChangeCheckpoint,storage,
+ const env={createWorkspace,openWorkspace,createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,MAX_RESEARCH_JSON_BYTES,buildPinContext,buildPublicationPin,normalizedCutoff,normalizeVintageTimestamp,researchLibrary,parseRoute,routeFor,updateWorkspaceSelection,dataStatus,publicationArchive:archive,publicationCsv,selectPublicationHistory,periodLabel,changesCsv,writeChangeCheckpoint,storage,
   state:{...parseRoute(hash),saved:[]},activeWorkspaceId:null,researchLabel:'',pinBusy:false,changeCheckpoint:{enabled:true,since:'2026-10-01T12:00:00.000Z',snapshotAt:'2026-10-01T12:00:00.000Z'},changeState:{status:'ready',history:{captures:[]}},historyController:{context:()=>({historyState:{status:'idle'}})},
   document:{getElementById:id=>inputs.get(id)},location,history,main:{},window:{addEventListener:(name,callback)=>listeners.set(name,callback)},cancelAnimationFrame(){},requestAnimationFrame(callback){callback();return 1;},render(){},rememberWorkspace(){},announce:message=>announcements.push(message),renderCharts:(root,options)=>chartCalls.push(options),downloadCsv:(content,name)=>downloads.push({content,name}),downloadJson:pkg=>downloads.push({content:exportResearchPackage(pkg),name:'json'}),changesContext:()=>({status:'ready',rows:[]}),syncChanges(){}};
  const change=/root\.addEventListener\('change',async event=>\{([^]*?)\n\}\);/.exec(source);assert.ok(change,'App change delegation must exist');
@@ -59,6 +69,14 @@ test('checkpoint mark, enable and disable clear the displayed cutoff/page in the
   assert.equal(current.checkpoint().enabled,action!=='disableChanges');assert.ok(current.values.has('meridian.change-checkpoint.v1'));
   if(action!=='disableChanges')assert.equal(current.checkpoint().since,dataStatus.generatedAt);
  }
+});
+
+test('publication actions retain the chosen quarter across cutoff changes, scoped CSV and frozen pins',async()=>{
+ const row={...publicationArchive.releases[0],id:'older-quarter',period:'2025-01-01',publicationDate:'2025-04-30',estimate:'Advance',value:1.5};
+ const archive={version:1,releases:[...publicationArchive.releases.slice(0,3),row]},current=await app('#/research?view=publications&period=2025-01-01&publishedBy=2026-06-25',{archive});
+ await current.changeHandler({target:{id:'publication-cutoff',value:'2026-05-01'}});assert.equal(current.state().publicationPeriod,'2025-01-01');
+ await current.handleResearchAction({exportPublications:''});assert.equal(current.downloads.at(-1).content,publicationCsv(archive,'2026-05-01','2025-01-01'));assert.match(current.downloads.at(-1).name,/2025-01-01/);
+ await current.handleResearchAction({pinPublication:''});const pkg=current.researchLibrary.getPackage(current.state().packageId);assert.equal(pkg.context.publicationPeriod,'2025-01-01');assert.equal(pkg.catalog.gdp.observations[0].value,1.5);assert.match(pkg.name,/2025/);
 });
 
 test('checkpoint control accepts native fractional seconds as UTC and preserves that cutoff in its URL',async()=>{

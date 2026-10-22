@@ -1,5 +1,5 @@
 import { releases, dataStatus,series } from './data.js';
-import { filterSeries, getSeries, latest, formatValue, formatChange, toCsv } from './model.js';
+import { filterSeries, getSeries, latest, formatValue, formatChange, toCsv,periodLabel } from './model.js';
 import {fiscalFinancingCsv} from './research-exports.js';
 import {refinancingCsv} from './refinancing-page.js';
 import {yieldCurvesCsv} from './yields-page.js';
@@ -24,8 +24,8 @@ import {createResearchPackage,importResearchPackage,exportResearchPackage,resear
 import {createResearchLibrary} from './research-library.js';
 import {buildPinContext,buildPublicationPin} from './research-context.js';
 import {captureChanges,changesCsv,readChangeCheckpoint,writeChangeCheckpoint} from './capture-changes.js';
-import {publicationArchive} from './publication-archive.js';
-import {publicationCsv} from './publication-history.js';
+import {createPublicationLoader} from './publication-loader.js';
+import {publicationCsv,selectPublicationHistory} from './publication-history.js';
 
 const root = document.getElementById('app');
 const main = document.getElementById('main-content');
@@ -38,6 +38,8 @@ let state = { ...parseRoute(location.hash), ...readPreferences(storage) };
 const researchLibrary=await createResearchLibrary(storage);
 let changeCheckpoint=readChangeCheckpoint(storage,dataStatus.generatedAt),changeState={status:'idle',ids:[],history:null,error:null},changeKey='',activeWorkspaceId=null,researchLabel='',pinBusy=false;
 let changeRowsCache=null;
+let publicationArchive=null,publicationState={status:'idle',error:null};
+const publicationLoader=createPublicationLoader();
 const workspaceMemory=createWorkspaceMemory();
 if('scrollRestoration' in history)history.scrollRestoration='manual';
 const historyLoader = createHistoryLoader(dataStatus.historyArchive);
@@ -85,6 +87,17 @@ function restoreFocus(focus) {
 }
 
 function trackedChanges(){return [...new Set((state.saved.length?state.saved:state.selected).filter(id=>getSeries(id)))];}
+function syncPublications({retry=false}={}){
+  if(state.page!=='research'||state.researchView!=='publications'||publicationState.status==='loading'||!retry&&publicationState.status!=='idle')return;
+  publicationState={status:'loading',error:null};
+  publicationLoader.load({retry}).then(archive=>{
+    publicationArchive=archive;publicationState={status:'ready',error:null};
+    if(state.page==='research'&&state.researchView==='publications')preserveHistoryView(main,()=>render());
+  }).catch(error=>{
+    publicationState={status:'error',error:error.message};
+    if(state.page==='research'&&state.researchView==='publications')preserveHistoryView(main,()=>render());
+  });
+}
 function syncChanges({retry=false}={}){
   if(state.page!=='research'||state.researchView!=='changes')return;
   const ids=trackedChanges(),key=ids.join(',');
@@ -124,13 +137,14 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   const focus=preserveFocus?rememberFocus():null;
   historyController.sync(state);
   syncChanges();
+  syncPublications();
   root.dataset.theme=state.theme;
   root.dataset.density=state.density;
   document.getElementById('theme-select').value=state.theme;
   document.getElementById('density-select').value=state.density;
   const agencies=new Set(trackedChanges().map(id=>series[id].agency));
   const failures=Object.entries(dataStatus.sources).filter(([id,source])=>agencies.has(id)&&source.status!=='ok').map(([id,source])=>({id,...source}));
-  main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${researchActions()}${renderPage(state,{...historyController.context(state),library:researchLibrary.getState(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationArchive})}`;
+  main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${researchActions()}${renderPage(state,{...historyController.context(state),library:researchLibrary.getState(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationArchive,publicationState})}`;
   root.querySelectorAll('[data-nav]').forEach(link=>{
     if(link.dataset.nav===state.page||link.dataset.nav==='research'&&isResearchPage(state.page))link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
@@ -232,8 +246,8 @@ async function handleResearchAction(d){
   }else if('removeWorkspace' in d){stored(await researchLibrary.removeWorkspace(d.removeWorkspace),'Workspace removal');if(activeWorkspaceId===d.removeWorkspace){activeWorkspaceId=null;researchLabel='';}}
   else if('pinResult' in d||'pinPublication' in d){
     if(pinBusy)return;
-    const args='pinPublication' in d?buildPublicationPin(publicationArchive,state.publicationCutoff):buildPinContext(state,historyController.context(state));
-    const name='pinPublication' in d?`GDP 2026 Q1 published by ${args.context.publicationCutoff}`:document.getElementById('research-name').value;
+    const args='pinPublication' in d?buildPublicationPin(publicationArchive,state.publicationCutoff,state.publicationPeriod):buildPinContext(state,historyController.context(state));
+    const name='pinPublication' in d?`GDP ${periodLabel({frequency:'Quarterly'},args.context.publicationPeriod)} published by ${args.context.publicationCutoff}`:document.getElementById('research-name').value;
     pinBusy=true;render({preserveFocus:true});
     try{
       const pkg=await createResearchPackage({name,...args}),result=await researchLibrary.pinPackage(pkg);stored(result,'Frozen package');
@@ -255,7 +269,8 @@ async function handleResearchAction(d){
   }else if('retryChanges' in d)syncChanges({retry:true});
   else if('changePage' in d)navigate({changePage:Math.max(1,Number(d.changePage)||1)});
   else if('exportChanges' in d){const view=changesContext();if(view.status!=='ready')throw new Error('Verified capture changes are unavailable.');downloadCsv(changesCsv(view.rows),'meridian-capture-changes.csv','Capture-change CSV downloaded. Retrieval changes do not establish publication times or revision causes.');}
-  else if('exportPublications' in d)downloadCsv(publicationCsv(publicationArchive,state.publicationCutoff),'meridian-gdp-publications.csv','Selected official GDP publication history downloaded with original source cells and separate retrieval provenance.');
+  else if('exportPublications' in d){const view=selectPublicationHistory(publicationArchive,state.publicationCutoff,state.publicationPeriod);if(!view.releases.length)throw new Error('No official publication is available for the selected quarter and date.');downloadCsv(publicationCsv(publicationArchive,state.publicationCutoff,view.period),`meridian-gdp-publications-${view.period}.csv`,'Selected-quarter official GDP publication history downloaded with original source cells and separate retrieval provenance.');}
+  else if('retryPublications' in d)syncPublications({retry:true});
 }
 
 root.addEventListener('click',async event=>{
@@ -263,7 +278,7 @@ root.addEventListener('click',async event=>{
   if(!button)return;
   const d=button.dataset;
   if(button.disabled)return;
-  const researchKeys=['saveWorkspace','clearWorkspace','pinResult','pinPublication','openWorkspace','renameWorkspace','removeWorkspace','openPackage','removePackage','packageJson','packageCsv','packageAttachment','enableChanges','disableChanges','markChanges','reviewAllChanges','retryChanges','changePage','exportChanges','exportPublications'];
+  const researchKeys=['saveWorkspace','clearWorkspace','pinResult','pinPublication','openWorkspace','renameWorkspace','removeWorkspace','openPackage','removePackage','packageJson','packageCsv','packageAttachment','enableChanges','disableChanges','markChanges','reviewAllChanges','retryChanges','changePage','exportChanges','exportPublications','retryPublications'];
   if(researchKeys.some(key=>key in d)){
     const before=location.hash;
     try{await handleResearchAction(d);}catch(error){state.researchError=error.message;announce(`Research action unavailable: ${error.message}`);}
@@ -339,7 +354,8 @@ root.addEventListener('change',async event=>{
       navigate({page:'research',researchView:'packages',packageId:pkg.id,researchError:''});
     }catch(error){state.researchError=error.message;render({preserveFocus:true});announce(`Import rejected: ${error.message}`);}return;
   }
-  if(target.id==='publication-cutoff'){navigate({publicationCutoff:target.value});return;}
+  if(target.id==='publication-period'){navigate({publicationPeriod:target.value});return;}
+  if(target.id==='publication-cutoff'){const view=selectPublicationHistory(publicationArchive,state.publicationCutoff,state.publicationPeriod);navigate({publicationCutoff:target.value,publicationPeriod:view.period});return;}
   if(target.id==='change-since'){
     try{navigate({changeSince:normalizedCutoff(target.value,changeState.history),changePage:1});}
     catch(error){state.researchError=error.message;render({preserveFocus:true});}return;

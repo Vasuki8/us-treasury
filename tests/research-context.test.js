@@ -19,7 +19,16 @@ test('specialist pin preserves observed inputs, modeled assumptions and exact or
 });
 test('publication package uses selected official estimate rather than current revised GDP',()=>{
  const args=buildPublicationPin(publicationArchive,'2026-05-01');assert.equal(args.catalog.gdp.observations[0].value,2);assert.equal(args.catalog.gdp.observations[0].publishedAt,null);assert.match(args.catalog.gdp.publicationNote,/2026-04-30/);
- assert.throws(()=>buildPublicationPin(publicationArchive,'2026-04-01'),/unavailable|publication/i);
+ assert.throws(()=>buildPublicationPin(publicationArchive,'2026-04-01','2026-01-01'),/unavailable|publication/i);
+});
+
+test('publication pins retain the selected quarter and its exact as-published CSV independently of other quarters',async()=>{
+ const row={...publicationArchive.releases[0],id:'older-quarter',period:'2025-01-01',publicationDate:'2025-04-30',estimate:'Advance',value:1.5};
+ const archive={version:1,releases:[...publicationArchive.releases.slice(0,3),row]};
+ const args=buildPublicationPin(archive,'2026-06-25','2025-01-01');assert.equal(args.catalog.gdp.observations[0].date,'2025-01-01');assert.equal(args.catalog.gdp.observations[0].value,1.5);assert.match(args.catalog.gdp.name,/Q1 2025/);assert.equal(args.context.publicationPeriod,'2025-01-01');assert.equal(args.context.publicationReleases.length,1);
+ assert.match(args.catalog.gdp.coverageNote,/official publication/i);assert.doesNotMatch(args.catalog.gdp.coverageNote,/approved quarterly and monthly NIPA files/);assert.equal(args.catalog.gdp.lastAttemptAt,null);assert.deepEqual(args.catalog.gdp.sourceUrls,[row.sourceUrl]);
+ const pkg=await createResearchPackage({name:'Old GDP quarter',...args}),text=exportResearchPackage(pkg);archive.releases.push({...row,value:99,publicationDate:'2026-07-01'});
+ assert.equal(exportResearchPackage(await importResearchPackage(text)),text);assert.doesNotMatch(pkg.context.attachments[0].content,/2026-01-01/);
 });
 test('calendar pins retain original schedule evidence without claiming historical calendar replay',()=>{
  const args=buildPinContext(parseRoute('#/calendar'));assert.ok(args.context.calendar.sources.bls.fetchedAt);assert.equal(args.context.calendarReplay,'Frozen current context only; historical calendar replay is unavailable.');
