@@ -46,7 +46,7 @@ test('official observations follow their real frequencies and maintain source pr
   assert.equal(series.gdp.frequency,'Quarterly');
   assert.ok(series.gdp.observations.every(o=>/^\d{4}-(01|04|07|10)-01$/.test(o.date)));
   for (const s of Object.values(series).filter(s=>s.frequency==='Monthly')) {
-    assert.ok(s.observations.every(o=>o.date.endsWith('-01')));
+    assert.ok(s.observations.every(o=>s.dateConvention==='month-end'?new Date(Date.parse(`${o.date}T00:00:00Z`)+86400000).getUTCDate()===1:o.date.endsWith('-01')),`${s.id} follows its declared monthly dating convention`);
   }
   assert.equal(series.cpi.adjustment,'Not seasonally adjusted');
   assert.ok(series.claims.observations.every(o=>new Date(`${o.date}T00:00:00Z`).getUTCDay()===6),'claims dates are week endings');

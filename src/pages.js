@@ -1,4 +1,5 @@
 import { fiscalPage } from './fiscal-page.js';
+import { refinancingPage } from './refinancing-page.js';
 import { series, releases, yieldCurve, dataStatus } from './data.js';
 import { getSeries, filterSeries, latest, formatValue, formatChange, periodLabel, transformSeries, compareSeries } from './model.js';
 import { escapeHtml as esc, button, heading, panel, chart, metrics, seriesTable, seriesLink, table, emptyState, sourceLink, seriesStatus, sourceStatusList, coverageBadge } from './ui.js';
@@ -206,5 +207,6 @@ export function renderPage(input = {}) {
   const state = { ...defaults, ...input };
   state.selected = seriesIds(Array.isArray(state.selected) ? state.selected : []).slice(0, 4);
   state.saved = seriesIds(Array.isArray(state.saved) ? state.saved : []);
-  return ({ overview, labor, indicator, calendar, explore, fiscal:()=>fiscalPage() }[state.page] ?? overview)(state);
+  return ({ overview, labor, indicator, calendar, explore, fiscal:()=>fiscalPage(),refinancing }[state.page] ?? overview)(state);
 }
+function refinancing(state){return refinancingPage(state);}

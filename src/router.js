@@ -8,6 +8,7 @@ export const defaults = {
   query: '', topic: 'All topics', frequency: 'All frequencies', selected: ['unrate', 'cpi'],
   exploreMode: 'catalog', comparison: 'native', calendarMonth: 'upcoming', day: 'all', calendarTopic: 'All topics',
   watchOnly: false, eventId: '',
+  refinancingHorizon:12,refinancingShock:100,
 };
 
 /** Hash routes work on ordinary static hosts and preserve browser history. */
@@ -25,6 +26,9 @@ export function parseRoute(hash = '') {
     } else if (path === '/calendar') state.page = 'calendar';
     else if (path === '/explore') state.page = 'explore';
     else if (path === '/fiscal') state.page = 'fiscal';
+    else if (path === '/refinancing') state.page = 'refinancing';
+    state.refinancingHorizon=[3,12,24].includes(Number(p.get('horizon')))?Number(p.get('horizon')):12;
+    state.refinancingShock=[25,50,100,200].includes(Number(p.get('shock')))?Number(p.get('shock')):100;
     state.range = p.get('range') === '6' ? 6 : 12;
     state.transform = p.get('transform') === 'change' ? 'change' : 'level';
     state.tab = ['methodology', 'revisions'].includes(p.get('tab')) ? p.get('tab') : 'data';
@@ -48,8 +52,12 @@ export function parseRoute(hash = '') {
 
 export function routeFor(input) {
   const state = { ...defaults, ...input };
-  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',fiscal:'/fiscal'}[state.page] || '/overview';
+  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',fiscal:'/fiscal',refinancing:'/refinancing'}[state.page] || '/overview';
   const p = new URLSearchParams();
+  if(state.page==='refinancing'){
+    if(state.refinancingHorizon!==12)p.set('horizon',String(state.refinancingHorizon));
+    if(state.refinancingShock!==100)p.set('shock',String(state.refinancingShock));
+  }
   if (state.page === 'indicator') {
     if (state.range === 6) p.set('range', '6');
     if (state.transform === 'change') p.set('transform', 'change');

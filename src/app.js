@@ -1,6 +1,7 @@
 import { releases, dataStatus } from './data.js';
 import { filterSeries, getSeries, latest, formatValue, formatChange, toCsv } from './model.js';
 import {fiscalFinancingCsv} from './research-exports.js';
+import {refinancingCsv} from './refinancing-page.js';
 import { renderPage } from './pages.js';
 import { escapeHtml as esc, sourceStatusList, sourceNotice } from './ui.js';
 import { mountFreshnessBanner } from './freshness-controller.js';
@@ -16,7 +17,7 @@ mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus);
 let storage;
 try { storage = window.localStorage; } catch { /* Session remains usable without persistence. */ }
 let state = { ...parseRoute(location.hash), ...readPreferences(storage) };
-const pageNames = {overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',fiscal:'Fiscal pressure'};
+const pageNames = {overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',fiscal:'Fiscal pressure',refinancing:'Refinancing risk'};
 
 document.querySelector('.skip-link').addEventListener('click',event=>{
   event.preventDefault();
@@ -146,6 +147,7 @@ root.addEventListener('click',async event=>{
   else if('exportFiscalFinancing' in d){
     downloadCsv(fiscalFinancingCsv(dataStatus.sources.fiscal),'meridian-fiscal-financing.csv','MTS financing CSV downloaded with reported amounts and calculated residuals; release dates remain unknown.');
   }
+  else if('exportRefinancing' in d||'exportRefinancingScenario' in d)downloadCsv(refinancingCsv(dataStatus.sources.refinancing,{scenario:'exportRefinancingScenario' in d,horizonMonths:state.refinancingHorizon,shockBps:state.refinancingShock}),'meridian-refinancing.csv','Refinancing CSV downloaded with observed principal, generated identifiers and explicitly modeled assumptions.');
   else if('copyLink' in d) {
     try {await navigator.clipboard.writeText(location.href);announce('Link copied with the current series, range, view and tab.');}
     catch {announce('Copy is unavailable. The address bar contains the shareable link.');}
@@ -162,7 +164,9 @@ root.addEventListener('change',event=>{
     return;
   }
   const fields={'topic-filter':'topic','frequency-filter':'frequency','transform-select':'transform','comparison-select':'comparison','calendar-topic':'calendarTopic'};
-  if(target.id==='calendar-month')navigate({calendarMonth:target.value,day:'all'});
+  if(target.id==='refinancing-horizon')navigate({refinancingHorizon:Number(target.value)});
+  else if(target.id==='refinancing-shock')navigate({refinancingShock:Number(target.value)});
+  else if(target.id==='calendar-month')navigate({calendarMonth:target.value,day:'all'});
   else if(target.id==='calendar-day')navigate({day:target.value});
   else if(fields[target.id])navigate({[fields[target.id]]:target.value});
   else if(target.id==='calendar-watch-only')navigate({watchOnly:target.checked});
