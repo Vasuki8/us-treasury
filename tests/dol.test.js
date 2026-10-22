@@ -26,7 +26,7 @@ function fixtureFetch(text) {
     assert.equal(options.method, 'POST');
     assert.equal(options.headers['Content-Type'], 'application/x-www-form-urlencoded');
     assert.equal(body.get('level'), 'us');
-    assert.equal(body.get('strtdate'), '2024');
+    assert.equal(body.get('strtdate'), '1967');
     assert.equal(body.get('enddate'), '2026');
     assert.equal(body.get('filetype'), 'xml');
     assert.equal(body.get('submit'), 'Submit');
@@ -112,7 +112,7 @@ test('a revised DOL export replaces its reported count without inventing publica
   assert.equal(revised.revisions, undefined);
 });
 
-test('DOL collector fetches national XML, retains the latest 52 past weeks, and records source provenance', async () => {
+test('DOL collector fetches national XML, retains every returned past week, and records source provenance', async () => {
   const start = Date.parse('2025-06-21T00:00:00Z');
   const rows = Array.from({ length: 71 }, (_, index) => {
     const date = new Date(start + index * 7 * 86400000).toISOString().slice(0, 10);
@@ -121,8 +121,8 @@ test('DOL collector fetches national XML, retains the latest 52 past weeks, and 
   const result = await dol().collectDol({ now: new Date('2026-10-21T12:00:00Z'), fetchImpl: fixtureFetch(xml(rows)) });
   const claims = result.series.claims;
   assert.equal(result.id, 'dol');
-  assert.equal(claims.observations.length, 52);
-  assert.equal(claims.observations[0].date, '2025-10-25');
+  assert.equal(claims.observations.length, 70);
+  assert.equal(claims.observations[0].date, '2025-06-21');
   assert.equal(claims.observations.at(-1).date, '2026-10-17');
   assert.equal(claims.observations.at(-1).value, 269);
   assert.equal(claims.sourceUrl, endpoint);
@@ -189,7 +189,7 @@ test('continued-claims malformed numeric values and a wholly missing required me
   assert.throws(()=>dol().parseDol(xml([week('09/19/2026','198,000',null)])),/continued|usable|numeric/i);
 });
 
-test('collector retains each measure\'s own latest 52 past observations with the same one-request source provenance',async()=>{
+test('collector retains each measure\'s own full past history with the same one-request source provenance',async()=>{
   const start=Date.parse('2025-06-21T00:00:00Z');
   const rows=Array.from({length:71},(_,i)=>{
     const date=new Date(start+i*7*86400000).toISOString().slice(0,10);
@@ -202,8 +202,8 @@ test('collector retains each measure\'s own latest 52 past observations with the
   assert.ok(continued,'collector publishes the continued-claims family member');
   assert.equal(requests,1);
   assert.equal(initial.observations.at(-1).date,'2026-10-17');
-  assert.equal(continued.observations.length,52);
-  assert.equal(continued.observations[0].date,'2025-10-18');
+  assert.equal(continued.observations.length,69);
+  assert.equal(continued.observations[0].date,'2025-06-21');
   assert.equal(continued.observations.at(-1).date,'2026-10-10');
   assert.equal(continued.observations.at(-1).value,1768);
   assert.equal(continued.latestObservationDate,'2026-10-10');
@@ -231,4 +231,35 @@ test('collector does not use a future continued-claims observation as a current 
   await assert.rejects(dol().collectDol({now:new Date('2026-10-21T12:00:00Z'),fetchImpl:fixtureFetch(xml([
     week('10/17/2026','198,000',null),week('10/24/2026','199,000','1,700,000'),
   ]))}),/usable|numeric|continued|observations/i);
+});
+
+test('full 1967-onward histories preserve early values, internal missing weeks and independent coverage with reuse metadata',async()=>{
+ const start=Date.parse('1967-01-07T00:00:00Z'),end=Date.parse('2026-10-24T00:00:00Z'),count=Math.floor((end-start)/(7*86400000))+1;
+ const rows=Array.from({length:count},(_,i)=>{
+  const date=new Date(start+i*7*86400000).toISOString().slice(0,10);
+  return week(`${date.slice(5,7)}/${date.slice(8)}/${date.slice(0,4)}`,i===100?'&#160;':String(200000+i),i===0||i===count-2?null:i===200?'&#160;':String(1700000+i));
+ });
+ // A source outside the requested start must not extend the reviewed scope.
+ const result=await dol().collectDol({now:new Date('2026-10-21T12:00:00Z'),fetchImpl:fixtureFetch(xml([week('12/31/1966'),...rows]))});
+ const initial=result.series.claims,continued=result.series.continuedClaims;
+ assert.equal(initial.observations.length,count-1);assert.equal(initial.observations[0].date,'1967-01-07');assert.equal(initial.observations[0].sourceValue,'200000');assert.equal(initial.observations[0].value,200);
+ assert.equal(continued.observations.length,count-3);assert.equal(continued.observations[0].date,'1967-01-14');assert.equal(continued.observations.at(-1).date,'2026-10-10');
+ assert.equal(initial.observations[100].value,null);assert.equal(continued.observations[199].value,null);
+ for(const measure of [initial,continued]){
+  assert.match(measure.coverageNote,new RegExp(measure.observations[0].date));assert.match(measure.coverageNote,new RegExp(measure.observations.at(-1).date));
+  assert.match(measure.coverageNote,/first captured.*retrieval|retriev.*not.*release|not.*historical.*vintage/i);
+  assert.match(measure.coverageNote,/regular.*UI|regular.*unemployment insurance/i);
+  assert.equal(measure.licenseUrl,'https://www.dol.gov/general/aboutdol/copyright');assert.match(measure.attribution,/Department of Labor.*Employment and Training Administration/);
+  assert.ok(measure.observations.every(row=>row.publishedAt===null));
+ }
+});
+
+test('full-history requests advance their end year at the UTC new year without discarding the start',async()=>{
+ let body;
+ await dol().collectDol({now:new Date('2027-01-01T00:00:00Z'),fetchImpl:async(_url,options)=>{body=new URLSearchParams(options.body);return new Response(xml([week('12/26/2026')],'01/01/2027'));}});
+ assert.equal(body.get('strtdate'),'1967');assert.equal(body.get('enddate'),'2027');
+});
+
+test('full-history collection bounds the downloaded XML before parsing',async()=>{
+ await assert.rejects(dol().collectDol({now:new Date('2026-10-21T12:00:00Z'),fetchImpl:async()=>new Response(' '.repeat(2*1024*1024+1))}),/byte|size|limit/i);
 });

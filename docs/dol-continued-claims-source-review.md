@@ -16,7 +16,7 @@ The [official release archive](https://oui.doleta.gov/unemploy/claims_arch.asp) 
 
 ## Coverage and parser rules
 
-Both initial and continued claims retain their latest 52 past returned weeks, independently, from the same single XML response. Initial-claims retention and top-level legacy coverage metadata remain unchanged. `parseDol` adds `continuedObservations` alongside the existing `observations` and `reportDate`; the collector publishes `series.continuedClaims` with its own `latestObservationDate`, `coverageNote`, source ID, formula, official status, and measure description.
+The original integration retained the latest 52 past returned weeks independently for initial and continued claims. The [1967-onward history follow-up](dol-claims-history-source-review.md) supersedes that retention limit after verifying the full official response and commercial reuse terms. `parseDol` adds `continuedObservations` alongside the existing `observations` and `reportDate`; the collector publishes `series.continuedClaims` with its own `latestObservationDate`, `coverageNote`, source ID, formula, official status, and measure description.
 
 Only leading and trailing missing counts are trimmed. A real zero remains zero; missing interior counts remain explicit null rows. The parser rejects negative/fractional/malformed/unsafe counts and preserves the existing bounded schema, Saturday validation, duplicate checks, and rejection of unsupported entities/declarations. A wholly missing required continued series, including one with no usable value before the cutoff, fails the source request rather than fabricating a current observation or publishing only part of the required family.
 

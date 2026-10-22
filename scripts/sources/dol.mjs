@@ -4,6 +4,16 @@ const endpoint = 'https://oui.doleta.gov/unemploy/wkclaims/report.asp';
 const MAX_XML_BYTES = 2 * 1024 * 1024;
 const MAX_WEEKS = 10000;
 const dayMs = 86400000;
+const historyStartYear = 1967;
+const reuse = {
+  licenseUrl: 'https://www.dol.gov/general/aboutdol/copyright',
+  attribution: 'Source: U.S. Department of Labor, Employment and Training Administration.',
+  sourceTitle: 'Unemployment Insurance Weekly Claims Data',
+};
+
+function historyCoverage(observations, measurement) {
+  return `ETA historical national regular UI ${measurement}; retained ${observations[0].date} through ${observations.at(-1).date} (week ending). This feed may lag the latest advance weekly release. Latest revised history, not historical publication vintages; earlier weeks are first captured on the actual retrieval date. Source data and seasonal adjustment can be revised, and historical methods can change.`;
+}
 
 function calendarDate(raw, weekly = false) {
   const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(raw.trim());
@@ -90,16 +100,17 @@ export function parseDol(xml) {
 export async function collectDol({ fetchImpl = globalThis.fetch, now = new Date() } = {}) {
   const year = now.getUTCFullYear();
   const cutoff = now.toISOString().slice(0, 10);
-  const body = new URLSearchParams({ level: 'us', strtdate: String(year - 2), enddate: String(year), filetype: 'xml', submit: 'Submit' }).toString();
-  const response = await requestText(endpoint, { fetchImpl, method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+  const body = new URLSearchParams({ level: 'us', strtdate: String(historyStartYear), enddate: String(year), filetype: 'xml', submit: 'Submit' }).toString();
+  const response = await requestText(endpoint, { fetchImpl, method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body, maxBytes: MAX_XML_BYTES });
   const parsed = parseDol(response.text);
-  const observations = trimMissing(parsed.observations.filter(row => row.date <= cutoff)).slice(-52);
-  const continuedObservations = trimMissing(parsed.continuedObservations.filter(row => row.date <= cutoff)).slice(-52);
+  const withinCoverage = row => row.date >= `${historyStartYear}-01-01` && row.date <= cutoff;
+  const observations = trimMissing(parsed.observations.filter(withinCoverage));
+  const continuedObservations = trimMissing(parsed.continuedObservations.filter(withinCoverage));
   const latestObservationDate = observations.at(-1).date;
-  const coverageNote = `ETA historical national weekly claims; latest observation ${latestObservationDate} (week ending). This feed may lag the latest advance weekly release, and historical values can be revised.`;
+  const coverageNote = historyCoverage(observations, 'initial weekly claims');
   const ageDays = (Date.parse(`${cutoff}T00:00:00Z`) - Date.parse(`${latestObservationDate}T00:00:00Z`)) / dayMs;
   const continuedLatestDate = continuedObservations.at(-1).date;
-  const continuedCoverage = `ETA historical national continued weekly claims (insured unemployment); latest observation ${continuedLatestDate} (week ending). This feed may lag the latest advance weekly release, and historical values can be revised. Continued claims may have an earlier latest reference week than initial claims.`;
+  const continuedCoverage = historyCoverage(continuedObservations, 'continued weekly claims (insured unemployment)') + ' Continued claims may have an earlier latest reference week than initial claims.';
   const continuedAgeDays = (Date.parse(`${cutoff}T00:00:00Z`) - Date.parse(`${continuedLatestDate}T00:00:00Z`)) / dayMs;
   const { text: _text, ...provenance } = response;
   return {
@@ -110,6 +121,7 @@ export async function collectDol({ fetchImpl = globalThis.fetch, now = new Date(
     coverageNote,
     series: {
       claims: {
+        ...reuse,
         observations,
         sourceUrl: endpoint,
         sourceIds: ['InitialClaims/SA'],
@@ -119,6 +131,7 @@ export async function collectDol({ fetchImpl = globalThis.fetch, now = new Date(
         coverageNote,
       },
       continuedClaims: {
+        ...reuse,
         observations: continuedObservations,
         sourceUrl: endpoint,
         sourceIds: ['ContinuedClaims/SA'],

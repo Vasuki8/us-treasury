@@ -1,0 +1,35 @@
+# DOL national claims history expansion
+
+Reviewed October 22, 2026. This extends the already admitted ETA national seasonally adjusted initial and continued claims dataset from the latest 52 retained weeks to its full available 1967-onward history. It does not add state data, unadjusted substitutes, pandemic benefit programs, or historical release vintages.
+
+## Exact source and commercial reuse
+
+- Landing/form: [ETA Unemployment Insurance Weekly Claims Data](https://oui.doleta.gov/unemploy/claims.asp).
+- Official form POST: `https://oui.doleta.gov/unemploy/wkclaims/report.asp`, with `level=us&strtdate=1967&enddate=<current UTC year>&filetype=xml&submit=Submit`. ETA's linked form JavaScript identifies 1967 as the national start year. No credentials or alternate data vendor is used.
+- Fields: `InitialClaims/SA` and `ContinuedClaims/SA` in the `r539cyNational` XML. Published raw counts are retained in `sourceValue`; displayed values are counts divided by 1,000. Saturdays identify reference weeks, not release dates.
+- [ETA's official dataset catalog](https://catalog.data.gov/dataset/historical-unemployment-insurance-seasonally-adjusted-and-unadjusted-weekly-claims-data) describes regular UI history back to 1967 and weekly/annual revisions. Its public-access and `rights:TRUE` fields alone are not treated as commercial redistribution permission.
+- [DOL's copyright policy](https://www.dol.gov/general/aboutdol/copyright) and [public-domain notice](https://beta.dol.gov/about/notices/website-content-and-publication-practices/public-domain-copyright-trademarks-patents) permit use, reproduction and distribution of federal public-domain materials without permission. The direct official policy request returned HTTP 200 during review even though the web renderer returned 403. This admission covers ETA's agency-authored statistical compilation; no contrary copyright notice was found in the reviewed form/export. Exclude logos, unrelated imagery, linked third-party material and implied endorsement. Both series carry DOL ETA attribution and the official copyright link into CSV and frozen-package metadata; the existing UI identifies and credits the DOL ETA source.
+
+## Coverage and cadence
+
+A direct read-only full-history POST returned HTTP 200 with 1,137,863 bytes on October 22, 2026, 20:36:49.913 UTC. SHA256: `e11efb46df159e609e49fd0a174bb90a97f04b2fb07e4f0962e13574e59ca021`. Research bytes and receipt are under ignored `test-results/dol-history-research/national-1967-2026.*`.
+
+The reviewed export has 3,117 usable observations for **each** measure, January 7, 1967 through September 26, 2026, with source `rundate` October 22, 2026. The latest counts match the retained snapshot: 199,000 initial and 1,714,000 continued claims. These are actual returned limits, not a promise of identical future coverage. Each series independently trims empty edges, excludes dates before the reviewed start and after the current cutoff, preserves internal missing observations and keeps its own latest reference week. Missing values are never filled or copied across measures.
+
+The actual DOL-only capture was retrieved at October 22, 2026, 20:38:25.242 UTC with the same source byte hash. Both real series have no missing values or omitted seven-day intervals; their prior 52 observations match exactly. All 34 earlier archive descriptors and blob hashes, other agency source objects, calendars and cached-BLS publication policy were verified unchanged. A single new immutable DOL capture adds 49,082 compressed bytes (485,157 uncompressed), extending the archive to 35 captures. Replay before/after the new retrieval returns 52/3,117 weeks respectively.
+
+The [official release archive](https://oui.doleta.gov/unemploy/claims_arch.asp) provides weekly publication guidance and holiday exceptions; it is separately admitted as calendar data. This historical table can lag the advance news release, and the catalog lists its accrual metadata as irregular. Daily Actions refreshes re-request the full revised national history using the current end year. A retrieval refresh does not imply a new reference week or establish historical publication instants. `rundate`, HTTP Last-Modified and retrieval timestamps are not historical release dates; `publishedAt` remains null.
+
+## Interpretation and immutable history
+
+These are latest revised regular UI series, rather than total unemployment, unique layoffs or all benefit programs. Initial claims and continued weeks claimed have distinct meanings and may have different latest reference weeks. Seasonal factors, unadjusted input revisions and historical methods can change; the [official seasonal-adjustment explanation](https://www.bls.gov/lau/seasonal-adjustment-for-weekly-unemployment-insurance-claims.htm) documents annual revisions and methodology changes, including the pandemic period. No source-provided seasonal adjustment is recalculated here and no historical methodology is presented as permanently identical.
+
+Earlier reference weeks are first retained on the actual new retrieval date. The existing source-specific, content-addressed capture archive appends the new state without rewriting old descriptors or blobs. An as-known cutoff before this retrieval must still show only the earlier retained coverage. Frozen packages stay unchanged. The numerical BEA publication/explanation archives and all other agency/calendar captures are outside this refresh.
+
+## Validation
+
+The collector retains all returned eligible weeks, with the existing strict national schema, Saturday dates, uniqueness, numeric-count rules, 10,000-week limit and 2 MiB input bound. The HTTP request now enforces that byte bound while downloading as well. Tests cover decades of data, different measure coverage, missing internal and edge values, future/out-of-scope weeks, UTC year rollover, reuse metadata and existing HTTP/schema failures. Shared chart windows, comparisons, CSV and immutable replay are validated separately. Capture uses the existing `node scripts/refresh-data.mjs --sources=dol --require-all` command so an official-source failure cannot replace the stored snapshot.
+
+Final local verification passed all 847 tests and the 91-asset built HTTP check. Browser checks confirmed Graphite styling, All/5Y/custom date ranges (including a 2008 continued-claims window), keyboard access to the first 1967 observation, no console errors and no page overflow at widths 320, 390, 736, 1024 and 1440 pixels. Independent review matched all 6,234 retained observations against the actual XML and verified source rights, CSV and immutable replay.
+
+The actual two-series All CSV is 8,407,250 bytes; its self-contained frozen package is 9,663,723 bytes and imports with the exact original CSV. It fits the existing 12 MiB portable-package cap but exceeds the separate 3 MiB durable browser library budget. The existing quota warning keeps such a package session-only and available for JSON download; it never replaces durable saved bytes silently. Smaller study selections and independent portable downloads remain available. No library cap or infrastructure was expanded for this data addition.

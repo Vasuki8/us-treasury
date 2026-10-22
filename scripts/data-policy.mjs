@@ -34,9 +34,9 @@ export const dataPolicies = [
     series:{yield:['BC_10YEAR']}, feed:'treasury-par-yields',
   },
   {
-    id:'dol-national-claims', agency:'dol', reviewedOn:'2026-10-21', commercialUse:true,
+    id:'dol-national-claims', agency:'dol', reviewedOn:'2026-10-22', commercialUse:true,
     basis:'DOL public-domain federal statistical compilation; credit ETA and do not imply endorsement',
-    terms:['https://beta.dol.gov/about/notices/website-content-and-publication-practices/public-domain-copyright-trademarks-patents','https://catalog.data.gov/dataset/historical-unemployment-insurance-seasonally-adjusted-and-unadjusted-weekly-claims-data'],
+    terms:['https://www.dol.gov/general/aboutdol/copyright','https://beta.dol.gov/about/notices/website-content-and-publication-practices/public-domain-copyright-trademarks-patents','https://catalog.data.gov/dataset/historical-unemployment-insurance-seasonally-adjusted-and-unadjusted-weekly-claims-data'],
     series:{claims:['InitialClaims/SA']}, feed:'dol-national-claims',
   },
   {
