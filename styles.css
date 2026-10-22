@@ -254,3 +254,22 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
 @media(max-width:600px) { .shell { grid-template-columns:1fr; } .rail { display:none; } .brandbar { gap:8px; } .brand { font-size:14px; } .data-mode { margin-left:auto; } .appearance { font-size:10px; } .brandbar .appearance { margin-left:auto; } .functionbar a { flex:1; min-width:105px; text-align:center; padding:9px 6px; } .functionbar kbd { display:none; } .command-hint { display:none; } .commandbar label { font-size:10px; } .ticker a { flex:1; min-width:145px; padding:6px 10px; } main { padding:8px; } h1 { font-size:18px; } .metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .metric { border-bottom:1px solid var(--border); } .metric:nth-child(3) { border-right:1px solid var(--border); } .metric:nth-child(2n) { border-right:0; } .metric:nth-last-child(-n+2) { border-bottom:0; } .metric-value { font-size:21px; } .metric-period { font-size:11px; } .calendar-detail { display:block; } .page-heading { align-items:flex-start; } .footline { font-size:9px; } }
 @media(pointer:coarse) { .action,.functionbar a,.tabs button,.calendar-days button { min-height:42px; } input:not([type="checkbox"]),select { font-size:16px; min-height:38px; } td button,th button { min-height:34px; } }
 @media(prefers-reduced-motion:no-preference) { button,a,input,select { transition:background-color .12s; } }
+.research-savebar { display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px; margin:0 0 12px; padding:10px; border:1px solid var(--border); border-radius:5px; background:var(--panel); }
+.research-savebar label { display:grid; gap:4px; flex:1 1 180px; max-width:340px; min-width:0; color:var(--muted); }
+.research-savebar input { width:100%; min-width:0; }
+.research-savebar p { flex:1 0 100%; margin:0; }
+.research-library-nav { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.research-library-nav [aria-current="page"] { border-color:var(--accent); background:var(--selected); }
+.research-import { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:12px; padding:10px; border:1px solid var(--border); border-radius:5px; }
+.research-import label { display:grid; flex:1 1 240px; gap:5px; min-width:0; }
+.research-import input { width:100%; min-width:0; max-width:100%; }
+.research-import p { flex:1 1 250px; min-width:0; }
+.research-controls { flex-wrap:wrap; padding:10px; gap:8px; align-items:flex-end; }
+.research-controls label { display:grid; gap:4px; min-width:0; max-width:100%; }
+.research-controls input { min-width:0; max-width:100%; }
+.workspace-label { width:100%; max-width:260px; min-width:140px; }
+.research-json { white-space:pre-wrap; overflow-wrap:anywhere; overflow:auto; max-height:420px; padding:10px; font-size:11px; line-height:1.5; }
+.break-all { overflow-wrap:anywhere; word-break:break-all; }
+.frozen-observations summary,.panel>details>summary { padding:10px; cursor:pointer; }
+.publication-result { margin:10px; font-size:14px; }
+@media(max-width:600px) { .research-savebar label { max-width:none; flex-basis:100%; } .research-savebar .actions { flex-wrap:wrap; } .research-savebar .action,.research-savebar .link-button,.research-library-nav .action,.research-controls .action,.research-import input,.workspace-label { min-height:44px; } .research-savebar input,.research-controls input,.workspace-label { font-size:16px; min-height:44px; } .research-controls label { flex-basis:100%; } .research-controls input { width:100%; } }

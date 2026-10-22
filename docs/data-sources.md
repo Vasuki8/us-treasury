@@ -2,7 +2,7 @@
 
 The public Meridian website is intended to earn advertising revenue. Display and CSV redistribution must use datasets whose terms permit commercial reuse. Free access, an API key, or an official-looking domain is insufficient evidence by itself.
 
-Review date: **October 21, 2026**. The twelve original indicators and Treasury par yield curve below fit this policy. Additional research indicators have separate scoped reviews and executable admissions in the [research source ledger](research-dashboard-sources.md). This document does not extend public-domain status to conditionally licensed New York Fed data.
+Review date: **October 22, 2026**. The twelve original indicators and Treasury par yield curve below fit this policy. Additional research indicators have separate scoped reviews and executable admissions in the [research source ledger](research-dashboard-sources.md). This document does not extend public-domain status to conditionally licensed New York Fed data.
 
 | Reviewed dataset scope | Commercial reuse basis | Official evidence |
 | --- | --- | --- |
@@ -28,6 +28,8 @@ Review date: **October 21, 2026**. The twelve original indicators and Treasury p
 - Use plain text agency credits. Agency seals/logos and third-party photographs, illustrations, news, forecasts or commercial market data are outside this review and are not licensed by the statistical data policies above.
 
 ## Enforced dataset scope
+
+The third website-review milestone retains longer histories from the already admitted BEA NIPA, Board G.17 and Census RESCONST files without adding statistical endpoints or changing units/rights. It separately admits only three 2026Q1 real-GDP publication estimates from an exact dated BEA-authored workbook, under the [publication-vintage review](publication-vintages-source-review.md) and `scripts/publication-policy.mjs`. This independent gate validates the static archive during capture and build. It does not approve other workbook rows, publication instants, current-table reconstructions, or a blanket historical-vintage service. Frozen research packages and capture-change exports preserve the original sources' notices and redistribution conditions, including BLS and conditional New York Fed terms.
 
 The second website-review milestone extends the original scope below through separate dataset reviews: [BLS macro families](bls-macro-family-source-review.md), [BEA monthly macro](bea-monthly-macro-source-review.md), [DOL continued claims](dol-continued-claims-source-review.md), and [policy, activity and Census construction](macro-coverage-source-review.md). The last review admits RESCONST bulk statistics and factual New Residential Construction calendar entries separately from the earlier MARTS approval. Exact source IDs, native units, conditional New York Fed rights and Census originating-program metadata are enforced by `scripts/macro-coverage-policy.mjs`, called from the existing admission gate. References below to the original MARTS-only Census scope describe that earlier review, not a blanket approval of other programs.
 

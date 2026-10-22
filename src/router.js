@@ -15,6 +15,7 @@ export const defaults = {
   vintageCutoff:null,vintageSeries:'gdp',
   window:'1y',startDate:'',endDate:'',returnTo:null,
   macroFamily:'prices',macroMeasure:'cpiMonthly',
+  researchView:'workspaces',packageId:'',changeSince:'',changePage:1,publicationCutoff:'',
 };
 
 /** Only local research workspaces can be offered as a return destination. */
@@ -54,6 +55,11 @@ export function parseRoute(hash = '') {
     else if (path === '/vintages') state.page = 'vintages';
     else if (path === '/market') state.page = 'market';
     else if (path === '/watchlist') state.page = 'watchlist';
+    else if (path === '/research') state.page = 'research';
+    state.researchView=['packages','changes','publications'].includes(p.get('view'))?p.get('view'):'workspaces';
+    state.packageId=/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(p.get('package')??'')?p.get('package'):'';
+    state.changeSince=(p.get('since')??'').slice(0,64);state.changePage=Math.max(1,Math.min(10000,Number.parseInt(p.get('changePage'),10)||1));
+    state.publicationCutoff=(p.get('publishedBy')??'').slice(0,32);
     state.vintageCutoff=p.has('cutoff')?p.get('cutoff').slice(0,64):null;
     state.macroFamily=Object.hasOwn(coverageFamilies,p.get('family'))?p.get('family'):'prices';
     state.macroMeasure=coverageFamilies[state.macroFamily].ids.includes(p.get('measure'))?p.get('measure'):coverageFamilies[state.macroFamily].defaultMeasure;
@@ -91,8 +97,13 @@ export function parseRoute(hash = '') {
 
 export function routeFor(input) {
   const state = { ...defaults, ...input };
-  const path = {macroCoverage:'/economy',overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',watchlist:'/watchlist',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',macro:'/macro',vintages:'/vintages',market:'/market'}[state.page] || '/overview';
+  const path = {research:"/research",macroCoverage:'/economy',overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',watchlist:'/watchlist',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',macro:'/macro',vintages:'/vintages',market:'/market'}[state.page] || '/overview';
   const p = new URLSearchParams();
+  if(state.page==='research'){
+    p.set('view',state.researchView);if(state.packageId)p.set('package',state.packageId);
+    if(state.changeSince)p.set('since',state.changeSince);if(state.changePage>1)p.set('changePage',String(state.changePage));
+    if(state.publicationCutoff)p.set('publishedBy',state.publicationCutoff);
+  }
   if(state.page==='macroCoverage'){
     p.set('family',state.macroFamily);p.set('measure',state.macroMeasure);
   }

@@ -1,6 +1,7 @@
 import { yieldCurve, dataStatus } from './data.js';
 import { getSeries, compareSeries, transformSeries, formatValue, periodLabel, observationCoverageLabel } from './model.js';
 import { selectCurveOverlays, NOMINAL_YIELD_TENORS } from './yields.js';
+import {createLinkedCursor} from './comparison-cursor.js';
 
 const ns = 'http://www.w3.org/2000/svg';
 let chartId = 0;
@@ -22,7 +23,7 @@ function svgElement(name, attributes, parent, text) {
   return node;
 }
 
-function draw(container, panels, {height = 180, bars = false, curve = false, transformed = false} = {}) {
+function draw(container, panels, {height = 180, bars = false, curve = false, transformed = false,cursor=null,evidenceLabel='Official snapshot'} = {}) {
   container.replaceChildren();
   const width = Math.max(300, Math.round(container.clientWidth));
   const h = Math.max(120,height), left = 54, right = 20, top = 28;
@@ -51,8 +52,8 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const y = value => top+(hi-value)/(hi-lo)*ph;
   const id = `chart-readout-${++chartId}`;
   const title = curve ? 'Treasury par yield curve' : panels.map(panel => panel.series.name).join(' and ');
-  const svg = svgElement('svg',{viewBox:`0 0 ${width} ${h}`,tabindex:0,role:'group','aria-label':`${title}. Official snapshot. Use left and right arrow keys for exact values.`,'aria-describedby':id},container);
-  svgElement('title',{},svg,`${title} · ${panels[0].unit} · official snapshot`);
+  const svg = svgElement('svg',{viewBox:`0 0 ${width} ${h}`,tabindex:0,role:'group','aria-label':`${title}. ${evidenceLabel}. Use left and right arrow keys for exact values.`,'aria-describedby':id},container);
+  svgElement('title',{},svg,`${title} · ${panels[0].unit} · ${evidenceLabel}`);
   svgElement('text',{x:left,y:14},svg,panels[0].unit);
   for (let index=0;index<4;index++) {
     const value = lo+(hi-lo)*index/3;
@@ -94,8 +95,13 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   let selected=orderedDates.length-1;
   function select(index, announce = false) {
     selected = Math.max(0,Math.min(orderedDates.length-1,index));
-    const date=orderedDates[selected], x=xIndex(selected);
+    selectDate(orderedDates[selected],announce);
+  }
+  function selectDate(date,announce=false){
+    if(!date)return;
+    const x=xDate(date);
     guide.setAttribute('x1',x); guide.setAttribute('x2',x);
+    guide.setAttribute('visibility',x>=left&&x<=width-right?'visible':'hidden');
     const dateLabel = curve ? `${date} maturity` : chartDateLabel(panels,date);
     readout.replaceChildren();
     const dateSpan = document.createElement('span'); dateSpan.textContent = dateLabel; readout.append(dateSpan);
@@ -113,29 +119,34 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
       span.append(`${label} `);
       const strong=document.createElement('strong'); strong.textContent=display; span.append(strong);
       const coverage=observationCoverageLabel(observation);if(coverage)span.append(` · ${coverage}`);
+      if(!observation)span.append(' · no observation on this reference date');
+      else if(!finite(value))span.append(' · source value unavailable');
       readout.append(span);
     });
-    if (announce) svg.setAttribute('aria-label',`${title}. Official snapshot. ${readout.textContent}. Use left and right arrow keys.`);
+    if (announce) svg.setAttribute('aria-label',`${title}. ${evidenceLabel}. ${readout.textContent}. Use left and right arrow keys.`);
   }
   function pointer(event) {
     const box = svg.getBoundingClientRect();
     const target = (event.clientX-box.left)*width/box.width;
     let nearest = 0;
-    orderedDates.forEach((_,index)=>{if(Math.abs(xIndex(index)-target)<Math.abs(xIndex(nearest)-target))nearest=index;});
-    select(nearest);
+    const candidates=cursor?.dates??orderedDates;
+    candidates.forEach((date,index)=>{if(Math.abs(xDate(date)-target)<Math.abs(xDate(candidates[nearest])-target))nearest=index;});
+    if(cursor)cursor.select(candidates[nearest],{origin:id});else select(nearest);
   }
   hit.addEventListener('pointermove',pointer);
   hit.addEventListener('pointerdown',pointer);
   svg.addEventListener('keydown',event=>{
     if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
     event.preventDefault();
-    select(event.key==='Home'?0:event.key==='End'?orderedDates.length-1:selected+(event.key==='ArrowRight'?1:-1),true);
+    if(cursor)cursor.move(event.key==='Home'?'home':event.key==='End'?'end':event.key==='ArrowRight'?1:-1,{announce:true,origin:id});
+    else select(event.key==='Home'?0:event.key==='End'?orderedDates.length-1:selected+(event.key==='ArrowRight'?1:-1),true);
   });
-  select(selected);
+  if(cursor)cursor.subscribe(({date,announce,origin})=>selectDate(date,announce&&origin===id));else select(selected);
 }
 
 /** Responsive view boxes avoid layout mutations inside ResizeObserver callbacks. */
-export function renderCharts(root) {
+export function renderCharts(root,{catalog}={}) {
+  const cursors=new Map(),lookup=id=>catalog?catalog[id]:getSeries(id);
   root.querySelectorAll('[data-chart]').forEach(container => {
     const {kind,transform='level',comparison='native'} = container.dataset;
     const range=readChartRange(container.dataset.range), height=Number(container.dataset.height)||180;
@@ -153,11 +164,14 @@ export function renderCharts(root) {
       return;
     }
     const ids=container.dataset.series.split(',').filter(Boolean);
-    const result=comparison!=='native'||container.dataset.panelId?compareSeries(ids,comparison,range):{panels:ids.map(id=>transformSeries(getSeries(id),transform,range))};
+    const result=comparison!=='native'||container.dataset.panelId?compareSeries(ids,comparison,range,catalog):{panels:ids.map(id=>transformSeries(lookup(id),transform,range))};
+    if(comparison==='native'&&container.dataset.panelId&&transform!=='level'&&!result.error)result.panels=result.panels.map(panel=>transformSeries(panel.series,transform,range,result.window));
     result.error??=result.panels?.find(panel=>panel.error)?.error;
     if (result.error) {container.textContent=result.error;return;}
     const panels=container.dataset.panelId?result.panels.filter(panel=>panel.series.id===container.dataset.panelId):result.panels;
     if(!panels.length){container.textContent='No observations available for this chart.';return;}
-    draw(container,panels,{height,bars:kind==='bar',transformed:transform==='change'||comparison==='difference'});
+    const group=container.dataset.cursorGroup;
+    if(group&&!cursors.has(group))cursors.set(group,createLinkedCursor(result.panels));
+    draw(container,panels,{height,bars:kind==='bar',transformed:transform==='change'||comparison==='difference',cursor:group?cursors.get(group):null,evidenceLabel:catalog?'Frozen research snapshot':'Official snapshot'});
   });
 }

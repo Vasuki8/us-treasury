@@ -33,7 +33,7 @@ export function parseG17Total(text,{now=new Date(),kind='production'}={}) {
     if(base?.length!==12||base.some(row=>!finite(row.value))||Math.abs(base.reduce((sum,row)=>sum+row.value,0)/12-100)>0.01)fail('industrial production index base changed or missing');
   }
   const cutoff=now.toISOString().slice(0,10);
-  const observations=[...years.values()].flat().filter(row=>row.date>='2017-01-01'&&row.date<=cutoff).sort((a,b)=>a.date.localeCompare(b.date));
+  const observations=[...years.values()].flat().filter(row=>row.date>='2000-01-01'&&row.date<=cutoff).sort((a,b)=>a.date.localeCompare(b.date));
   if(!observations.some(row=>finite(row.value)))fail('no usable total index observations');
   return observations;
 }
@@ -49,7 +49,7 @@ async function capture(url,fetchImpl) {
 export async function collectActivity({fetchImpl=globalThis.fetch,now=new Date()}={}) {
   if(!(now instanceof Date)||!Number.isFinite(now.getTime()))fail('capture date');
   const [production,utilization]=await Promise.all([INDUSTRIAL_PRODUCTION_URL,CAPACITY_UTILIZATION_URL].map(url=>capture(url,fetchImpl)));
-  const coverageNote='Monthly seasonally adjusted total U.S. industrial-sector estimates from 2017, covering manufacturing, mining, and utilities. Latest revised history; monthly and annual revisions can change previous observations. Historical release dates are not inferred.';
+  const coverageNote='Monthly seasonally adjusted total U.S. industrial-sector estimates from January 2000, covering manufacturing, mining, and utilities. Latest revised history; monthly and annual revisions can change previous observations. Earlier reference dates are first captured on the actual new retrieval date. Historical release dates are not inferred.';
   const common={frequency:'Monthly',adjustment:'Seasonally adjusted',observationType:'official',dataStatus:'official',attribution:'Source: Board of Governors of the Federal Reserve System, G.17 Industrial Production and Capacity Utilization.',licenseUrl:terms,coverageNote};
   const series={
     industrialProduction:{...common,observations:parseG17Total(production.text,{now,kind:'production'}),sourceIds:['IP.B50001.SA'],sourceUrl:INDUSTRIAL_PRODUCTION_URL,sourceTitle:'G.17 Total Industrial Production',unit:'Index 2017=100',calculation:'Published B50001 total industrial production seasonally adjusted index, 2017=100. No growth rate or annualization is applied.'},

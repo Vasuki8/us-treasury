@@ -9,7 +9,7 @@ Admitted on 22 October 2026, extending 48 to 77 registered measurements. The exi
 | Family | Source review | Coverage and constraints |
 | --- | --- | --- |
 | CPI/core/monthly and labor | [BLS review](bls-macro-family-source-review.md) | Twelve unique official API IDs; one unregistered request, ten calendar years. SA/NSA and calculated exact-month/year changes remain distinct. |
-| PCE/core/monthly, real spending and real disposable income | [BEA monthly review](bea-monthly-macro-source-review.md) | Up to 120 retained months; published nonannualized monthly rates, explicit SAAR real-dollar levels and 2017 price/quantity conventions. |
+| PCE/core/monthly, real spending and real disposable income | [BEA monthly review](bea-monthly-macro-source-review.md) | All available approved-file history after milestone 3; independent first periods, published nonannualized monthly rates, explicit SAAR real-dollar levels and 2017 price/quantity conventions. |
 | Continued claims | [DOL review](dol-continued-claims-source-review.md) | National SA historical XML, independent week-ending dates and lag limitations; raw counts converted to thousands. |
 | Target bounds, IORB, industrial activity and housing | [Exact feeds and commercial terms](macro-coverage-source-review.md) | Conditional New York Fed redistribution notices, Board official series, Census CC0 and originating-program attribution. IORB has no pre-2021 splice; housing is SAAR rather than monthly counts. |
 
@@ -28,5 +28,7 @@ Calendar associations connect the existing BLS/BEA/DOL programs to related measu
 | Market functioning | New York Fed official dealer statistics and funding reference rates | Partial market coverage, instrument/tenor, reporting lags and permitted redistribution | Admitted conditionally: [exact feeds, reporting bases, rights and exclusions](market-functioning-source-review.md), enforced by market-policy.mjs; titles, rate disclaimers and downstream terms preserved across views/exports. |
 
 ## Failure policy
+
+Website review milestone 3 separately admits a [selected official GDP publication sample](publication-vintages-source-review.md): 2026Q1 Advance/Second/Third, with original source cells, publication-day evidence, retrieval hashes and BEA reuse attribution. `scripts/publication-policy.mjs` validates only the exact reviewed workbook/records during capture and build. It is a static historical sample, outside the required daily freshness collectors. It neither extends the latest-series admission hostname-wide nor invents missing historical vintages. Broader publication coverage and supplemental/calendar replay remain deferred.
 
 Blocked or unapproved feeds do not produce substitute observations. Keep source-specific last-good capture times and visible cached/unavailable states. A rights decision for one dataset does not cover unrelated calendars, prose, logos or third-party market data. No new credentials, paid feeds or infrastructure are authorized by this ledger.

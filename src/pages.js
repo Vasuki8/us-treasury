@@ -13,6 +13,8 @@ import {rangeControls,coverageSummary,measureLabel,changeLabel} from './research
 import {relatedIndicators} from './related.js';
 import {watchlistPage} from './watchlist-page.js';
 import {macroCoveragePage} from './macro-coverage-page.js';
+import {researchPage} from './research-page.js';
+import {calendarScope} from './calendar-scope.js';
 import {calendarRelatedIds} from './macro-calendar.js';
 import { researchNavigation } from './research-navigation.js';
 import { series, releases, yieldCurve, dataStatus } from './data.js';
@@ -157,14 +159,7 @@ function calendarPreview(event, state) {
 }
 
 function calendar(state) {
-  const months = [...new Set(releases.map(event => event.date.slice(0, 7)))].sort();
-  const month = months.includes(state.calendarMonth) ? state.calendarMonth : 'upcoming';
-  const windowEvents = month === 'upcoming' ? upcomingReleases() : orderedReleases().filter(event => event.date.startsWith(month));
-  const days = [...new Set(windowEvents.map(event => event.date))];
-  const filtered = windowEvents.filter(event => (state.day === 'all' || event.date === state.day)
-    && (state.calendarTopic === 'All topics' || event.topic === state.calendarTopic || relatedSeries(event).some(id=>getSeries(id).topic===state.calendarTopic))
-    && (!state.watchOnly || relatedSeries(event).some(id => state.saved.includes(id))));
-  const selected = filtered.find(event => event.id === state.eventId) ?? filtered[0];
+  const {months,month,days,filtered,selected}=calendarScope(state);
   let previousDay = '';
   const rows = filtered.map(event => {
     const dayHeader = previousDay === event.date ? '' : `<tr class="calendar-day"><th scope="rowgroup" colspan="3">${esc(releaseDate(event.date))}</th></tr>`;
@@ -207,9 +202,9 @@ function comparison(state) {
   if (!state.selected.length) workspace = emptyState('No series selected.', 'Choose up to four series from the catalog.', button('OPEN CATALOG', 'data-explore-mode="catalog"'));
   else if (result.error) workspace = emptyState('Comparison unavailable.', result.error, button('USE NATIVE VALUES','data-comparison-mode="native"')+button('CHANGE FROM BASELINE','data-comparison-mode="difference"')+button('EDIT SELECTION', 'data-explore-mode="catalog"'));
   else if (state.comparison === 'indexed') workspace = `<p class="panel-note">Index (common baseline = 100) · eligible positive levels only · baseline ${esc(result.panels[0]?.baselineDate)} · original observation dates thereafter · no fill or frequency aggregation</p>${chart(state.selected, { height: 275, range: viewRange(state), comparison: 'indexed' })}${result.panels.map(coverageSummary).join('')}`;
-  else workspace = result.panels.map(item => `<section class="comparison-panel"><h3 class="chart-caption"><span class="swatch"></span>${esc(item.series.short)} · ${esc(item.unit)}</h3>${state.comparison==='difference'?`<p class="panel-note">Change from baseline ${esc(item.baselineDate)} · ${esc(item.formula??'current value minus baseline value in the displayed units')}</p>`:''}${chart(state.selected, { height: 150, range: viewRange(state),comparison:state.comparison,panelId:item.series.id })}${coverageSummary(item)}</section>`).join('');
+  else workspace = result.panels.map(item => `<section class="comparison-panel"><h3 class="chart-caption"><span class="swatch"></span>${esc(item.series.short)} · ${esc(item.unit)}</h3>${state.comparison==='difference'?`<p class="panel-note">Change from baseline ${esc(item.baselineDate)} · ${esc(item.formula??'current value minus baseline value in the displayed units')}</p>`:''}${chart(state.selected, { height: 150, range: viewRange(state),comparison:state.comparison,panelId:item.series.id,cursorGroup:"comparison" })}${coverageSummary(item)}</section>`).join('');
   const controls = `<div class="toolbar"><label for="comparison-select">Comparison <select id="comparison-select"><option value="native"${state.comparison === 'native' ? ' selected' : ''}>Native units · separate panels</option><option value="indexed"${state.comparison === 'indexed' ? ' selected' : ''}>Index · eligible positive levels</option><option value="difference"${state.comparison==='difference'?' selected':''}>Change from baseline · separate units</option></select></label>${rangeControls(state,state.selected)}</div>`;
-  return `<div class="grid g12">${panel('01', 'SELECTED SERIES', `<div class="builder-list">${selected || '<p class="muted">Select series in the catalog to compare.</p>'}<p class="small muted">Native units and observation dates are preserved. Rates, growth, contributions and balances use native values or baseline differences; ratio indexing requires eligible positive levels.</p></div>`, button('EDIT', 'data-explore-mode="catalog"', 'link-button'))}${panel('02', 'COMPARISON WORKSPACE', controls + workspace, '', 'Official snapshots · separate panels use independent labeled scales')}</div>`
+  return `<div class="grid g12">${panel('01', 'SELECTED SERIES', `<div class="builder-list">${selected || '<p class="muted">Select series in the catalog to compare.</p>'}<p class="small muted">Native units and observation dates are preserved. Rates, growth, contributions and balances use native values or baseline differences; ratio indexing requires eligible positive levels.</p></div>`, button('EDIT', 'data-explore-mode="catalog"', 'link-button'))}${panel('02', 'COMPARISON WORKSPACE', controls + workspace, '', 'Official snapshots · independent scales; linked cursor uses exact dates with no interpolation')}</div>`
     + panel('03', 'EXPORT CONFIGURATION', `<div class="context-strip"><span>FORMAT <b class="mono">LONG CSV</b></span><span>SCOPE <b class="mono">DISPLAYED WINDOW</b></span><span>VALUES <b class="mono">${state.comparison === 'indexed' ? 'INDEXED' : state.comparison==='difference'?'BASELINE DIFFERENCE':'NATIVE'}</b></span><span>ALIGNMENT <b class="mono">NO FILL</b></span></div><p class="panel-note">CSV exports match the displayed date window, values and units. Comparison baselines, formulas, per-series status and retrieval provenance accompany each row.</p>`, button('CSV SELECTED', `data-export${state.selected.length&&!result.error ? '' : ' disabled title="Choose a valid comparison and date window."'}`, 'link-button'));
 }
 
@@ -224,6 +219,6 @@ export function renderPage(input = {}, historyContext = {}) {
   if(Object.hasOwn(input,'range')&&!Object.hasOwn(input,'window'))state.window='observations';
   state.selected = seriesIds(Array.isArray(state.selected) ? state.selected : []).slice(0, 4);
   state.saved = seriesIds(Array.isArray(state.saved) ? state.saved : []);
-  return researchNavigation(state.page)+({ overview, labor, macroCoverage:macroCoveragePage, indicator:()=>indicator(state, historyContext), calendar, explore,watchlist:()=>`<div class="watchlist-workspace">${watchlistPage(state)}</div>`, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage(),macro:()=>macroPage(),vintages:()=>vintagesPage(state, historyContext.historyState?.history, historyContext.historyState),market:()=>marketFunctioningPage() }[state.page] ?? overview)(state);
+  return researchNavigation(state.page)+({ research:()=>researchPage(state,historyContext),overview, labor, macroCoverage:macroCoveragePage, indicator:()=>indicator(state, historyContext), calendar, explore,watchlist:()=>`<div class="watchlist-workspace">${watchlistPage(state)}</div>`, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage(),macro:()=>macroPage(),vintages:()=>vintagesPage(state, historyContext.historyState?.history, historyContext.historyState),market:()=>marketFunctioningPage() }[state.page] ?? overview)(state);
 }
 function refinancing(state){return refinancingPage(state);}

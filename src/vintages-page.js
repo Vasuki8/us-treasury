@@ -47,7 +47,7 @@ function rightsNotice(contexts, current) {
 }
 
 /** datetime-local is deliberately interpreted as UTC, never the device timezone. */
-function normalizedCutoff(value, vintages) {
+export function normalizedCutoff(value, vintages) {
   if (value === undefined || value === null) value = latestCapture(vintages);
   if (!value || typeof value !== 'string') throw new Error('Invalid cutoff: select a UTC date and time.');
   let canonical = value;

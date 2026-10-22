@@ -88,7 +88,8 @@ function ordered(vintages) {
   return captures(vintages).map(item => ({ ...item, capturedAt: timestamp(item.capturedAt), recordedAt: timestamp(item.recordedAt) })).sort((a, b) => a.capturedAt.localeCompare(b.capturedAt) || a.sourceId.localeCompare(b.sourceId));
 }
 
-function applyCapture(sources, capture) {
+/** Apply a validated capture to private replay state, never to retained archive objects. */
+export function applyVintageCapture(sources, capture) {
   if (!sources[capture.sourceId] && !capture.baseline) throw new Error('Vintage delta is missing its baseline');
   const source = sources[capture.sourceId] ?? { id: capture.sourceId, series: {} };
   for (const key of sourceFields) delete source[key];
@@ -110,7 +111,7 @@ export function asKnownOn(vintages, cutoffISOString) {
   const cutoff = timestamp(cutoffISOString), sources = {};
   for (const item of ordered(vintages)) {
     if (item.capturedAt > cutoff) continue;
-    applyCapture(sources, item);
+    applyVintageCapture(sources, item);
   }
   return { sources };
 }

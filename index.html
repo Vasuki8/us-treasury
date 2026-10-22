@@ -32,7 +32,7 @@
       <input id="command-input" placeholder="Search indicators or enter US, LABOR, UNRATE, CAL, FIND" autocomplete="off" spellcheck="false" maxlength="200">
       <kbd class="command-hint">Ctrl K</kbd><button class="go" type="submit">GO</button>
     </form>
-    <nav class="mobile-workspace" aria-label="Personal workspace"><a class="action" href="#/watchlist" data-nav="watchlist">MY WATCHLIST <span id="mobile-saved-count">0</span></a></nav>
+    <nav class="mobile-workspace" aria-label="Personal workspace"><a class="action" href="#/watchlist" data-nav="watchlist">MY WATCHLIST <span id="mobile-saved-count">0</span></a><a class="action" href="#/research" data-nav="research">SAVED RESEARCH</a></nav>
     <div class="ticker" id="ticker" aria-label="Official macro snapshot"></div>
     <div id="data-freshness"></div>
     <div class="shell">
@@ -43,6 +43,7 @@
         <a href="#/series/unrate" data-nav="indicator" id="indicator-rail"><span class="code">IND</span>Indicator detail</a>
         <a href="#/calendar" data-nav="calendar"><span class="code">CAL</span>Calendar</a>
         <a href="#/explore" data-nav="explore"><span class="code">EXP</span>Explore data</a>
+        <a href="#/research" data-nav="research"><span class="code">SAV</span>Saved research</a>
         <hr><div class="rail-title">RESEARCH</div>
         <a href="#/economy" data-nav="macroCoverage"><span class="code">ECO</span>Macro coverage</a>
         <a href="#/fiscal" data-nav="fiscal"><span class="code">FIS</span>Fiscal pressure</a>

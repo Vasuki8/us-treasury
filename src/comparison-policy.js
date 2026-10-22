@@ -32,9 +32,8 @@ export function comparisonClassification(s) {
   return knownClasses.has(s.comparisonClass) ? s.comparisonClass : 'unknown';
 }
 
-export function indexEligibilityError(panel) {
+export function indexEligibilityError(panel, classification = comparisonClassification(panel.series)) {
   const s = panel.series;
-  const classification = comparisonClassification(s);
   const alternative = 'Use native panels or baseline differences.';
   if (!ratioClasses.has(classification)) return `${s.name} cannot be ratio-indexed: its displayed measurement is ${classification === 'unknown' ? 'unknown or unclassified' : classification === 'change' ? 'a period change' : `a ${classification} measure`}. ${alternative}`;
   if (panel.observations.some(o => typeof o.value === 'number' && Number.isFinite(o.value) && o.value <= 0)) {

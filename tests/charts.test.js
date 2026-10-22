@@ -22,7 +22,7 @@ test('weekly chart readouts identify the week-ending date', () => {
 });
 
 // Exercise the real SVG renderer; only the browser's element boundary is replaced.
-function withRenderedCharts(range, comparison, run) {
+function withRenderedCharts(range, comparison, run, {linked=false,transform='level',frozen=false}={}) {
   class Element {
     constructor(tag) { this.tag = tag; this.attributes = {}; this.children = []; this.listeners = {}; }
     setAttribute(name, value) { this.attributes[name] = String(value); }
@@ -46,10 +46,10 @@ function withRenderedCharts(range, comparison, run) {
     const containers = (comparison === 'indexed' ? [null] : ids).map(panelId => {
       const container = new Element('div');
       container.clientWidth = 374;
-      container.dataset = { series: ids.join(','), range: JSON.stringify(range), comparison, ...(panelId ? { panelId } : {}) };
+      container.dataset = { series: ids.join(','), range: JSON.stringify(range), comparison,transform, ...(panelId ? { panelId } : {}),...(linked?{cursorGroup:'comparison'}:{}) };
       return container;
     });
-    renderCharts({ querySelectorAll: () => containers });
+    renderCharts({ querySelectorAll: () => containers },frozen?{catalog:series}:{});
     const paths = containers.flatMap(container => {
       const rendered = nodes(container), grid = rendered.find(node => node.attributes.class === 'gridline');
       const left = Number(grid.attributes.x1), width = Number(grid.attributes.x2) - left;
@@ -112,4 +112,38 @@ test('explicit observation windows retain each panel\'s own observation extent',
     assert.equal(monthly.xs.at(-1), monthly.left + monthly.width);
     assert.notEqual(monthly.xs[0], daily.xs[1], 'OBS panels intentionally use their independent retained date extents');
   });
+});
+
+test('linked SVG comparison keyboard updates every exact-date readout and never borrows a monthly value',()=>{
+ withRenderedCharts({preset:'all'},'native',({containers,nodes})=>{
+  const svg=nodes(containers[0]).find(node=>node.tag==='svg');
+  const readout=container=>container.children.find(node=>node.tag==='div').textContent;
+  svg.listeners.keydown({key:'Home',preventDefault(){}});
+  assert.match(readout(containers[0]),/^1 Jan 2026/);
+  assert.match(readout(containers[1]),/—.*no observation on this reference date/);
+  svg.listeners.keydown({key:'ArrowRight',preventDefault(){}});
+  assert.match(readout(containers[1]),/^Feb 2026/);
+  assert.match(readout(containers[1]),/5/);
+  svg.listeners.keydown({key:'End',preventDefault(){}});
+  assert.match(readout(containers[1]),/^Apr 2026/);
+  assert.match(readout(containers[1]),/—/);
+ },{linked:true});
+});
+
+test('frozen native panel charts apply captured period-change transforms before drawing',()=>{
+ withRenderedCharts({preset:'all'},'native',({containers,nodes})=>{
+  const readout=containers[0].children.find(node=>node.tag==='div');
+  assert.match(nodes(readout).find(node=>node.tag==='strong').textContent,/^2\.00 /);
+ },{transform:'change'});
+});
+
+test('frozen SVG labels retain their evidence classification during keyboard interaction',()=>{
+ withRenderedCharts({preset:'all'},'native',({containers,nodes})=>{
+  const svg=nodes(containers[0]).find(node=>node.tag==='svg');
+  assert.match(svg.attributes['aria-label'],/Frozen research snapshot/);
+  assert.match(nodes(svg).find(node=>node.tag==='title').textContent,/Frozen research snapshot/);
+  svg.listeners.keydown({key:'Home',preventDefault(){}});
+  assert.match(svg.attributes['aria-label'],/Frozen research snapshot/);
+  assert.doesNotMatch(svg.attributes['aria-label'],/Official snapshot/);
+ },{frozen:true});
 });

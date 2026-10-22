@@ -83,6 +83,14 @@ test('async repaint restores focused cutoff selection and scroll, and stable ret
  }
 });
 
+test('async history repaint restores file-input focus without assigning a browser-protected filename',()=>{
+ const old={id:'research-import',tagName:'INPUT',type:'file',dataset:{},value:'C:\\fakepath\\pinned.json',selectionStart:null,selectionEnd:null};let active=old,assignments=0;
+ const replacement={id:'research-import',type:'file',focus:()=>{active=replacement;},set value(value){assignments++;if(value)throw new DOMException('File input values may only be set to the empty string.','InvalidStateError');}};
+ const document={get activeElement(){return active;},getElementById:()=>replacement},main={ownerDocument:document,contains:node=>node===old,querySelectorAll:()=>[]},window={scrollX:8,scrollY:120,scrollTo:value=>{window.restored=value;}};
+ assert.doesNotThrow(()=>preserveHistoryView(main,()=>{active=null;},{window,document}));
+ assert.equal(active,replacement);assert.equal(assignments,0);assert.deepEqual(window.restored,{left:8,top:120,behavior:'instant'});
+});
+
 test('successful retry focuses the current history control after its retry button disappears',()=>{
  for(const fallbackId of ['vintage-cutoff','detail-tab-revisions']){
   const retry={id:'history-retry',tagName:'BUTTON',dataset:{retryHistory:''},value:''};let active=retry;

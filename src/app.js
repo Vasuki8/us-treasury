@@ -1,4 +1,4 @@
-import { releases, dataStatus } from './data.js';
+import { releases, dataStatus,series } from './data.js';
 import { filterSeries, getSeries, latest, formatValue, formatChange, toCsv } from './model.js';
 import {fiscalFinancingCsv} from './research-exports.js';
 import {refinancingCsv} from './refinancing-page.js';
@@ -6,7 +6,7 @@ import {yieldCurvesCsv} from './yields-page.js';
 import {auctionsCsv} from './auctions-page.js';
 import {ownershipCsv} from './ownership-page.js';
 import {macroContributionsCsv} from './macro-page.js';
-import {vintagesCsv} from './vintages-page.js';
+import {vintagesCsv,normalizedCutoff} from './vintages-page.js';
 import {marketFunctioningCsv} from './market-functioning-page.js';
 import {isResearchPage} from './research-navigation.js';
 import { renderPage } from './pages.js';
@@ -19,6 +19,13 @@ import { createHistoryLoader } from './history-loader.js';
 import { createHistoryController, preserveHistoryView } from './history-controller.js';
 import {viewRange,indicatorHref,createWorkspaceMemory,updateWorkspaceSelection} from './workspace-context.js';
 import {coverageFamilies} from './macro-registry.js';
+import {createWorkspace,openWorkspace,MAX_RESEARCH_JSON_BYTES} from './research-workspaces.js';
+import {createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv} from './research-packages.js';
+import {createResearchLibrary} from './research-library.js';
+import {buildPinContext,buildPublicationPin} from './research-context.js';
+import {captureChanges,changesCsv,readChangeCheckpoint,writeChangeCheckpoint} from './capture-changes.js';
+import {publicationArchive} from './publication-archive.js';
+import {publicationCsv} from './publication-history.js';
 
 const root = document.getElementById('app');
 const main = document.getElementById('main-content');
@@ -28,6 +35,9 @@ mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus);
 let storage;
 try { storage = window.localStorage; } catch { /* Session remains usable without persistence. */ }
 let state = { ...parseRoute(location.hash), ...readPreferences(storage) };
+const researchLibrary=await createResearchLibrary(storage);
+let changeCheckpoint=readChangeCheckpoint(storage,dataStatus.generatedAt),changeState={status:'idle',ids:[],history:null,error:null},changeKey='',activeWorkspaceId=null,researchLabel='',pinBusy=false;
+let changeRowsCache=null;
 const workspaceMemory=createWorkspaceMemory();
 if('scrollRestoration' in history)history.scrollRestoration='manual';
 const historyLoader = createHistoryLoader(dataStatus.historyArchive);
@@ -35,7 +45,7 @@ const historyController = createHistoryController(historyLoader, {
   getRoute:() => state,
   onChange:() => preserveHistoryView(main, () => render()),
 });
-const pageNames = {macroCoverage:'Macro coverage',overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',watchlist:'Watchlist',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Yield explanations',auctions:'Auction demand',ownership:'Debt ownership',macro:'Macro drivers',vintages:'Captured by',market:'Market functioning'};
+const pageNames = {research:"Research library",macroCoverage:'Macro coverage',overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',watchlist:'Watchlist',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Yield explanations',auctions:'Auction demand',ownership:'Debt ownership',macro:'Macro drivers',vintages:'Captured by',market:'Market functioning'};
 
 document.querySelector('.skip-link').addEventListener('click',event=>{
   event.preventDefault();
@@ -74,14 +84,53 @@ function restoreFocus(focus) {
   }
 }
 
+function trackedChanges(){return [...new Set((state.saved.length?state.saved:state.selected).filter(id=>getSeries(id)))];}
+function syncChanges({retry=false}={}){
+  if(state.page!=='research'||state.researchView!=='changes')return;
+  const ids=trackedChanges(),key=ids.join(',');
+  if(key===changeKey&&(changeState.status==='loading'||!retry&&['ready','error'].includes(changeState.status)))return;
+  changeKey=key;changeState={status:'loading',ids,history:null,error:null};
+  Promise.all(ids.map(id=>historyLoader.load(id,{retry}))).then(histories=>{
+    if(changeKey!==key)return;
+    const captures=new Map();
+    for(const history of histories)for(const capture of history.captures)captures.set(capture.sourceId+'|'+capture.capturedAt,capture);
+    changeState={status:'ready',ids,history:{version:1,captures:[...captures.values()].sort((a,b)=>a.capturedAt.localeCompare(b.capturedAt)||a.sourceId.localeCompare(b.sourceId))},error:null};
+    if(state.page==='research'&&state.researchView==='changes')preserveHistoryView(main,()=>render());
+  }).catch(error=>{
+    if(changeKey!==key)return;
+    changeState={status:'error',ids,history:null,error:error.message};
+    if(state.page==='research'&&state.researchView==='changes')preserveHistoryView(main,()=>render());
+  });
+}
+function changesContext(){
+  if(changeState.status!=='ready')return changeState;
+  try{
+    const since=state.changeSince||changeCheckpoint.since,ids=changeState.ids.join(',');
+    if(changeRowsCache?.history!==changeState.history||changeRowsCache.ids!==ids||changeRowsCache.since!==since)changeRowsCache={history:changeState.history,ids,since,rows:captureChanges(changeState.history,{ids:changeState.ids,since})};
+    return {...changeState,rows:changeRowsCache.rows};
+  }
+  catch(error){return {...changeState,status:'error',error:error.message};}
+}
+function currentPackage(){return state.page==='research'&&state.researchView==='packages'?researchLibrary.getPackage(state.packageId):null;}
+function renderCurrentCharts(){const pkg=currentPackage();renderCharts(main,pkg?{catalog:pkg.catalog}:{});}
+function researchActions(){
+  const alert=changeCheckpoint.enabled&&dataStatus.generatedAt>changeCheckpoint.snapshotAt?'<p class="panel-note amber" role="status">A newer snapshot is available since your local change checkpoint. <a href="#/research?view=changes">Review captured changes and collector failures</a>. A new snapshot does not itself establish a new economic release.</p>':'';
+  if(state.page==='research')return alert;
+  const active=researchLibrary.getWorkspace(activeWorkspaceId),name=researchLabel||active?.name||`${pageNames[state.page]} research`;
+  return alert+`<section class="research-savebar" aria-label="Save research"><label for="research-name">Research name<input id="research-name" value="${esc(name)}" maxlength="80" autocomplete="off"></label><div class="actions"><button type="button" class="action" data-save-workspace>${active?'UPDATE WORKSPACE':'SAVE WORKSPACE'}</button><button type="button" class="action" data-pin-result${pinBusy?' disabled':''}>${pinBusy?'PINNING…':'PIN RESULT'}</button><a class="action" href="#/research">SAVED RESEARCH</a>${active?'<button type="button" class="link-button" data-clear-workspace>NEW WORKSPACE</button>':''}</div><p class="small muted">${active?`Editing ${esc(active.name)}. `:''}Workspaces reopen current data. Pins freeze up to four scoped measurements and retain relevant module inputs, assumptions and original exports.</p>${state.researchError?`<p class="amber" role="alert">${esc(state.researchError)}</p>`:''}</section>`;
+}
+
 function render({focusHeading=false,preserveFocus=false}={}) {
   const focus=preserveFocus?rememberFocus():null;
   historyController.sync(state);
+  syncChanges();
   root.dataset.theme=state.theme;
   root.dataset.density=state.density;
   document.getElementById('theme-select').value=state.theme;
   document.getElementById('density-select').value=state.density;
-  main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${renderPage(state,historyController.context(state))}`;
+  const agencies=new Set(trackedChanges().map(id=>series[id].agency));
+  const failures=Object.entries(dataStatus.sources).filter(([id,source])=>agencies.has(id)&&source.status!=='ok').map(([id,source])=>({id,...source}));
+  main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${researchActions()}${renderPage(state,{...historyController.context(state),library:researchLibrary.getState(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationArchive})}`;
   root.querySelectorAll('[data-nav]').forEach(link=>{
     if(link.dataset.nav===state.page||link.dataset.nav==='research'&&isResearchPage(state.page))link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
@@ -98,7 +147,7 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   document.getElementById('source-notice').innerHTML=sourceNotice(dataStatus.sources);
   document.getElementById('snapshot-time').textContent=`OFFICIAL SNAPSHOT · ASSEMBLED ${dataStatus.generatedAt ?? 'UNAVAILABLE'}`;
   document.title=`${state.page==='indicator'?getSeries(state.seriesId).name:pageNames[state.page]} — Meridian`;
-  renderCharts(main);
+  renderCurrentCharts();
   if(focusHeading) {
     const heading=main.querySelector('h1');
     heading.tabIndex=-1;heading.focus({preventScroll:true});
@@ -158,11 +207,68 @@ function exportCsv(selection=null) {
   } catch(error) {announce(`Export unavailable: ${error.message}`);}
 }
 
+function downloadJson(pkg){
+  const url=URL.createObjectURL(new Blob([exportResearchPackage(pkg)],{type:'application/json;charset=utf-8'})),anchor=document.createElement('a');
+  anchor.href=url;anchor.download=`meridian-package-${pkg.id}.json`;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);announce('Frozen research JSON downloaded with original observations, assumptions, exports and provenance.');
+}
+function stored(result,label){
+  if(!result.ok)throw new Error(result.reason==='duplicate-id'?'This package ID already identifies different frozen evidence.':`Research library ${result.reason??'save failed'}.`);
+  announce(`${label}${result.persisted?' saved in this browser.':' retained for this session; download pinned JSON for durable storage.'}`);
+}
+async function handleResearchAction(d){
+  state.researchError='';
+  if('saveWorkspace' in d){
+    const prior=researchLibrary.getWorkspace(activeWorkspaceId),name=document.getElementById('research-name').value;
+    const record=createWorkspace({name,state,...(prior?{id:prior.id,now:new Date(prior.createdAt)}:{})});
+    stored(await researchLibrary.saveWorkspace(record),'Workspace');activeWorkspaceId=record.id;researchLabel=record.name;
+  }else if('clearWorkspace' in d){activeWorkspaceId=null;researchLabel='';}
+  else if('openWorkspace' in d){
+    const record=researchLibrary.getWorkspace(d.openWorkspace);if(!record)throw new Error('Workspace unavailable.');
+    activeWorkspaceId=record.id;researchLabel=record.name;navigate(openWorkspace(record));announce('Workspace opened against the latest snapshot. UPDATE WORKSPACE saves configuration changes.');
+  }else if('renameWorkspace' in d){
+    const record=researchLibrary.getWorkspace(d.renameWorkspace);if(!record)throw new Error('Workspace unavailable.');
+    stored(await researchLibrary.saveWorkspace({...record,name:document.getElementById(`workspace-label-${record.id}`).value.trim()}),'Renamed workspace');
+    if(activeWorkspaceId===record.id)researchLabel=researchLibrary.getWorkspace(record.id).name;
+  }else if('removeWorkspace' in d){stored(await researchLibrary.removeWorkspace(d.removeWorkspace),'Workspace removal');if(activeWorkspaceId===d.removeWorkspace){activeWorkspaceId=null;researchLabel='';}}
+  else if('pinResult' in d||'pinPublication' in d){
+    if(pinBusy)return;
+    const args='pinPublication' in d?buildPublicationPin(publicationArchive,state.publicationCutoff):buildPinContext(state,historyController.context(state));
+    const name='pinPublication' in d?`GDP 2026 Q1 published by ${args.context.publicationCutoff}`:document.getElementById('research-name').value;
+    pinBusy=true;render({preserveFocus:true});
+    try{
+      const pkg=await createResearchPackage({name,...args}),result=await researchLibrary.pinPackage(pkg);stored(result,'Frozen package');
+      navigate({page:'research',researchView:'packages',packageId:pkg.id});
+    }finally{pinBusy=false;}
+  }else if('openPackage' in d)navigate({page:'research',researchView:'packages',packageId:d.openPackage});
+  else if('removePackage' in d){stored(await researchLibrary.removePackage(d.removePackage),'Package removal');if(state.packageId===d.removePackage)navigate({packageId:''});}
+  else if('packageJson' in d){const pkg=researchLibrary.getPackage(d.packageJson);if(!pkg)throw new Error('Package unavailable.');downloadJson(pkg);}
+  else if('packageCsv' in d){const pkg=researchLibrary.getPackage(d.packageCsv);if(!pkg)throw new Error('Package unavailable.');downloadCsv(researchPackageCsv(pkg),`meridian-frozen-${pkg.id}.csv`,'Original frozen CSV downloaded; current data were not substituted.');}
+  else if('packageAttachment' in d){const pkg=currentPackage(),file=pkg?.context.attachments?.[Number(d.packageAttachment)];if(!file)throw new Error('Frozen attachment unavailable.');downloadCsv(file.content,file.name,'Original frozen specialist export downloaded with its captured inputs and assumptions.');}
+  else if('enableChanges' in d||'disableChanges' in d||'markChanges' in d){
+    changeCheckpoint={...changeCheckpoint,enabled:'enableChanges' in d?true:'disableChanges' in d?false:changeCheckpoint.enabled,...('disableChanges' in d?{}:{since:dataStatus.generatedAt,snapshotAt:dataStatus.generatedAt})};
+    const durable=writeChangeCheckpoint(storage,changeCheckpoint);changeCheckpoint.storageAvailable=durable;
+    navigate({changeSince:'',changePage:1},{replace:true});announce(`${changeCheckpoint.enabled?'Local change alerts enabled':'Local change alerts disabled'}. ${durable?'Checkpoint saved in this browser.':'Checkpoint lasts for this session; browser storage is unavailable.'}`);
+  }else if('reviewAllChanges' in d){
+    if(changeState.status!=='ready')throw new Error('Load the selected capture archives first.');
+    const earliest=changeState.history.captures.map(row=>row.capturedAt).sort()[0];
+    if(earliest)navigate({changeSince:new Date(Date.parse(earliest)-1).toISOString(),changePage:1});
+  }else if('retryChanges' in d)syncChanges({retry:true});
+  else if('changePage' in d)navigate({changePage:Math.max(1,Number(d.changePage)||1)});
+  else if('exportChanges' in d){const view=changesContext();if(view.status!=='ready')throw new Error('Verified capture changes are unavailable.');downloadCsv(changesCsv(view.rows),'meridian-capture-changes.csv','Capture-change CSV downloaded. Retrieval changes do not establish publication times or revision causes.');}
+  else if('exportPublications' in d)downloadCsv(publicationCsv(publicationArchive,state.publicationCutoff),'meridian-gdp-publications.csv','Selected official GDP publication history downloaded with original source cells and separate retrieval provenance.');
+}
+
 root.addEventListener('click',async event=>{
   const button=event.target.closest('button');
   if(!button)return;
   const d=button.dataset;
   if(button.disabled)return;
+  const researchKeys=['saveWorkspace','clearWorkspace','pinResult','pinPublication','openWorkspace','renameWorkspace','removeWorkspace','openPackage','removePackage','packageJson','packageCsv','packageAttachment','enableChanges','disableChanges','markChanges','reviewAllChanges','retryChanges','changePage','exportChanges','exportPublications'];
+  if(researchKeys.some(key=>key in d)){
+    const before=location.hash;
+    try{await handleResearchAction(d);}catch(error){state.researchError=error.message;announce(`Research action unavailable: ${error.message}`);}
+    if(location.hash===before)render({preserveFocus:true});return;
+  }
   if('reloadSnapshot' in d){
     const url=new URL(window.location.href);
     url.searchParams.set('_refresh',Date.now().toString(36));
@@ -223,8 +329,21 @@ root.addEventListener('click',async event=>{
   }
 });
 
-root.addEventListener('change',event=>{
+root.addEventListener('change',async event=>{
   const target=event.target;
+  if(target.id==='research-import'){
+    const file=target.files?.[0];if(!file)return;
+    try{
+      if(file.size>MAX_RESEARCH_JSON_BYTES)throw new Error('Package exceeds the 12 MiB file limit.');
+      const pkg=await importResearchPackage(await file.text());stored(await researchLibrary.pinPackage(pkg),'Imported read-only package');
+      navigate({page:'research',researchView:'packages',packageId:pkg.id,researchError:''});
+    }catch(error){state.researchError=error.message;render({preserveFocus:true});announce(`Import rejected: ${error.message}`);}return;
+  }
+  if(target.id==='publication-cutoff'){navigate({publicationCutoff:target.value});return;}
+  if(target.id==='change-since'){
+    try{navigate({changeSince:normalizedCutoff(target.value,changeState.history),changePage:1});}
+    catch(error){state.researchError=error.message;render({preserveFocus:true});}return;
+  }
   if(target.id==='theme-select' || target.id==='density-select') {
     const preference=target.id==='theme-select'?'theme':'density';
     state[preference]=target.value;
@@ -250,6 +369,7 @@ root.addEventListener('change',event=>{
 });
 
 root.addEventListener('input',event=>{
+  if(event.target.id==='research-name')researchLabel=event.target.value;
   if(event.target.id==='catalog-search')navigate({query:event.target.value},{replace:true});
 });
 
@@ -257,7 +377,7 @@ document.getElementById('command-form').addEventListener('submit',event=>{
   event.preventDefault();
   const input=document.getElementById('command-input'), query=input.value.trim().replace(/<go>/ig,'').trim();
   const command=query.toUpperCase();
-  const pages={US:'overview',OVERVIEW:'overview',LABOR:'labor',MACRO:'macroCoverage',CAL:'calendar',CALENDAR:'calendar',FIND:'explore',EXPLORE:'explore',WATCHLIST:'watchlist'};
+  const pages={US:'overview',OVERVIEW:'overview',LABOR:'labor',MACRO:'macroCoverage',CAL:'calendar',CALENDAR:'calendar',FIND:'explore',EXPLORE:'explore',WATCHLIST:'watchlist',SAVED:'research',RESEARCH:'research'};
   if(pages[command])navigate({page:pages[command],returnTo:null});
   else {
     const matches=filterSeries({query});
@@ -287,7 +407,7 @@ document.addEventListener('keydown',event=>{
 let resizeFrame;
 window.addEventListener('resize',()=>{
   cancelAnimationFrame(resizeFrame);
-  resizeFrame=requestAnimationFrame(()=>renderCharts(main));
+  resizeFrame=requestAnimationFrame(()=>renderCurrentCharts());
 });
 
 render();

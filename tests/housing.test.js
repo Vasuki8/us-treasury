@@ -39,3 +39,14 @@ test('housing collector rejects missing README conditions, unavailable downloads
  await assert.rejects(use().collectHousing({now,fetchImpl:async()=>new Response('blocked',{status:403})}),/403/);
  await assert.rejects(use().collectHousing({now,fetchImpl:async()=>({ok:true,redirected:true,url:'https://example.com'})}),/redirect|URL/i);
 });
+
+test('housing backfill retains January 2000 onward without filling gaps, changing SAAR scale or losing zero/null distinctions',()=>{
+ const earlier=['4,4,1,0,7,1,999','4,1,1,0,7,1,999','4,6,1,0,7,1,999','5,4,1,0,7,1,(S)','5,1,1,0,7,1,1250','5,6,1,0,7,1,1150','6,4,1,0,7,1,0'];
+ const input=csv().replace('3,Jan-2027','3,Jan-2027\r\n4,Dec-1999\r\n5,Jan-2000\r\n6,Mar-2000')+'\r\n'+earlier.join('\r\n');
+ const result=use().parseHousingCsv(input,{now});
+ assert.deepEqual(result.series.housingStarts.observations.slice(0,2).map(o=>[o.date,o.value,o.sourceValue]),[['2000-01-01',null,'(S)'],['2000-03-01',0,'0']]);
+ assert.deepEqual(result.series.housingPermits.observations[0],{date:'2000-01-01',value:1250,sourceValue:'1250',publishedAt:null,footnotes:[]});
+ assert.equal(result.series.housingCompletions.observations[0].value,1150);
+ assert.ok(Object.values(result.series).every(s=>!s.observations.some(o=>o.date<'2000-01-01'||o.date==='2000-02-01')));
+ assert.equal(result.series.housingPermits.observations.at(-1).value,1350);
+});

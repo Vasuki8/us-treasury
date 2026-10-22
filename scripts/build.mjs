@@ -5,10 +5,13 @@ import { fileURLToPath } from 'node:url';
 import { snapshot } from '../src/official-snapshot.js';
 import { assertCommercialData } from './data-policy.mjs';
 import {loadSnapshotHistory,browserSnapshotAssets} from './snapshot-storage.mjs';
+import {publicationArchive} from '../src/publication-archive.js';
+import {assertPublicationData} from './publication-policy.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fullSnapshot={...snapshot,vintages:await loadSnapshotHistory(snapshot,{directory:path.join(root,'src')})};
 assertCommercialData(fullSnapshot);
+assertPublicationData(publicationArchive);
 const projected=browserSnapshotAssets(fullSnapshot);
 const output = path.join(root, 'dist');
 const modules = (await readdir(path.join(root, 'src'), { withFileTypes: true }))

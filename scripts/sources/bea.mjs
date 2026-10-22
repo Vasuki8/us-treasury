@@ -84,7 +84,7 @@ export async function collectBea({ fetchImpl = globalThis.fetch, now = new Date(
   const raw=parseBeaBatch(monthly.text,['DPCERG','DPCCRG','DPCERGM','DPCCRGM','DPCERX','DPCERAM','A067RX','A067RM'],'M');
   for(const code of Object.keys(raw))raw[code]=raw[code].filter(observation=>observation.date<=cutoff);
   const pce = pceInflation(raw.DPCERG);
-  const measure=(code,calculation,{observations=raw[code],observationType='official'}={})=>({observations:observations.slice(-120),sourceUrl:MONTHLY_URL,sourceIds:[code],calculation,observationType,dataStatus:'official'});
+  const measure=(code,calculation,{observations=raw[code],observationType='official'}={})=>({observations,sourceUrl:MONTHLY_URL,sourceIds:[code],calculation,observationType,dataStatus:'official'});
   const real=(code,label)=>measure(code,`Published ${label}, NIPA ${code==='DPCERX'?'Table 2.8.6 line 1':'Table 2.6 line 37'}; raw chained-2017-dollar millions / 1000 = billions at seasonally adjusted annual rates. Do not sum chained-dollar components.`,{observations:raw[code].map(o=>({...o,value:o.value===null?null:o.value/1000}))});
   const monthlyRate=(code,label,table)=>measure(code,`Published ${label}, NIPA ${table}; percent change from the preceding month, seasonally adjusted, not annualized. Uses published quantity-index changes for real activity, not growth recomputed from rounded dollar levels.`);
   return {
@@ -92,14 +92,14 @@ export async function collectBea({ fetchImpl = globalThis.fetch, now = new Date(
     fetchedAt: [quarterly.retrievedAt, monthly.retrievedAt].sort().at(-1),
     series: {
       gdp: {
-        observations: gdp.slice(-36),
+        observations: gdp,
         sourceUrl: QUARTERLY_URL,
         sourceIds: ['A191RL'],
         calculation: 'Published percent change from the preceding quarter in real GDP, annualized (NIPA Table 1.1.1, line 1).',
         dataStatus: 'official',
       },
       pce: {
-        observations: pce.slice(-120),
+        observations: pce,
         sourceUrl: MONTHLY_URL,
         sourceIds: ['DPCERG'],
         calculation: '100 * (index / exact year-ago index - 1); headline PCE price index (NIPA Table 2.8.4, line 1).',
@@ -117,7 +117,7 @@ export async function collectBea({ fetchImpl = globalThis.fetch, now = new Date(
       realDisposableIncomeMonthly:monthlyRate('A067RM','real disposable personal income growth','Table 2.6 line 43'),
     },
     provenance: [quarterly, monthly].map(({ text: _text, ...metadata }) => metadata),
-    coverageNote:'Monthly price, real spending and real disposable-income families retain up to 120 observations. Real-dollar levels are annual rates; monthly percentage changes are not annualized. Reference dates are month starts, not release times.',
+    coverageNote:'Retains all available observations from the approved quarterly and monthly NIPA files; each measure has its own first available period. Current revised history, first captured on its actual retrieval date. Real-dollar levels are annual rates; monthly percentage changes are not annualized. Reference dates are period starts, not release times.',
     warnings: [],
   };
 }

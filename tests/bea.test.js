@@ -102,7 +102,7 @@ test('PCE annual inflation stays missing when the exact calendar comparison is u
   assert.deepEqual(result.series.pce.observations.slice(-3).map(row => row.date), ['2026-08-01', '2026-09-01', '2026-10-01']);
 });
 
-test('collector filters future periods and truncates only after calculating annual inflation', async () => {
+test('collector filters future periods after calculating exact full-history annual inflation', async () => {
   const monthly = header + Array.from({ length: 60 }, (_, index) => {
     const year = 2022 + Math.floor(index / 12);
     const month = String(index % 12 + 1).padStart(2, '0');
@@ -156,4 +156,28 @@ test('BEA batch parser selects all reviewed series in one pass with independent 
  assert.equal(result.DPCERG[0].value,131.579);assert.equal(result.DPCCRG[0].value,130.455);
  assert.throws(()=>bea().parseBeaBatch(header+'DPCERG,2026M08,131',['DPCERG','DPCCRG'],'M'),/missing.*DPCCRG/i);
  assert.throws(()=>bea().parseBeaBatch(header+'DPCERG,2026M08,131\nDPCERG,2026M08,132',['DPCERG'],'M'),/duplicate/i);
+});
+
+test('BEA backfill retains all GDP and independent monthly histories without losing early baselines or inventing months',async()=>{
+ const quarterly=header+Array.from({length:80},(_,i)=>`A191RL,${1990+Math.floor(i/4)}Q${i%4+1},${i/10}`).join('\n');
+ const monthlyRows=[];
+ for(let i=0;i<180;i++){
+  const period=`${2000+Math.floor(i/12)}M${String(i%12+1).padStart(2,'0')}`;
+  for(const [code,value]of [['DPCERG',100+i],['DPCCRG',200+i],['DPCERGM',.1],['DPCCRGM',.2],['DPCERX',1000000+i*1000],['DPCERAM',.3],['A067RX',2000000+i*1000],['A067RM',.4]]){
+   if(code==='DPCERX'&&i<84||code==='DPCERG'&&i===13)continue;
+   monthlyRows.push(`${code},${period},${value}`);
+  }
+ }
+ const result=await bea().collectBea({now:new Date('2026-10-22T15:00:00Z'),fetchImpl:fixtureFetch({quarterly,monthly:header+monthlyRows.join('\n'),familyDefaults:false})});
+ assert.equal(result.series.gdp.observations.length,80);assert.equal(result.series.gdp.observations[0].date,'1990-01-01');
+ assert.equal(result.series.pceIndex.observations.length,179);assert.equal(result.series.pce.observations[0].date,'2000-01-01');
+ assert.equal(result.series.pceCoreIndex.observations.length,180);assert.equal(result.series.realDisposableIncome.observations.length,180);
+ assert.equal(result.series.realSpending.observations.length,96);assert.equal(result.series.realSpending.observations[0].date,'2007-01-01');
+ assert.equal(result.series.realSpending.observations[0].value,1084);assert.equal(result.series.realSpending.observations[0].sourceValue,'1084000');
+ assert.ok(result.series.pce.observations.slice(0,12).every(o=>o.value===null));
+ assert.ok(Math.abs(result.series.pce.observations.find(o=>o.date==='2001-01-01').value-12)<1e-10);
+ assert.equal(result.series.pce.observations.find(o=>o.date==='2002-02-01').value,null,'missing exact year-ago month stays unavailable');
+ assert.ok(!result.series.pce.observations.some(o=>o.date==='2001-02-01'),'the source gap is not filled');
+ assert.equal(result.series.pceMonthly.observations[0].value,.1);assert.equal(result.series.realSpendingMonthly.observations[0].date,'2000-01-01');
+ assert.ok(Object.values(result.series).every(s=>s.observations.every(o=>o.publishedAt===null)));
 });

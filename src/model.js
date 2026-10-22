@@ -125,17 +125,18 @@ export function transformSeries(s, mode = 'level', range = 12, resolved = null) 
  * levels may be ratio-indexed at the first shared positive finite baseline.
  * Exact dates must match; source frequencies are never aggregated or filled.
  */
-export function compareSeries(ids, mode = 'native', range = 12) {
+export function compareSeries(ids, mode = 'native', range = 12, catalog = series) {
+  const lookup = id => Object.hasOwn(catalog, id) ? catalog[id] : undefined;
   if (!['native', 'indexed', 'difference'].includes(mode)) return { panels: [], error: `Unknown comparison mode: ${mode}` };
   const selected = [...new Set(ids)];
   if (!selected.length) return { panels: [], error: null };
-  if (selected.some((id) => !getSeries(id))) return { panels: [], error: 'One or more selected series are unknown or unavailable.' };
-  const window = resolveDateWindow(range, selected.map(getSeries));
+  if (selected.some((id) => !lookup(id))) return { panels: [], error: 'One or more selected series are unknown or unavailable.' };
+  const window = resolveDateWindow(range, selected.map(lookup));
   if (window.error) return { panels: [], error: window.error, window };
-  const panels = selected.map((id) => transformSeries(getSeries(id), 'level', range, window));
+  const panels = selected.map((id) => transformSeries(lookup(id), 'level', range, window));
   if (mode === 'native') return { panels, error: null, window };
   if (mode === 'indexed') {
-    const error = panels.map(indexEligibilityError).find(Boolean);
+    const error = panels.map(panel => indexEligibilityError(panel, catalog !== series ? panel.series.comparisonClass : undefined)).find(Boolean);
     if (error) return { panels: [], error, window };
   }
   const byDate = panels.map((panel) => new Map(panel.observations.map((o) => [o.date, o.value])));
@@ -170,21 +171,24 @@ export function csvCell(value, numericSource = false) {
 export function tabularCsv(headers,rows){return [headers,...rows].map(row=>row.map(cell=>csvCell(cell)).join(',')).join('\r\n')+'\r\n';}
 
 /** Export exactly the displayed observations; missing numeric cells remain blank. */
-export function toCsv(ids, { transform = 'level', range = 12, comparison = 'native' } = {}) {
-  const result = compareSeries(ids, comparison, range);
+export function toCsv(ids, { transform = 'level', range = 12, comparison = 'native', catalog = series, maxBytes = Infinity } = {}) {
+  const result = compareSeries(ids, comparison, range, catalog);
   if (result.error) throw new Error(result.error);
   if (comparison !== 'native' && transform !== 'level') {
     throw new RangeError(`${comparison === 'indexed' ? 'Indexed' : 'Baseline difference'} comparisons derive from levels; choose native panels to export period changes.`);
   }
   const panels = comparison !== 'native' ? result.panels : result.panels.map((panel) => transformSeries(panel.series, transform, range, result.window));
-  const rows = [['series_id', 'name', 'date', 'value', 'unit', 'frequency', 'adjustment', 'source', 'publication_date', 'transform', 'data_status','retrieved_at','source_url','source_series','calculation','source_value','source_baseline_date','source_baseline_value','index_baseline_date','index_baseline_value','source_notice','coverage_note','observation_type','source_urls','license_url','attribution','source_title','partial','auction_count','pending_count','revision_indicator','source_notes','suppressed','measure','capture_provenance_json','comparison_mode','comparison_baseline_date','comparison_baseline_value','comparison_formula','window_preset','window_start_date','window_end_date','window_label']];
+  if(maxBytes!==Infinity&&(!Number.isSafeInteger(maxBytes)||maxBytes<0))throw new RangeError('CSV byte limit must be a nonnegative integer.');
+  const rows=[],encoder=maxBytes===Infinity?null:new TextEncoder();let bytes=0;
+  const append=row=>{const line=row.map((cell,index)=>csvCell(cell,index===15||index===17)).join(',')+'\r\n';if(encoder&&(bytes+=encoder.encode(line).byteLength)>maxBytes)throw new RangeError('CSV byte limit exceeded.');rows.push(line);};
+  append(['series_id', 'name', 'date', 'value', 'unit', 'frequency', 'adjustment', 'source', 'publication_date', 'transform', 'data_status','retrieved_at','source_url','source_series','calculation','source_value','source_baseline_date','source_baseline_value','index_baseline_date','index_baseline_value','source_notice','coverage_note','observation_type','source_urls','license_url','attribution','source_title','partial','auction_count','pending_count','revision_indicator','source_notes','suppressed','measure','capture_provenance_json','comparison_mode','comparison_baseline_date','comparison_baseline_value','comparison_formula','window_preset','window_start_date','window_end_date','window_label']);
   for (const panel of panels) {
     const s = panel.series;
     const publications = new Map(s.observations.map((o) => [o.date, o.publishedAt]));
     for (const observation of panel.observations) {
-      rows.push([s.id, s.name, observation.date, observation.value, panel.unit, s.frequency, s.adjustment,
+      append([s.id, s.name, observation.date, observation.value, panel.unit, s.frequency, s.adjustment,
         s.source.name, publications.get(observation.date), comparison !== 'native' ? comparison : transform, s.dataStatus||'unknown',s.fetchedAt,observation.sourceUrl||s.sourceUrl||s.source.url,(s.source.seriesIds||[]).join('; '),s.calculation,observation.sourceValue,observation.baseDate|| (observation.yearAgoSourceValue!=null?`${Number(observation.date.slice(0,4))-1}${observation.date.slice(4)}`:null),observation.baseValue??observation.yearAgoSourceValue,comparison === 'indexed' ? panel.baselineDate : null,comparison === 'indexed' ? panel.baselineValue : null,s.agency === 'bls' ? BLS_DATA_NOTICE : s.sourceNotice??'',s.coverageNote,s.observationType??'official',(observation.sourceUrls??s.sourceUrls??[]).join('; '),s.licenseUrl,s.attribution,s.sourceTitle,observation.partial,observation.auctionCount,observation.pendingCount,observation.revisionIndicator,(observation.footnotes??[]).join('; '),observation.suppressed,s.measure,JSON.stringify(observation.inputProvenance??s.provenance??[]),comparison,panel.baselineDate,panel.baselineValue,panel.formula,panel.window.preset,panel.window.startDate,panel.window.endDate,panel.window.label]);
     }
   }
-  return `${rows.map((row) => row.map((cell,index)=>csvCell(cell,index===15||index===17)).join(',')).join('\r\n')}\r\n`;
+  return rows.join('');
 }

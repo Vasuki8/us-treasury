@@ -44,7 +44,7 @@ export function preserveHistoryView(main, render, { window = globalThis.window, 
       ?? [...main.querySelectorAll(focused.tag)].find(node => Object.entries(focused.data).every(([key, value]) => node.dataset[key] === value))
       ?? (focused.id === 'history-retry' ? document.getElementById('vintage-cutoff') ?? document.getElementById('detail-tab-revisions') : null);
     replacement?.focus({ preventScroll:true });
-    if (replacement && replacement.id === focused.id && focused.value !== undefined) replacement.value = focused.value;
+    if (replacement && replacement.id === focused.id && replacement.type !== 'file' && focused.value !== undefined) replacement.value = focused.value;
     if (typeof focused.start === 'number' && typeof replacement?.setSelectionRange === 'function') {
       try { replacement.setSelectionRange(focused.start, focused.end); } catch { /* Date controls may not support text selections. */ }
     }

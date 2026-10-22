@@ -46,9 +46,9 @@ export function panel(index, title, body, actions = '', note = '', extraClass = 
   return `<section class="panel${extraClass ? ` ${escapeHtml(extraClass)}` : ''}"><header class="panel-head"><h2><span class="index">${escapeHtml(index)}</span>${escapeHtml(title)}</h2><div class="actions">${actions}</div></header>${body}${note ? `<p class="panel-note">${escapeHtml(note)}</p>` : ''}</section>`;
 }
 
-export function chart(ids, { height = 180, kind = 'line', transform = 'level', range = 12, comparison = 'native',panelId='' } = {}) {
+export function chart(ids, { height = 180, kind = 'line', transform = 'level', range = 12, comparison = 'native',panelId='',cursorGroup='' } = {}) {
   const names = ids.map(id => getSeries(id)?.name).filter(Boolean).join(', ');
-  return `<div class="chart" data-chart data-series="${escapeHtml(ids.join(','))}" data-kind="${escapeHtml(kind)}" data-transform="${escapeHtml(transform)}" data-range="${escapeHtml(typeof range==='object'?JSON.stringify(range):range)}" data-comparison="${escapeHtml(comparison)}" data-panel-id="${escapeHtml(panelId)}" data-height="${escapeHtml(height)}"><p class="chart-fallback muted">${escapeHtml(kind === 'curve' ? 'Treasury yield curve' : names)} chart · official snapshot</p></div>`;
+  return `<div class="chart" data-chart data-series="${escapeHtml(ids.join(','))}" data-kind="${escapeHtml(kind)}" data-transform="${escapeHtml(transform)}" data-range="${escapeHtml(typeof range==='object'?JSON.stringify(range):range)}" data-comparison="${escapeHtml(comparison)}" data-panel-id="${escapeHtml(panelId)}" data-cursor-group="${escapeHtml(cursorGroup)}" data-height="${escapeHtml(height)}"><p class="chart-fallback muted">${escapeHtml(kind === 'curve' ? 'Treasury yield curve' : names)} chart · official snapshot</p></div>`;
 }
 
 export function seriesLink(id, label, className = '') {

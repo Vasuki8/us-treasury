@@ -96,6 +96,16 @@ test('strict calendar CLI publishes successful current coverage when BLS has nev
 });
 
 async function blockedBlsFixture(directory,{failOther=false}={}) {
+  const {snapshot}=await import(pathToFileURL(path.join(directory,'src','official-snapshot.js')).href);
+  // New committed captures must never make this simulated refresh travel back
+  // in time. Retain their original timestamps and advance only the fixture clock.
+  const priorTimes=[snapshot.generatedAt,snapshot.checkedAt,
+    ...Object.values(snapshot.sources).map(source=>source.fetchedAt),
+    ...Object.values(snapshot.calendar.sources).map(source=>source.fetchedAt),
+    ...(snapshot.vintageArchive?.captures??[]).flatMap(capture=>[capture.capturedAt,capture.recordedAt]),
+  ].filter(Boolean).map(value=>Date.parse(value));
+  assert.ok(priorTimes.length&&priorTimes.every(Number.isFinite),'fixture derives time from valid stored capture timestamps');
+  const attemptAt=new Date(Math.max(...priorTimes)+1000).toISOString();
   // Keep every other verified source deterministic while exercising the real
   // BLS HTTP collector, publication gate and atomic CLI writer together.
   await writeFile(path.join(directory,'scripts','sources','fixture-retrieval.mjs'),`
@@ -135,17 +145,18 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
   await writeFile(path.join(directory,'blocked-bls.mjs'),`
     const NativeDate=Date;
     globalThis.Date=class extends NativeDate {
-      constructor(...args){super(...(args.length?args:['2026-10-22T14:00:00.000Z']));}
-      static now(){return NativeDate.parse('2026-10-22T14:00:00.000Z');}
+      constructor(...args){super(...(args.length?args:[${JSON.stringify(attemptAt)}]));}
+      static now(){return NativeDate.parse(${JSON.stringify(attemptAt)});}
     };
     globalThis.fetch=async()=>new Response('BLS access denied',{status:403});
   `);
+  return attemptAt;
 }
 
 test('approved cached-BLS CLI mode publishes other sources and reports the original retained capture',async()=>{
   await withCliFixture(async({directory,destination,original})=>{
     const {snapshot:prior}=await import(`${pathToFileURL(destination).href}?prior-cached`);
-    await blockedBlsFixture(directory);
+    const attemptAt=await blockedBlsFixture(directory);
     const summary=path.join(directory,'summary.md');
     const result=await execute(process.execPath,['--import','./blocked-bls.mjs','scripts/refresh-data.mjs','--allow-cached-bls-calendar'],{cwd:directory,timeout:20000,env:{...process.env,GITHUB_STEP_SUMMARY:summary}});
     const {snapshot:published}=await import(`${pathToFileURL(destination).href}?cached-published`);
@@ -157,9 +168,11 @@ test('approved cached-BLS CLI mode publishes other sources and reports the origi
     assert.equal(cached.fetchedAt,prior.calendar.sources.bls.fetchedAt);
     assert.deepEqual(cached.provenance,prior.calendar.sources.bls.provenance);
     assert.deepEqual(cached.events,prior.calendar.sources.bls.events);
-    assert.equal(cached.lastAttemptAt,'2026-10-22T14:00:00.000Z');
+    assert.equal(cached.lastAttemptAt,attemptAt);
+    assert.ok(prior.vintageArchive.captures.every(capture=>Date.parse(capture.capturedAt)<Date.parse(attemptAt)),'simulated refresh strictly follows every stored actual capture');
     for(const [id,source] of Object.entries(published.sources)){
       assert.equal(source.status,'ok');
+      assert.equal(source.fetchedAt,attemptAt);
       assert.ok(source.provenance.every(item=>item.retrievedAt===source.fetchedAt),'simulated successful responses carry their new actual retrieval time');
       assert.deepEqual(source.provenance.map(item=>item.sha256),prior.sources[id].provenance.map(item=>item.sha256),'identical simulated response bytes retain their hashes');
     }
