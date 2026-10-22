@@ -6,7 +6,7 @@ export const series=Object.fromEntries(Object.entries(registry).map(([id,metadat
   const source=snapshot.sources[metadata.agency],official=source?.series?.[id];
   const dataStatus=!official?'unavailable':source.status==='ok'?'official':'cached';
   return [id,{
-    ...metadata,observationType:official?.observationType??metadata.observationType??'official',
+    ...metadata,observationType:metadata.observationType??official?.observationType??'official',
     source:{...metadata.source,seriesIds:official?.sourceIds||[]},observations:official?.observations||[],dataStatus,
     fetchedAt:source?.fetchedAt||null,lastAttemptAt:source?.lastAttemptAt||null,error:source?.error||(!official?'This official source is not connected.':null),
     measure:official?.measure??'',provenance:source?.provenance??[],calculation:official?.calculation||'',sourceUrl:official?.sourceUrl||metadata.source.url,sourceUrls:official?.sourceUrls??[],

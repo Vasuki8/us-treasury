@@ -32,6 +32,7 @@
       <input id="command-input" placeholder="Search indicators or enter US, LABOR, UNRATE, CAL, FIND" autocomplete="off" spellcheck="false" maxlength="200">
       <kbd class="command-hint">Ctrl K</kbd><button class="go" type="submit">GO</button>
     </form>
+    <nav class="mobile-workspace" aria-label="Personal workspace"><a class="action" href="#/watchlist" data-nav="watchlist">MY WATCHLIST <span id="mobile-saved-count">0</span></a></nav>
     <div class="ticker" id="ticker" aria-label="Official macro snapshot"></div>
     <div id="data-freshness"></div>
     <div class="shell">
@@ -56,7 +57,7 @@
         <a href="#/series/cpi"><span class="code">CPI</span>Inflation</a>
         <a href="#/series/debt"><span class="code">DBT</span>Federal debt</a>
         <a href="#/series/yield"><span class="code">UST</span>Treasury 10Y</a>
-        <hr><div class="rail-title">MY WATCHLIST <span id="saved-count">0</span></div>
+        <hr><div class="rail-title"><a href="#/watchlist" data-nav="watchlist">MY WATCHLIST <span id="saved-count">0</span></a></div>
         <div id="saved-list" class="saved-list"></div>
         <hr><div class="rail-note">UNITED STATES<br><span class="mono">ET · USD</span><br><br>OFFICIAL SNAPSHOT<br>Agency retrieval status</div><div id="source-status" class="definitions"></div>
       </aside>

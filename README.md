@@ -18,10 +18,20 @@ The app credits the agencies and Census's originating program, shows the require
 - [Auctions](https://vasuki8.github.io/us-treasury/#/auctions): observed demand, competitive allocations and comparable prior auctions.
 - [Ownership](https://vasuki8.github.io/us-treasury/#/ownership): Z.1 sectors and separately valued SOMA holdings.
 - [Macro drivers](https://vasuki8.github.io/us-treasury/#/macro): published BEA GDP contributions; CPI effects remain unavailable after official BLS HTTP 403.
-- [Revision history](https://vasuki8.github.io/us-treasury/#/vintages): immutable registered-series captures, observed changes and UTC as-known retrieval cutoffs.
+- [Captured by / revision history](https://vasuki8.github.io/us-treasury/#/vintages): immutable registered-series captures, observed changes and exact UTC retrieval cutoffs.
 - [Market functioning](https://vasuki8.github.io/us-treasury/#/market): dealer positions/financing/fails and SOFR/EFFR context; partial indicators, no composite score.
 
 All modules distinguish observations, calculations and assumptions. Source/retrieval dates, methodology, limitations and downloadable metadata accompany results. The [implementation record](docs/research-dashboard-plan.md) tracks tests and deployments. TIC country tables and ACM term premium remain unadmitted pending further rights/schema review; auction tails have no approved matched when-issued source. First-reported historical vintages are not invented. As-known replay currently covers registered series rather than supplementary profiles or calendars. Cloudflare activation remains deferred; the existing Pages deployment is preserved.
+
+## Research windows, search and watchlist
+
+Indicator details and comparisons offer **1Y, 3Y, 5Y, All history and exact inclusive UTC reference dates**. Presets end at the latest retained observation across the selected series. All history exposes retained coverage; it does not request additional agency history. Coverage summaries distinguish retained/displayed observations and retrieval timestamps. Legacy `range=6/12` links remain explicit observation-count windows. Charts, tables and CSV use the same window and preserve source frequency and missing values. Calendar comparison panels share date bounds while retaining separate native scales.
+
+Search covers all 48 indicators, official IDs, agency/measurement metadata and calculation descriptions. Aliases expand results, and exact identifiers rank ahead of loose matches. Catalog, comparison and watchlist detail links retain date settings, selection and a safe return route; same-session returns restore list position. Related links follow each measure's subject and research module.
+
+Native comparisons remain the default. Ratio indexing admits only classified positive levels/counts/amounts with an exact shared positive baseline. Rates, growth, contributions and balances instead use native values or **change from baseline**, with separate units and a shared finite reference date. No interpolation or frequency aggregation is performed. CSV includes the selected window, comparison formula, baseline and existing source/rights provenance.
+
+**My watchlist** is available on desktop and mobile, with open/remove and add-to-comparison actions (up to four measures). It uses existing browser storage and explicitly reports session-only persistence when storage is unavailable. **Captured by** shows exact UTC retrieval cutoffs and each series' first retained capture; earlier data stays unavailable. Observation dates, retrieval times and unknown release dates remain distinct. See the [usable-research milestone plan](docs/superpowers/plans/2026-10-22-usable-research.md).
 
 ## Run locally
 

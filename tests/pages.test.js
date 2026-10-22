@@ -374,19 +374,20 @@ test('catalog escapes search input and renders a useful no-results state', () =>
 
 test('compare preserves native units in separate panels and handles an empty selection', () => {
   const html = render({ page: 'explore', exploreMode: 'compare' });
-  assert.match(html, /data-series="unrate"/);
-  assert.match(html, /data-series="cpi"/);
-  assert.doesNotMatch(html, /data-chart[^>]*data-series="unrate,cpi"/);
+  assert.match(html, /data-panel-id="unrate"/);
+  assert.match(html, /data-panel-id="cpi"/);
+  assert.equal((html.match(/data-series="unrate,cpi"/g)??[]).length,2,'each separate panel resolves the same comparison calendar');
   assert.match(html, /id="comparison-select"/);
   assert.match(render({ page: 'explore', exploreMode: 'compare', selected: [] }), /No series selected/i);
 });
 
 test('indexed comparisons describe their shared baseline and export units accurately', () => {
-  const html = render({ page: 'explore', exploreMode: 'compare', comparison: 'indexed' });
-  assert.match(html, /shared starting date/i);
+  const html = render({ page: 'explore', exploreMode: 'compare', comparison: 'indexed',selected:['receipts','outlays'] });
+  assert.match(html, /common baseline = 100/i);
   assert.match(html, /original observation dates thereafter/i);
-  assert.match(html, /UNITS <b class="mono">INDEXED/);
+  assert.match(html, /VALUES <b class="mono">INDEXED/);
   assert.doesNotMatch(html, /retain each series’ native units/i);
+  assert.match(render({page:'explore',exploreMode:'compare',comparison:'indexed'}),/Comparison unavailable/,'rates and growth measures cannot be ratio indexed');
 });
 
 test('an unconnected calendar has no invented release results or fixed displayed week', () => {

@@ -7,24 +7,23 @@ import { macroPage } from './macro-page.js';
 import { vintagesPage, historyStatusMessage } from './vintages-page.js';
 import { marketFunctioningPage } from './market-functioning-page.js';
 import { vintageMeasurementsComparable } from './vintages.js';
+import {defaults as routeDefaults} from './router.js';
+import {viewRange,workspaceReturn,indicatorHref} from './workspace-context.js';
+import {rangeControls,coverageSummary,measureLabel,changeLabel} from './research-controls.js';
+import {relatedIndicators} from './related.js';
+import {watchlistPage} from './watchlist-page.js';
 import { researchNavigation } from './research-navigation.js';
 import { series, releases, yieldCurve, dataStatus } from './data.js';
 import { getSeries, filterSeries, latest, formatValue, formatChange, periodLabel, transformSeries, compareSeries, observationCoverageLabel } from './model.js';
 import { escapeHtml as esc, button, heading, panel, chart, metrics, seriesTable, seriesLink, table, emptyState, sourceLink, seriesStatus, sourceStatusList, coverageBadge } from './ui.js';
 
-const defaults = {
-  page: 'overview', seriesId: 'unrate', range: 12, transform: 'level', tab: 'data',
-  query: '', topic: 'All topics', frequency: 'All frequencies', selected: ['unrate', 'cpi'],
-  exploreMode: 'catalog', comparison: 'native', calendarMonth: 'upcoming', day: 'all', calendarTopic: 'All topics',
-  watchOnly: false, eventId: '', saved: [], density: 'compact',
-};
+const defaults = {...routeDefaults,saved:[],density:'compact'};
 const allSeries = () => Object.values(series);
 const options = (values, selected) => values.map(value => `<option value="${esc(value)}"${value === selected ? ' selected' : ''}>${esc(value)}</option>`).join('');
 const link = (label, href, className = 'action') => `<a class="${esc(className)}" href="${esc(href)}">${esc(label)}</a>`;
 const number = (value, precision = 2) => value == null ? '—' : new Intl.NumberFormat('en-US', { maximumFractionDigits: precision, minimumFractionDigits: precision }).format(value);
 const valueForPanel = (item, value, transform = 'level') => transform === 'level' ? formatValue(item.series, value) : value == null ? '—' : `${number(value, item.series.precision)} ${item.unit}`;
 const seriesIds = values => [...new Set(values)].filter(id => getSeries(id));
-const rangeControls = state => `<div class="actions" aria-label="Observation range">${[6, 12].map(range => button(`${range} OBS`, `data-range="${range}" aria-pressed="${state.range === range}"`)).join('')}</div>`;
 const saveButton = (id, state, labels = ['☆ SAVE', '★ SAVED']) => button(state.saved.includes(id) ? labels[1] : labels[0], `data-save="${esc(id)}" aria-pressed="${state.saved.includes(id)}"`);
 const releaseDate = date => new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`));
 const finite = value => typeof value === 'number' && Number.isFinite(value);
@@ -104,24 +103,25 @@ function labor() {
 }
 
 function detailData(item, state) {
+  if(item.error)return emptyState('Date window unavailable.',item.error);
   if (!item.observations.length) return emptyState('No observations available.', item.series.error ?? 'The official source has no available observations in this snapshot.', link('EXPLORE DATA ↗', '#/explore'));
   const originals = new Map(item.series.observations.map(observation => [observation.date, observation]));
   const rows = [...item.observations].reverse().map(observation => {
     const original = originals.get(observation.date);
     return `<tr><th scope="row"><time datetime="${esc(observation.date)}">${esc(periodLabel(item.series, observation.date))}</time></th><td class="num">${esc(valueForPanel(item, observation.value, state.transform))}</td><td class="mono muted">${esc(original?.publishedAt ?? '—')}</td><td class="muted">${esc([...(original?.footnotes??[]),observationCoverageLabel(original),original?.suppressed?'SUPPRESSED · withheld by source':'',original?.revisionIndicator==='Y'?'SOURCE REVISION FLAG · reason unknown':''].filter(Boolean).join('; ') || '—')}</td></tr>`;
   }).join('');
-  return `<p class="panel-note">${state.transform === 'change' ? 'Period changes from adjacent observations' : item.series.observationType==='calculated'?'Calculated metric':'Published measure'} · ${esc(item.unit)} · most recent first. ${esc(item.series.publicationNote ?? 'Historical publication dates are not supplied by this feed; — means unknown.')}</p>${table(['OBSERVATION PERIOD', state.transform === 'change' ? 'PERIOD CHANGE' : 'VALUE', 'PUBLISHED', 'SOURCE NOTES'], rows, 'Official indicator observations and source footnotes')}`;
+  return `<p class="panel-note">${esc(state.transform==='change'?changeLabel(item.series):measureLabel(item.series))} · ${esc(item.unit)} · most recent first. ${esc(item.series.publicationNote ?? 'Historical publication dates are not supplied by this feed; — means unknown.')}</p>${table(['OBSERVATION PERIOD', state.transform === 'change' ? 'PERIOD CHANGE' : 'VALUE', 'PUBLISHED', 'SOURCE NOTES'], rows, 'Official indicator observations and source footnotes')}`;
 }
 
 function detailRevisions(current, { historyState = { status:'idle' }, revisions = [] } = {}) {
   if (historyState.status !== 'ready') return historyStatusMessage(historyState);
-  if (!revisions.length) return emptyState('No observed value changes have been captured.', 'This does not establish whether earlier published values were revised. First captured and first released are distinct; see Revision history for as-known retrieval cutoffs.');
+  if (!revisions.length) return emptyState('No observed value changes have been captured.', 'This does not establish whether earlier published values were revised. First captured and first released are distinct; see Captured by for retrieval cutoffs.');
   const rows = [...revisions].reverse().map(revision => {
     const first = { ...current, ...revision.firstMetadata }, latest = { ...current, ...revision.latestMetadata };
     const comparison = vintageMeasurementsComparable(first, latest) ? 'Same captured measurement and definition.' : 'Not directly comparable: measurement or definition changed between captures. Cause unknown.';
     return `<tr><th scope="row">${esc(periodLabel(latest, revision.date))}</th><td class="num">${esc(formatValue(first, revision.firstCaptured.value))}<span class="table-code muted">${esc(first.unit)}</span></td><td class="num">${esc(formatValue(latest, revision.latest.value))}<span class="table-code muted">${esc(latest.unit)}</span></td><td>${esc(revision.firstCaptured.capturedAt)}</td><td>${esc(revision.latest.capturedAt)}</td><td>Unknown</td><td>${esc(comparison)}</td></tr>`;
   }).join('');
-  return `<p class="panel-note">Observed changes between immutable retrieval captures. Each value retains its captured measurement metadata. First captured does not mean first reported. Release dates, revision explanations and benchmark classification are unknown without independent release evidence.</p>${table(['OBSERVATION PERIOD', 'FIRST CAPTURED VALUE', 'LATEST CAPTURED VALUE', 'FIRST RETRIEVED / UTC', 'LATEST RETRIEVED / UTC','REVISION REASON','MEASUREMENT COMPARISON'], rows, 'Observed captured value changes')}<a class="action" href="#/vintages?series=${esc(current.id)}">AS-KNOWN VIEW</a>`;
+  return `<p class="panel-note">Observed changes between immutable retrieval captures. Each value retains its captured measurement metadata. First captured does not mean first reported. Release dates, revision explanations and benchmark classification are unknown without independent release evidence.</p>${table(['OBSERVATION PERIOD', 'FIRST CAPTURED VALUE', 'LATEST CAPTURED VALUE', 'FIRST RETRIEVED / UTC', 'LATEST RETRIEVED / UTC','REVISION REASON','MEASUREMENT COMPARISON'], rows, 'Observed captured value changes')}<a class="action" href="#/vintages?series=${esc(current.id)}">CAPTURED BY VIEW</a>`;
 }
 
 function detailMethodology(current) {
@@ -132,18 +132,18 @@ function indicator(state, historyContext) {
   const current = getSeries(state.seriesId) ?? getSeries('unrate');
   const observation = latest(current);
   const previous = current.observations.at(-2);
-  const transformed = transformSeries(current, state.transform, state.range);
+  const transformed = transformSeries(current, state.transform, viewRange(state)),related=relatedIndicators(current.id),back=workspaceReturn(state);
   const tabs = [['data', 'DATA TABLE'], ['methodology', 'METHODOLOGY'], ['revisions', 'REVISIONS']];
   const activeTab = tabs.some(([id]) => state.tab === id) ? state.tab : 'data';
   const content = activeTab === 'methodology' ? detailMethodology(current) : activeTab === 'revisions' ? detailRevisions(current, historyContext) : detailData(transformed, state);
   const metadata = `<dl class="facts"><dt>Series</dt><dd class="mono cyan">${esc(current.code)}</dd><dt>Source IDs</dt><dd class="mono">${esc((current.source.seriesIds ?? []).join(', ') || '—')}</dd><dt>Frequency</dt><dd>${esc(current.frequency)}</dd><dt>Unit</dt><dd>${esc(current.unit)}</dd><dt>Adjustment</dt><dd>${esc(current.adjustment)}</dd><dt>Observation</dt><dd>${esc(observation ? periodLabel(current, observation.date) : '—')}</dd><dt>Published</dt><dd class="mono">${esc(observation?.publishedAt ?? 'Unknown')}</dd><dt>Retrieved</dt><dd class="mono">${esc(current.fetchedAt ?? 'No successful retrieval')}</dd><dt>Source</dt><dd>${sourceLink(current)}</dd><dt>Data status</dt><dd class="amber">${esc(seriesStatus(current))}</dd></dl>${current.error ? `<p class="panel-note amber">${esc(current.error)}</p>` : ''}<p class="panel-note">${esc(current.definition)}</p><p class="panel-note">${esc(current.publicationNote ?? 'Historical publication dates are not supplied by this feed.')}</p>`;
-  return heading(current.name.toUpperCase(), `${current.code} · ${current.source.name} · ${current.adjustment}`, saveButton(current.id, state) + button('COMPARE ↗', `data-compare="${esc(current.id)}"`) + button('CSV EXPORT', 'data-export') + button('COPY LINK', 'data-copy-link'))
+  return (back?`<nav class="return-context" aria-label="Return to workspace">${link(back.label,back.href)}</nav>`:'')+heading(current.name.toUpperCase(), `${current.code} · ${current.source.name} · ${current.adjustment}`, saveButton(current.id, state) + button(state.selected.includes(current.id)?'VIEW COMPARISON':'ADD TO COMPARISON', `data-add-compare="${esc(current.id)}"${state.selected.length>=4&&!state.selected.includes(current.id)?' disabled title="Remove a selected series before adding another."':''}`) + button('CSV EXPORT', `data-export${transformed.error?' disabled title="Choose a valid date window."':''}`) + button('COPY LINK', 'data-copy-link'))
     + `<div class="context-strip indicator-context"><strong class="big-value">${esc(formatValue(current, observation?.value))}</strong><span class="cyan mono">${esc(formatChange(current))}</span><span>OBSERVATION <b class="mono">${esc(observation ? periodLabel(current, observation.date) : '—')}</b></span><span>PRIOR <b class="mono">${esc(formatValue(current, previous?.value))}</b></span><span class="pill">${esc(seriesStatus(current).toUpperCase())}</span></div>`
     + (current.coverageNote ? `<p class="panel-note amber">${esc(current.coverageNote)}</p>` : '')
     + (current.id === 'yield' ? yieldTimingPanel() : '')
-    + `<div class="grid g21">${panel('01', `${current.code} / HISTORICAL SERIES`, `<div class="toolbar">${rangeControls(state)}<label for="transform-select">View <select id="transform-select">${options(['level', 'change'], state.transform).replace('>level<', '>Published measure<').replace('>change<', '>Period change<')}</select></label></div>${chart([current.id], { height: 230, transform: state.transform, range: state.range })}`, '', `${current.frequency} · ${transformed.unit} · ${seriesStatus(current)}`)}${panel('02', 'SERIES INFORMATION', metadata, link('CALENDAR ↗', '#/calendar', 'link-button'))}</div>`
+    + `<div class="grid g21">${panel('01', `${current.code} / HISTORICAL SERIES`, `<div class="toolbar">${rangeControls(state,[current.id])}<label for="transform-select">View <select id="transform-select"><option value="level"${state.transform==='level'?' selected':''}>${esc(measureLabel(current))}</option><option value="change"${state.transform==='change'?' selected':''}>${esc(changeLabel(current))}</option></select></label></div>${chart([current.id], { height: 230, transform: state.transform, range: viewRange(state) })}${coverageSummary(transformed)}`, '', `${current.frequency} · ${transformed.unit} · ${seriesStatus(current)}`)}${panel('02', 'SERIES INFORMATION', metadata, link('CALENDAR ↗', '#/calendar', 'link-button'))}</div>`
     + `<section class="panel"><div class="tabs" role="tablist" aria-label="Indicator detail sections">${tabs.map(([id, label]) => button(label, `role="tab" id="detail-tab-${id}" aria-controls="detail-content" aria-selected="${activeTab === id}" data-tab="${id}"`, '')).join('')}</div><div class="tab-panel" id="detail-content" role="tabpanel" aria-labelledby="detail-tab-${activeTab}">${content}</div></section>`
-    + `<nav class="context-strip related-series" aria-label="Related indicators"><span class="muted">RELATED</span>${['unrate', 'payroll', 'claims', 'participation', 'cpi'].filter(id => id !== current.id).slice(0, 4).map(id => seriesLink(id, getSeries(id).code, 'action')).join('')}</nav>`;
+    + `<nav class="context-strip related-series" aria-label="Related indicators"><span class="muted">RELATED</span>${related.seriesIds.map(id=>link(getSeries(id).short,indicatorHref(id,state))).join('')}${related.module?link(related.module.label+' ↗',related.module.href):''}</nav>`;
 }
 
 function calendarPreview(event, state) {
@@ -189,37 +189,39 @@ function catalog(state) {
   const filters = `<div class="filter-body"><label for="topic-filter">Topic<select id="topic-filter">${options(['All topics', ...new Set(allSeries().map(item => item.topic))], state.topic)}</select></label><label for="frequency-filter">Frequency<select id="frequency-filter">${options(['All frequencies', ...new Set(allSeries().map(item => item.frequency))], state.frequency)}</select></label><div class="small muted">Geography<br><span class="mono">United States</span></div><div class="small muted">Data mode<br><span class="amber">OFFICIAL SNAPSHOT</span></div></div>`;
   const rows = matching.map(current => {
     const observation = latest(current);
-    return `<tr${state.selected.includes(current.id) ? ' class="selected-row"' : ''}><td><input type="checkbox" data-select="${esc(current.id)}" aria-label="Select ${esc(current.name)}"${state.selected.includes(current.id) ? ' checked' : ''}></td><th scope="row">${seriesLink(current.id)}<span class="table-code mono muted">${esc(current.code)}</span><span class="table-code muted">${esc(seriesStatus(current))}${!observation && current.error ? ` · ${esc(current.error)}` : ''}</span>${coverageBadge(current)}</th><td class="num">${esc(formatValue(current, observation?.value))}</td><td class="mono muted">${esc(observation ? periodLabel(current, observation.date) : '—')}</td><td>${esc(current.frequency)}</td><td class="muted">${esc(current.source.name)}</td></tr>`;
+    return `<tr${state.selected.includes(current.id) ? ' class="selected-row"' : ''}><td><input type="checkbox" data-select="${esc(current.id)}" aria-label="Select ${esc(current.name)}"${state.selected.includes(current.id) ? ' checked' : ''}></td><th scope="row">${link(current.name,indicatorHref(current.id,state),'')}<span class="table-code mono muted">${esc(current.code)}</span><span class="table-code muted">${esc(seriesStatus(current))}${!observation && current.error ? ` · ${esc(current.error)}` : ''}</span>${coverageBadge(current)}</th><td class="num">${esc(formatValue(current, observation?.value))}</td><td class="mono muted">${esc(observation ? periodLabel(current, observation.date) : '—')}</td><td>${esc(current.frequency)}</td><td class="muted">${esc(current.source.name)}</td></tr>`;
   }).join('');
   const catalogTable = rows ? `<div class="table-wrap"><table><caption class="sr-only">Official series catalog, including unavailable indicators</caption><thead><tr><th scope="col"><span class="sr-only">Select</span></th><th scope="col">INDICATOR / CODE</th><th scope="col" class="num">LATEST</th><th scope="col">OBSERVATION</th><th scope="col">FREQ</th><th scope="col">SOURCE</th></tr></thead><tbody>${rows}</tbody></table></div>` : emptyState('No series match your filters.', 'Search a series name, code, topic or agency, or clear the filters.', button('CLEAR FILTERS', 'data-reset-filters'));
   return `<div class="explore-layout">${panel('', 'FILTERS', filters, button('CLEAR', 'data-reset-filters', 'link-button'))}${panel('01', 'SERIES CATALOG', `<div class="panel-body"><label class="catalog-search-label" for="catalog-search">Search series</label><input id="catalog-search" class="searchbox" type="search" placeholder="Name, code, topic or agency…" value="${esc(state.query)}"></div>${catalogTable}${selectionTray(state)}`, `<span class="small muted" id="catalog-result-count">${matching.length} SERIES</span>`)}</div>`;
 }
 
 function comparison(state) {
-  const result = compareSeries(state.selected, state.comparison, state.range);
+  const result = compareSeries(state.selected, state.comparison, viewRange(state));
   const selected = state.selected.map((id, index) => {
     const current = getSeries(id);
-    return `<div class="builder-series"><span class="mono ${index % 2 ? 'cyan' : 'amber'}">${index + 1} / ${esc(current.code)}</span><h3>${seriesLink(id)}</h3><p class="muted">${esc(current.unit)} · ${esc(current.frequency)}</p>${coverageBadge(current)}${current.coverageNote ? `<p class="small amber">${esc(current.coverageNote)}</p>` : ''}${button('REMOVE', `data-remove="${esc(id)}"`, 'link-button')}</div>`;
+    return `<div class="builder-series"><span class="mono ${index % 2 ? 'cyan' : 'amber'}">${index + 1} / ${esc(current.code)}</span><h3>${link(current.name,indicatorHref(id,state),'')}</h3><p class="muted">${esc(current.unit)} · ${esc(current.frequency)}</p>${coverageBadge(current)}${current.coverageNote ? `<p class="small amber">${esc(current.coverageNote)}</p>` : ''}${button('REMOVE', `data-remove="${esc(id)}"`, 'link-button')}</div>`;
   }).join('');
   let workspace;
   if (!state.selected.length) workspace = emptyState('No series selected.', 'Choose up to four series from the catalog.', button('OPEN CATALOG', 'data-explore-mode="catalog"'));
-  else if (result.error) workspace = emptyState('Comparison unavailable.', result.error, button('EDIT SELECTION', 'data-explore-mode="catalog"'));
-  else if (state.comparison === 'indexed') workspace = `<p class="panel-note">Index (common baseline = 100) · shared starting date; original observation dates thereafter · no fill or frequency aggregation</p>${chart(state.selected, { height: 275, range: state.range, comparison: 'indexed' })}`;
-  else workspace = result.panels.map(item => `<section class="comparison-panel"><h3 class="chart-caption"><span class="swatch"></span>${esc(item.series.short)} · ${esc(item.unit)}</h3>${chart([item.series.id], { height: 150, range: state.range })}</section>`).join('');
-  const controls = `<div class="toolbar"><label for="comparison-select">Comparison <select id="comparison-select"><option value="native"${state.comparison === 'native' ? ' selected' : ''}>Native units · separate panels</option><option value="indexed"${state.comparison === 'indexed' ? ' selected' : ''}>Index · common baseline = 100</option></select></label>${rangeControls(state)}</div>`;
-  return `<div class="grid g12">${panel('01', 'SELECTED SERIES', `<div class="builder-list">${selected || '<p class="muted">Select series in the catalog to compare.</p>'}<p class="small muted">Native units and observation dates are preserved. Indexing requires a common nonzero baseline.</p></div>`, button('EDIT', 'data-explore-mode="catalog"', 'link-button'))}${panel('02', 'COMPARISON WORKSPACE', controls + workspace, '', 'Official snapshots · native panels use independent labeled scales')}</div>`
-    + panel('03', 'EXPORT CONFIGURATION', `<div class="context-strip"><span>FORMAT <b class="mono">LONG CSV</b></span><span>UNITS <b class="mono">${state.comparison === 'indexed' ? 'INDEXED' : 'NATIVE'}</b></span><span>ALIGNMENT <b class="mono">NO FILL</b></span><span>DATA <b class="mono">OFFICIAL SNAPSHOT</b></span></div><p class="panel-note">${state.comparison === 'indexed' ? 'CSV exports contain the indexed values displayed, with a shared starting date and original observation dates thereafter.' : 'CSV exports retain each series’ native units and original observation dates.'} Per-series status and retrieval times identify cached observations.</p>`, button('CSV SELECTED', `data-export${state.selected.length ? '' : ' disabled'}`, 'link-button'));
+  else if (result.error) workspace = emptyState('Comparison unavailable.', result.error, button('USE NATIVE VALUES','data-comparison-mode="native"')+button('CHANGE FROM BASELINE','data-comparison-mode="difference"')+button('EDIT SELECTION', 'data-explore-mode="catalog"'));
+  else if (state.comparison === 'indexed') workspace = `<p class="panel-note">Index (common baseline = 100) · eligible positive levels only · baseline ${esc(result.panels[0]?.baselineDate)} · original observation dates thereafter · no fill or frequency aggregation</p>${chart(state.selected, { height: 275, range: viewRange(state), comparison: 'indexed' })}${result.panels.map(coverageSummary).join('')}`;
+  else workspace = result.panels.map(item => `<section class="comparison-panel"><h3 class="chart-caption"><span class="swatch"></span>${esc(item.series.short)} · ${esc(item.unit)}</h3>${state.comparison==='difference'?`<p class="panel-note">Change from baseline ${esc(item.baselineDate)} · ${esc(item.formula??'current value minus baseline value in the displayed units')}</p>`:''}${chart(state.selected, { height: 150, range: viewRange(state),comparison:state.comparison,panelId:item.series.id })}${coverageSummary(item)}</section>`).join('');
+  const controls = `<div class="toolbar"><label for="comparison-select">Comparison <select id="comparison-select"><option value="native"${state.comparison === 'native' ? ' selected' : ''}>Native units · separate panels</option><option value="indexed"${state.comparison === 'indexed' ? ' selected' : ''}>Index · eligible positive levels</option><option value="difference"${state.comparison==='difference'?' selected':''}>Change from baseline · separate units</option></select></label>${rangeControls(state,state.selected)}</div>`;
+  return `<div class="grid g12">${panel('01', 'SELECTED SERIES', `<div class="builder-list">${selected || '<p class="muted">Select series in the catalog to compare.</p>'}<p class="small muted">Native units and observation dates are preserved. Rates, growth, contributions and balances use native values or baseline differences; ratio indexing requires eligible positive levels.</p></div>`, button('EDIT', 'data-explore-mode="catalog"', 'link-button'))}${panel('02', 'COMPARISON WORKSPACE', controls + workspace, '', 'Official snapshots · separate panels use independent labeled scales')}</div>`
+    + panel('03', 'EXPORT CONFIGURATION', `<div class="context-strip"><span>FORMAT <b class="mono">LONG CSV</b></span><span>SCOPE <b class="mono">DISPLAYED WINDOW</b></span><span>VALUES <b class="mono">${state.comparison === 'indexed' ? 'INDEXED' : state.comparison==='difference'?'BASELINE DIFFERENCE':'NATIVE'}</b></span><span>ALIGNMENT <b class="mono">NO FILL</b></span></div><p class="panel-note">CSV exports match the displayed date window, values and units. Comparison baselines, formulas, per-series status and retrieval provenance accompany each row.</p>`, button('CSV SELECTED', `data-export${state.selected.length&&!result.error ? '' : ' disabled title="Choose a valid comparison and date window."'}`, 'link-button'));
 }
 
 function explore(state) {
-  return heading('EXPLORE DATA', 'Find series, inspect definitions and compare observations', button('CSV SELECTED', `data-export${state.selected.length ? '' : ' disabled'}`))
+  const back=workspaceReturn(state),result=compareSeries(state.selected,state.exploreMode==='compare'?state.comparison:'native',viewRange(state));
+  return (back?`<nav class="return-context" aria-label="Return to workspace">${link(back.label,back.href)}</nav>`:'')+heading('EXPLORE DATA', 'Find series, inspect definitions and compare observations', button('CSV SELECTED', `data-export${state.selected.length&&!result.error ? '' : ' disabled title="Choose a valid comparison and date window."'}`))
     + `<div class="tabs explore-tabs" role="tablist" aria-label="Explore views">${[['catalog', 'SERIES CATALOG'], ['compare', 'COMPARE SERIES']].map(([id, label]) => button(label, `role="tab" id="explore-tab-${id}" aria-controls="explore-content" aria-selected="${state.exploreMode === id}" data-explore-mode="${id}"`, '')).join('')}</div><div id="explore-content" class="tab-panel" role="tabpanel" aria-labelledby="explore-tab-${state.exploreMode}">${state.exploreMode === 'compare' ? comparison(state) : catalog(state)}</div>`;
 }
 
 export function renderPage(input = {}, historyContext = {}) {
   const state = { ...defaults, ...input };
+  if(Object.hasOwn(input,'range')&&!Object.hasOwn(input,'window'))state.window='observations';
   state.selected = seriesIds(Array.isArray(state.selected) ? state.selected : []).slice(0, 4);
   state.saved = seriesIds(Array.isArray(state.saved) ? state.saved : []);
-  return researchNavigation(state.page)+({ overview, labor, indicator:()=>indicator(state, historyContext), calendar, explore, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage(),macro:()=>macroPage(),vintages:()=>vintagesPage(state, historyContext.historyState?.history, historyContext.historyState),market:()=>marketFunctioningPage() }[state.page] ?? overview)(state);
+  return researchNavigation(state.page)+({ overview, labor, indicator:()=>indicator(state, historyContext), calendar, explore,watchlist:()=>`<div class="watchlist-workspace">${watchlistPage(state)}</div>`, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage(),macro:()=>macroPage(),vintages:()=>vintagesPage(state, historyContext.historyState?.history, historyContext.historyState),market:()=>marketFunctioningPage() }[state.page] ?? overview)(state);
 }
 function refinancing(state){return refinancingPage(state);}

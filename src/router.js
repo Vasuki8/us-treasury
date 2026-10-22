@@ -12,7 +12,21 @@ export const defaults = {
   yieldDateA:'',yieldDateB:'',
   auctionType:'All',auctionId:'',
   vintageCutoff:null,vintageSeries:'gdp',
+  window:'1y',startDate:'',endDate:'',returnTo:null,
 };
+
+/** Only local catalog/watchlist contexts can be offered as a return destination. */
+export function safeReturnTo(value) {
+  if(typeof value!=='string'||value.length>4000||/[\u0000-\u001f\u007f]/.test(value)||!/^#\/(?:explore|watchlist)(?:\?|$)/.test(value))return null;
+  const [path,query='']=value.split('?'),params=new URLSearchParams(query);
+  const origin=params.get('return');params.delete('return');
+  // One bounded watchlist origin may accompany a catalog/comparison return.
+  // Watchlists drop nested returns, so recursive workspace chains cannot grow.
+  if(path==='#/explore'&&/^#\/watchlist(?:\?|$)/.test(origin??'')){
+    const watchlist=safeReturnTo(origin);if(watchlist)params.set('return',watchlist);
+  }
+  return path+(params.size?'?'+params.toString():'');
+}
 
 /** Hash routes work on ordinary static hosts and preserve browser history. */
 export function parseRoute(hash = '') {
@@ -36,6 +50,7 @@ export function parseRoute(hash = '') {
     else if (path === '/macro') state.page = 'macro';
     else if (path === '/vintages') state.page = 'vintages';
     else if (path === '/market') state.page = 'market';
+    else if (path === '/watchlist') state.page = 'watchlist';
     state.vintageCutoff=p.has('cutoff')?p.get('cutoff').slice(0,64):null;
     state.vintageSeries=Object.hasOwn(series,p.get('series'))?p.get('series'):'gdp';
     state.auctionType=['All','Bill','Note','Bond','FRN','TIPS'].includes(p.get('type'))?p.get('type'):'All';
@@ -46,6 +61,9 @@ export function parseRoute(hash = '') {
     state.refinancingHorizon=[3,12,24].includes(Number(p.get('horizon')))?Number(p.get('horizon')):12;
     state.refinancingShock=[25,50,100,200].includes(Number(p.get('shock')))?Number(p.get('shock')):100;
     state.range = p.get('range') === '6' ? 6 : 12;
+    state.window=['1y','3y','5y','all','custom'].includes(p.get('window'))?p.get('window'):!p.has('window')&&['6','12'].includes(p.get('range'))?'observations':'1y';
+    state.startDate=(p.get('start')??'').slice(0,64);state.endDate=(p.get('end')??'').slice(0,64);
+    state.returnTo=safeReturnTo(p.get('return'));
     state.transform = p.get('transform') === 'change' ? 'change' : 'level';
     state.tab = ['methodology', 'revisions'].includes(p.get('tab')) ? p.get('tab') : 'data';
     state.query = (p.get('q') || '').slice(0, 200);
@@ -53,7 +71,7 @@ export function parseRoute(hash = '') {
     state.frequency = frequencies.includes(p.get('frequency')) ? p.get('frequency') : 'All frequencies';
     if (p.has('selected')) state.selected = validIds(p.get('selected').split(','));
     state.exploreMode = p.get('mode') === 'compare' ? 'compare' : 'catalog';
-    state.comparison = p.get('comparison') === 'indexed' ? 'indexed' : 'native';
+    state.comparison = ['indexed','difference'].includes(p.get('comparison')) ? p.get('comparison') : 'native';
     state.day = releases.some(event=>event.date===p.get('day')) ? p.get('day') : 'all';
     state.calendarMonth = releases.some(event => event.date.startsWith(p.get('month') + '-')) ? p.get('month') : !p.has('month') && state.day !== 'all' ? state.day.slice(0, 7) : 'upcoming';
     if (state.calendarMonth !== 'upcoming' && state.day !== 'all' && !state.day.startsWith(state.calendarMonth + '-')) state.day = 'all';
@@ -68,7 +86,7 @@ export function parseRoute(hash = '') {
 
 export function routeFor(input) {
   const state = { ...defaults, ...input };
-  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',macro:'/macro',vintages:'/vintages',market:'/market'}[state.page] || '/overview';
+  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',watchlist:'/watchlist',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',macro:'/macro',vintages:'/vintages',market:'/market'}[state.page] || '/overview';
   const p = new URLSearchParams();
   if(state.page==='vintages'){
     if(state.vintageCutoff!==null)p.set('cutoff',state.vintageCutoff);
@@ -87,7 +105,8 @@ export function routeFor(input) {
     if(state.refinancingShock!==100)p.set('shock',String(state.refinancingShock));
   }
   if (state.page === 'indicator') {
-    if (state.range === 6) p.set('range', '6');
+    if(safeReturnTo(state.returnTo))p.set('selected',validIds(state.selected||[]).join(','));
+    if(safeReturnTo(state.returnTo)&&['indexed','difference'].includes(state.comparison))p.set('comparison',state.comparison);
     if (state.transform === 'change') p.set('transform', 'change');
     if (state.tab !== 'data') p.set('tab', state.tab);
   }
@@ -97,8 +116,17 @@ export function routeFor(input) {
     if (state.topic !== 'All topics') p.set('topic', state.topic);
     if (state.frequency !== 'All frequencies') p.set('frequency', state.frequency);
     if (state.exploreMode === 'compare') p.set('mode', 'compare');
-    if (state.comparison === 'indexed') p.set('comparison', 'indexed');
-    if (state.range === 6) p.set('range', '6');
+    if (['indexed','difference'].includes(state.comparison)) p.set('comparison', state.comparison);
+  }
+  if(state.page==='watchlist'){
+    p.set('selected',validIds(state.selected||[]).join(','));
+    if(['indexed','difference'].includes(state.comparison))p.set('comparison',state.comparison);
+  }
+  if(['indicator','explore','watchlist'].includes(state.page)){
+    if(state.window==='observations')p.set('range',String(state.range===6?6:12));
+    else if(state.window!=='1y')p.set('window',state.window);
+    if(state.window==='custom'){p.set('start',state.startDate);p.set('end',state.endDate);}
+    const returnTo=safeReturnTo(state.returnTo);if(returnTo&&state.page!=='watchlist')p.set('return',returnTo);
   }
   if (state.page === 'calendar') {
     if (state.calendarMonth !== 'upcoming') p.set('month', state.calendarMonth);

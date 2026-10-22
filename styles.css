@@ -168,6 +168,29 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
 .toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:7px 9px; border-bottom:1px solid var(--border); font-size:11px; }
 .toolbar label { display:flex; align-items:center; gap:6px; color:var(--muted); }
 .spacer { flex:1; }
+.mobile-workspace { display:none; }
+.date-window-controls { width:100%; min-width:0; display:grid; gap:8px; }
+.date-window-inputs { display:flex; gap:10px; flex-wrap:wrap; }
+.date-window-inputs label { display:grid; gap:4px; flex:1; min-width:160px; }
+.date-window-inputs input { width:100%; min-width:0; }
+.date-window-controls .actions { flex-wrap:wrap; }
+.window-error { line-height:1.5; }
+.return-context { margin-bottom:8px; }
+.coverage-summary { overflow-wrap:anywhere; }
+@media(max-width:600px) {
+  .mobile-workspace { display:flex; padding:7px 8px; border-bottom:1px solid var(--border); background:var(--panel); }
+  .mobile-workspace a,.date-window-controls .action { min-height:44px; }
+  .date-window-inputs input { min-height:44px; font-size:16px; }
+  .date-window-inputs label { min-width:130px; }
+  .watchlist-workspace table,.watchlist-workspace tbody,.watchlist-workspace tr,.watchlist-workspace td,.watchlist-workspace tbody th { display:block; width:auto; white-space:normal; height:auto; }
+  .watchlist-workspace .table-wrap { overflow:visible; }
+  .watchlist-workspace thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+  .watchlist-workspace tbody tr { border-bottom:1px solid var(--border); padding:8px 0; }
+  .watchlist-workspace td,.watchlist-workspace tbody th { border:0; text-align:left; overflow-wrap:anywhere; }
+  .watchlist-workspace .table-code { white-space:normal; overflow-wrap:anywhere; font-size:11px; }
+  .watchlist-workspace .action,.watchlist-workspace button { min-height:44px; padding:8px; }
+  .watchlist-workspace td[data-label]::before { content:attr(data-label) ' '; display:block; color:var(--muted); font-size:11px; }
+}
 .tabs { display:flex; border-bottom:1px solid var(--border); flex-wrap:wrap; background:var(--head); }
 .tabs button { font-size:11px; padding:9px 11px; border-right:1px solid var(--border); color:var(--muted); }
 .tabs button[aria-selected="true"],.tabs button[aria-pressed="true"] { color:var(--text); box-shadow:inset 0 -2px var(--accent); background:var(--selected); }

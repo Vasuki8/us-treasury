@@ -21,7 +21,7 @@ test('source-partition history retains the global default cutoff before and afte
   assert.match(html,/default cutoff.*all sources/is);
  }
  const explicit=vintagesPage({vintageSeries:'gdp',vintageCutoff:t1},history,{status:'ready',history,latestCaptureAt:globalCutoff,sourceIds:['bea']});
- assert.ok(explicit.includes(`Selected cutoff: ${t1}.`));assert.ok(!explicit.includes('2.4%'));
+ assert.ok(explicit.includes(`Captured by: ${t1}.`));assert.ok(!explicit.includes('2.4%'));
 });
 
 test('vintage views and CSV keep first and previous values in their captured units after rescaling', () => {
@@ -87,6 +87,39 @@ test('as-known page honors exact UTC cutoff and does not show later revisions in
   assert.match(html, /No observed value changes/i);
   assert.match(vintagesPage({ vintageCutoff: '2026-02-30T12:00', vintageSeries: 'gdp' }, fixture()), /invalid.*cutoff/i);
   assert.match(vintagesPage({}, { version: 1, captures: [] }), /No capture history/i);
+});
+
+test('Captured by controls describe an inclusive retrieval cutoff with exact UTC precision', () => {
+  const html = vintagesPage({ vintageSeries: 'gdp', vintageCutoff: t1 }, fixture());
+  assert.match(html, /<label for="vintage-cutoff">Captured by \(UTC\)/);
+  assert.match(html, /<h1>CAPTURED BY<\/h1>[\s\S]*Revision history at a UTC retrieval cutoff/);
+  assert.ok(html.includes(`Captured by: ${t1}.`));
+  assert.match(html, /Captures at the exact cutoff are included/);
+  assert.match(html, /retrieval cutoff.*release date|release date.*retrieval cutoff/is);
+});
+
+test('selected-series boundary uses its first observation upsert instead of an unrelated or empty source baseline', () => {
+  const unrelatedAt = '2026-10-18T12:00:00.000Z', emptyAt = '2026-10-19T12:00:00.000Z';
+  const unrelated = { ...source(unrelatedAt, 1.1), id: 'bls', series: { cpi: source(unrelatedAt, 1.1).series.gdp } };
+  const empty = source(emptyAt, 2.2); empty.series.gdp.observations = [];
+  const history = recordVintages(null, { bls: unrelated, bea: empty }, { bea: source(t1, 2.2) }, { checkedAt: t2 });
+  const before = vintagesPage({ vintageSeries: 'gdp', vintageCutoff: emptyAt }, history);
+  assert.match(before, /First retained capture for this series: <time[^>]*>2026-10-20T12:00:00.123Z<\/time>/);
+  assert.match(before, /Unavailable before the first retained capture for this series/i);
+  assert.match(before, /Later values are not substituted/);
+  assert.ok(!before.includes('2.2%'));
+  assert.equal(parseCsv(vintagesCsv(history, { cutoff: emptyAt, seriesId: 'gdp' })).length, 1);
+  const exact = vintagesPage({ vintageSeries: 'gdp', vintageCutoff: t1 }, history);
+  assert.ok(exact.includes('2.2%'));
+  assert.doesNotMatch(exact, /Unavailable before the first retained capture/);
+});
+
+test('selected series without retained observation captures has no invented first-capture boundary', () => {
+  const history = fixture();
+  const html = vintagesPage({ vintageSeries: 'sofr', vintageCutoff: t2 }, history);
+  assert.match(html, /First retained capture for this series: Unavailable/);
+  assert.match(html, /No observation capture is retained for this series/);
+  assert.doesNotMatch(html, /First retained capture for this series: <time/);
 });
 
 test('vintage CSV exports as-known observations and observed changes with provenance and unknown causes', () => {
@@ -173,5 +206,5 @@ test('whole-second UTC cutoff aliases retain exact inclusion in vintage page and
   assert.equal(row.cutoff_utc, '2026-10-20T12:00:00.000Z');
   assert.equal(row.value, '2.2');
   assert.equal(parseCsv(vintagesCsv(vintages, { cutoff: '2026-10-20T11:59:59.999Z', seriesId: 'gdp' })).length, 1);
-  assert.match(vintagesPage({ vintageCutoff: '2026-10-20T12:00:00Z' }, vintages), /Selected cutoff: 2026-10-20T12:00:00.000Z/);
+  assert.match(vintagesPage({ vintageCutoff: '2026-10-20T12:00:00Z' }, vintages), /Captured by: 2026-10-20T12:00:00.000Z/);
 });

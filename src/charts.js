@@ -9,6 +9,11 @@ export function chartDateLabel(panels, date) {
   const frequencies = new Set(panels.map(panel => panel.series.frequency));
   return periodLabel(frequencies.size > 1 ? {frequency:'Daily'} : panels[0].series, date);
 }
+export function readChartRange(value) {
+  if(value===undefined)return 12;
+  try {const parsed=JSON.parse(value);if(typeof parsed==='number'&&Number.isFinite(parsed)||parsed&&typeof parsed==='object'&&!Array.isArray(parsed))return parsed;} catch { /* Invalid configuration must not widen the window. */ }
+  return {preset:'custom',startDate:'invalid',endDate:'invalid'};
+}
 function svgElement(name, attributes, parent, text) {
   const node = document.createElementNS(ns, name);
   Object.entries(attributes).forEach(([key,value]) => node.setAttribute(key,String(value)));
@@ -29,9 +34,15 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const dates = [...new Set(panels.flatMap(panel => panel.observations.map(o => o.date)))].sort();
   const orderedDates = curve ? yieldCurve.map(point => point.tenor) : dates;
   const positions = orderedDates.map((date,index) => curve ? index : Date.parse(`${date}T00:00:00Z`));
-  const minX = positions[0], spanX = positions.at(-1)-minX || 1;
-  const xIndex = index => left+(positions[index]-minX)/spanX*pw;
-  const xDate = date => xIndex(orderedDates.indexOf(date));
+  // Calendar bounds belong to the requested window, including empty coverage
+  // before a source starts or a derived comparison's common baseline.
+  const window = !curve && panels[0].window?.mode === 'calendar' ? panels[0].window : null;
+  const minX = window ? Date.parse(`${window.startDate}T00:00:00Z`) : positions[0];
+  const maxX = window ? Date.parse(`${window.endDate}T00:00:00Z`) : positions.at(-1);
+  const spanX = maxX-minX || 1;
+  const xPosition = position => left+(position-minX)/spanX*pw;
+  const xIndex = index => xPosition(positions[index]);
+  const xDate = date => curve ? xIndex(orderedDates.indexOf(date)) : xPosition(Date.parse(`${date}T00:00:00Z`));
   let lo = Math.min(...values), hi = Math.max(...values);
   if (bars) { lo = Math.min(0,lo); hi = Math.max(0,hi); }
   const pad = Math.max((hi-lo)*.13,Math.abs(hi)*.015,.05);
@@ -49,12 +60,14 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
     const label = new Intl.NumberFormat('en-US',{maximumFractionDigits:Math.abs(hi-lo)<3?2:1}).format(value);
     svgElement('text',{x:left-8,y:y(value)+4,'text-anchor':'end'},svg,label);
   }
-  const labelIndexes = curve ? orderedDates.map((_,i)=>i) : [0,Math.floor((orderedDates.length-1)/2),orderedDates.length-1];
-  [...new Set(labelIndexes)].forEach(index => {
-    const date = orderedDates[index];
-    let label = curve ? date : chartDateLabel(panels,date);
-    if (!curve && panels[0].series.frequency === 'Weekly') label = label.replace('Week ending ','');
-    svgElement('text',{x:xIndex(index),y:h-(staggerCurveLabels && index%2===0 ? 24 : 8),'text-anchor':index===0?'start':index===orderedDates.length-1?'end':'middle'},svg,label);
+  const labelDates = curve ? orderedDates : window
+    ? [window.startDate, new Date(minX+(maxX-minX)/2).toISOString().slice(0,10), window.endDate]
+    : [orderedDates[0], orderedDates[Math.floor((orderedDates.length-1)/2)], orderedDates.at(-1)];
+  const uniqueLabelDates = [...new Set(labelDates)];
+  uniqueLabelDates.forEach((date,index) => {
+    let label = curve ? date : window ? periodLabel({frequency:'Daily'},date) : chartDateLabel(panels,date);
+    if (!curve && !window && panels[0].series.frequency === 'Weekly') label = label.replace('Week ending ','');
+    svgElement('text',{x:xDate(date),y:h-(staggerCurveLabels && index%2===0 ? 24 : 8),'text-anchor':index===0?'start':index===uniqueLabelDates.length-1?'end':'middle'},svg,label);
   });
   panels.forEach((panel,index) => {
     const className = curve && index>0 ? ' previous' : ['', ' secondary', ' tertiary', ' quaternary'][index];
@@ -125,7 +138,7 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
 export function renderCharts(root) {
   root.querySelectorAll('[data-chart]').forEach(container => {
     const {kind,transform='level',comparison='native'} = container.dataset;
-    const range=Number(container.dataset.range)||12, height=Number(container.dataset.height)||180;
+    const range=readChartRange(container.dataset.range), height=Number(container.dataset.height)||180;
     if(kind==='history-curve'){
       const curves=selectCurveOverlays(dataStatus.sources.yields,container.dataset.dates.split(',').filter(Boolean));
       draw(container,curves.map(curve=>({series:getSeries('yield'),label:curve.date+(curve.available?'':' — unavailable'),unit:'Yield · %',observations:NOMINAL_YIELD_TENORS.map(tenor=>({date:tenor,value:curve.nominal[tenor]??null}))})),{height,curve:true});
@@ -140,8 +153,11 @@ export function renderCharts(root) {
       return;
     }
     const ids=container.dataset.series.split(',').filter(Boolean);
-    const result=comparison==='indexed'?compareSeries(ids,'indexed',range):{panels:ids.map(id=>transformSeries(getSeries(id),transform,range))};
+    const result=comparison!=='native'||container.dataset.panelId?compareSeries(ids,comparison,range):{panels:ids.map(id=>transformSeries(getSeries(id),transform,range))};
+    result.error??=result.panels?.find(panel=>panel.error)?.error;
     if (result.error) {container.textContent=result.error;return;}
-    draw(container,result.panels,{height,bars:kind==='bar',transformed:transform==='change'});
+    const panels=container.dataset.panelId?result.panels.filter(panel=>panel.series.id===container.dataset.panelId):result.panels;
+    if(!panels.length){container.textContent='No observations available for this chart.';return;}
+    draw(container,panels,{height,bars:kind==='bar',transformed:transform==='change'||comparison==='difference'});
   });
 }

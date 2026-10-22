@@ -17,6 +17,7 @@ import { parseRoute, routeFor } from './router.js';
 import { readPreferences, writePreferences } from './storage.js';
 import { createHistoryLoader } from './history-loader.js';
 import { createHistoryController, preserveHistoryView } from './history-controller.js';
+import {viewRange,indicatorHref,createWorkspaceMemory,updateWorkspaceSelection} from './workspace-context.js';
 
 const root = document.getElementById('app');
 const main = document.getElementById('main-content');
@@ -26,12 +27,14 @@ mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus);
 let storage;
 try { storage = window.localStorage; } catch { /* Session remains usable without persistence. */ }
 let state = { ...parseRoute(location.hash), ...readPreferences(storage) };
+const workspaceMemory=createWorkspaceMemory();
+if('scrollRestoration' in history)history.scrollRestoration='manual';
 const historyLoader = createHistoryLoader(dataStatus.historyArchive);
 const historyController = createHistoryController(historyLoader, {
   getRoute:() => state,
   onChange:() => preserveHistoryView(main, () => render()),
 });
-const pageNames = {overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Yield explanations',auctions:'Auction demand',ownership:'Debt ownership',macro:'Macro drivers',vintages:'Revision history',market:'Market functioning'};
+const pageNames = {overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',watchlist:'Watchlist',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Yield explanations',auctions:'Auction demand',ownership:'Debt ownership',macro:'Macro drivers',vintages:'Captured by',market:'Market functioning'};
 
 document.querySelector('.skip-link').addEventListener('click',event=>{
   event.preventDefault();
@@ -39,6 +42,10 @@ document.querySelector('.skip-link').addEventListener('click',event=>{
 });
 
 function announce(message) { status.textContent=message; }
+function rememberWorkspace(){
+  const active=document.activeElement;
+  workspaceMemory.remember(state,{left:window.scrollX,top:window.scrollY,focusHref:main.contains(active)&&active.tagName==='A'?active.getAttribute('href'):null});
+}
 function downloadCsv(content,filename,notice){
   const url=URL.createObjectURL(new Blob(['\ufeff',content],{type:'text/csv;charset=utf-8'}));
   const anchor=document.createElement('a');anchor.href=url;anchor.download=filename;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);announce(notice);
@@ -84,7 +91,8 @@ function render({focusHeading=false,preserveFocus=false}={}) {
     return `<a href="#/series/${id}"><span>${esc(item.code)}</span><strong>${esc(formatValue(item,latest(item)?.value))}</strong><span class="mono">${esc(formatChange(item))}</span></a>`;
   }).join('');
   document.getElementById('saved-count').textContent=state.saved.length;
-  document.getElementById('saved-list').innerHTML=state.saved.length?state.saved.map(id=>`<div class="saved-item"><a href="#/series/${id}">${esc(getSeries(id).short)}</a><button type="button" data-save="${id}" aria-label="Remove ${esc(getSeries(id).name)} from watchlist">×</button></div>`).join(''):'<p class="rail-note">No saved series.<br>Open an indicator to save it.</p>';
+  document.getElementById('mobile-saved-count').textContent=state.saved.length;
+  document.getElementById('saved-list').innerHTML=state.saved.length?state.saved.map(id=>`<div class="saved-item"><a href="${esc(indicatorHref(id,{...state,page:'watchlist'}))}">${esc(getSeries(id).short)}</a><button type="button" data-save="${id}" aria-label="Remove ${esc(getSeries(id).name)} from watchlist">×</button></div>`).join(''):'<p class="rail-note">No saved series.<br>Open an indicator to save it.</p>';
   document.getElementById('source-status').innerHTML=sourceStatusList(dataStatus.sources,{compact:true});
   document.getElementById('source-notice').innerHTML=sourceNotice(dataStatus.sources);
   document.getElementById('snapshot-time').textContent=`OFFICIAL SNAPSHOT · ASSEMBLED ${dataStatus.generatedAt ?? 'UNAVAILABLE'}`;
@@ -94,12 +102,21 @@ function render({focusHeading=false,preserveFocus=false}={}) {
     const heading=main.querySelector('h1');
     heading.tabIndex=-1;heading.focus({preventScroll:true});
     window.scrollTo({top:0,behavior:'instant'});
+    const position=workspaceMemory.recall(state);
+    if(position){
+      const links=[...main.querySelectorAll('a[href]')];
+      const previous=links.find(a=>a.getAttribute('href')===position.focusHref)??(/^#\/series\//.test(position.focusHref??'')?links.find(a=>a.getAttribute('href').split('?')[0]===position.focusHref.split('?')[0]):null);
+      previous?.focus({preventScroll:true});
+      window.scrollTo({left:position.left,top:position.top,behavior:'instant'});
+    }
   } else restoreFocus(focus);
 }
 
 function navigate(patch,{replace=false,preserveFocus=true}={}) {
   const previous={page:state.page,seriesId:state.seriesId};
+  if(patch.page&&patch.page!==state.page)rememberWorkspace();
   state={...state,...patch};
+  if(patch.selected&&state.returnTo)state.returnTo=updateWorkspaceSelection(state.returnTo,state.selected);
   const route=routeFor(state);
   if(location.hash!==route)history[replace?'replaceState':'pushState'](null,'',route);
   render({focusHeading:previous.page!==state.page || previous.seriesId!==state.seriesId,preserveFocus});
@@ -108,8 +125,9 @@ function navigate(patch,{replace=false,preserveFocus=true}={}) {
 window.addEventListener('hashchange',()=>{
   if(location.hash==='#main-content'){main.focus();return;}
   const route=parseRoute(location.hash), oldPage=state.page, oldId=state.seriesId;
+  if(route.page!==state.page)rememberWorkspace();
   if(route.page!=='indicator')route.seriesId=state.seriesId;
-  if(route.page!=='explore' || !location.hash.includes('selected='))route.selected=state.selected;
+  if(!location.hash.includes('selected='))route.selected=state.selected;
   state={...state,...route};
   render({focusHeading:oldPage!==state.page || oldId!==state.seriesId});
 });
@@ -119,7 +137,13 @@ function save(id) {
   const wasSaved=state.saved.includes(id);
   state.saved=wasSaved?state.saved.filter(value=>value!==id):[...state.saved,id];
   const durable=persist();
+  const removedRow=wasSaved&&state.page==='watchlist'&&main.contains(document.activeElement)?document.activeElement.closest('tr'):null;
+  const nextSaved=removedRow?.nextElementSibling?.querySelector('[data-save]')?.dataset.save??removedRow?.previousElementSibling?.querySelector('[data-save]')?.dataset.save;
   render({preserveFocus:true});
+  if(removedRow){
+    const next=nextSaved?main.querySelector(`[data-save="${nextSaved}"]`):main.querySelector('.empty-state a')??main.querySelector('h1');
+    if(next){if(next.tagName==='H1')next.tabIndex=-1;next.focus();}
+  }
   announce(wasSaved?`${getSeries(id).short} removed from watchlist.`:`${getSeries(id).short} saved ${durable?'in this browser':'for this session; browser storage is unavailable'}.`);
 }
 
@@ -128,7 +152,7 @@ function exportCsv(selection=null) {
   if(!ids.length){announce('Select at least one series to export.');return;}
   try {
     const comparison=state.page==='explore' && state.exploreMode==='compare'?state.comparison:'native';
-    const content=toCsv(ids,{transform:state.page==='indicator'?state.transform:'level',range:state.range,comparison});
+    const content=toCsv(ids,{transform:state.page==='indicator'?state.transform:'level',range:['indicator','explore','watchlist'].includes(state.page)?viewRange(state):state.range,comparison});
     downloadCsv(content,`meridian-${ids.join('-')}.csv`,'CSV downloaded with displayed observations, units, official source identifiers, retrieval times and per-series data status. Unknown publication dates remain empty.');
   } catch(error) {announce(`Export unavailable: ${error.message}`);}
 }
@@ -150,13 +174,21 @@ root.addEventListener('click',async event=>{
     preserveHistoryView(main,()=>render());
   }
   else if('series' in d && getSeries(d.series))navigate({page:'indicator',seriesId:d.series,transform:'level',tab:'data'});
+  else if('addCompare' in d&&getSeries(d.addCompare)){
+    const selected=[...new Set([...state.selected,d.addCompare])];
+    if(selected.length>4){announce('Compare up to four series. Remove a selected series first.');return;}
+    const returnTo=state.page==='watchlist'?routeFor({...state,selected}):state.returnTo;
+    navigate({page:'explore',exploreMode:'compare',selected,returnTo});
+  }
   else if('page' in d && pageNames[d.page])navigate({page:d.page});
   else if('compare' in d)navigate({page:'explore',selected:[...new Set(d.compare.split(',').filter(id=>getSeries(id)))].slice(0,4),exploreMode:'compare',comparison:'native'});
   else if('event' in d){
     const selected=releases.find(release=>release.id===d.event);
     if(selected)navigate(state.page==='calendar'?{eventId:selected.id}:{page:'calendar',eventId:selected.id,calendarMonth:selected.date.slice(0,7),day:'all',calendarTopic:'All topics',watchOnly:false});
   }
-  else if('range' in d)navigate({range:Number(d.range)});
+  else if('range' in d)navigate({range:Number(d.range),window:'observations',startDate:'',endDate:''});
+  else if('window' in d)navigate({window:d.window,startDate:'',endDate:''});
+  else if('comparisonMode' in d)navigate({comparison:d.comparisonMode});
   else if('tab' in d)navigate({tab:d.tab});
   else if('exploreMode' in d)navigate({exploreMode:d.exploreMode});
   else if('remove' in d)navigate({selected:state.selected.filter(id=>id!==d.remove)});
@@ -200,6 +232,7 @@ root.addEventListener('change',event=>{
   }
   const fields={'topic-filter':'topic','frequency-filter':'frequency','transform-select':'transform','comparison-select':'comparison','calendar-topic':'calendarTopic','yield-curve-date-a':'yieldDateA','yield-curve-date-b':'yieldDateB','auction-type':'auctionType','vintage-cutoff':'vintageCutoff','vintage-series':'vintageSeries'};
   if(target.id==='refinancing-horizon')navigate({refinancingHorizon:Number(target.value)});
+  else if(['window-start','window-end'].includes(target.id))navigate({window:'custom',startDate:document.getElementById('window-start').value,endDate:document.getElementById('window-end').value});
   else if(target.id==='refinancing-shock')navigate({refinancingShock:Number(target.value)});
   else if(target.id==='calendar-month')navigate({calendarMonth:target.value,day:'all'});
   else if(target.id==='calendar-day')navigate({day:target.value});
@@ -220,12 +253,12 @@ document.getElementById('command-form').addEventListener('submit',event=>{
   event.preventDefault();
   const input=document.getElementById('command-input'), query=input.value.trim().replace(/<go>/ig,'').trim();
   const command=query.toUpperCase();
-  const pages={US:'overview',OVERVIEW:'overview',LABOR:'labor',CAL:'calendar',CALENDAR:'calendar',FIND:'explore',EXPLORE:'explore'};
-  if(pages[command])navigate({page:pages[command]});
+  const pages={US:'overview',OVERVIEW:'overview',LABOR:'labor',CAL:'calendar',CALENDAR:'calendar',FIND:'explore',EXPLORE:'explore',WATCHLIST:'watchlist'};
+  if(pages[command])navigate({page:pages[command],returnTo:null});
   else {
     const matches=filterSeries({query});
-    if(query && matches.length===1)navigate({page:'indicator',seriesId:matches[0].id,transform:'level',tab:'data'});
-    else navigate({page:'explore',query,topic:'All topics',frequency:'All frequencies',exploreMode:'catalog'});
+    if(query && matches.length===1)navigate({page:'indicator',seriesId:matches[0].id,transform:'level',tab:'data',returnTo:routeFor({...state,page:'explore',query,topic:'All topics',frequency:'All frequencies',exploreMode:'catalog',returnTo:null})});
+    else navigate({page:'explore',query,topic:'All topics',frequency:'All frequencies',exploreMode:'catalog',returnTo:null});
     announce(matches.length?`${matches.length} matching series.`:'No matching series. Try jobs, GDP, CPI or Treasury.');
   }
   input.value='';

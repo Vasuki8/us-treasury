@@ -143,10 +143,13 @@ test('captured official measures reconcile with their retained source values and
 });
 test('search recognizes ordinary-language aliases, source names, and codes', () => {
   assert.equal(getSeries('missing'), undefined);
-  assert.deepEqual(filterSeries({ query: 'jobs' }).map((s) => s.id).sort(), ['payroll', 'unrate']);
-  assert.deepEqual(filterSeries({ query: 'unemployment' }).map((s) => s.id), ['unrate']);
+  // Aliases expand the catalog instead of excluding other matching measures.
+  assert.deepEqual(filterSeries({ query: 'jobs' }).map((s) => s.id).sort(), ['claims', 'payroll', 'unrate']);
+  assert.deepEqual(filterSeries({ query: 'unemployment' }).map((s) => s.id), ['unrate', 'claims']);
   assert.ok(filterSeries({ query: 'GDP' }).some((s) => s.id === 'gdp'));
   assert.ok(filterSeries({ query: 'treasury' }).some((s) => s.id === 'yield'));
+  assert.ok(filterSeries({ query: 'treasury' }).some((s) => s.id === 'marketableDebt'));
+  assert.equal(filterSeries({ query: series.sofr.source.seriesIds[0] })[0]?.id, 'sofr');
   assert.ok(filterSeries({ query: 'debt' }).some((s) => s.id === 'debt'));
   assert.ok(filterSeries({ query: series.cpi.code.toLowerCase() }).some((s) => s.id === 'cpi'));
   assert.ok(filterSeries({ query: 'bureau of labor statistics' }).some((s) => s.id === 'unrate'));
@@ -217,13 +220,14 @@ test('transformed observations retain the publication dates of their underlying 
   const s = fixture([1, 3, 6]);
   assert.equal(transformSeries(s, 'level', 1).observations[0].publishedAt, '2026-04-01');
   assert.equal(transformSeries(s, 'change', 1).observations[0].publishedAt, '2026-04-01');
-  const indexed = compareSeries(['cpi', 'unrate'], 'indexed', 2);
-  assert.equal(indexed.panels[0].observations[1].publishedAt, latest(series.cpi).publishedAt);
+  const difference = compareSeries(['cpi', 'unrate'], 'difference', 2);
+  assert.equal(difference.error, null);
+  assert.equal(difference.panels[0].observations[1].publishedAt, latest(series.cpi).publishedAt);
 });
 
 test('indexed panels retain their original post-baseline dates instead of intersecting calendars', () => {
-  const monthly=fixture([], {id:'monthly-calendar',observations:Array.from({length:12},(_,i)=>({date:new Date(Date.UTC(2025,9+i,1)).toISOString().slice(0,10),value:i+1,publishedAt:null}))});
-  const quarterly=fixture([], {id:'quarterly-calendar',frequency:'Quarterly',observations:Array.from({length:12},(_,i)=>({date:new Date(Date.UTC(2023,6+3*i,1)).toISOString().slice(0,10),value:i+1,publishedAt:null}))});
+  const monthly=fixture([], {id:'monthly-calendar',comparisonClass:'level',format:'number',unit:'Index',observations:Array.from({length:12},(_,i)=>({date:new Date(Date.UTC(2025,9+i,1)).toISOString().slice(0,10),value:i+1,publishedAt:null}))});
+  const quarterly=fixture([], {id:'quarterly-calendar',comparisonClass:'level',format:'number',unit:'Index',frequency:'Quarterly',observations:Array.from({length:12},(_,i)=>({date:new Date(Date.UTC(2023,6+3*i,1)).toISOString().slice(0,10),value:i+1,publishedAt:null}))});
   series[monthly.id]=monthly;series[quarterly.id]=quarterly;
   try {
   const result = compareSeries([monthly.id,quarterly.id], 'indexed', 12);
@@ -258,23 +262,23 @@ test('native comparisons keep mixed-frequency series in separate panels', () => 
   assert.deepEqual(result.panels[1].observations.map((o) => o.date), series.gdp.observations.slice(-2).map(o=>o.date));
 });
 
-test('indexed comparisons use the earliest common date in the displayed ranges', () => {
-  const result = compareSeries(['unrate', 'cpi'], 'indexed', 3);
+test('indexed positive amount comparisons use the earliest common date in the displayed ranges', () => {
+  const result = compareSeries(['receipts', 'outlays'], 'indexed', 3);
   assert.equal(result.error, null);
   assert.equal(result.panels.length, 2);
   for (const panel of result.panels) {
-    assert.equal(panel.observations[0].date, series.unrate.observations.at(-3).date);
+    assert.equal(panel.observations[0].date, series.receipts.observations.at(-3).date);
     assert.equal(panel.observations[0].value, 100);
     assert.equal(panel.unit, 'Index (common baseline = 100)');
   }
   const gdpAndCpi = compareSeries(['gdp', 'cpi'], 'indexed', 2);
   assert.deepEqual(gdpAndCpi.panels, []);
-  assert.match(gdpAndCpi.error, /common|frequency/i);
+  assert.match(gdpAndCpi.error, /growth|index/i);
 });
 
-test('indexed comparison skips missing or zero baselines without filling observations', () => {
-  const a = fixture([0, 2, null, 8], { id: 'custom-a' });
-  const b = fixture([1, 4, 6, 8], { id: 'custom-b' });
+test('indexed eligible level comparison skips missing baselines without filling observations', () => {
+  const a = fixture([null, 2, null, 8], { id: 'custom-a', comparisonClass:'level', format:'number', unit:'Index' });
+  const b = fixture([1, 4, 6, 8], { id: 'custom-b', comparisonClass:'level', format:'number', unit:'Index' });
   series[a.id] = a;
   series[b.id] = b;
   try {
@@ -316,7 +320,9 @@ test('CSV exports the displayed range with official provenance and an unknown re
 });
 
 test('CSV exports transformed and indexed values exactly as displayed', () => {
-  const s = fixture([1, 3, 6], { id: 'csv-fixture' });
+  // Synthetic positive-level metadata opts this fixture into ratio indexing.
+  // The production percent-rate series now correctly fail the eligibility policy.
+  const s = fixture([1, 3, 6], { id: 'csv-fixture', comparisonClass:'level' });
   series[s.id] = s;
   try {
     const change = toCsv([s.id], { range: 1, transform: 'change' });
@@ -326,7 +332,7 @@ test('CSV exports transformed and indexed values exactly as displayed', () => {
     assert.ok(indexed.includes(',2026-02-01,100,Index (common baseline = 100),'));
     assert.ok(indexed.includes(',2026-03-01,200,Index (common baseline = 100),'));
     assert.ok(indexed.includes(',indexed,test'));
-    assert.throws(() => toCsv(['cpi', 'gdp'], { comparison: 'indexed', range: 2 }), /common|frequency/i);
+    assert.throws(() => toCsv(['cpi', 'gdp'], { comparison: 'indexed', range: 2 }), /growth|index/i);
   } finally {
     delete series[s.id];
   }
@@ -387,4 +393,100 @@ test('CSV keeps the BLS required notice on each BLS observation in a mixed-sourc
     delete series[bls.id];
     delete series[bea.id];
   }
+});
+
+test('calendar transforms use full prior history and report displayed versus retained coverage', () => {
+  const s = fixture([], { observations: [
+    { date:'2024-12-31', value: 1 }, { date:'2025-12-31', value: 3 },
+    { date:'2026-01-01', value: null }, { date:'2026-12-31', value: 6 },
+  ] });
+  const result = transformSeries(s, 'change', { preset:'1y' });
+  assert.deepEqual(result.observations.map(o=>[o.date,o.value]), [['2025-12-31',2],['2026-01-01',null],['2026-12-31',null]]);
+  assert.equal(result.error,null);
+  assert.equal(result.window.startDate,'2025-12-31');
+  assert.deepEqual(result.coverage,{fullStartDate:'2024-12-31',fullEndDate:'2026-12-31',fullCount:4,startDate:'2025-12-31',endDate:'2026-12-31',count:3});
+  assert.equal(transformSeries(s,'level').observations.length,4,'default remains twelve observations');
+  assert.equal(transformSeries(s,'level',{preset:'custom',startDate:'2026-02-30',endDate:'2026-03-01'}).observations.length,0);
+});
+
+test('comparison calendar bounds anchor to the latest selected observation rather than each panel separately', () => {
+  const a=fixture([],{id:'shared-window-a',observations:[{date:'2025-06-01',value:1},{date:'2025-12-31',value:2},{date:'2026-12-31',value:3}]});
+  const b=fixture([],{id:'shared-window-b',frequency:'Quarterly',observations:[{date:'2025-01-01',value:4},{date:'2025-10-01',value:5},{date:'2026-07-01',value:6}]});
+  series[a.id]=a;series[b.id]=b;
+  try {
+    const result=compareSeries([a.id,b.id],'native',{preset:'1y'});
+    assert.equal(result.error,null);
+    assert.deepEqual(result.panels.map(p=>p.window.startDate),['2025-12-31','2025-12-31']);
+    assert.deepEqual(result.panels[1].observations.map(o=>o.date),['2026-07-01']);
+    assert.equal(result.panels[1].coverage.fullCount,3);
+    assert.equal(result.panels[1].coverage.count,1);
+    const [header,...rows]=parseCsv(toCsv([a.id,b.id],{range:{preset:'1y'},transform:'change'}));
+    const values=rows.map(row=>Object.fromEntries(header.map((key,i)=>[key,row[i]])));
+    assert.deepEqual(values.filter(r=>r.series_id===b.id).map(r=>[r.date,Number(r.value)]),[['2026-07-01',1]]);
+    assert.ok(values.every(r=>r.window_start_date==='2025-12-31'&&r.window_end_date==='2026-12-31'));
+  } finally {delete series[a.id];delete series[b.id];}
+});
+
+test('baseline differences admit zero and negative values and retain native units in separate panels', () => {
+  const a=fixture([-2,0,null,3],{id:'difference-a',name:'Negative level',format:'billions',unit:'USD billions'});
+  const b=fixture([null,0,1,2],{id:'difference-b',name:'Rate'});
+  series[a.id]=a;series[b.id]=b;
+  try {
+    const result=compareSeries([a.id,b.id],'difference',{preset:'all'});
+    assert.equal(result.error,null);
+    assert.equal(result.panels.length,2);
+    assert.deepEqual(result.panels.map(p=>p.baselineDate),['2026-02-01','2026-02-01']);
+    assert.deepEqual(result.panels.map(p=>p.baselineValue),[0,0]);
+    assert.deepEqual(result.panels[0].observations.map(o=>o.value),[0,null,3]);
+    assert.deepEqual(result.panels[1].observations.map(o=>o.value),[0,1,2]);
+    assert.deepEqual(result.panels.map(p=>p.unit),['USD billions','Percentage points']);
+    assert.ok(result.panels.every(p=>p.formula.includes('baseline')));
+    const negativeBaseline=compareSeries([a.id],'difference',{preset:'all'});
+    assert.equal(negativeBaseline.panels[0].baselineValue,-2);
+    assert.deepEqual(negativeBaseline.panels[0].observations.map(o=>o.value),[0,2,null,5]);
+  } finally {delete series[a.id];delete series[b.id];}
+});
+
+test('yield baseline differences convert percent to basis points while preserving source dates and CSV formula', () => {
+  const s=fixture([4.15,4.18,null],{id:'yield-difference-fixture',changeInBasisPoints:true});
+  series[s.id]=s;
+  try {
+    const range={preset:'custom',startDate:'2026-01-01',endDate:'2026-03-01'};
+    const result=compareSeries([s.id],'difference',range);
+    assert.equal(result.error,null);
+    assert.equal(result.panels[0].unit,'Basis points');
+    assert.deepEqual(result.panels[0].observations.map(o=>o.value),[0,3,null]);
+    const [header,...values]=parseCsv(toCsv([s.id],{range,comparison:'difference'}));
+    const rows=values.map(row=>Object.fromEntries(header.map((key,i)=>[key,row[i]])));
+    assert.deepEqual(rows.map(r=>r.value),['0','3','']);
+    assert.ok(rows.every(r=>r.transform==='difference'&&r.comparison_mode==='difference'));
+    assert.ok(rows.every(r=>r.comparison_baseline_date==='2026-01-01'&&r.comparison_baseline_value==='4.15'));
+    assert.ok(rows.every(r=>r.comparison_formula.includes('100')));
+    assert.ok(rows.every(r=>r.index_baseline_date===''),'difference never impersonates ratio indexing');
+    assert.deepEqual(rows.map(r=>r.publication_date),s.observations.map(o=>o.publishedAt));
+    assert.throws(()=>toCsv([s.id],{range,comparison:'difference',transform:'change'}),/difference.*level|native.*change/i);
+  } finally {delete series[s.id];}
+});
+
+test('derived comparisons fail without an exact shared finite date and never aggregate source frequencies', () => {
+  const a=fixture([],{id:'no-baseline-a',observations:[{date:'2026-01-01',value:0},{date:'2026-02-01',value:null}]});
+  const b=fixture([],{id:'no-baseline-b',frequency:'Weekly',observations:[{date:'2026-01-03',value:-2},{date:'2026-02-01',value:3}]});
+  series[a.id]=a;series[b.id]=b;
+  try {
+    const result=compareSeries([a.id,b.id],'difference',{preset:'all'});
+    assert.deepEqual(result.panels,[]);
+    assert.match(result.error,/common.*finite.*baseline/i);
+    assert.throws(()=>toCsv([a.id,b.id],{comparison:'difference',range:{preset:'all'}}),/common.*finite.*baseline/i);
+  } finally {delete series[a.id];delete series[b.id];}
+});
+
+test('All exposes every retained SOFR date and its CSV matches exact custom-window changes', () => {
+  assert.deepEqual(transformSeries(series.sofr,'level',{preset:'all'}).observations,series.sofr.observations);
+  assert.ok(series.sofr.observations.length>12);
+  const range={preset:'custom',startDate:series.sofr.observations.at(-20).date,endDate:series.sofr.observations.at(-2).date};
+  const displayed=transformSeries(series.sofr,'change',range);
+  const [headers,...values]=parseCsv(toCsv(['sofr'],{range,transform:'change'}));
+  const rows=values.map(row=>Object.fromEntries(headers.map((key,index)=>[key,row[index]])));
+  assert.deepEqual(rows.map(r=>[r.date,r.value===''?null:Number(r.value)]),displayed.observations.map(o=>[o.date,o.value]));
+  assert.ok(rows.every(r=>r.unit==='Basis points'));
 });
