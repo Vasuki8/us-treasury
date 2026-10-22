@@ -38,7 +38,7 @@ export function getDailyRefreshPlan(snapshot = {}, { now = new Date(), force = f
     reason: force === true ? 'Manual force requested; refresh all official sources.'
       : pendingSources.length ? `${pendingSources.length} sources still need a successful capture for this daily slot.`
         : approvedCachedBls ? 'Daily slot is complete; the verified cached BLS calendar was attempted in this slot.'
-          : 'All 11 official sources already captured for this daily slot.',
+          : `All ${freshness.entries.length} official sources already captured for this daily slot.`,
   };
 }
 

@@ -4,7 +4,7 @@ This is a working admission ledger, not a blanket license approval. Existing rev
 
 | Milestone | Primary candidate | Required distinctions | Status |
 | --- | --- | --- | --- |
-| Fiscal pressure | Treasury Fiscal Data Monthly Treasury Statement; Debt to the Penny | Monthly versus fiscal-year-to-date; net budget interest versus gross interest expense; public versus gross debt; financing/cash reconciliation | Endpoint/schema review in progress |
+| Fiscal pressure | Treasury Fiscal Data MTS table 9/table 2/explicit-million cross-check; Debt to the Penny | Monthly versus fiscal-year-to-date; net budget interest versus gross interest expense; public versus gross debt; financing/cash reconciliation | Admitted: [exact feeds, units, cadence, rights and limits](fiscal-source-review.md); executable scope in `scripts/research-policy.mjs` |
 | Refinancing | Treasury Fiscal Data Monthly Statement of the Public Debt | Outstanding security principal, maturity, issue/instrument type, TIPS inflation adjustments, FRN reset versus maturity | Endpoint/schema review in progress |
 | Yields | Treasury nominal and real par yield curves | Same observation day/tenor; methodology changes; inflation compensation is not pure expected inflation | Endpoint/rights review in progress |
 | Term premium | New York Fed ACM model | Model estimate, model-vintage and convention; no exact incompatible decomposition | Not admitted; permission review required |

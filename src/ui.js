@@ -95,7 +95,7 @@ export function sourceLink(series) {
 }
 
 export function seriesStatus(series) {
-  return series.dataStatus === 'cached' ? 'Cached official snapshot' : series.dataStatus === 'official' ? 'Official snapshot' : 'Unavailable';
+  return series.dataStatus === 'cached' ? `Cached ${series.observationType==='calculated'?'calculated metric':'official snapshot'}` : series.dataStatus === 'official' ? (series.observationType==='calculated'?'Calculated metric':'Official snapshot') : 'Unavailable';
 }
 
 /** The BLS disclaimer and last successful capture accompany every route. */

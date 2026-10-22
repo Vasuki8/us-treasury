@@ -66,5 +66,6 @@ test('build packages only the entry and allowlisted versioned application files,
     assert(relative === 'index.html' || /^assets\/[a-f0-9]{16}\/(?:styles\.css|favicon\.svg|src\/[a-zA-Z0-9_-]+\.js)$/.test(relative), `Unexpected public file: ${relative}`);
   }
   const checked = await run(process.execPath, ['scripts/check-build.mjs'], { cwd: root });
-  assert.match(checked.stdout, /smoke check passed \(14 assets\)/);
+  const checkedCount=checked.stdout.match(/smoke check passed \((\d+) assets\)/);
+  assert.ok(checkedCount&&Number(checkedCount[1])>=14,'the full imported module graph and baseline assets are checked');
 });

@@ -1,5 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+test('an independent source refresh preserves the unchanged cached calendar publication policy',async()=>{
+  const {refreshSnapshot}=await import('../scripts/sources/refresh.mjs');
+  const policy={mode:'allow-cached-bls-calendar',cachedCalendarSources:['bls']};
+  const result=await refreshSnapshot({previous:{sources:{},publicationPolicy:policy,calendar:{status:'partial',sources:{}}}});
+  assert.deepEqual(result.publicationPolicy,policy);
+});
 import { refreshSnapshot } from '../scripts/sources/refresh.mjs';
 import * as http from '../scripts/sources/http.mjs';
 

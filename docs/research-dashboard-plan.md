@@ -27,4 +27,6 @@ Tests cover source schema and units/signs, exact month/fiscal alignment, incompl
 
 ## Status
 
-Repository inspection complete: 12 registered indicators, 11 existing freshness feeds, five routes, deterministic native Node tests and a strict commercial data allowlist. Source research is underway for milestones 1–3. Source candidates and admission status are recorded in [research-dashboard-sources.md](research-dashboard-sources.md). No new data is admitted by this plan alone.
+Milestone 1 implemented locally: 11 new fiscal/public-debt indicators, Fiscal pressure route, monthly/TTM accounting, named category changes and financing CSV. Baseline plus fiscal checks passed (346 local tests, including the independently tested ZIP extension for a later milestone); local build and HTTP smoke check passed. Browser checks at 1440/1024/736/390/320 px found no page overflow; keyboard chart readout, downloaded financing CSV and console checks passed. Deployment verification is pending. Evidence and limits: [fiscal-source-review.md](fiscal-source-review.md).
+
+Source candidates and admission status are recorded in [research-dashboard-sources.md](research-dashboard-sources.md). Parallel source adapters for later milestones are not complete product modules until shared integration, UI/export acceptance and deployment checks pass. No new data is admitted by this plan alone.

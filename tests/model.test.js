@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { series, releases, yieldCurve, dataStatus } from '../src/data.js';
 import { parseCsv } from '../scripts/sources/http.mjs';
 import { easternFields } from '../scripts/sources/calendar-utils.mjs';
+import { registry } from '../src/registry.js';
 import {
   getSeries, filterSeries, latest, formatValue, formatChange,
   periodLabel, transformSeries, compareSeries, toCsv,
@@ -19,8 +20,9 @@ const fixture = (values, extra = {}) => ({
   })), ...extra,
 });
 
-test('all twelve official indicators have traced observations and retrieval provenance', () => {
-  assert.deepEqual(Object.keys(series).sort(), [...ids].sort());
+test('original and admitted research indicators have traced observations and retrieval provenance', () => {
+  assert.ok(ids.every(id=>Object.hasOwn(series,id)),'all twelve original indicators are preserved');
+  assert.deepEqual(Object.keys(series).sort(), Object.keys(registry).sort());
   for (const [id, s] of Object.entries(series)) {
     assert.equal(s.id,id);
     assert.doesNotMatch(s.source.name,/synthetic/i);
@@ -123,12 +125,13 @@ test('official Treasury curve preserves exact dated snapshots and unavailable te
 
 test('captured official measures reconcile with their retained source values and exact baselines',()=>{
   for(const [id,s] of Object.entries(series)) {
-    if(id==='yield')continue;
+    if(id==='yield'||!ids.includes(id)&&!['receipts','outlays','netInterest','publicDebt'].includes(id))continue;
     for(const o of s.observations) {
       if(o.value===null)continue;
       const raw=Number(String(o.sourceValue).replaceAll(',',''));
       let expected=raw;
-      if(id==='debt')expected=raw/1e12;
+      if(['debt','publicDebt'].includes(id))expected=raw/1e12;
+      else if(['receipts','outlays','netInterest'].includes(id))expected=raw/1e9;
       else if(['openings','claims'].includes(id))expected=raw/1000;
       else if(id==='payroll')expected=raw-Number(o.baseValue);
       else if(['cpi','wages','pce'].includes(id))expected=100*(raw/Number(o.baseValue??o.yearAgoSourceValue)-1);
@@ -150,7 +153,7 @@ test('search recognizes ordinary-language aliases, source names, and codes', () 
 });
 
 test('catalog filters compose topic, frequency, and watchlist without stale results', () => {
-  assert.equal(filterSeries().length, 12);
+  assert.equal(filterSeries().length, Object.keys(registry).length);
   assert.deepEqual(filterSeries({ frequency: 'Quarterly' }).map((s) => s.id), ['gdp']);
   assert.deepEqual(filterSeries({ query: 'jobs', watchlist: new Set(['unrate']) }).map((s) => s.id), ['unrate']);
   assert.deepEqual(filterSeries({ topic: series.cpi.topic, watchlist: ['cpi', 'gdp'] }).map((s) => s.id), ['cpi']);

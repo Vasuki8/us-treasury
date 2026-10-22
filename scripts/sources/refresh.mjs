@@ -84,5 +84,6 @@ export async function refreshSnapshot({previous={},collectors={},calendarCollect
   }
   const releases=Object.values(calendar.sources??{}).flatMap(source=>source.events??[]).sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)||a.id.localeCompare(b.id));
   const generatedAt=new Date(Math.max(Date.now(),Date.parse(checkedAt),...[...Object.values(sources),...Object.values(calendar.sources??{})].map(source=>Date.parse(source.fetchedAt)||0))).toISOString();
-  return {schemaVersion:1,generatedAt,checkedAt,sources,releases,calendar,...(allowCachedBlsCalendar?{publicationPolicy:{mode:'allow-cached-bls-calendar',cachedCalendarSources}}:{})};
+  const publicationPolicy=allowCachedBlsCalendar?{mode:'allow-cached-bls-calendar',cachedCalendarSources}:Object.keys(calendarCollectors).length===0?previous.publicationPolicy:null;
+  return {schemaVersion:1,generatedAt,checkedAt,sources,releases,calendar,...(publicationPolicy?{publicationPolicy}:{})};
 }

@@ -1,5 +1,6 @@
 import { releases, dataStatus } from './data.js';
 import { filterSeries, getSeries, latest, formatValue, formatChange, toCsv } from './model.js';
+import {fiscalFinancingCsv} from './research-exports.js';
 import { renderPage } from './pages.js';
 import { escapeHtml as esc, sourceStatusList, sourceNotice } from './ui.js';
 import { mountFreshnessBanner } from './freshness-controller.js';
@@ -15,7 +16,7 @@ mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus);
 let storage;
 try { storage = window.localStorage; } catch { /* Session remains usable without persistence. */ }
 let state = { ...parseRoute(location.hash), ...readPreferences(storage) };
-const pageNames = {overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data'};
+const pageNames = {overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',fiscal:'Fiscal pressure'};
 
 document.querySelector('.skip-link').addEventListener('click',event=>{
   event.preventDefault();
@@ -23,6 +24,10 @@ document.querySelector('.skip-link').addEventListener('click',event=>{
 });
 
 function announce(message) { status.textContent=message; }
+function downloadCsv(content,filename,notice){
+  const url=URL.createObjectURL(new Blob(['\ufeff',content],{type:'text/csv;charset=utf-8'}));
+  const anchor=document.createElement('a');anchor.href=url;anchor.download=filename;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);announce(notice);
+}
 function persist() {
   state.storageAvailable=writePreferences(storage,state);
   return state.storageAvailable;
@@ -102,17 +107,13 @@ function save(id) {
   announce(wasSaved?`${getSeries(id).short} removed from watchlist.`:`${getSeries(id).short} saved ${durable?'in this browser':'for this session; browser storage is unavailable'}.`);
 }
 
-function exportCsv() {
-  const ids=state.page==='indicator'?[state.seriesId]:state.selected;
+function exportCsv(selection=null) {
+  const ids=selection??(state.page==='indicator'?[state.seriesId]:state.selected);
   if(!ids.length){announce('Select at least one series to export.');return;}
   try {
     const comparison=state.page==='explore' && state.exploreMode==='compare'?state.comparison:'native';
     const content=toCsv(ids,{transform:state.page==='indicator'?state.transform:'level',range:state.range,comparison});
-    const url=URL.createObjectURL(new Blob(['\ufeff',content],{type:'text/csv;charset=utf-8'}));
-    const anchor=document.createElement('a');
-    anchor.href=url;anchor.download=`meridian-${ids.join('-')}.csv`;anchor.click();
-    setTimeout(()=>URL.revokeObjectURL(url),1000);
-    announce('CSV downloaded with displayed observations, units, official source identifiers, retrieval times and per-series data status. Unknown publication dates remain empty.');
+    downloadCsv(content,`meridian-${ids.join('-')}.csv`,'CSV downloaded with displayed observations, units, official source identifiers, retrieval times and per-series data status. Unknown publication dates remain empty.');
   } catch(error) {announce(`Export unavailable: ${error.message}`);}
 }
 
@@ -141,6 +142,10 @@ root.addEventListener('click',async event=>{
   else if('resetFilters' in d)navigate({query:'',topic:'All topics',frequency:'All frequencies'});
   else if('resetCalendar' in d)navigate({calendarMonth:'upcoming',day:'all',calendarTopic:'All topics',watchOnly:false});
   else if('export' in d)exportCsv();
+  else if('exportFiscal' in d)exportCsv(['receipts','outlays','netInterest','budgetDeficit','primaryDeficit','receiptsTtm','outlaysTtm','netInterestTtm','primaryDeficitTtm','interestRevenueRatio','publicDebt']);
+  else if('exportFiscalFinancing' in d){
+    downloadCsv(fiscalFinancingCsv(dataStatus.sources.fiscal),'meridian-fiscal-financing.csv','MTS financing CSV downloaded with reported amounts and calculated residuals; release dates remain unknown.');
+  }
   else if('copyLink' in d) {
     try {await navigator.clipboard.writeText(location.href);announce('Link copied with the current series, range, view and tab.');}
     catch {announce('Copy is unavailable. The address bar contains the shareable link.');}

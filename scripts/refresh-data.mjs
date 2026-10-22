@@ -15,13 +15,15 @@ import { collectTreasuryCalendar } from './sources/calendar-treasury.mjs';
 import { collectTreasuryYieldTiming } from './sources/timing-treasury-yields.mjs';
 import { refreshSnapshot } from './sources/refresh.mjs';
 import { assertCommercialData } from './data-policy.mjs';
+import { collectFiscal } from './sources/fiscal.mjs';
+import { deriveFiscalSeries } from '../src/fiscal.js';
 
-const all={treasury:collectTreasury,bls:collectBls,bea:collectBea,dol:collectDol,census:collectCensus};
+const all={treasury:collectTreasury,bls:collectBls,bea:collectBea,dol:collectDol,census:collectCensus,fiscal:async options=>{const result=await collectFiscal(options);return {...result,series:{...result.series,...deriveFiscalSeries(result)}};}};
 const requireAll=process.argv.includes('--require-all');
 const allowCachedBlsCalendar=process.argv.includes('--allow-cached-bls-calendar');
 if(requireAll&&allowCachedBlsCalendar)throw new Error('Cannot combine --require-all and --allow-cached-bls-calendar; publication modes are mutually exclusive.');
 const selection=process.argv.find(arg=>arg.startsWith('--sources='))?.split('=')[1]?.split(',')||[...Object.keys(all),'calendar'];
-if(selection.some(id=>!Object.hasOwn(all,id)&&id!=='calendar'))throw new Error('Sources must be treasury,bls,bea,dol,census,calendar');
+if(selection.some(id=>!Object.hasOwn(all,id)&&id!=='calendar'))throw new Error(`Sources must be ${Object.keys(all).join(',')},calendar`);
 const collectors=Object.fromEntries(selection.filter(id=>id!=='calendar').map(id=>[id,async options=>{
   console.log(`Retrieving ${id.toUpperCase()} official data…`);
   return all[id](options);

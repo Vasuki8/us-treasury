@@ -1,8 +1,10 @@
 import { easternFields } from './sources/calendar-utils.mjs';
+import { researchPolicies, matchesResearchFeed, assertResearchData } from './research-policy.mjs';
 
 // Dataset-specific commercial reuse review. Evidence and limitations: docs/data-sources.md.
 // An official-looking hostname alone does not establish reuse rights.
 export const dataPolicies = [
+  ...researchPolicies,
   {
     id:'bls-statistics', agency:'bls', reviewedOn:'2026-10-21', commercialUse:true,
     basis:'Public-domain BLS statistics; API attribution and disclaimer conditions apply',
@@ -43,6 +45,7 @@ export const dataPolicies = [
 ];
 
 function matchesFeed(value, feed) {
+  if(matchesResearchFeed(value,feed))return true;
   try {
     const url=new URL(value);
     if(url.username || url.password)return false;
@@ -189,6 +192,7 @@ function assertCalendarData(snapshot) {
 
 /** Stop publication or snapshot replacement when data exceed the reviewed scope. */
 export function assertCommercialData(snapshot) {
+  assertResearchData(snapshot);
   assertCalendarData(snapshot);
   for(const [agency,source] of Object.entries(snapshot.sources ?? {})) {
     const policies=dataPolicies.filter(policy=>policy.agency===agency && policy.commercialUse===true);
@@ -198,7 +202,7 @@ export function assertCommercialData(snapshot) {
       if(!policy)throw new Error(`Commercial reuse review required for series: ${agency}/${id}`);
       const approvedIds=policy.series[id];
       if(!Array.isArray(series.sourceIds) || series.sourceIds.length!==approvedIds.length || !approvedIds.every((value,index)=>series.sourceIds[index]===value))throw new Error(`Unreviewed source identifier for ${agency}/${id}`);
-      if(!matchesFeed(series.sourceUrl,policy.feed))throw new Error(`Unreviewed feed for ${agency}/${id}`);
+      if(!matchesFeed(series.sourceUrl,policy.seriesFeeds?.[id]??policy.feed))throw new Error(`Unreviewed feed for ${agency}/${id}`);
     }
     for(const item of source.provenance ?? []) {
       if(!policies.some(policy=>matchesFeed(item.url,policy.feed)))throw new Error(`Unreviewed provenance for ${agency}: ${item.url}`);

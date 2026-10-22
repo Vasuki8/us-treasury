@@ -61,6 +61,7 @@ export function formatValue(s, value) {
   switch (s.format) {
     case 'percent': return `${number}%`;
     case 'trillions': return `$${number}T`;
+    case 'billions': return `$${number}B`;
     case 'thousands': return `${number}k`;
     case 'millions': return `${number}M`;
     default: return number;
@@ -163,13 +164,14 @@ export function compareSeries(ids, mode = 'native', range = 12) {
 }
 
 /** Escape RFC 4180 cells and neutralize formula-like text without altering numeric values. */
-function csvCell(value, numericSource = false) {
+export function csvCell(value, numericSource = false) {
   if (value === null || value === undefined) return '';
   let text = String(value);
   const validatedNumber=numericSource && /^[+-]?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(text.trim());
   if (typeof value === 'string' && !validatedNumber && /^[\s]*[=+\-@]/.test(text)) text = `'${text}`;
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
+export function tabularCsv(headers,rows){return [headers,...rows].map(row=>row.map(cell=>csvCell(cell)).join(',')).join('\r\n')+'\r\n';}
 
 /** Export exactly the displayed observations; missing numeric cells remain blank. */
 export function toCsv(ids, { transform = 'level', range = 12, comparison = 'native' } = {}) {
@@ -179,13 +181,13 @@ export function toCsv(ids, { transform = 'level', range = 12, comparison = 'nati
     throw new RangeError('Indexed comparisons export indexed levels; choose native panels to export changes.');
   }
   const panels = comparison === 'indexed' ? result.panels : result.panels.map((panel) => transformSeries(panel.series, transform, range));
-  const rows = [['series_id', 'name', 'date', 'value', 'unit', 'frequency', 'adjustment', 'source', 'publication_date', 'transform', 'data_status','retrieved_at','source_url','source_series','calculation','source_value','source_baseline_date','source_baseline_value','index_baseline_date','index_baseline_value','source_notice','coverage_note']];
+  const rows = [['series_id', 'name', 'date', 'value', 'unit', 'frequency', 'adjustment', 'source', 'publication_date', 'transform', 'data_status','retrieved_at','source_url','source_series','calculation','source_value','source_baseline_date','source_baseline_value','index_baseline_date','index_baseline_value','source_notice','coverage_note','observation_type']];
   for (const panel of panels) {
     const s = panel.series;
     const publications = new Map(s.observations.map((o) => [o.date, o.publishedAt]));
     for (const observation of panel.observations) {
       rows.push([s.id, s.name, observation.date, observation.value, panel.unit, s.frequency, s.adjustment,
-        s.source.name, publications.get(observation.date), comparison === 'indexed' ? 'indexed' : transform, s.dataStatus||'unknown',s.fetchedAt,s.sourceUrl||s.source.url,(s.source.seriesIds||[]).join('; '),s.calculation,observation.sourceValue,observation.baseDate|| (observation.yearAgoSourceValue!=null?`${Number(observation.date.slice(0,4))-1}${observation.date.slice(4)}`:null),observation.baseValue??observation.yearAgoSourceValue,panel.baselineDate,panel.baselineValue,s.agency === 'bls' ? BLS_DATA_NOTICE : '',s.coverageNote]);
+        s.source.name, publications.get(observation.date), comparison === 'indexed' ? 'indexed' : transform, s.dataStatus||'unknown',s.fetchedAt,s.sourceUrl||s.source.url,(s.source.seriesIds||[]).join('; '),s.calculation,observation.sourceValue,observation.baseDate|| (observation.yearAgoSourceValue!=null?`${Number(observation.date.slice(0,4))-1}${observation.date.slice(4)}`:null),observation.baseValue??observation.yearAgoSourceValue,panel.baselineDate,panel.baselineValue,s.agency === 'bls' ? BLS_DATA_NOTICE : '',s.coverageNote,s.observationType??'official']);
     }
   }
   return `${rows.map((row) => row.map((cell,index)=>csvCell(cell,index===15||index===17)).join(',')).join('\r\n')}\r\n`;

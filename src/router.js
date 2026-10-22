@@ -24,6 +24,7 @@ export function parseRoute(hash = '') {
       state.seriesId = Object.hasOwn(series, id) ? id : defaults.seriesId;
     } else if (path === '/calendar') state.page = 'calendar';
     else if (path === '/explore') state.page = 'explore';
+    else if (path === '/fiscal') state.page = 'fiscal';
     state.range = p.get('range') === '6' ? 6 : 12;
     state.transform = p.get('transform') === 'change' ? 'change' : 'level';
     state.tab = ['methodology', 'revisions'].includes(p.get('tab')) ? p.get('tab') : 'data';
@@ -47,7 +48,7 @@ export function parseRoute(hash = '') {
 
 export function routeFor(input) {
   const state = { ...defaults, ...input };
-  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore'}[state.page] || '/overview';
+  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',fiscal:'/fiscal'}[state.page] || '/overview';
   const p = new URLSearchParams();
   if (state.page === 'indicator') {
     if (state.range === 6) p.set('range', '6');

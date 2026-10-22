@@ -46,7 +46,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Check all eleven daily capture outcomes
+      - name: Check all registered daily capture outcomes
         id: check
         # Only this explicit manual option forces a repeat of a completed run.
         run: node scripts/check-refresh-due.mjs ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_data && '--force' || '' }}

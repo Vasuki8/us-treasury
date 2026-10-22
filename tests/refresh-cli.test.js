@@ -15,7 +15,7 @@ async function withCliFixture(run) {
   const directory=await mkdtemp(path.join(scratchRoot,'refresh-cli-'));
   try {
     await cp(path.join(root,'scripts'),path.join(directory,'scripts'),{recursive:true});
-    await mkdir(path.join(directory,'src'));
+    await cp(path.join(root,'src'),path.join(directory,'src'),{recursive:true});
     const destination=path.join(directory,'src','official-snapshot.js');
     const original=await readFile(path.join(root,'src','official-snapshot.js'));
     await writeFile(destination,original);
@@ -104,6 +104,7 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
     ['bea.mjs','collectBea','bea',false],
     ['dol.mjs','collectDol','dol',false],
     ['census.mjs','collectCensus','census',false],
+    ['fiscal.mjs','collectFiscal','fiscal',false],
     ['calendar-bea.mjs','collectBeaCalendar','bea',true],
     ['calendar-census.mjs','collectCensusCalendar','census',true],
     ['calendar-dol.mjs','collectDolCalendar','dol',true],

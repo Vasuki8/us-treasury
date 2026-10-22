@@ -1,3 +1,4 @@
+import { fiscalPage } from './fiscal-page.js';
 import { series, releases, yieldCurve, dataStatus } from './data.js';
 import { getSeries, filterSeries, latest, formatValue, formatChange, periodLabel, transformSeries, compareSeries } from './model.js';
 import { escapeHtml as esc, button, heading, panel, chart, metrics, seriesTable, seriesLink, table, emptyState, sourceLink, seriesStatus, sourceStatusList, coverageBadge } from './ui.js';
@@ -100,7 +101,7 @@ function detailData(item, state) {
     const original = originals.get(observation.date);
     return `<tr><th scope="row"><time datetime="${esc(observation.date)}">${esc(periodLabel(item.series, observation.date))}</time></th><td class="num">${esc(valueForPanel(item, observation.value, state.transform))}</td><td class="mono muted">${esc(original?.publishedAt ?? '—')}</td><td class="muted">${esc((original?.footnotes ?? []).join('; ') || '—')}</td></tr>`;
   }).join('');
-  return `<p class="panel-note">${state.transform === 'change' ? 'Period changes from adjacent observations' : 'Published measure'} · ${esc(item.unit)} · most recent first. ${esc(item.series.publicationNote ?? 'Historical publication dates are not supplied by this feed; — means unknown.')}</p>${table(['OBSERVATION PERIOD', state.transform === 'change' ? 'PERIOD CHANGE' : 'VALUE', 'PUBLISHED', 'SOURCE NOTES'], rows, 'Official indicator observations and source footnotes')}`;
+  return `<p class="panel-note">${state.transform === 'change' ? 'Period changes from adjacent observations' : item.series.observationType==='calculated'?'Calculated metric':'Published measure'} · ${esc(item.unit)} · most recent first. ${esc(item.series.publicationNote ?? 'Historical publication dates are not supplied by this feed; — means unknown.')}</p>${table(['OBSERVATION PERIOD', state.transform === 'change' ? 'PERIOD CHANGE' : 'VALUE', 'PUBLISHED', 'SOURCE NOTES'], rows, 'Official indicator observations and source footnotes')}`;
 }
 
 function detailRevisions(current) {
@@ -205,5 +206,5 @@ export function renderPage(input = {}) {
   const state = { ...defaults, ...input };
   state.selected = seriesIds(Array.isArray(state.selected) ? state.selected : []).slice(0, 4);
   state.saved = seriesIds(Array.isArray(state.saved) ? state.saved : []);
-  return ({ overview, labor, indicator, calendar, explore }[state.page] ?? overview)(state);
+  return ({ overview, labor, indicator, calendar, explore, fiscal:()=>fiscalPage() }[state.page] ?? overview)(state);
 }

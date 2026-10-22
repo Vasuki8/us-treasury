@@ -1,0 +1,16 @@
+const fiscalSource={name:'U.S. Treasury Fiscal Data, Monthly Treasury Statement',url:'https://fiscaldata.treasury.gov/datasets/monthly-treasury-statement/'};
+const fiscal={agency:'fiscal',topic:'Fiscal',frequency:'Monthly',unit:'USD billions',precision:2,format:'billions',adjustment:'Not seasonally adjusted',source:fiscalSource};
+const definitions={
+  receipts:['Federal receipts','Receipts','Cash-basis federal budget receipts in the reporting month.'],
+  outlays:['Federal outlays','Outlays','Cash-basis federal budget outlays in the reporting month, including net budget interest.'],
+  netInterest:['Net budget interest','Net interest','MTS net budget interest outlays. This is not gross interest expense on all outstanding Treasury debt.'],
+  budgetDeficit:['Federal budget deficit','Budget deficit','Outlays minus receipts for the same month. Positive means deficit; negative means surplus. Deficit is not the change in gross outstanding debt.'],
+  primaryDeficit:['Federal primary deficit','Primary deficit','Monthly outlays minus receipts minus net budget interest. Positive means primary deficit; negative means primary surplus.'],
+  receiptsTtm:['Trailing 12-month federal receipts','TTM receipts','Sum of receipts over twelve exact consecutive calendar months. This rolling window is distinct from fiscal-year-to-date amounts.'],
+  outlaysTtm:['Trailing 12-month federal outlays','TTM outlays','Sum of outlays over twelve exact consecutive calendar months.'],
+  netInterestTtm:['Trailing 12-month net budget interest','TTM net interest','Sum of net budget interest over twelve exact consecutive calendar months.'],
+  primaryDeficitTtm:['Trailing 12-month primary deficit','TTM primary deficit','Trailing twelve-month outlays minus receipts minus net budget interest.'],
+  interestRevenueRatio:['Net interest to revenue ratio','Interest / revenue','100 times trailing twelve-month net budget interest divided by receipts over the identical window. Not a debt-service coverage or default-risk score.'],
+};
+export const researchRegistry=Object.fromEntries(Object.entries(definitions).map(([id,[name,short,definition]])=>[id,{...fiscal,id,name,short,definition,code:'MTS '+id,observationType:['receipts','outlays','netInterest'].includes(id)?'official':'calculated',...(id==='interestRevenueRatio'?{unit:'Percent of receipts',format:'percent',precision:2}:{})}]));
+researchRegistry.publicDebt={id:'publicDebt',code:'debt_held_public_amt',name:'Federal debt held by the public',short:'Debt held by public',topic:'Fiscal',agency:'fiscal',frequency:'Daily',unit:'USD trillions',precision:2,format:'trillions',adjustment:'Not seasonally adjusted',source:{name:'U.S. Treasury Fiscal Data, Debt to the Penny',url:'https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/'},definition:'Federal debt held outside federal government accounts, including Federal Reserve holdings. Gross federal debt also includes intragovernmental holdings. This daily stock is not the monthly budget deficit.'};

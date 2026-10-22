@@ -187,6 +187,8 @@ In restricted environments the server test needs permission to connect to loopba
 
 ## Next development milestone
 
+The deeper research expansion is tracked in the [incremental roadmap](docs/research-dashboard-plan.md) and [source admission ledger](docs/research-dashboard-sources.md). The Fiscal pressure page adds monthly receipts, outlays, net budget interest, primary deficits, exact trailing-12-month trends, interest/revenue, category changes and a cash-financing bridge. It distinguishes gross/public debt and net/gross interest. Historical MTS values are as recorded in each monthly statement; later revisions may not be incorporated. Financing source residuals remain explicit. See the [fiscal source review](docs/fiscal-source-review.md).
+
 Capture historical publication snapshots and revisions, review additional agency calendar coverage, and evaluate a reliable advance-claims feed to supplement the historical table. Persistent multi-device workspaces, accounts, alerts, broader coverage, and advertising remain subsequent milestones.
 
 Design and implementation scope are recorded in `docs/superpowers/`.
