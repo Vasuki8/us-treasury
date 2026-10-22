@@ -6,7 +6,8 @@ const seriesFields = ['sourceIds', 'sourceUrl', 'calculation', 'dataStatus', 'co
 // Existing providers keep their historical normalization contract. RESCONST is
 // newly admitted and needs its originating program in replayed rights metadata.
 const housingSeriesFields = [...seriesFields, 'programName'];
-const seriesFieldsFor = source => source === 'housing' ? housingSeriesFields : seriesFields;
+const advanceSeriesFields = [...seriesFields, 'publicationNote'];
+const seriesFieldsFor = source => source === 'housing' ? housingSeriesFields : source === 'dolAdvance' ? advanceSeriesFields : seriesFields;
 const clone = value => JSON.parse(JSON.stringify(value));
 const own = (value, key) => Object.hasOwn(value, key);
 

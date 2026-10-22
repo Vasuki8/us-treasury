@@ -3,6 +3,7 @@ const targets = [
   ['data', 'bls', 'BLS data'],
   ['data', 'bea', 'BEA data'],
   ['data', 'dol', 'DOL ETA data'],
+  ['data', 'dolAdvance', 'DOL advance claims release'],
   ['data', 'census', 'Census data'],
   ['calendar', 'bls', 'BLS release calendar'],
   ['calendar', 'bea', 'BEA release calendar'],

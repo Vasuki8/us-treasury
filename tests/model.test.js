@@ -30,12 +30,14 @@ test('original and admitted research indicators have traced observations and ret
     assert.ok(Number.isInteger(s.precision));
     assert.equal(Object.hasOwn(s,'revisions'),false,'ordinary startup does not compute archived revision rows');
     assert.equal(s.dataStatus,'official',id);
-    assert.ok(s.observations.filter(o=>Number.isFinite(o.value)).length>=12,id);
+    if(s.agency==='dolAdvance')assert.equal(s.observations.length,2,'latest release context contains the prior comparison and current advance only');
+    else assert.ok(s.observations.filter(o=>Number.isFinite(o.value)).length>=12,id);
     assert.match(s.fetchedAt,/^\d{4}-\d{2}-\d{2}T/);
     assert.ok(s.source.seriesIds.length);
     for (const [i,o] of s.observations.entries()) {
       assert.match(o.date,/^\d{4}-\d{2}-\d{2}$/);
-      assert.equal(o.publishedAt,null,'retrieval is not a publication date');
+      if(s.agency==='dolAdvance'){assert.match(o.publishedAt,/^\d{4}-\d{2}-\d{2}$/);assert.equal(o.publicationDatePrecision,'day');}
+      else assert.equal(o.publishedAt,null,'retrieval is not a publication date');
       assert.ok(o.value===null || Number.isFinite(o.value));
       if(i)assert.ok(o.date>s.observations[i-1].date);
     }

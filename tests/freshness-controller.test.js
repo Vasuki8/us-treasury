@@ -9,7 +9,7 @@ const researchIds = ['fiscal','refinancing','yields','auctions','ownership','mac
 function snapshot() {
   const source = () => ({ status: 'ok', fetchedAt: capturedAt, lastAttemptAt: capturedAt });
   return {
-    sources: Object.fromEntries([...targetIds,...researchIds].map(id => [id, source()])),
+    sources: Object.fromEntries([...targetIds,'dolAdvance',...researchIds].map(id => [id, source()])),
     calendar: { sources: Object.fromEntries([...targetIds, 'treasury-yield-timing'].map(id => [id, source()])) },
   };
 }

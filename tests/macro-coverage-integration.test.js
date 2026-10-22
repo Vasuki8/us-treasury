@@ -3,7 +3,7 @@ import {registry} from '../src/registry.js';import {macroRegistry,coverageFamili
 import {comparisonClassification,transformSeries} from '../src/model.js';import {getFreshness} from '../src/freshness.js';
 
 test('macro families register exact measurement metadata and comparison eligibility without unknown classes',()=>{
- assert.equal(Object.keys(macroRegistry).length,29);
+ assert.equal(Object.keys(macroRegistry).length,31);
  for(const [id,item]of Object.entries(macroRegistry)){
   assert.equal(registry[id],item);assert.ok(item.unit&&item.definition&&item.adjustment&&item.frequency&&item.code,id);
   assert.match(item.source.url,/^https:\/\//,id);assert.notEqual(comparisonClassification(item),'unknown',id);
@@ -22,7 +22,7 @@ test('macro families register exact measurement metadata and comparison eligibil
 test('new collectors are required freshness targets even if their source objects disappear',()=>{
  const result=getFreshness({});
  for(const id of ['policyRates','activity','housing'])assert.equal(result.entries.find(row=>row.id===`data:${id}`)?.status,'unavailable',id);
- assert.equal(result.entries.length,21);
+ assert.equal(result.entries.length,22);
 });
 
 test('differences of price and activity indexes are explicitly index-point changes',()=>{

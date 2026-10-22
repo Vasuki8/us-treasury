@@ -5,7 +5,7 @@
  */
 export const comparisonClasses = Object.freeze({
   cpiIndex:'level',cpiCoreIndex:'level',cpiSaIndex:'level',cpiCoreSaIndex:'level',cpiCore:'growth',cpiMonthly:'growth',cpiCoreMonthly:'growth',
-  payrollLevel:'count',underemployment:'rate',employmentPopulation:'rate',weeklyHours:'level',continuedClaims:'count',
+  payrollLevel:'count',underemployment:'rate',employmentPopulation:'rate',weeklyHours:'level',continuedClaims:'count',claimsAdvance:'count',continuedClaimsAdvance:'count',
   pceIndex:'level',pceCoreIndex:'level',pceCore:'growth',pceMonthly:'growth',pceCoreMonthly:'growth',realSpending:'amount',realSpendingMonthly:'growth',realDisposableIncome:'amount',realDisposableIncomeMonthly:'growth',
   policyTargetLower:'rate',policyTargetUpper:'rate',iorb:'rate',industrialProduction:'level',capacityUtilization:'rate',housingStarts:'count',housingPermits:'count',housingCompletions:'count',
   receipts: 'amount', outlays: 'amount', netInterest: 'amount',

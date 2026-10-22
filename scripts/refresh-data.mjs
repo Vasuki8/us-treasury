@@ -6,6 +6,7 @@ import { collectTreasury } from './sources/treasury.mjs';
 import { collectBls } from './sources/bls.mjs';
 import { collectBea } from './sources/bea.mjs';
 import { collectDol } from './sources/dol.mjs';
+import { collectDolAdvance } from './sources/dol-advance.mjs';
 import { collectCensus } from './sources/census.mjs';
 import { collectBlsCalendar } from './sources/calendar-bls.mjs';
 import { collectBeaCalendar } from './sources/calendar-bea.mjs';
@@ -27,7 +28,7 @@ import { collectPolicyRates } from './sources/policy-rates.mjs';
 import { collectActivity } from './sources/activity.mjs';
 import { collectHousing } from './sources/housing.mjs';
 
-const all={treasury:collectTreasury,bls:collectBls,bea:collectBea,dol:collectDol,census:collectCensus,fiscal:async options=>{const result=await collectFiscal(options);return {...result,series:{...result.series,...deriveFiscalSeries(result)}};},refinancing:collectRefinancing,yields:collectYields,auctions:collectAuctions,ownership:collectOwnership,macroContributions:collectMacroContributions,marketFunctioning:collectMarketFunctioning,policyRates:collectPolicyRates,activity:collectActivity,housing:collectHousing};
+const all={treasury:collectTreasury,bls:collectBls,bea:collectBea,dol:collectDol,dolAdvance:collectDolAdvance,census:collectCensus,fiscal:async options=>{const result=await collectFiscal(options);return {...result,series:{...result.series,...deriveFiscalSeries(result)}};},refinancing:collectRefinancing,yields:collectYields,auctions:collectAuctions,ownership:collectOwnership,macroContributions:collectMacroContributions,marketFunctioning:collectMarketFunctioning,policyRates:collectPolicyRates,activity:collectActivity,housing:collectHousing};
 const requireAll=process.argv.includes('--require-all');
 const allowCachedBlsCalendar=process.argv.includes('--allow-cached-bls-calendar');
 if(requireAll&&allowCachedBlsCalendar)throw new Error('Cannot combine --require-all and --allow-cached-bls-calendar; publication modes are mutually exclusive.');

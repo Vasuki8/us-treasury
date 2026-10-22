@@ -4,12 +4,17 @@
   "private": true,
   "type": "module",
   "description": "A compact US macro research workspace in Graphite",
-  "engines": { "node": ">=22.2.0" },
+  "engines": {
+    "node": ">=22.2.0"
+  },
   "scripts": {
     "start": "node server.mjs",
     "dev": "node server.mjs",
     "test": "node --test tests/*.test.js",
     "build": "node scripts/build.mjs",
     "data:refresh": "node scripts/refresh-data.mjs"
+  },
+  "devDependencies": {
+    "unpdf": "1.9.1"
   }
 }

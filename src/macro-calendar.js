@@ -5,7 +5,7 @@ const associations={
  'bls/employment-situation':['unrate','payroll','participation','wages','payrollLevel','underemployment','employmentPopulation','weeklyHours'],
  'bea/personal-income-outlays':['pce','pceIndex','pceCoreIndex','pceCore','pceMonthly','pceCoreMonthly','realSpending','realSpendingMonthly','realDisposableIncome','realDisposableIncomeMonthly'],
  'bea/gdp':['gdp','gdpTotalContribution','gdpConsumptionContribution','gdpInvestmentContribution','gdpGovernmentContribution','gdpExportsContribution','gdpImportsContribution'],
- 'dol/weekly-claims':['claims','continuedClaims'],
+ 'dol/weekly-claims':['claims','continuedClaims','claimsAdvance','continuedClaimsAdvance'],
  'census/housing-construction':['housingStarts','housingPermits','housingCompletions'],
 };
 export function calendarRelatedIds(event={}){

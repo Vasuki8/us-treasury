@@ -120,11 +120,14 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
       return {...source,fetchedAt:retrievedAt};
     }
   `);
+  // Preserve the collector's admission constants while replacing only its fetch.
+  await cp(path.join(directory,'scripts','sources','dol-advance.mjs'),path.join(directory,'scripts','sources','dol-advance-original.mjs'));
   for(const [filename,exportName,id,calendar] of [
     ['treasury.mjs','collectTreasury','treasury',false],
     ['bls.mjs','collectBls','bls',false],
     ['bea.mjs','collectBea','bea',false],
     ['dol.mjs','collectDol','dol',false],
+    ['dol-advance.mjs','collectDolAdvance','dolAdvance',false],
     ['census.mjs','collectCensus','census',false],
     ['fiscal.mjs','collectFiscal','fiscal',false],
     ['refinancing.mjs','collectRefinancing','refinancing',false],
@@ -141,7 +144,7 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
     ['calendar-dol.mjs','collectDolCalendar','dol',true],
     ['calendar-treasury.mjs','collectTreasuryCalendar','treasury',true],
     ['timing-treasury-yields.mjs','collectTreasuryYieldTiming','treasury-yield-timing',true],
-  ])await writeFile(path.join(directory,'scripts','sources',filename),`import {snapshot} from '../../src/official-snapshot.js';\nimport {refreshedCapture} from './fixture-retrieval.mjs';\nexport async function ${exportName}(){${failOther&&id==='bea'&&!calendar?"throw new Error('BEA unavailable');":`return refreshedCapture(snapshot.${calendar?'calendar.':''}sources[${JSON.stringify(id)}]);`}}\n`);
+  ])await writeFile(path.join(directory,'scripts','sources',filename),`${id==='dolAdvance'?"export * from './dol-advance-original.mjs';\n":''}import {snapshot} from '../../src/official-snapshot.js';\nimport {refreshedCapture} from './fixture-retrieval.mjs';\nexport async function ${exportName}(){${failOther&&id==='bea'&&!calendar?"throw new Error('BEA unavailable');":`return refreshedCapture(snapshot.${calendar?'calendar.':''}sources[${JSON.stringify(id)}]);`}}\n`);
   await writeFile(path.join(directory,'blocked-bls.mjs'),`
     const NativeDate=Date;
     globalThis.Date=class extends NativeDate {

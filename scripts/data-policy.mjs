@@ -2,10 +2,12 @@ import { easternFields } from './sources/calendar-utils.mjs';
 import { researchPolicies, matchesResearchFeed, assertResearchData } from './research-policy.mjs';
 import { assertVintageData } from './vintage-policy.mjs';
 import {macroCoveragePolicies,matchesMacroCoverageFeed,assertMacroCoverageData} from './macro-coverage-policy.mjs';
+import {dolAdvancePolicy,matchesDolAdvanceFeed,assertDolAdvanceData} from './dol-advance-policy.mjs';
 
 // Dataset-specific commercial reuse review. Evidence and limitations: docs/data-sources.md.
 // An official-looking hostname alone does not establish reuse rights.
 export const dataPolicies = [
+  dolAdvancePolicy,
   ...researchPolicies,
   ...macroCoveragePolicies,
   {
@@ -48,6 +50,7 @@ export const dataPolicies = [
 ];
 
 function matchesFeed(value, feed) {
+  if(matchesDolAdvanceFeed(value,feed))return true;
   if(matchesMacroCoverageFeed(value,feed))return true;
   if(matchesResearchFeed(value,feed))return true;
   try {
@@ -196,6 +199,7 @@ function assertCalendarData(snapshot) {
 
 /** Stop publication or snapshot replacement when data exceed the reviewed scope. */
 export function assertCommercialData(snapshot) {
+  assertDolAdvanceData(snapshot);
   assertMacroCoverageData(snapshot);
   assertResearchData(snapshot);
   assertCalendarData(snapshot);
