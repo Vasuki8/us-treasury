@@ -2,7 +2,7 @@ import { series } from './data.js';
 
 const key = 'meridian.preferences.v1';
 export function readPreferences(storage) {
-  const fallback = { saved: [], density: 'compact', theme: 'Graphite', storageAvailable: true };
+  const fallback = { saved: [], density: 'compact', theme: 'Light', storageAvailable: true };
   try {
     if (!storage) return { ...fallback, storageAvailable: false };
     const data = JSON.parse(storage.getItem(key) || '{}');
@@ -11,7 +11,7 @@ export function readPreferences(storage) {
       ...fallback,
       saved: Array.isArray(data.saved) ? [...new Set(data.saved.filter(id => Object.hasOwn(series, id)))] : [],
       density: data.density === 'comfortable' ? 'comfortable' : 'compact',
-      theme: ['Graphite','Paper','Midnight'].includes(data.theme) ? data.theme : 'Graphite',
+      theme: ['Graphite','Midnight'].includes(data.theme) ? 'Graphite' : 'Light',
     };
   } catch (error) {
     return { ...fallback, storageAvailable: error instanceof SyntaxError };

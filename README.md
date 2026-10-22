@@ -1,6 +1,8 @@
-# Meridian — Graphite US Macro Workspace
+# Meridian — US Macro Workspace
 
-A compact Graphite US fiscal and macro research dashboard. The original Overview, Labor Market, Indicator Detail, Calendar and Explore Data views remain available alongside eight specialist research views and a five-family macro workspace.
+A compact US fiscal and macro research dashboard with Light and Graphite themes. The original Overview, Labor Market, Indicator Detail, Calendar and Explore Data views remain available alongside eight specialist research views and a five-family macro workspace.
+
+The header's **Dark mode** switch turns Graphite on or returns to Light. New visitors start in Light; the choice is saved in the same browser alongside density and watchlist preferences. Switching preserves the current page, filters and unsaved inputs. Existing Graphite/Midnight preferences open Graphite, and Paper preferences open Light. With browser storage blocked, the switch still works for the current session.
 
 Uses official Treasury, BLS, BEA, DOL ETA, Census, Federal Reserve Board and reviewed New York Fed observations captured by the data refresh command. The app serves a committed snapshot, with observation periods, source identifiers and actual retrieval times. It does not stream live market quotes.
 
@@ -164,7 +166,7 @@ The historical publication archive loads only when its view needs it, with expli
 | `scripts/snapshot-storage.mjs`, `src/history/` | Verified immutable captures, compact current module and lazy bundle projection |
 | `src/history-loader.js`, `src/history-controller.js` | On-demand verified history, retry, navigation and focus handling |
 | `src/research-workspaces.js`, `src/research-packages.js`, `src/research-library.js` | Validated saved configurations, frozen portable evidence and bounded browser persistence |
-| `src/research-context.js`, `src/research-page.js` | Scoped specialist pinning, frozen viewer and Graphite research library |
+| `src/research-context.js`, `src/research-page.js` | Scoped specialist pinning, frozen viewer and research library |
 | `src/capture-changes.js`, `src/comparison-cursor.js` | Factual capture deltas, local checkpoints and exact shared cursor dates |
 | `src/publication-archive.js`, `src/publication-history.js`, `scripts/publication-policy.mjs` | Selected immutable official GDP publication estimates and exact independent admission |
 | `scripts/publish-snapshot.mjs` | Root and newly referenced capture commits, expected-commit checks and normal pushes |
@@ -177,7 +179,7 @@ The historical publication archive loads only when its view needs it, with expli
 | `src/ui.js`, `src/pages.js` | Shared markup and five page views |
 | `src/charts.js` | Responsive accessible SVG charts and exact observation readouts |
 | `src/app.js` | Navigation, user actions, focus, persistence, downloads |
-| `styles.css` | Graphite/Paper/Midnight appearance and responsive density |
+| `styles.css` | Light/Graphite appearance and responsive density |
 
 Original HTML/SVG/PDF design artifacts are preserved in the original local workspace and excluded from the application repository.
 

@@ -78,8 +78,32 @@ test('saved preferences reject unrecognized series and restore density', () => {
   const result = readPreferences(storage);
   assert.deepEqual(result.saved, ['cpi']);
   assert.equal(result.density, 'comfortable');
-  assert.equal(result.theme, 'Paper');
+  assert.equal(result.theme, 'Light');
   let saved;
   assert.equal(writePreferences({setItem:(key,value)=>{saved=JSON.parse(value);}},result),true);
   assert.deepEqual(saved.saved,['cpi']);
+});
+
+test('new and unavailable browsers start in Light mode', () => {
+  for (const storage of [undefined, {getItem:()=>null}, {getItem:()=>'{broken'}, {getItem:()=>{throw Error('denied');}}]) {
+    assert.equal(readPreferences(storage).theme, 'Light');
+  }
+});
+
+test('Light and Graphite persist alongside watchlist and density preferences', () => {
+  const values = new Map();
+  const storage = {getItem:key=>values.get(key)??null, setItem:(key,value)=>values.set(key,value)};
+  for (const theme of ['Graphite', 'Light']) {
+    assert.equal(writePreferences(storage, {theme, saved:['cpi'], density:'comfortable'}), true);
+    const restored = readPreferences(storage);
+    assert.equal(restored.theme, theme);
+    assert.deepEqual(restored.saved, ['cpi']);
+    assert.equal(restored.density, 'comfortable');
+  }
+});
+
+test('legacy appearance choices migrate to their light or dark equivalent', () => {
+  for (const [previous, expected] of [['Paper','Light'], ['Midnight','Graphite'], ['Graphite','Graphite'], ['unknown','Light']]) {
+    assert.equal(readPreferences({getItem:()=>JSON.stringify({theme:previous})}).theme, expected);
+  }
 });

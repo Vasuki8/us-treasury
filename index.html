@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Meridian — a compact US macroeconomic research workspace with traceable official Treasury, BLS and BEA snapshots.">
-  <meta name="theme-color" content="#17191f">
+  <meta name="theme-color" content="#f4f6fa">
   <title>Meridian — US Macro Research</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
@@ -12,11 +12,11 @@
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
-  <div id="app" data-theme="Graphite" data-density="compact">
+  <div id="app" data-theme="Light" data-density="compact">
     <header class="brandbar">
       <a class="brand" href="#/overview">MERIDIAN<span>US MACRO / RESEARCH TERMINAL</span></a>
       <span class="data-mode"><span aria-hidden="true">●</span> OFFICIAL SNAPSHOT</span>
-      <label class="appearance">Appearance <select id="theme-select"><option>Graphite</option><option>Paper</option><option>Midnight</option></select></label>
+      <label class="appearance theme-toggle"><span>Dark mode</span><input id="theme-toggle" type="checkbox" role="switch" aria-description="Off uses Light. On uses Graphite."><span class="theme-track" aria-hidden="true"></span></label>
       <label class="appearance density-label">Density <select id="density-select"><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select></label>
     </header>
     <nav class="functionbar" aria-label="Main navigation">

@@ -68,6 +68,15 @@ function persist() {
   return state.storageAvailable;
 }
 
+function applyAppearance() {
+  root.dataset.theme=state.theme;
+  root.dataset.density=state.density;
+  document.documentElement.dataset.theme=state.theme;
+  document.querySelector('meta[name="theme-color"]').content=state.theme==='Graphite'?'#17191f':'#f4f6fa';
+  document.getElementById('theme-toggle').checked=state.theme==='Graphite';
+  document.getElementById('density-select').value=state.density;
+}
+
 function rememberFocus() {
   const active=document.activeElement;
   if (!main.contains(active))return null;
@@ -138,10 +147,7 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   historyController.sync(state);
   syncChanges();
   syncPublications();
-  root.dataset.theme=state.theme;
-  root.dataset.density=state.density;
-  document.getElementById('theme-select').value=state.theme;
-  document.getElementById('density-select').value=state.density;
+  applyAppearance();
   const agencies=new Set(trackedChanges().map(id=>series[id].agency));
   const failures=Object.entries(dataStatus.sources).filter(([id,source])=>agencies.has(id)&&source.status!=='ok').map(([id,source])=>({id,...source}));
   main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${researchActions()}${renderPage(state,{...historyController.context(state),library:researchLibrary.getState(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationArchive,publicationState})}`;
@@ -360,9 +366,14 @@ root.addEventListener('change',async event=>{
     try{navigate({changeSince:normalizedCutoff(target.value,changeState.history),changePage:1});}
     catch(error){state.researchError=error.message;render({preserveFocus:true});}return;
   }
-  if(target.id==='theme-select' || target.id==='density-select') {
-    const preference=target.id==='theme-select'?'theme':'density';
-    state[preference]=target.value;
+  if(target.id==='theme-toggle') {
+    state.theme=target.checked?'Graphite':'Light';
+    const durable=persist();applyAppearance();
+    announce(`${state.theme} theme enabled. ${durable?'Saved in this browser.':'Changed for this session; browser storage is unavailable.'}`);
+    return;
+  }
+  if(target.id==='density-select') {
+    state.density=target.value;
     const durable=persist();render({preserveFocus:true});
     announce(durable?'Appearance saved in this browser.':'Appearance changed for this session; browser storage is unavailable.');
     return;
