@@ -1,10 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { snapshot } from '../src/official-snapshot.js';
+import {fileURLToPath} from 'node:url';
+import { snapshot as stored } from '../src/official-snapshot.js';
 import { assertCommercialData } from '../scripts/data-policy.mjs';
+import {loadSnapshotHistory} from '../scripts/snapshot-storage.mjs';
+const snapshot={...stored,vintages:await loadSnapshotHistory(stored,{directory:fileURLToPath(new URL('../src/',import.meta.url))})};
 
 test('all published datasets and provenance have a recorded commercial reuse review', () => {
   assert.doesNotThrow(() => assertCommercialData(snapshot));
+});
+test('a stored archive index cannot bypass admission of historical states',()=>{
+ assert.throws(()=>assertCommercialData({sources:{},vintageArchive:{version:1,captures:[]}}),/hydrat/i);
 });
 
 test('a new agency or series is rejected until its reuse rights are reviewed', () => {

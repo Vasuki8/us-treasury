@@ -209,5 +209,6 @@ export function assertCommercialData(snapshot) {
       if(!policies.some(policy=>matchesFeed(item.url,policy.feed)))throw new Error(`Unreviewed provenance for ${agency}: ${item.url}`);
     }
   }
+  if(Object.hasOwn(snapshot,'vintageArchive')&&!Object.hasOwn(snapshot,'vintages'))throw new Error('Stored vintage archive must be hydrated before commercial-data admission');
   assertVintageData(snapshot.vintages,assertCommercialData);
 }

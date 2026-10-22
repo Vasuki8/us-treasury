@@ -4,7 +4,7 @@ import { yieldsPage } from './yields-page.js';
 import { auctionsPage } from './auctions-page.js';
 import { ownershipPage } from './ownership-page.js';
 import { macroPage } from './macro-page.js';
-import { vintagesPage } from './vintages-page.js';
+import { vintagesPage, historyStatusMessage } from './vintages-page.js';
 import { marketFunctioningPage } from './market-functioning-page.js';
 import { vintageMeasurementsComparable } from './vintages.js';
 import { researchNavigation } from './research-navigation.js';
@@ -113,9 +113,10 @@ function detailData(item, state) {
   return `<p class="panel-note">${state.transform === 'change' ? 'Period changes from adjacent observations' : item.series.observationType==='calculated'?'Calculated metric':'Published measure'} · ${esc(item.unit)} · most recent first. ${esc(item.series.publicationNote ?? 'Historical publication dates are not supplied by this feed; — means unknown.')}</p>${table(['OBSERVATION PERIOD', state.transform === 'change' ? 'PERIOD CHANGE' : 'VALUE', 'PUBLISHED', 'SOURCE NOTES'], rows, 'Official indicator observations and source footnotes')}`;
 }
 
-function detailRevisions(current) {
-  if (!current.revisions.length) return emptyState('No observed value changes have been captured.', 'This does not establish whether earlier published values were revised. First captured and first released are distinct; see Revision history for as-known retrieval cutoffs.');
-  const rows = [...current.revisions].reverse().map(revision => {
+function detailRevisions(current, { historyState = { status:'idle' }, revisions = [] } = {}) {
+  if (historyState.status !== 'ready') return historyStatusMessage(historyState);
+  if (!revisions.length) return emptyState('No observed value changes have been captured.', 'This does not establish whether earlier published values were revised. First captured and first released are distinct; see Revision history for as-known retrieval cutoffs.');
+  const rows = [...revisions].reverse().map(revision => {
     const first = { ...current, ...revision.firstMetadata }, latest = { ...current, ...revision.latestMetadata };
     const comparison = vintageMeasurementsComparable(first, latest) ? 'Same captured measurement and definition.' : 'Not directly comparable: measurement or definition changed between captures. Cause unknown.';
     return `<tr><th scope="row">${esc(periodLabel(latest, revision.date))}</th><td class="num">${esc(formatValue(first, revision.firstCaptured.value))}<span class="table-code muted">${esc(first.unit)}</span></td><td class="num">${esc(formatValue(latest, revision.latest.value))}<span class="table-code muted">${esc(latest.unit)}</span></td><td>${esc(revision.firstCaptured.capturedAt)}</td><td>${esc(revision.latest.capturedAt)}</td><td>Unknown</td><td>${esc(comparison)}</td></tr>`;
@@ -127,14 +128,14 @@ function detailMethodology(current) {
   return `<div class="explain"><p><strong>Definition.</strong> ${esc(current.definition)}</p><p><strong>Frequency and units.</strong> ${esc(current.frequency)} · ${esc(current.unit)} · ${esc(current.adjustment)}.</p><p><strong>Calculation.</strong> ${esc(current.calculation ?? 'No calculation metadata is available.')}</p>${current.coverageNote ? `<p><strong>Coverage.</strong> ${esc(current.coverageNote)}</p>` : ''}<p><strong>Observation and publication dates.</strong> The observation period describes when activity was measured. Retrieval is when the source was captured. ${esc(current.publicationNote ?? 'Historical publication dates are not supplied by this feed and remain unknown.')}</p><p><strong>Period change.</strong> Each observation is compared with the immediately preceding observation. Missing observations remain missing; no values are filled. Changes in percentage measures use percentage points; yield changes use basis points.</p><p><strong>Source.</strong> ${sourceLink(current)} · ${esc((current.source.seriesIds ?? []).join(', ') || current.code)}. ${esc(seriesStatus(current))}; retrieved ${esc(current.fetchedAt ?? 'unavailable')}.${current.error ? ` ${esc(current.error)}` : ''}</p><p>Source footnotes, including preliminary estimates, are preserved in the data table. Revision history records immutable retrieval captures; release dates are shown only when independently verified.</p></div>`;
 }
 
-function indicator(state) {
+function indicator(state, historyContext) {
   const current = getSeries(state.seriesId) ?? getSeries('unrate');
   const observation = latest(current);
   const previous = current.observations.at(-2);
   const transformed = transformSeries(current, state.transform, state.range);
   const tabs = [['data', 'DATA TABLE'], ['methodology', 'METHODOLOGY'], ['revisions', 'REVISIONS']];
   const activeTab = tabs.some(([id]) => state.tab === id) ? state.tab : 'data';
-  const content = activeTab === 'methodology' ? detailMethodology(current) : activeTab === 'revisions' ? detailRevisions(current) : detailData(transformed, state);
+  const content = activeTab === 'methodology' ? detailMethodology(current) : activeTab === 'revisions' ? detailRevisions(current, historyContext) : detailData(transformed, state);
   const metadata = `<dl class="facts"><dt>Series</dt><dd class="mono cyan">${esc(current.code)}</dd><dt>Source IDs</dt><dd class="mono">${esc((current.source.seriesIds ?? []).join(', ') || '—')}</dd><dt>Frequency</dt><dd>${esc(current.frequency)}</dd><dt>Unit</dt><dd>${esc(current.unit)}</dd><dt>Adjustment</dt><dd>${esc(current.adjustment)}</dd><dt>Observation</dt><dd>${esc(observation ? periodLabel(current, observation.date) : '—')}</dd><dt>Published</dt><dd class="mono">${esc(observation?.publishedAt ?? 'Unknown')}</dd><dt>Retrieved</dt><dd class="mono">${esc(current.fetchedAt ?? 'No successful retrieval')}</dd><dt>Source</dt><dd>${sourceLink(current)}</dd><dt>Data status</dt><dd class="amber">${esc(seriesStatus(current))}</dd></dl>${current.error ? `<p class="panel-note amber">${esc(current.error)}</p>` : ''}<p class="panel-note">${esc(current.definition)}</p><p class="panel-note">${esc(current.publicationNote ?? 'Historical publication dates are not supplied by this feed.')}</p>`;
   return heading(current.name.toUpperCase(), `${current.code} · ${current.source.name} · ${current.adjustment}`, saveButton(current.id, state) + button('COMPARE ↗', `data-compare="${esc(current.id)}"`) + button('CSV EXPORT', 'data-export') + button('COPY LINK', 'data-copy-link'))
     + `<div class="context-strip indicator-context"><strong class="big-value">${esc(formatValue(current, observation?.value))}</strong><span class="cyan mono">${esc(formatChange(current))}</span><span>OBSERVATION <b class="mono">${esc(observation ? periodLabel(current, observation.date) : '—')}</b></span><span>PRIOR <b class="mono">${esc(formatValue(current, previous?.value))}</b></span><span class="pill">${esc(seriesStatus(current).toUpperCase())}</span></div>`
@@ -215,10 +216,10 @@ function explore(state) {
     + `<div class="tabs explore-tabs" role="tablist" aria-label="Explore views">${[['catalog', 'SERIES CATALOG'], ['compare', 'COMPARE SERIES']].map(([id, label]) => button(label, `role="tab" id="explore-tab-${id}" aria-controls="explore-content" aria-selected="${state.exploreMode === id}" data-explore-mode="${id}"`, '')).join('')}</div><div id="explore-content" class="tab-panel" role="tabpanel" aria-labelledby="explore-tab-${state.exploreMode}">${state.exploreMode === 'compare' ? comparison(state) : catalog(state)}</div>`;
 }
 
-export function renderPage(input = {}) {
+export function renderPage(input = {}, historyContext = {}) {
   const state = { ...defaults, ...input };
   state.selected = seriesIds(Array.isArray(state.selected) ? state.selected : []).slice(0, 4);
   state.saved = seriesIds(Array.isArray(state.saved) ? state.saved : []);
-  return researchNavigation(state.page)+({ overview, labor, indicator, calendar, explore, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage(),macro:()=>macroPage(),vintages:()=>vintagesPage(state),market:()=>marketFunctioningPage() }[state.page] ?? overview)(state);
+  return researchNavigation(state.page)+({ overview, labor, indicator:()=>indicator(state, historyContext), calendar, explore, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage(),macro:()=>macroPage(),vintages:()=>vintagesPage(state, historyContext.historyState?.history, historyContext.historyState),market:()=>marketFunctioningPage() }[state.page] ?? overview)(state);
 }
 function refinancing(state){return refinancingPage(state);}

@@ -15,6 +15,8 @@ import { mountFreshnessBanner } from './freshness-controller.js';
 import { renderCharts } from './charts.js';
 import { parseRoute, routeFor } from './router.js';
 import { readPreferences, writePreferences } from './storage.js';
+import { createHistoryLoader } from './history-loader.js';
+import { createHistoryController, preserveHistoryView } from './history-controller.js';
 
 const root = document.getElementById('app');
 const main = document.getElementById('main-content');
@@ -24,6 +26,11 @@ mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus);
 let storage;
 try { storage = window.localStorage; } catch { /* Session remains usable without persistence. */ }
 let state = { ...parseRoute(location.hash), ...readPreferences(storage) };
+const historyLoader = createHistoryLoader(dataStatus.historyArchive);
+const historyController = createHistoryController(historyLoader, {
+  getRoute:() => state,
+  onChange:() => preserveHistoryView(main, () => render()),
+});
 const pageNames = {overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Yield explanations',auctions:'Auction demand',ownership:'Debt ownership',macro:'Macro drivers',vintages:'Revision history',market:'Market functioning'};
 
 document.querySelector('.skip-link').addEventListener('click',event=>{
@@ -61,11 +68,12 @@ function restoreFocus(focus) {
 
 function render({focusHeading=false,preserveFocus=false}={}) {
   const focus=preserveFocus?rememberFocus():null;
+  historyController.sync(state);
   root.dataset.theme=state.theme;
   root.dataset.density=state.density;
   document.getElementById('theme-select').value=state.theme;
   document.getElementById('density-select').value=state.density;
-  main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${renderPage(state)}`;
+  main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${renderPage(state,historyController.context(state))}`;
   root.querySelectorAll('[data-nav]').forEach(link=>{
     if(link.dataset.nav===state.page||link.dataset.nav==='research'&&isResearchPage(state.page))link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
@@ -129,12 +137,18 @@ root.addEventListener('click',async event=>{
   const button=event.target.closest('button');
   if(!button)return;
   const d=button.dataset;
+  if(button.disabled)return;
   if('reloadSnapshot' in d){
     const url=new URL(window.location.href);
     url.searchParams.set('_refresh',Date.now().toString(36));
     window.location.replace(url.href);
   }
   else if('save' in d)save(d.save);
+  else if('retryHistory' in d){
+    if(historyLoader.getState().status!=='error')return;
+    historyController.sync(state,{retry:true});
+    preserveHistoryView(main,()=>render());
+  }
   else if('series' in d && getSeries(d.series))navigate({page:'indicator',seriesId:d.series,transform:'level',tab:'data'});
   else if('page' in d && pageNames[d.page])navigate({page:d.page});
   else if('compare' in d)navigate({page:'explore',selected:[...new Set(d.compare.split(',').filter(id=>getSeries(id)))].slice(0,4),exploreMode:'compare',comparison:'native'});
@@ -160,7 +174,13 @@ root.addEventListener('click',async event=>{
   else if('auctionId' in d)navigate({auctionId:d.auctionId});
   else if('exportAuctions' in d||'exportAuctionBenchmark' in d)downloadCsv(auctionsCsv(dataStatus.sources.auctions,{securityType:state.auctionType,auctionId:state.auctionId,benchmark:'exportAuctionBenchmark' in d}),'meridian-auctions.csv','Auction CSV downloaded with matching scope, observed results, calculated allocations and source provenance.');
   else if('exportMarket' in d)downloadCsv(marketFunctioningCsv(dataStatus.sources.marketFunctioning),'meridian-market.csv','Market CSV downloaded with reporting bases, missing and suppressed values, source titles and reuse conditions.');
-  else if('exportVintages' in d)downloadCsv(vintagesCsv(dataStatus.vintages,{cutoff:state.vintageCutoff,seriesId:state.vintageSeries}),'meridian-vintages.csv','Vintage CSV downloaded at the selected UTC retrieval cutoff. First captured is distinct from first released.');
+  else if('exportVintages' in d){
+    try {
+      const history = historyLoader.getState();
+      if(history.status!=='ready')throw new Error('Capture history is not ready.');
+      downloadCsv(vintagesCsv(history.history,{cutoff:state.vintageCutoff,seriesId:state.vintageSeries}),'meridian-vintages.csv','Vintage CSV downloaded at the selected UTC retrieval cutoff. First captured is distinct from first released.');
+    } catch(error) {announce(`Export unavailable: ${error.message}`);}
+  }
   else if('exportMacro' in d)downloadCsv(macroContributionsCsv(dataStatus.sources.macroContributions),'meridian-macro.csv','Macro CSV downloaded with published GDP contributions and unavailable CPI effects labeled.');
   else if('exportOwnership' in d)downloadCsv(ownershipCsv(dataStatus.sources.ownership),'meridian-ownership.csv','Ownership CSV downloaded with separate reporting dates, valuations and reuse notices.');
   else if('copyLink' in d) {

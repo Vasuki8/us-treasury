@@ -1,12 +1,24 @@
 import http from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile,stat } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath,pathToFileURL } from 'node:url';
+import {loadSnapshotHistory,browserSnapshotAssets} from './scripts/snapshot-storage.mjs';
+import {assertCommercialData} from './scripts/data-policy.mjs';
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
-const types = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml'};
+const types = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.json':'application/json; charset=utf-8','.gz':'application/gzip'};
 
 export function createAppServer(root = projectRoot) {
+  let cachedProjection=null,projectionKey='';
+  const projection=async()=>{
+    const sourcePath=path.join(root,'src','official-snapshot.js'),info=await stat(sourcePath),key=`${info.mtimeMs}:${info.size}`;
+    if(!cachedProjection||projectionKey!==key){
+      projectionKey=key;
+      cachedProjection=(async()=>{const {snapshot}=await import(pathToFileURL(sourcePath).href+`?projection=${encodeURIComponent(key)}`);const full={...snapshot,vintages:await loadSnapshotHistory(snapshot,{directory:path.join(root,'src')})};assertCommercialData(full);return browserSnapshotAssets(full);})();
+      cachedProjection.catch(()=>{if(projectionKey===key)cachedProjection=null;});
+    }
+    return cachedProjection;
+  };
   return http.createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer');
@@ -19,10 +31,16 @@ export function createAppServer(root = projectRoot) {
     const asset = pathname === '/' ? 'index.html' : pathname.slice(1);
     const allowed = ['index.html','styles.css','favicon.svg'].includes(asset)
       || /^src\/[a-zA-Z0-9_-]+\.js$/.test(asset)
-      || /^assets\/[a-f0-9]{16}\/(?:styles\.css|favicon\.svg|src\/[a-zA-Z0-9_-]+\.js)$/.test(asset);
+      || /^src\/history-[a-f0-9]{64}\.json(?:\.gz)?$/.test(asset)
+      || /^assets\/[a-f0-9]{16}\/(?:styles\.css|favicon\.svg|src\/(?:[a-zA-Z0-9_-]+\.js|history-[a-f0-9]{64}\.json(?:\.gz)?))$/.test(asset);
     if (!allowed) { res.writeHead(404); res.end('Not found'); return; }
     try {
-      const data = await readFile(path.join(root, asset));
+      let data;
+      if(asset==='src/official-snapshot.js')data=Buffer.from((await projection()).module);
+      else if(/^src\/history-[a-f0-9]{64}\.json(?:\.gz)?$/.test(asset)){
+        data=(await projection()).files.get(asset.slice(4));
+        if(!data){res.writeHead(404);res.end('Not found');return;}
+      }else data=await readFile(path.join(root, asset));
       res.writeHead(200, {'Content-Type':types[path.extname(asset)] || 'application/octet-stream'});
       res.end(req.method === 'HEAD' ? undefined : data);
     } catch {

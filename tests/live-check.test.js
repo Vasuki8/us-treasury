@@ -4,6 +4,8 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { verifyLiveBuild } from '../scripts/check-live.mjs';
+import {gzipSync} from 'node:zlib';
+import {createHash} from 'node:crypto';
 
 const html = '<!doctype html><title>Meridian</title><link rel="stylesheet" href="./styles.css"><link rel="icon" href="./favicon.svg"><script type="module" src="./src/app.js"></script>';
 
@@ -101,4 +103,16 @@ test('live verifier requires an HTTPS deployment root without credentials, query
 test('live verifier fails when the entry omits required application assets', async t => {
   const setup = await fixture(t, { 'index.html': '<title>Meridian</title>' });
   await assert.rejects(verifyLiveBuild('https://meridian.example/preview/', setup), /stylesheet.*icon.*module/);
+});
+async function lazyFixture(t){
+ const json=Buffer.from(JSON.stringify({version:1,captures:[]})),gz=gzipSync(json),sha=bytes=>createHash('sha256').update(bytes).digest('hex');
+ const plain=`history-${sha(json)}.json`,compressed=`history-${sha(gz)}.json.gz`;
+ const setup=await fixture(t,{'src/data.js':`export {value} from './nested/value.js';export const historyArchive={fallback:{url:'./${plain}'},compressed:{url:'./${compressed}'}};`,['src/'+plain]:json,['src/'+compressed]:gz});
+ setup.remote.get('src/'+plain).type='application/json';setup.remote.get('src/'+compressed).type='application/gzip';return {...setup,plain,compressed};
+}
+test('live verification includes both lazy history bundles under the deployment prefix',async t=>{
+ const setup=await lazyFixture(t);assert.equal((await verifyLiveBuild('https://meridian.example/preview/',setup)).assets,8);
+});
+test('missing, corrupt or incorrectly served lazy history stops release verification',async t=>{
+ for(const variant of ['plain','compressed'])for(const failure of ['missing','corrupt','mime']){const setup=await lazyFixture(t),name='src/'+setup[variant];if(failure==='missing')setup.remote.delete(name);else setup.remote.set(name,{body:failure==='corrupt'?'wrong':setup.remote.get(name).body,type:failure==='mime'?'text/html':setup.remote.get(name).type});await assert.rejects(verifyLiveBuild('https://meridian.example/preview/',setup),/404|differs|MIME/);}
 });

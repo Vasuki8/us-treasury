@@ -15,7 +15,7 @@ const base = {
   exploreMode: 'catalog', comparison: 'native', day: 'all', calendarTopic: 'All topics',
   watchOnly: false, eventId: 'cpi', saved: [], density: 'compact',
 };
-const render = (state = {}) => renderPage({ ...base, ...state });
+const render = (state = {}, historyContext = {}) => renderPage({ ...base, ...state }, historyContext);
 
 function withCalendar(events, calendar, run) {
   const savedEvents = releases.splice(0), savedCalendar = dataStatus.calendar;
@@ -418,8 +418,9 @@ test('indicator preserves unknown publication dates and exposes official retriev
     assert.doesNotMatch(html, /2025-02-02/);
     const methodology = render({ page: 'indicator', tab: 'methodology' });
     assert.match(methodology, /Official unemployment rate, unchanged\./);
-    assert.match(render({ page: 'indicator', tab: 'revisions' }), /No observed value changes have been captured/i);
-    assert.match(render({page:'indicator',tab:'revisions'}),/First captured and first released are distinct/);
+    const historyContext={historyState:{status:'ready',history:{version:1,captures:[]}},revisions:[]};
+    assert.match(render({ page: 'indicator', tab: 'revisions' },historyContext), /No observed value changes have been captured/i);
+    assert.match(render({page:'indicator',tab:'revisions'},historyContext),/First captured and first released are distinct/);
   } finally { Object.assign(current, saved); }
 });
 

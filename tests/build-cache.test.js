@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {pathToFileURL} from 'node:url';
 
 const run = promisify(execFile);
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -41,7 +42,10 @@ test('unchanged builds reuse asset URLs while a refreshed snapshot changes the e
   await writeFile(snapshotPath, original.replace(/"generatedAt":\s*"[^"]+"/, '"generatedAt": "2026-10-22T02:00:00.000Z"'));
   const refreshed = await build(root);
   assert.notEqual(refreshed.entry, first.entry);
-  assert.equal(await readFile(path.join(root, 'dist', refreshed.directory, 'src', 'official-snapshot.js'), 'utf8'), await readFile(snapshotPath, 'utf8'));
+  const {snapshot:projected}=await import(pathToFileURL(path.join(root,'dist',refreshed.directory,'src','official-snapshot.js')).href);
+  assert.equal(projected.generatedAt,'2026-10-22T02:00:00.000Z');
+  assert.equal(projected.vintages,undefined,'the browser only loads history on demand');assert.equal(projected.vintageArchive,undefined);
+  assert.ok(projected.historyArchive.compressed.url.endsWith('.json.gz'));
   const modules = (await readdir(path.join(root, 'dist', refreshed.directory, 'src'))).filter(name => name.endsWith('.js'));
   for (const name of modules) {
     const moduleURL = new URL(`src/${name}`, `https://example.test/us-treasury/${refreshed.directory}`);
@@ -63,7 +67,7 @@ test('build packages only the entry and allowlisted versioned application files,
   const files = (await readdir(path.join(root, 'dist'), { recursive: true, withFileTypes: true })).filter(item => item.isFile());
   for (const item of files) {
     const relative = path.relative(path.join(root, 'dist'), path.join(item.parentPath, item.name)).replaceAll(path.sep, '/');
-    assert(relative === 'index.html' || /^assets\/[a-f0-9]{16}\/(?:styles\.css|favicon\.svg|src\/[a-zA-Z0-9_-]+\.js)$/.test(relative), `Unexpected public file: ${relative}`);
+    assert(relative === 'index.html' || /^assets\/[a-f0-9]{16}\/(?:styles\.css|favicon\.svg|src\/(?:[a-zA-Z0-9_-]+\.js|history-[a-f0-9]{64}\.json(?:\.gz)?))$/.test(relative), `Unexpected public file: ${relative}`);
   }
   const checked = await run(process.execPath, ['scripts/check-build.mjs'], { cwd: root });
   const checkedCount=checked.stdout.match(/smoke check passed \((\d+) assets\)/);

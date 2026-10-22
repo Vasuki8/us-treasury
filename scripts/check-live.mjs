@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import {moduleAssetReferences} from './asset-references.mjs';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -41,10 +42,7 @@ function entryAssets(html) {
 }
 
 // The application uses static native ES modules, including re-exports and side-effect imports.
-function moduleImports(source) {
-  return [...source.matchAll(/\b(?:import\s+(?:[^'";]*?\s+from\s+)?|export\s+[^'";]*?\s+from\s+)(['"])([^'"]+)\1/g)]
-    .map(match => match[2]);
-}
+const moduleImports=moduleAssetReferences;
 
 /** Confirm that an HTTPS deployment serves the exact locally tested static build. */
 export async function verifyLiveBuild(input, { directory = path.join(projectRoot, 'dist'), fetchImpl = globalThis.fetch } = {}) {
@@ -78,6 +76,8 @@ export async function verifyLiveBuild(input, { directory = path.join(projectRoot
     if (name.endsWith('.js') && !/^(?:text|application)\/(?:javascript|ecmascript)(?:\s*;|$)/i.test(response.headers.get('content-type') ?? '')) {
       throw new Error(`Expected JavaScript MIME type for ${name}`);
     }
+    if(name.endsWith('.json')&&!/^application\/json(?:\s*;|$)/i.test(response.headers.get('content-type')??''))throw new Error(`Expected JSON MIME type for ${name}`);
+    if(name.endsWith('.gz')&&!/^application\/(?:gzip|octet-stream)(?:\s*;|$)/i.test(response.headers.get('content-type')??''))throw new Error(`Expected gzip MIME type for ${name}`);
     const actual = Buffer.from(await response.arrayBuffer());
     if (!actual.equals(expected)) throw new Error(`Deployed file differs from local build: ${name}`);
     const source = actual.toString('utf8');

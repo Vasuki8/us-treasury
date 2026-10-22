@@ -6,7 +6,6 @@ import { parseCsv } from '../scripts/sources/http.mjs';
 import { registry } from '../src/registry.js';
 import { BLS_DATA_NOTICE } from '../src/model.js';
 import { renderPage } from '../src/pages.js';
-import { series } from '../src/data.js';
 
 const t1 = '2026-10-20T12:00:00.123Z', t2 = '2026-10-21T12:00:00.456Z';
 const source = (fetchedAt, value) => ({ id: 'bea', fetchedAt, coverageNote: 'Only captured GDP values; no historical first releases.', provenance: [{ url: 'https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt', sha256: 'b'.repeat(64), retrievedAt: fetchedAt }], series: { gdp: { sourceIds: ['A191RL'], sourceUrl: 'https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt', calculation: 'Published real GDP annualized growth', dataStatus: 'official', observations: [{ date: '2026-04-01', value, publishedAt: null }] } } });
@@ -38,14 +37,10 @@ test('vintage views and CSV keep first and previous values in their captured uni
   assert.equal(change.change_reason, 'unknown');
   assert.equal(JSON.parse(change.previous_value_metadata_json).unit, 'USD millions');
 
-  const original = series.gdp.revisions;
-  try {
-    series.gdp.revisions = revisionHistory(history, 'gdp');
-    const detail = renderPage({ page: 'indicator', seriesId: 'gdp', tab: 'revisions', saved: [] });
+    const detail = renderPage({ page: 'indicator', seriesId: 'gdp', tab: 'revisions', saved: [] }, {historyState:{status:'ready',history},revisions:revisionHistory(history,'gdp')});
     assert.ok(detail.includes('2,000.00M'));
     assert.ok(detail.includes('$2.00B'));
     assert.match(detail, /not directly comparable/is);
-  } finally { series.gdp.revisions = original; }
 });
 
 test('definition-only changes disclose a non-comparable first/latest measurement without inventing a value revision', () => {

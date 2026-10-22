@@ -1,6 +1,5 @@
 import { snapshot } from './official-snapshot.js';
 import { registry } from './registry.js';
-import { revisionHistory } from './vintages.js';
 
 const publicationNote='The source feed does not provide historical publication timestamps. Retrieval time is shown separately; it is not a release date.';
 export const series=Object.fromEntries(Object.entries(registry).map(([id,metadata])=>{
@@ -8,7 +7,7 @@ export const series=Object.fromEntries(Object.entries(registry).map(([id,metadat
   const dataStatus=!official?'unavailable':source.status==='ok'?'official':'cached';
   return [id,{
     ...metadata,observationType:official?.observationType??metadata.observationType??'official',
-    source:{...metadata.source,seriesIds:official?.sourceIds||[]},observations:official?.observations||[],revisions:revisionHistory(snapshot.vintages,id),dataStatus,
+    source:{...metadata.source,seriesIds:official?.sourceIds||[]},observations:official?.observations||[],dataStatus,
     fetchedAt:source?.fetchedAt||null,lastAttemptAt:source?.lastAttemptAt||null,error:source?.error||(!official?'This official source is not connected.':null),
     measure:official?.measure??'',provenance:source?.provenance??[],calculation:official?.calculation||'',sourceUrl:official?.sourceUrl||metadata.source.url,sourceUrls:official?.sourceUrls??[],
     sourceNotice:official?.sourceNotice??official?.redistributionNotice??'',licenseUrl:official?.licenseUrl??official?.termsUrl??'',attribution:official?.attribution??'',sourceTitle:official?.sourceTitle??'',

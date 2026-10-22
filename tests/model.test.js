@@ -4,7 +4,6 @@ import { series, releases, yieldCurve, dataStatus } from '../src/data.js';
 import { parseCsv } from '../scripts/sources/http.mjs';
 import { easternFields } from '../scripts/sources/calendar-utils.mjs';
 import { registry } from '../src/registry.js';
-import { revisionHistory } from '../src/vintages.js';
 import {
   getSeries, filterSeries, latest, formatValue, formatChange,
   periodLabel, transformSeries, compareSeries, toCsv,
@@ -29,8 +28,7 @@ test('original and admitted research indicators have traced observations and ret
     assert.doesNotMatch(s.source.name,/synthetic/i);
     assert.match(s.source.url,/^https:\/\//);
     assert.ok(Number.isInteger(s.precision));
-    assert.deepEqual(s.revisions,revisionHistory(dataStatus.vintages,id),'revision rows come only from immutable captured changes');
-    for(const revision of s.revisions){assert.ok(revision.changes.length);assert.ok(revision.changes.every(change=>change.kind==='observed-value-change'&&change.reason==='unknown'),'a value change does not establish an agency revision explanation');}
+    assert.equal(Object.hasOwn(s,'revisions'),false,'ordinary startup does not compute archived revision rows');
     assert.equal(s.dataStatus,'official',id);
     assert.ok(s.observations.filter(o=>Number.isFinite(o.value)).length>=12,id);
     assert.match(s.fetchedAt,/^\d{4}-\d{2}-\d{2}T/);

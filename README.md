@@ -39,7 +39,7 @@ npm run build
 node server.mjs --dist --port 4174
 ```
 
-The build writes a self-contained static app to `dist/`. Its stylesheet, icon and complete native-module graph live under a content-versioned asset directory, so a changed snapshot gets new asset URLs instead of reusing a cached module. Hash routes support ordinary static hosting without rewrite rules. The preview server binds only to this computer's loopback interface. It intentionally serves only app assets, not the original design files or project internals.
+The build writes a self-contained static app to `dist/`. Its stylesheet, icon, native modules and lazy history bundles live under a content-versioned asset directory, so a changed snapshot gets new asset URLs instead of reusing a cached module. Ordinary pages receive current observations only; Revision history and indicator Revisions load and verify the archive on demand, with explicit loading, error and retry states. Native gzip decompression has a plain JSON fallback. Hash routes support ordinary static hosting without rewrite rules. The preview server binds only to this computer's loopback interface. It intentionally serves only app assets, not the original design files or project internals.
 
 ## Refresh official data
 
@@ -63,7 +63,7 @@ node scripts/check-bls-calendar-access.mjs
 
 Refresh and then reload the browser. No API keys or dependency installation are needed. Refresh uses Node's server-side fetch; the browser does not contact agency APIs. BEA's two public bulk files total about 70 MB, so refreshing may take several seconds. BLS unauthenticated requests are rate-limited; all six BLS series are batched into one request.
 
-The refresh command writes `src/official-snapshot.js` atomically and exits with an error if an agency fails. Other successful agencies still update. A failed agency retains its last successful values, original retrieval time and provenance; its cached status and refresh error are visible. A first failure leaves that agency unavailable. Do not hand-edit snapshot observations.
+The refresh command writes new immutable, content-addressed gzip captures under `src/history/`, verifies retained files, then atomically replaces `src/official-snapshot.js` with current data and an ordered storage index. All original captures, confirmations, provenance and timestamps remain available; no history is pruned. Build, refresh and publication hydrate the archive before commercial-data admission. The command exits with an error if an agency fails. Other successful agencies still update. A failed agency retains its last successful values, original retrieval time and provenance; its cached status and refresh error are visible. A first failure leaves that agency unavailable. Do not hand-edit snapshot observations or archive files. See the [storage and replay contract](docs/vintages-design.md).
 
 Use `--require-all` when every selected source must succeed before replacing the snapshot. The daily workflow uses the explicitly approved `--allow-cached-bls-calendar` policy instead: every other selected source must succeed, while an actual HTTP 403 from an exact official BLS annual calendar URL may retain a valid, nonempty prior calendar capture. The modes are mutually exclusive. The BLS source remains cached/error and the aggregate calendar remains partial; its events, provenance and retrieval time stay unchanged, and Actions records a warning and summary. A successful later BLS capture clears the error automatically. Missing or invalid prior coverage, redirects, different BLS errors, and other source failures reject the candidate before writing.
 
@@ -131,7 +131,9 @@ Yield timing has a separate factual-metadata commercial-use review; the statisti
 | `src/freshness.js` | Recorded retrieval/attempt summary, daily refresh deadlines and independent stale/cached states |
 | `src/freshness-controller.js` | Minute/resume freshness checks that preserve disclosure and keyboard focus |
 | `scripts/refresh-data.mjs`, `scripts/sources/` | Official agency retrieval, parsing, transformations and last-good retention |
-| `scripts/publish-snapshot.mjs` | Snapshot-only bot commits, expected-commit checks and normal pushes |
+| `scripts/snapshot-storage.mjs`, `src/history/` | Verified immutable captures, compact current module and lazy bundle projection |
+| `src/history-loader.js`, `src/history-controller.js` | On-demand verified history, retry, navigation and focus handling |
+| `scripts/publish-snapshot.mjs` | Root and newly referenced capture commits, expected-commit checks and normal pushes |
 | `scripts/check-refresh-due.mjs` | Daily capture completion guard for scheduled, backup and main-push refreshes |
 | `scripts/check-bls-calendar-access.mjs` | Manual, metadata-only checks of documented official BLS calendar access |
 | `scripts/data-policy.mjs`, `docs/data-sources.md` | Reviewed commercial reuse scope, evidence and build/refresh validation |
@@ -167,7 +169,7 @@ When due, the run attempts all five statistical collectors and all six calendar/
 
 These use the existing commercially reviewed official sources and require no agency API keys. BLS calendar access currently returns HTTP 403; its last verified calendar remains visibly cached while the other ten collectors update. This exception does not apply to BLS statistical observations.
 
-The refresh job tests, builds and smoke-checks the candidate before committing only `src/official-snapshot.js` with the job's `GITHUB_TOKEN`. It checks that remote `main` still matches the starting commit, refuses unrelated tracked or staged changes, and uses a normal push so competing changes cannot be overwritten. Source failures outside the approved BLS calendar exception, validation errors and push conflicts stop the run and leave the previous live deployment in place. Subsequent Node 22/24 verification and deployment check out the exact emitted snapshot commit. Refresh and deployment share one workflow because [pushes using `GITHUB_TOKEN` do not trigger another push workflow](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
+The refresh job tests, builds and smoke-checks the candidate before committing `src/official-snapshot.js` and its exact newly referenced immutable captures together with the job's `GITHUB_TOKEN`. Unreferenced files are excluded. It checks that remote `main` still matches the starting commit, refuses unrelated tracked or staged changes and historical edits/deletions, verifies the archive prefix and bytes, and uses a normal push so competing changes cannot be overwritten. Source failures outside the approved BLS calendar exception, validation errors and push conflicts stop the run and leave the previous live deployment in place. Subsequent Node 22/24 verification and deployment check out the exact emitted snapshot commit. Refresh and deployment share one workflow because [pushes using `GITHUB_TOKEN` do not trigger another push workflow](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
 
 The cron is [GitHub's best-effort schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule): runs can be delayed, and public repositories disable schedules after 60 days without repository activity. The refresh job needs repository `contents: write`; other verification jobs retain read-only repository access. No personal token or additional repository secret is needed for data refreshes.
 
