@@ -138,7 +138,7 @@ Yield timing has a separate factual-metadata commercial-use review; the statisti
 - Native-unit comparison panels; optional indexing at an explicit shared nonzero baseline. No automatic frequency aggregation, interpolation, or filling.
 - CSV downloads with displayed observations, units, source identifiers, calculation inputs, retrieval times, unknown publication dates and official/cached status.
 
-## Source map
+## Repeatable research
 
 Website review milestone 3 adds [Saved research](https://vasuki8.github.io/us-treasury/#/research). Named workspaces save editable selections, windows and module assumptions and reopen the latest snapshot. **PIN RESULT** creates a separate read-only package containing up to four scoped measurements, their full retained inputs, exact displayed observations, calculation version, baselines, rights, provenance, assumptions and original CSV. Specialist inputs and exports are included where relevant. Download its JSON and import it in another browser to reconstruct the result without a mutable dashboard link. A SHA-256 checksum checks integrity; it does not authenticate imported source claims. The viewer does not fetch package URLs or replace frozen observations with current ones.
 
@@ -151,6 +151,8 @@ Longer current revised history now includes all observations available in the ap
 **Publication history** is a separately admitted, deliberately selected official sample: 2026Q1 real GDP's Advance, Second and Third estimates (2.0%, 1.6%, 2.1%). Its date cutoff uses the agency's dated GDP/GDI vintage workbook, not today's revised table or a scheduled release time. Publication dates have day precision; exact publication instants remain unknown. Later annual/benchmark updates, other quarters and historical supplemental/calendar replay remain outside this sample. See the [official source/rights review](docs/publication-vintages-source-review.md) and [milestone acceptance evidence](docs/website-review-milestone-3.md).
 
 The selected historical publication archive is static, independently validated during build, and excluded from daily freshness. `node scripts/capture-publications.mjs` performs the initial reviewed capture only; once populated it preserves existing bytes and makes no new request. Corrections or broader samples require a new explicit source/admission review and new evidence rather than overwriting the retained records.
+
+## Source map
 
 | File | Responsibility |
 | --- | --- |

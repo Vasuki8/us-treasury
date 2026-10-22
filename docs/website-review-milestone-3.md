@@ -29,7 +29,11 @@ The archive audit compared the full pre-milestone snapshot with the result: all 
 - Actual browser: daily/monthly keyboard cursor shows unavailable on missing exact dates; publication cutoff before the second estimate shows only Advance and pins 2.0%; change feed shows loading, empty and populated/paginated states, and local alerts enable/disable without console errors.
 - Graphite desktop screenshot inspected at 1440 pixels. Workspaces, pinned package and publication views checked at 320, 390 and 768 pixels with no page-level horizontal overflow. Phone personal-workspace links have 44-pixel targets; frozen charts remain within the viewport after resizing. Desktop/mobile screenshots and local test/audit logs are retained under ignored `test-results/`.
 
-Deployment continues through the existing Node 22/24 Actions and selected-host workflow. A release is only reported live after its Actions deployment and exact public assets plus representative pages have been verified; local validation alone is not that claim.
+## Deployment verification
+
+Implementation commit [`61a4ba6`](https://github.com/Vasuki8/us-treasury/commit/61a4ba66157d3e369584583b9bf56ee9a18981be) passed both Node 22 and Node 24 checks and GitHub Pages deployment in [Actions run 39821753028](https://github.com/Vasuki8/us-treasury/actions/runs/39821753028). The existing daily guard confirmed refresh was complete, so no extra agency refresh ran; Cloudflare remains deferred.
+
+`node scripts/check-live.mjs https://vasuki8.github.io/us-treasury/` from a clean LF checkout of that exact commit verified all **85 published assets** against its tested build. Actual deployed overview, refinancing, calendar, capture changes and publication-history routes rendered without page overflow. The official three-estimate sample and day-precision/retrieval distinction were visible. The 390-pixel live view also had no page overflow; the temporary viewport override was reset. Public desktop/mobile screenshots are retained under ignored `test-results/`. The [research library is live](https://vasuki8.github.io/us-treasury/#/research); broader roadmap/source limitations below remain open.
 
 ## Explicit limits and remaining work
 
