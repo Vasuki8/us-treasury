@@ -1,5 +1,6 @@
 import { easternFields } from './sources/calendar-utils.mjs';
 import { researchPolicies, matchesResearchFeed, assertResearchData } from './research-policy.mjs';
+import { assertVintageData } from './vintage-policy.mjs';
 
 // Dataset-specific commercial reuse review. Evidence and limitations: docs/data-sources.md.
 // An official-looking hostname alone does not establish reuse rights.
@@ -208,4 +209,5 @@ export function assertCommercialData(snapshot) {
       if(!policies.some(policy=>matchesFeed(item.url,policy.feed)))throw new Error(`Unreviewed provenance for ${agency}: ${item.url}`);
     }
   }
+  assertVintageData(snapshot.vintages,assertCommercialData);
 }

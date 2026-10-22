@@ -98,6 +98,18 @@ test('strict calendar CLI publishes successful current coverage when BLS has nev
 async function blockedBlsFixture(directory,{failOther=false}={}) {
   // Keep every other verified source deterministic while exercising the real
   // BLS HTTP collector, publication gate and atomic CLI writer together.
+  await writeFile(path.join(directory,'scripts','sources','fixture-retrieval.mjs'),`
+    export function refreshedCapture(retained){
+      const source=structuredClone(retained),retrievedAt=new Date().toISOString();
+      const update=value=>{
+        if(!value||typeof value!=='object')return;
+        if(typeof value.url==='string'&&typeof value.sha256==='string'&&Object.hasOwn(value,'retrievedAt'))value.retrievedAt=retrievedAt;
+        for(const item of Object.values(value))update(item);
+      };
+      update(source);
+      return {...source,fetchedAt:retrievedAt};
+    }
+  `);
   for(const [filename,exportName,id,calendar] of [
     ['treasury.mjs','collectTreasury','treasury',false],
     ['bls.mjs','collectBls','bls',false],
@@ -115,7 +127,7 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
     ['calendar-dol.mjs','collectDolCalendar','dol',true],
     ['calendar-treasury.mjs','collectTreasuryCalendar','treasury',true],
     ['timing-treasury-yields.mjs','collectTreasuryYieldTiming','treasury-yield-timing',true],
-  ])await writeFile(path.join(directory,'scripts','sources',filename),`import {snapshot} from '../../src/official-snapshot.js';\nexport async function ${exportName}(){${failOther&&id==='bea'&&!calendar?"throw new Error('BEA unavailable');":`return {...snapshot.${calendar?'calendar.':''}sources[${JSON.stringify(id)}],fetchedAt:new Date().toISOString()};`}}\n`);
+  ])await writeFile(path.join(directory,'scripts','sources',filename),`import {snapshot} from '../../src/official-snapshot.js';\nimport {refreshedCapture} from './fixture-retrieval.mjs';\nexport async function ${exportName}(){${failOther&&id==='bea'&&!calendar?"throw new Error('BEA unavailable');":`return refreshedCapture(snapshot.${calendar?'calendar.':''}sources[${JSON.stringify(id)}]);`}}\n`);
   await writeFile(path.join(directory,'blocked-bls.mjs'),`
     const NativeDate=Date;
     globalThis.Date=class extends NativeDate {
@@ -142,7 +154,11 @@ test('approved cached-BLS CLI mode publishes other sources and reports the origi
     assert.deepEqual(cached.provenance,prior.calendar.sources.bls.provenance);
     assert.deepEqual(cached.events,prior.calendar.sources.bls.events);
     assert.equal(cached.lastAttemptAt,'2026-10-22T14:00:00.000Z');
-    for(const source of Object.values(published.sources))assert.equal(source.status,'ok');
+    for(const [id,source] of Object.entries(published.sources)){
+      assert.equal(source.status,'ok');
+      assert.ok(source.provenance.every(item=>item.retrievedAt===source.fetchedAt),'simulated successful responses carry their new actual retrieval time');
+      assert.deepEqual(source.provenance.map(item=>item.sha256),prior.sources[id].provenance.map(item=>item.sha256),'identical simulated response bytes retain their hashes');
+    }
     for(const [id,source] of Object.entries(published.calendar.sources))if(id!=='bls')assert.equal(source.status,'ok');
     assert.match(result.stdout,/warning.*BLS.*cached|BLS.*cached/i);
     assert.match(await readFile(summary,'utf8'),/BLS.*cached/i);

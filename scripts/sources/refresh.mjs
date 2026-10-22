@@ -1,6 +1,8 @@
 import { easternFields } from './calendar-utils.mjs';
 import { assertCommercialData } from '../data-policy.mjs';
 import { OfficialSourceHttpError } from './http.mjs';
+import { recordVintages } from '../../src/vintages.js';
+import { registry } from '../../src/registry.js';
 
 const calendarLinks=[{name:'BLS release calendar',url:'https://www.bls.gov/schedule/'},{name:'BEA release schedule',url:'https://www.bea.gov/news/schedule/'},{name:'Census release schedule',url:'https://www.census.gov/economic-indicators/calendar-listview.html'},{name:'DOL claims release schedule',url:'https://oui.doleta.gov/unemploy/claims_arch.asp'},{name:'Treasury Fiscal Data release calendar',url:'https://fiscaldata.treasury.gov/release-calendar/'},{name:'Treasury yield publication timing',url:'https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology'}];
 const calendarCoverage='Schedules cover Employment Situation, CPI, JOLTS, national GDP, Personal Income and Outlays, Census advance retail sales, DOL weekly claims and Treasury Debt to the Penny. Treasury debt entries retain the agency calendar\'s estimated dates and times. Treasury yield publication timing appears separately as ongoing guidance when a verified capture is available; it adds no dated events. DOL dates expand its published Thursday rule and explicit holiday exceptions within a 90-day upcoming window. Auctions are not ingested. Dates can change; a scheduled time does not confirm publication or results.';
@@ -85,5 +87,7 @@ export async function refreshSnapshot({previous={},collectors={},calendarCollect
   const releases=Object.values(calendar.sources??{}).flatMap(source=>source.events??[]).sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)||a.id.localeCompare(b.id));
   const generatedAt=new Date(Math.max(Date.now(),Date.parse(checkedAt),...[...Object.values(sources),...Object.values(calendar.sources??{})].map(source=>Date.parse(source.fetchedAt)||0))).toISOString();
   const publicationPolicy=allowCachedBlsCalendar?{mode:'allow-cached-bls-calendar',cachedCalendarSources}:Object.keys(calendarCollectors).length===0?previous.publicationPolicy:null;
-  return {schemaVersion:1,generatedAt,checkedAt,sources,releases,calendar,...(publicationPolicy?{publicationPolicy}:{})};
+  const seriesMetadata=Object.fromEntries(Object.entries(registry).map(([id,metadata])=>[id,{...metadata,observationType:metadata.observationType??'official'}]));
+  const vintages=recordVintages(previous.vintages,previous.sources,sources,{checkedAt:generatedAt,seriesMetadata});
+  return {schemaVersion:1,generatedAt,checkedAt,sources,releases,calendar,vintages,...(publicationPolicy?{publicationPolicy}:{})};
 }

@@ -8,6 +8,8 @@ test('an independent source refresh preserves the unchanged cached calendar publ
 });
 import { refreshSnapshot } from '../scripts/sources/refresh.mjs';
 import * as http from '../scripts/sources/http.mjs';
+import { asKnownOn } from '../src/vintages.js';
+import { registry } from '../src/registry.js';
 
 const result=id=>({id,fetchedAt:'2026-10-21T12:00:00Z',series:{example:{observations:[{date:'2026-09-01',value:4.2,publishedAt:null}],dataStatus:'official'}},provenance:[],warnings:[]});
 
@@ -42,6 +44,71 @@ test('invalid source observations fail closed and cannot overwrite cached offici
 test('snapshot assembly cannot predate the successful response retrieval',async()=>{
   const next=await refreshSnapshot({collectors:{bls:async()=>result('bls')},now:new Date('2026-10-21T11:00:00Z')});
   assert.ok(Date.parse(next.generatedAt)>=Date.parse(next.sources.bls.fetchedAt));
+});
+
+test('refresh bootstraps genuine prior retrievals and appends revisions at completion without changing earlier captures',async()=>{
+  const initial=result('bls'),revised=result('bls');
+  initial.fetchedAt='2026-10-20T12:00:00Z';
+  revised.fetchedAt='2026-10-21T12:00:01.123Z';
+  revised.series.example.observations[0].value=4.3;
+  const previous={sources:{bls:initial}},copy=structuredClone(previous);
+  const next=await refreshSnapshot({previous,collectors:{bls:async()=>revised},now:new Date('2026-10-21T12:00:00Z')});
+  assert.equal(next.vintages?.captures?.length,2);
+  assert.equal(next.vintages.captures[0].capturedAt,'2026-10-20T12:00:00.000Z');
+  assert.equal(next.vintages.captures[0].baseline,true);
+  assert.equal(next.vintages.captures[1].capturedAt,'2026-10-21T12:00:01.123Z');
+  assert.equal(next.vintages.captures[1].recordedAt,next.generatedAt);
+  assert.ok(next.vintages.captures[1].recordedAt>next.checkedAt,'recording follows response completion, not the refresh start');
+  assert.equal(asKnownOn(next.vintages,'2026-10-20T12:00:00Z').sources.bls.series.example.observations[0].value,4.2);
+  assert.equal(asKnownOn(next.vintages,'2026-10-21T12:00:01.123Z').sources.bls.series.example.observations[0].value,4.3);
+  assert.deepEqual(previous,copy);
+
+  const retained=structuredClone(next.vintages),confirmed={...revised,fetchedAt:'2026-10-22T12:00:00Z'};
+  const again=await refreshSnapshot({previous:next,collectors:{bls:async()=>confirmed},now:new Date('2026-10-22T12:00:00Z')});
+  assert.deepEqual(again.vintages.captures.slice(0,2),retained.captures);
+  assert.equal(again.vintages.captures.length,3);
+  assert.deepEqual(again.vintages.captures[2].series,{});
+});
+
+test('failed and unattempted refreshes preserve existing vintage captures while initial failures create no invented baseline',async()=>{
+  const prior=await refreshSnapshot({collectors:{bls:async()=>result('bls')},now:new Date('2026-10-21T12:00:00Z')});
+  const failed=await refreshSnapshot({previous:prior,collectors:{bls:async()=>{throw Error('HTTP 503');}},now:new Date('2026-10-22T12:00:00Z')});
+  assert.deepEqual(failed.vintages,prior.vintages);
+  const omitted=await refreshSnapshot({previous:failed,now:new Date('2026-10-23T12:00:00Z')});
+  assert.deepEqual(omitted.vintages,prior.vintages);
+  const initialFailure=await refreshSnapshot({collectors:{bls:async()=>{throw Error('HTTP 503');}}});
+  assert.deepEqual(initialFailure.vintages,{version:1,captures:[]});
+});
+
+test('a same-retrieval changed refresh cannot overwrite the immutable vintage key',async()=>{
+  const initial=result('bls');
+  const prior=await refreshSnapshot({collectors:{bls:async()=>initial}});
+  const changed=result('bls');changed.series.example.observations[0].value=9;
+  await assert.rejects(refreshSnapshot({previous:prior,collectors:{bls:async()=>changed}}),/immutable|collision/i);
+  assert.equal(prior.sources.bls.series.example.observations[0].value,4.2);
+});
+
+test('refresh records registry measurement meaning without mutating source snapshots or earlier definitions',async t=>{
+  const original=registry.gdp;
+  t.after(()=>{registry.gdp=original;});
+  const capture={id:'bea',fetchedAt:'2026-10-20T12:00:00Z',series:{gdp:{observations:[{date:'2026-07-01',value:2.2,publishedAt:null}],sourceIds:['A191RL'],sourceUrl:'https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt'}},provenance:[]};
+  const prior=await refreshSnapshot({collectors:{bea:async()=>capture},now:new Date('2026-10-20T13:00:00Z')});
+  const early=asKnownOn(prior.vintages,capture.fetchedAt).sources.bea.series.gdp;
+  assert.equal(early.unit,'Percent q/q annualized');
+  assert.equal(early.name,'Real gross domestic product growth');
+  assert.equal(early.frequency,'Quarterly');
+  assert.equal(early.definition,original.definition);
+  assert.equal(prior.sources.bea.series.gdp.unit,undefined);
+  assert.equal(capture.series.gdp.definition,undefined);
+  registry.gdp={...original,definition:'A later registered definition.',dateConvention:'quarter-start',periodType:'reference-quarter'};
+  const cached=await refreshSnapshot({previous:prior,collectors:{bea:async()=>{throw Error('unavailable');}},now:new Date('2026-10-21T13:00:00Z')});
+  assert.deepEqual(cached.vintages,prior.vintages);
+  const latest=await refreshSnapshot({previous:prior,collectors:{bea:async()=>({...capture,fetchedAt:'2026-10-21T12:00:00Z'})},now:new Date('2026-10-21T13:00:00Z')});
+  assert.equal(asKnownOn(latest.vintages,'2026-10-20T12:00:00Z').sources.bea.series.gdp.definition,original.definition);
+  const known=asKnownOn(latest.vintages,'2026-10-21T12:00:00Z').sources.bea.series.gdp;
+  assert.equal(known.definition,'A later registered definition.');
+  assert.equal(known.dateConvention,'quarter-start');
+  assert.equal(known.periodType,'reference-quarter');
 });
 
 const calendarEvent=(extra={})=>({id:'bea-gdp-q3',sourceId:'bea',program:'gdp',name:'GDP (Advance Estimate), 3rd Quarter 2026',agency:'BEA',seriesId:'gdp',seriesIds:['gdp'],topic:'Growth',date:'2026-10-29',time:'08:30',scheduledAt:'2026-10-29T12:30:00.000Z',period:null,periodLabel:'3rd Quarter 2026',sourceUrl:'https://www.bea.gov/news/schedule/ics/online-calendar-subscription.ics',sourceUid:'gdp-q3',...extra});

@@ -49,5 +49,5 @@ export function macroContributionsCsv(source = {}) {
   }
   const cpi = source.cpiCategoryEffects ?? {};
   rows.push(['Unavailable CPI effects', 'cpiCategoryEffects', 'Official BLS CPI category effects', '', '', null, 'Percentage points of CPI change; official effects unavailable', 'Monthly', 'One-month and 12-month bases must remain distinct', 'unavailable', 'unavailable', 'U.S. Bureau of Labor Statistics', (cpi.sourceUrls ?? ['https://www.bls.gov/news.release/cpi.t06.htm', 'https://www.bls.gov/news.release/cpi.t07.htm']).join('; '), '', null, null, cpi.methodology ?? 'No approximation from relative-importance weights; only official published effects are admitted.', '', null, cpi.reason ?? 'No official CPI effects capture has been admitted']);
-  return tabularCsv(headers, rows);
+  return tabularCsv([...headers,'capture_provenance_json'],rows.map(row=>[...row,JSON.stringify(row[1]==='cpiCategoryEffects'?[]:source.provenance??[])]));
 }

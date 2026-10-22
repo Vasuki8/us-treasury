@@ -52,3 +52,8 @@ test('macro CSV preserves published negative imports, missing release dates, met
   const cpi = rows.find(row => row.series_id === 'cpiCategoryEffects');
   assert.equal(cpi.value, ''); assert.equal(cpi.data_status, 'unavailable'); assert.match(cpi.availability_reason, /403/);
 });
+test('macro CSV carries captured response provenance for GDP but does not imply a CPI capture',()=>{
+ const source=fixture();source.provenance=[{url:'https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt',sha256:'a'.repeat(64),retrievedAt:source.fetchedAt}];
+ const [headers,...rows]=parseCsv(macroContributionsCsv(source)),column=headers.indexOf('capture_provenance_json');assert.ok(column>=0);
+ assert.deepEqual(JSON.parse(rows[0][column]),source.provenance);assert.deepEqual(JSON.parse(rows.at(-1)[column]),[]);
+});

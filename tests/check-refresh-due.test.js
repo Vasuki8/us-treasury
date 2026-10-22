@@ -175,6 +175,9 @@ async function withCliFixture(value, run) {
     await cp(path.join(root, 'scripts'), path.join(directory, 'scripts'), { recursive: true });
     await mkdir(path.join(directory, 'src'));
     await cp(path.join(root, 'src', 'freshness.js'), path.join(directory, 'src', 'freshness.js'));
+    await cp(path.join(root, 'src', 'vintages.js'), path.join(directory, 'src', 'vintages.js'));
+    await cp(path.join(root, 'src', 'registry.js'), path.join(directory, 'src', 'registry.js'));
+    await cp(path.join(root, 'src', 'research-registry.js'), path.join(directory, 'src', 'research-registry.js'));
     await writeFile(path.join(directory, 'package.json'), '{"type":"module"}');
     await writeFile(path.join(directory, 'src', 'official-snapshot.js'), `export const snapshot = ${JSON.stringify(value)};\n`);
     await writeFile(path.join(directory, 'clock.mjs'), `const NativeDate=Date; globalThis.Date=class extends NativeDate { constructor(...args){super(...(args.length?args:['2026-10-22T00:17:00.000Z']));} static now(){return NativeDate.parse('2026-10-22T00:17:00.000Z');} };\n`);

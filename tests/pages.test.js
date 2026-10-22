@@ -418,7 +418,8 @@ test('indicator preserves unknown publication dates and exposes official retriev
     assert.doesNotMatch(html, /2025-02-02/);
     const methodology = render({ page: 'indicator', tab: 'methodology' });
     assert.match(methodology, /Official unemployment rate, unchanged\./);
-    assert.match(render({ page: 'indicator', tab: 'revisions' }), /No revision history (has been )?captured/i);
+    assert.match(render({ page: 'indicator', tab: 'revisions' }), /No observed value changes have been captured/i);
+    assert.match(render({page:'indicator',tab:'revisions'}),/First captured and first released are distinct/);
   } finally { Object.assign(current, saved); }
 });
 
