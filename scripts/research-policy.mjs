@@ -25,10 +25,20 @@ export const researchPolicies=[{
   id:'treasury-auction-results',agency:'auctions',reviewedOn:'2026-10-21',commercialUse:true,
   basis:'Fiscal Data permits commercial copying, adaptation and redistribution; auction facts excluding third-party security identifier fields',terms:['https://fiscaldata.treasury.gov/api-documentation/#license-and-authorization'],feed:'treasury-auctions',
   series:{auctionOfferingMonthly:['offering_amt','auction_date','bid_to_cover_ratio']},
+},{
+ id:'fed-z1-treasury-positions',agency:'ownership',reviewedOn:'2026-10-21',commercialUse:true,
+ basis:'Federal Reserve Board public-domain statistical data with credit; selected Z.1 Treasury sector positions and dictionary only',terms:['https://www.federalreserve.gov/disclaimer.htm'],feed:'fed-z1',
+ series:{foreignTreasuryHoldings:['LM263061105.Q'],fedTreasuryHoldings:['LM713061103.Q']},
+},{
+ id:'nyfed-soma-treasury',agency:'ownership',reviewedOn:'2026-10-21',commercialUse:true,
+ basis:'Conditional commercial/business reuse under New York Fed Terms of Use; titles, copyright, source/terms links and downstream same-conditions notice retained; modified aggregation labeled',terms:['https://www.newyorkfed.org/privacy/termsofuse.html'],feed:'nyfed-soma',
+ series:{somaTreasuryHoldings:['SOMA:treasury-adjusted-par']},
 }];
 export function matchesResearchFeed(value,feed){
   try{
     const url=new URL(value);if(url.username||url.password||url.hash)return false;
+    if(feed==='fed-z1')return !url.search&&['https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip','https://www.federalreserve.gov/releases/z1/default.htm'].includes(url.href);
+    if(feed==='nyfed-soma')return url.href==='https://markets.newyorkfed.org/api/soma/summary.json';
     if(feed==='treasury-mts-fiscal')return fiscalPaths.some(part=>url.origin+url.pathname===fiscalBase+part);
     if(feed==='fiscal-public-debt')return url.origin+url.pathname===fiscalBase+fiscalPaths[3];
     if(feed==='fiscal-table9')return url.origin+url.pathname===fiscalBase+fiscalPaths[0];
@@ -44,6 +54,9 @@ export function matchesResearchFeed(value,feed){
   return false;
 }
 export function assertResearchData(snapshot){
+  for(const item of Object.values(snapshot.sources?.ownership?.series??{}))if(item.sourceUrl?.startsWith('https://markets.newyorkfed.org/')){
+    if(item.sourceTitle!=='SOMA Holdings'||item.termsUrl!=='https://www.newyorkfed.org/privacy/termsofuse.html'||!item.attribution?.includes('Federal Reserve Bank of New York')||!item.redistributionNotice?.includes('permissions, conditions and restrictions'))throw new Error('Required SOMA commercial redistribution conditions missing');
+  }
   const source=snapshot.sources?.fiscal;
   for(const row of source?.monthly??[]){
     if(!/^\d{4}-\d{2}-01$/.test(row.date)||!/^\d{4}-\d{2}-\d{2}$/.test(row.periodEnd)||row.periodEnd.slice(0,7)!==row.date.slice(0,7)||row.recordDate!==row.periodEnd)throw new Error('Unreviewed fiscal month or reference date');

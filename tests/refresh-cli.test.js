@@ -108,6 +108,7 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
     ['refinancing.mjs','collectRefinancing','refinancing',false],
     ['yields.mjs','collectYields','yields',false],
     ['auctions.mjs','collectAuctions','auctions',false],
+    ['ownership.mjs','collectOwnership','ownership',false],
     ['calendar-bea.mjs','collectBeaCalendar','bea',true],
     ['calendar-census.mjs','collectCensusCalendar','census',true],
     ['calendar-dol.mjs','collectDolCalendar','dol',true],

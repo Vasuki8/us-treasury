@@ -154,7 +154,8 @@ test('search recognizes ordinary-language aliases, source names, and codes', () 
 
 test('catalog filters compose topic, frequency, and watchlist without stale results', () => {
   assert.equal(filterSeries().length, Object.keys(registry).length);
-  assert.deepEqual(filterSeries({ frequency: 'Quarterly' }).map((s) => s.id), ['gdp']);
+  assert.deepEqual(filterSeries({ frequency: 'Quarterly' }).map((s) => s.id).sort(),Object.values(registry).filter(s=>s.frequency==='Quarterly').map(s=>s.id).sort());
+  assert.ok(filterSeries({frequency:'Quarterly'}).some(s=>s.id==='gdp'));
   assert.deepEqual(filterSeries({ query: 'jobs', watchlist: new Set(['unrate']) }).map((s) => s.id), ['unrate']);
   assert.deepEqual(filterSeries({ topic: series.cpi.topic, watchlist: ['cpi', 'gdp'] }).map((s) => s.id), ['cpi']);
   assert.deepEqual(filterSeries({ watchlist: [] }), []);

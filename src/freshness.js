@@ -52,7 +52,7 @@ function newest(values) {
 /** Summarize captures against the daily deadline using a valid Date clock. */
 export function getFreshness(snapshot = {}, { now = new Date() } = {}) {
   const { expectedRefreshAt, refreshDeadline } = refreshWindow(now);
-  const researchTargets=Object.entries({fiscal:'Treasury fiscal pressure',refinancing:'Treasury debt maturity profile',yields:'Treasury yield history',auctions:'Treasury auction results'}).filter(([id])=>Object.hasOwn(snapshot?.sources??{},id)).map(([id,label])=>['data',id,label]);
+  const researchTargets=Object.entries({fiscal:'Treasury fiscal pressure',refinancing:'Treasury debt maturity profile',yields:'Treasury yield history',auctions:'Treasury auction results',ownership:'Federal Reserve Treasury ownership'}).filter(([id])=>Object.hasOwn(snapshot?.sources??{},id)).map(([id,label])=>['data',id,label]);
   const entries = [...targets,...researchTargets].map(([kind, sourceId, label]) => {
     const source = kind === 'data' ? snapshot?.sources?.[sourceId] : snapshot?.calendar?.sources?.[sourceId];
     const fetchedAt = timestamp(source?.fetchedAt);

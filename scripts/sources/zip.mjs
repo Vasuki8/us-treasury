@@ -1,9 +1,10 @@
 import { crc32, inflateRawSync } from 'node:zlib';
 
 /** Read one ZIP member in memory. ZIP64, encryption and multipart archives are unsupported. */
-export function extractZipEntry(input,name,{maxOutputBytes=8*1024*1024}={}) {
+export function extractZipEntry(input,name,{maxOutputBytes=8*1024*1024,maxEntries=100}={}) {
   const bytes=Buffer.from(input);
   const fail=message=>{throw new Error(`Invalid ZIP archive: ${message}`);};
+  if(!Number.isInteger(maxEntries)||maxEntries<1||maxEntries>1000)fail('invalid entry limit');
   const bounds=(offset,size,end=bytes.length)=>{
     if(!Number.isSafeInteger(offset)||offset<0||size<0||offset+size>end)fail('truncated entry or bounds');
   };
@@ -14,7 +15,7 @@ export function extractZipEntry(input,name,{maxOutputBytes=8*1024*1024}={}) {
   if(end<0)fail('missing end of central directory');
   const count=bytes.readUInt16LE(end+10),directorySize=bytes.readUInt32LE(end+12),directoryOffset=bytes.readUInt32LE(end+16);
   if(bytes.readUInt16LE(end+4)!==0||bytes.readUInt16LE(end+6)!==0||bytes.readUInt16LE(end+8)!==count)fail('multipart archive');
-  if(count===0xffff||directorySize===0xffffffff||directoryOffset===0xffffffff||count>100)fail('unsupported directory size');
+  if(count===0xffff||directorySize===0xffffffff||directoryOffset===0xffffffff||count>maxEntries)fail('unsupported directory size');
   bounds(directoryOffset,directorySize,end);
   if(directoryOffset+directorySize!==end)fail('central directory bounds');
   let cursor=directoryOffset,target=null;

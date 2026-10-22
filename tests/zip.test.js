@@ -37,3 +37,11 @@ test('ZIP limits both declared and inflated output size', () => {
   lying.writeUInt32LE(1,22);lying.writeUInt32LE(1,directory+24);
   assert.throws(()=>extract(lying,'data',{maxOutputBytes:16}),/limit|length|size|buffer/i);
 });
+
+test('ZIP allows an explicit bounded entry limit for large official archives while retaining the default', () => {
+  const archive = zipFixture(Array.from({length: 101}, (_, index) => ({name: `data/${index}.txt`, text: String(index)})));
+  assert.throws(() => extract(archive, 'data/100.txt'), /directory size/i);
+  assert.equal(extract(archive, 'data/100.txt', {maxEntries:1000}).toString(), '100');
+  for (const maxEntries of [0, -1, Infinity, 1001, 1.5]) assert.throws(() => extract(archive, 'data/100.txt', {maxEntries}), /entry limit/i);
+  assert.throws(() => extract(archive, 'data/100.txt', {maxEntries:1000,maxOutputBytes:1}), /limit/i);
+});

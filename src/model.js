@@ -111,7 +111,7 @@ export function periodLabel(s, date) {
   if (s.frequency === 'Monthly') return `${monthNames[month]} ${year}`;
   if (s.frequency === 'Quarterly') return `Q${Math.floor(month / 3) + 1} ${year}`;
   const day = `${parsed.getUTCDate()} ${monthNames[month]} ${year}`;
-  return s.frequency === 'Weekly' ? `Week ending ${day}` : day;
+  return s.frequency === 'Weekly' ? `${s.periodType==='stock'?'As of':'Week ending'} ${day}` : day;
 }
 
 function rangeSize(range) {
