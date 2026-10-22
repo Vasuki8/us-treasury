@@ -6,7 +6,7 @@ export const BLS_DATA_NOTICE = 'BLS.gov cannot vouch for the data or analyses de
 /** Numeric nulls are missing data, never zero. Reject nonfinite values as missing, too. */
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const clean = (value) => Number(value.toFixed(12));
-const isYield = (s) => s.id === 'yield' || s.code === 'DGS10';
+const isYield = (s) => s.id === 'yield' || s.code === 'DGS10' || s.changeInBasisPoints===true;
 
 export function getSeries(id) {
   return Object.hasOwn(series, id) ? series[id] : undefined;
@@ -62,6 +62,7 @@ export function formatValue(s, value) {
     case 'percent': return `${number}%`;
     case 'trillions': return `$${number}T`;
     case 'billions': return `$${number}B`;
+    case 'basisPoints': return `${number} bp`;
     case 'thousands': return `${number}k`;
     case 'millions': return `${number}M`;
     default: return number;
@@ -181,13 +182,13 @@ export function toCsv(ids, { transform = 'level', range = 12, comparison = 'nati
     throw new RangeError('Indexed comparisons export indexed levels; choose native panels to export changes.');
   }
   const panels = comparison === 'indexed' ? result.panels : result.panels.map((panel) => transformSeries(panel.series, transform, range));
-  const rows = [['series_id', 'name', 'date', 'value', 'unit', 'frequency', 'adjustment', 'source', 'publication_date', 'transform', 'data_status','retrieved_at','source_url','source_series','calculation','source_value','source_baseline_date','source_baseline_value','index_baseline_date','index_baseline_value','source_notice','coverage_note','observation_type']];
+  const rows = [['series_id', 'name', 'date', 'value', 'unit', 'frequency', 'adjustment', 'source', 'publication_date', 'transform', 'data_status','retrieved_at','source_url','source_series','calculation','source_value','source_baseline_date','source_baseline_value','index_baseline_date','index_baseline_value','source_notice','coverage_note','observation_type','source_urls','license_url','attribution','source_title']];
   for (const panel of panels) {
     const s = panel.series;
     const publications = new Map(s.observations.map((o) => [o.date, o.publishedAt]));
     for (const observation of panel.observations) {
       rows.push([s.id, s.name, observation.date, observation.value, panel.unit, s.frequency, s.adjustment,
-        s.source.name, publications.get(observation.date), comparison === 'indexed' ? 'indexed' : transform, s.dataStatus||'unknown',s.fetchedAt,s.sourceUrl||s.source.url,(s.source.seriesIds||[]).join('; '),s.calculation,observation.sourceValue,observation.baseDate|| (observation.yearAgoSourceValue!=null?`${Number(observation.date.slice(0,4))-1}${observation.date.slice(4)}`:null),observation.baseValue??observation.yearAgoSourceValue,panel.baselineDate,panel.baselineValue,s.agency === 'bls' ? BLS_DATA_NOTICE : '',s.coverageNote,s.observationType??'official']);
+        s.source.name, publications.get(observation.date), comparison === 'indexed' ? 'indexed' : transform, s.dataStatus||'unknown',s.fetchedAt,observation.sourceUrl||s.sourceUrl||s.source.url,(s.source.seriesIds||[]).join('; '),s.calculation,observation.sourceValue,observation.baseDate|| (observation.yearAgoSourceValue!=null?`${Number(observation.date.slice(0,4))-1}${observation.date.slice(4)}`:null),observation.baseValue??observation.yearAgoSourceValue,panel.baselineDate,panel.baselineValue,s.agency === 'bls' ? BLS_DATA_NOTICE : s.sourceNotice??'',s.coverageNote,s.observationType??'official',(observation.sourceUrls??s.sourceUrls??[]).join('; '),s.licenseUrl,s.attribution,s.sourceTitle]);
     }
   }
   return `${rows.map((row) => row.map((cell,index)=>csvCell(cell,index===15||index===17)).join(',')).join('\r\n')}\r\n`;

@@ -8,7 +8,7 @@ Uses official Treasury, BLS, BEA, DOL ETA and Census observations captured by th
 
 The site is intended for advertising revenue. Only datasets reviewed for commercial display, derived use and downloadable redistribution may be connected. The current twelve indicators and Treasury yield curve qualify under their published policies; see the [dataset rights review](docs/data-sources.md) for official evidence, scope and conditions.
 
-The app credits the agencies and Census's originating program, shows the required BLS disclaimer and retrieval date, and includes the disclaimer in exported BLS rows. Build and refresh commands reject data outside the reviewed dataset, identifier and feed scope in `scripts/data-policy.mjs`. Recheck terms when adding or changing a source. Claims coverage limitations accompany the displayed data and CSV exports.
+The app credits the agencies and Census's originating program, shows the required BLS disclaimer and retrieval date, and includes the disclaimer in exported BLS rows. Build and refresh commands reject data outside the reviewed dataset, identifier and feed scope in `scripts/data-policy.mjs`. Recheck terms when adding or changing a source. Claims coverage limitations accompany the displayed data and CSV exports. Research additions have separate scoped reviews in the [research source ledger](docs/research-dashboard-sources.md).
 
 ## Run locally
 

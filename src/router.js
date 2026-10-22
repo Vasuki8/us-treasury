@@ -9,6 +9,7 @@ export const defaults = {
   exploreMode: 'catalog', comparison: 'native', calendarMonth: 'upcoming', day: 'all', calendarTopic: 'All topics',
   watchOnly: false, eventId: '',
   refinancingHorizon:12,refinancingShock:100,
+  yieldDateA:'',yieldDateB:'',
 };
 
 /** Hash routes work on ordinary static hosts and preserve browser history. */
@@ -27,6 +28,10 @@ export function parseRoute(hash = '') {
     else if (path === '/explore') state.page = 'explore';
     else if (path === '/fiscal') state.page = 'fiscal';
     else if (path === '/refinancing') state.page = 'refinancing';
+    else if (path === '/yields') state.page = 'yields';
+    const validCurveDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
+    state.yieldDateA=validCurveDate(p.get('curveA'))?p.get('curveA'):'';
+    state.yieldDateB=validCurveDate(p.get('curveB'))?p.get('curveB'):'';
     state.refinancingHorizon=[3,12,24].includes(Number(p.get('horizon')))?Number(p.get('horizon')):12;
     state.refinancingShock=[25,50,100,200].includes(Number(p.get('shock')))?Number(p.get('shock')):100;
     state.range = p.get('range') === '6' ? 6 : 12;
@@ -52,8 +57,12 @@ export function parseRoute(hash = '') {
 
 export function routeFor(input) {
   const state = { ...defaults, ...input };
-  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',fiscal:'/fiscal',refinancing:'/refinancing'}[state.page] || '/overview';
+  const path = {overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields'}[state.page] || '/overview';
   const p = new URLSearchParams();
+  if(state.page==='yields'){
+    if(state.yieldDateA)p.set('curveA',state.yieldDateA);
+    if(state.yieldDateB)p.set('curveB',state.yieldDateB);
+  }
   if(state.page==='refinancing'){
     if(state.refinancingHorizon!==12)p.set('horizon',String(state.refinancingHorizon));
     if(state.refinancingShock!==100)p.set('shock',String(state.refinancingShock));

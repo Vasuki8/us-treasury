@@ -1,5 +1,6 @@
 import { yieldCurve, dataStatus } from './data.js';
 import { getSeries, compareSeries, transformSeries, formatValue, periodLabel } from './model.js';
+import { selectCurveOverlays, NOMINAL_YIELD_TENORS } from './yields.js';
 
 const ns = 'http://www.w3.org/2000/svg';
 let chartId = 0;
@@ -123,6 +124,11 @@ export function renderCharts(root) {
   root.querySelectorAll('[data-chart]').forEach(container => {
     const {kind,transform='level',comparison='native'} = container.dataset;
     const range=Number(container.dataset.range)||12, height=Number(container.dataset.height)||180;
+    if(kind==='history-curve'){
+      const curves=selectCurveOverlays(dataStatus.sources.yields,container.dataset.dates.split(',').filter(Boolean));
+      draw(container,curves.map(curve=>({series:getSeries('yield'),label:curve.date+(curve.available?'':' — unavailable'),unit:'Yield · %',observations:NOMINAL_YIELD_TENORS.map(tenor=>({date:tenor,value:curve.nominal[tenor]??null}))})),{height,curve:true});
+      return;
+    }
     if (kind === 'curve') {
       const reference=getSeries('yield');
       draw(container,[

@@ -18,8 +18,9 @@ import { assertCommercialData } from './data-policy.mjs';
 import { collectFiscal } from './sources/fiscal.mjs';
 import { deriveFiscalSeries } from '../src/fiscal.js';
 import { collectRefinancing } from './sources/refinancing.mjs';
+import { collectYields } from './sources/yields.mjs';
 
-const all={treasury:collectTreasury,bls:collectBls,bea:collectBea,dol:collectDol,census:collectCensus,fiscal:async options=>{const result=await collectFiscal(options);return {...result,series:{...result.series,...deriveFiscalSeries(result)}};},refinancing:collectRefinancing};
+const all={treasury:collectTreasury,bls:collectBls,bea:collectBea,dol:collectDol,census:collectCensus,fiscal:async options=>{const result=await collectFiscal(options);return {...result,series:{...result.series,...deriveFiscalSeries(result)}};},refinancing:collectRefinancing,yields:collectYields};
 const requireAll=process.argv.includes('--require-all');
 const allowCachedBlsCalendar=process.argv.includes('--allow-cached-bls-calendar');
 if(requireAll&&allowCachedBlsCalendar)throw new Error('Cannot combine --require-all and --allow-cached-bls-calendar; publication modes are mutually exclusive.');
