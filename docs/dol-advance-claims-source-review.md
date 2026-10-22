@@ -33,6 +33,8 @@ DOL's weekly schedule and holiday exceptions are already separately admitted. Ex
 
 New captures are retained at actual retrieval time. As-known cutoffs before the first advance capture remain unavailable for these measurements. Each later release replaces the current two-row context, while immutable archive deltas and frozen packages preserve earlier captured contexts. This is capture history going forward, not a reconstruction of all historical first releases.
 
+The [separate archived-publication review](dol-publication-history-source-review.md) adds verified facts from 42 dated 2026 releases to Publication history. Those archived publication facts have their own actual current retrievals and do not modify this latest two-row context or retroactively populate Meridian capture history.
+
 ## Extraction, admission and integration
 
 Use pinned `unpdf@1.9.1` (MIT; bundled Mozilla PDF.js under its included license) as a development-only Node collector dependency, installed with lockfile integrity using `npm ci --ignore-scripts`. It requires no service, credentials, Python, native canvas or new hosting. The static browser build contains neither this package nor the collector. PDF text parsing runs in an isolated Node worker with a 128 MiB heap limit and a 15-second termination timeout. Download input is bounded to 4 MiB; at most 16 PDF pages are accepted and only the first five are read, with text/item caps. Embedded evaluation, external font/resource fetches and rendering are disabled. No general PDF parser is hand-written.

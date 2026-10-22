@@ -5,7 +5,7 @@ import {createWorkspace,openWorkspace,MAX_RESEARCH_JSON_BYTES} from '../src/rese
 import {createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv} from '../src/research-packages.js';
 import {createResearchLibrary as createLibrary} from '../src/research-library.js';
 const createResearchLibrary=storage=>createLibrary(storage,{locks:{request:async(_name,_options,callback)=>callback()}});
-import {buildPinContext,buildPublicationPin} from '../src/research-context.js';
+import {buildPinContext,buildPublicationPin,buildClaimsPublicationPin} from '../src/research-context.js';
 import {parseRoute,routeFor} from '../src/router.js';
 import {updateWorkspaceSelection} from '../src/workspace-context.js';
 import {normalizedCutoff} from '../src/vintages-page.js';
@@ -16,6 +16,9 @@ import {publicationCsv,selectPublicationHistory} from '../src/publication-histor
 import {publicationExplanationsCsv} from '../src/publication-explanation-view.js';
 import {changesCsv,writeChangeCheckpoint} from '../src/capture-changes.js';
 import {periodLabel} from '../src/model.js';
+import {selectClaimsPublicationHistory,claimsPublicationCsv,claimsPublicationIds} from '../src/claims-publication-history.js';
+import {claimsFixture} from './helpers/claims-publications-fixture.js';
+import {createPublicationController} from '../src/publication-controller.js';
 
 const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8');
 function section(start,end){
@@ -33,8 +36,8 @@ test('change feed replay is reused across pagination and rebuilt only when its e
 });
 
 test('actual publication synchronization requests no archive on ordinary views and ignores navigation while loading',async()=>{
- let finish,calls=0,renders=0;const env={state:{page:'overview'},publicationState:{status:'idle',error:null},publicationArchive:null,publicationLoader:{load:()=>{calls++;return new Promise(resolve=>{finish=resolve;});}},main:{},preserveHistoryView:(_main,callback)=>callback(),render:()=>{renders++;}};
- const view=new Function('env',`let {${Object.keys(env).join(',')}}=env;${section('function syncPublications(', 'function syncChanges(')};return{sync:syncPublications,route:next=>{state=next},context:()=>({publicationState,publicationArchive})};`)(env);
+ let finish,calls=0,renders=0;const env={state:{page:'overview'},publicationState:{status:'idle',error:null},publicationArchive:null,publicationLoader:{load:()=>{calls++;return new Promise(resolve=>{finish=resolve;});}},createPublicationController,claimsPublicationIds,main:{},preserveHistoryView:(_main,callback)=>callback(),render:()=>{renders++;}};
+ const view=new Function('env',`let {${Object.keys(env).join(',')}}=env;const publicationController=createPublicationController({gdpLoader:publicationLoader,claimsLoader:{load(){throw Error('Wrong archive requested');}},getRoute:()=>state,onChange:()=>preserveHistoryView(main,()=>render())});${section('function syncPublications(', 'function syncChanges(')};return{sync:syncPublications,route:next=>{state=next},context:()=>{const value=publicationController.context(state.publicationSeries);return{publicationState:value,publicationArchive:value.archive};}};`)(env);
  view.sync();view.route({page:'research',researchView:'changes'});view.sync();assert.equal(calls,0);
  view.route({page:'research',researchView:'publications'});view.sync();view.sync();assert.equal(calls,1);assert.equal(view.context().publicationState.status,'loading');
  view.route({page:'overview'});const archive={version:1,releases:[]};finish(archive);await Promise.resolve();await Promise.resolve();assert.equal(view.context().publicationArchive,archive);assert.equal(view.context().publicationState.status,'ready');assert.equal(renders,0);
@@ -43,11 +46,11 @@ test('actual publication synchronization requests no archive on ordinary views a
 
 // Run the actual delegated handlers and chart/resize helpers. Browser element
 // boundaries are replaced; model, package, storage and route contracts stay real.
-async function app(hash='#/series/gdp?window=all',{archive=publicationArchive,explanations={version:1,explanations:[]},explanationStatus='ready'}={}){
+async function app(hash='#/series/gdp?window=all',{archive=publicationArchive,explanations={version:1,explanations:[]},explanationStatus='ready',publicationStatus='ready'}={}){
  const values=new Map(),storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
  const researchLibrary=await createResearchLibrary(storage),inputs=new Map([['research-name',{value:'Handler research'}]]),downloads=[],chartCalls=[],listeners=new Map(),announcements=[];
  const location={hash},history={pushState:(_state,_title,route)=>{location.hash=route;},replaceState:(_state,_title,route)=>{location.hash=route;}};
- const env={createWorkspace,openWorkspace,createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,MAX_RESEARCH_JSON_BYTES,buildPinContext,buildPublicationPin,normalizedCutoff,normalizeVintageTimestamp,researchLibrary,parseRoute,routeFor,updateWorkspaceSelection,dataStatus,publicationArchive:archive,publicationExplanations:explanations,explanationState:{status:explanationStatus},publicationExplanationsCsv,publicationCsv,selectPublicationHistory,periodLabel,changesCsv,writeChangeCheckpoint,storage,
+ const env={createWorkspace,openWorkspace,createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,MAX_RESEARCH_JSON_BYTES,buildPinContext,buildPublicationPin,buildClaimsPublicationPin,selectClaimsPublicationHistory,claimsPublicationCsv,claimsPublicationIds,normalizedCutoff,normalizeVintageTimestamp,researchLibrary,parseRoute,routeFor,updateWorkspaceSelection,dataStatus,publicationArchive:archive,publicationState:{status:publicationStatus},publicationExplanations:explanations,explanationState:{status:explanationStatus},publicationExplanationsCsv,publicationCsv,selectPublicationHistory,periodLabel,changesCsv,writeChangeCheckpoint,storage,
   state:{...parseRoute(hash),saved:[]},activeWorkspaceId:null,researchLabel:'',pinBusy:false,changeCheckpoint:{enabled:true,since:'2026-10-01T12:00:00.000Z',snapshotAt:'2026-10-01T12:00:00.000Z'},changeState:{status:'ready',history:{captures:[]}},historyController:{context:()=>({historyState:{status:'idle'}})},
   document:{getElementById:id=>inputs.get(id)},location,history,main:{},window:{addEventListener:(name,callback)=>listeners.set(name,callback)},cancelAnimationFrame(){},requestAnimationFrame(callback){callback();return 1;},render(){},rememberWorkspace(){},announce:message=>announcements.push(message),renderCharts:(root,options)=>chartCalls.push(options),downloadCsv:(content,name)=>downloads.push({content,name}),downloadJson:pkg=>downloads.push({content:exportResearchPackage(pkg),name:'json'}),changesContext:()=>({status:'ready',rows:[]}),syncChanges(){}};
  const change=/root\.addEventListener\('change',async event=>\{([^]*?)\n\}\);/.exec(source);assert.ok(change,'App change delegation must exist');
@@ -82,10 +85,11 @@ test('actual explanation export and pin actions share the same selected quarter/
 });
 
 test('actual explanation synchronization is independent, demand-loaded and retries without discarding numerical history',async()=>{
- let calls=0,renders=0;const env={state:{page:'overview'},explanationState:{status:'idle',error:null},publicationExplanations:null,explanationLoader:{load:async()=>{if(++calls===1)throw Error('HTTP503');return {version:1,explanations:[]};}},main:{},preserveHistoryView:(_main,fn)=>fn(),render:()=>{renders++;}};
+ let calls=0,renders=0;const env={state:{page:'overview'},claimsPublicationIds,explanationState:{status:'idle',error:null},publicationExplanations:null,explanationLoader:{load:async()=>{if(++calls===1)throw Error('HTTP503');return {version:1,explanations:[]};}},main:{},preserveHistoryView:(_main,fn)=>fn(),render:()=>{renders++;}};
  const view=new Function('env',`let {${Object.keys(env).join(',')}}=env;${section('function syncPublicationExplanations(', 'function syncChanges(')};return{sync:syncPublicationExplanations,route:next=>{state=next},context:()=>({explanationState,publicationExplanations})};`)(env);
  view.sync();assert.equal(calls,0);view.route({page:'research',researchView:'publications'});view.sync();await Promise.resolve();await Promise.resolve();assert.equal(view.context().explanationState.status,'error');assert.equal(renders,1);
  view.sync();assert.equal(calls,1);view.sync({retry:true});view.route({page:'overview'});await Promise.resolve();await Promise.resolve();assert.equal(calls,2);assert.equal(view.context().explanationState.status,'ready');assert.equal(renders,1);
+ view.route({page:'research',researchView:'publications',publicationSeries:'claimsAdvance'});view.sync({retry:true});assert.equal(calls,2,'claims do not request BEA explanations');
 });
 
 test('publication actions retain the chosen quarter across cutoff changes, scoped CSV and frozen pins',async()=>{
@@ -94,6 +98,19 @@ test('publication actions retain the chosen quarter across cutoff changes, scope
  await current.changeHandler({target:{id:'publication-cutoff',value:'2026-05-01'}});assert.equal(current.state().publicationPeriod,'2025-01-01');
  await current.handleResearchAction({exportPublications:''});assert.equal(current.downloads.at(-1).content,publicationCsv(archive,'2026-05-01','2025-01-01'));assert.match(current.downloads.at(-1).name,/2025-01-01/);
  await current.handleResearchAction({pinPublication:''});const pkg=current.researchLibrary.getPackage(current.state().packageId);assert.equal(pkg.context.publicationPeriod,'2025-01-01');assert.equal(pkg.catalog.gdp.observations[0].value,1.5);assert.match(pkg.name,/2025/);
+});
+
+test('actual claims publication actions use one series/week/cutoff for CSV and frozen pins',async()=>{
+ const archive=claimsFixture(),current=await app('#/research?view=publications&publicationSeries=claimsAdvance&period=2026-03-07&publishedBy=2026-03-19',{archive});
+ await current.handleResearchAction({exportPublications:''});assert.equal(current.downloads.at(-1).content,claimsPublicationCsv(archive,'claimsAdvance','2026-03-19','2026-03-07'));assert.match(current.downloads.at(-1).name,/claimsAdvance.*2026-03-07/);
+ await current.handleResearchAction({pinPublication:''});const pkg=current.researchLibrary.getPackage(current.state().packageId);assert.deepEqual(pkg.request.ids,['claimsAdvance']);assert.equal(pkg.context.publicationSeries,'claimsAdvance');assert.equal(pkg.catalog.claimsAdvance.observations[0].value,201);assert.equal(pkg.context.attachments[0].content,current.downloads[0].content);
+});
+
+test('switching publication measurement clears cross-measure periods and retained weeks survive cutoff changes',async()=>{
+ const archive=claimsFixture(),current=await app('#/research?view=publications&publicationSeries=claimsAdvance&period=2026-03-07&publishedBy=2026-03-19',{archive});
+ await current.changeHandler({target:{id:'publication-cutoff',value:'2026-03-12'}});assert.equal(current.state().publicationPeriod,'2026-03-07');
+ await current.changeHandler({target:{id:'publication-series',value:'continuedClaimsAdvance',matches:()=>false}});assert.equal(current.state().publicationSeries,'continuedClaimsAdvance');assert.equal(current.state().publicationPeriod,'');assert.equal(parseRoute(current.location.hash).publicationSeries,'continuedClaimsAdvance');
+ const unavailable=await app('#/research?view=publications&publicationSeries=claimsAdvance',{archive,publicationStatus:'loading'});await assert.rejects(unavailable.handleResearchAction({exportPublications:''}),/unavailable|load/i);await assert.rejects(unavailable.handleResearchAction({pinPublication:''}),/unavailable|load/i);assert.equal(unavailable.researchLibrary.listPackages().length,0);
 });
 
 test('checkpoint control accepts native fractional seconds as UTC and preserves that cutoff in its URL',async()=>{

@@ -15,7 +15,7 @@ export const defaults = {
   vintageCutoff:null,vintageSeries:'gdp',
   window:'1y',startDate:'',endDate:'',returnTo:null,
   macroFamily:'prices',macroMeasure:'cpiMonthly',
-  researchView:'workspaces',packageId:'',changeSince:'',changePage:1,publicationCutoff:'',publicationPeriod:'',
+  researchView:'workspaces',packageId:'',changeSince:'',changePage:1,publicationCutoff:'',publicationPeriod:'',publicationSeries:'gdp',
 };
 
 /** Only local research workspaces can be offered as a return destination. */
@@ -61,6 +61,7 @@ export function parseRoute(hash = '') {
     state.changeSince=(p.get('since')??'').slice(0,64);state.changePage=Math.max(1,Math.min(10000,Number.parseInt(p.get('changePage'),10)||1));
     state.publicationCutoff=(p.get('publishedBy')??'').slice(0,32);
     state.publicationPeriod=(p.get('period')??'').slice(0,16);
+    state.publicationSeries=['claimsAdvance','continuedClaimsAdvance'].includes(p.get('publicationSeries'))?p.get('publicationSeries'):'gdp';
     state.vintageCutoff=p.has('cutoff')?p.get('cutoff').slice(0,64):null;
     state.macroFamily=Object.hasOwn(coverageFamilies,p.get('family'))?p.get('family'):'prices';
     state.macroMeasure=coverageFamilies[state.macroFamily].ids.includes(p.get('measure'))?p.get('measure'):coverageFamilies[state.macroFamily].defaultMeasure;
@@ -105,6 +106,7 @@ export function routeFor(input) {
     if(state.changeSince)p.set('since',state.changeSince);if(state.changePage>1)p.set('changePage',String(state.changePage));
     if(state.publicationCutoff)p.set('publishedBy',state.publicationCutoff);
     if(state.publicationPeriod)p.set('period',state.publicationPeriod);
+    if(['claimsAdvance','continuedClaimsAdvance'].includes(state.publicationSeries))p.set('publicationSeries',state.publicationSeries);
   }
   if(state.page==='macroCoverage'){
     p.set('family',state.macroFamily);p.set('measure',state.macroMeasure);

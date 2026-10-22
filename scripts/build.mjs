@@ -9,12 +9,15 @@ import {publicationArchive} from '../src/publication-archive.js';
 import {assertPublicationData} from './publication-policy.mjs';
 import {publicationExplanations} from '../src/publication-explanations.js';
 import {assertPublicationExplanations} from './publication-explanation-policy.mjs';
+import {claimsPublicationArchive} from '../src/claims-publication-archive.js';
+import {assertClaimsPublicationData} from './dol-publication-policy.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fullSnapshot={...snapshot,vintages:await loadSnapshotHistory(snapshot,{directory:path.join(root,'src')})};
 assertCommercialData(fullSnapshot);
 assertPublicationData(publicationArchive,{complete:true});
 assertPublicationExplanations(publicationExplanations,{complete:true});
+assertClaimsPublicationData(claimsPublicationArchive,{complete:true});
 const projected=browserSnapshotAssets(fullSnapshot);
 const output = path.join(root, 'dist');
 const modules = (await readdir(path.join(root, 'src'), { withFileTypes: true }))

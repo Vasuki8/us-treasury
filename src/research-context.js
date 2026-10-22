@@ -15,6 +15,7 @@ import {fiscalFinancingCsv} from './research-exports.js';
 import {selectPublicationHistory,publicationCsv,publicationContext} from './publication-history.js';
 import {periodLabel} from './model.js';
 import {publicationExplanationRows,publicationExplanationsCsv} from './publication-explanation-view.js';
+import {selectClaimsPublicationHistory,claimsPublicationCsv} from './claims-publication-history.js';
 
 const moduleIds={overview:['unrate','cpi','gdp','yield'],labor:['payroll','unrate','underemployment','weeklyHours'],fiscal:['receipts','outlays','netInterest','primaryDeficit'],refinancing:['marketableDebt'],yields:['yield','realYield10','spread2s10s','inflationComp10'],auctions:['auctionOfferingMonthly'],ownership:['foreignTreasuryHoldings','fedTreasuryHoldings','somaTreasuryHoldings'],macro:['gdpTotalContribution','gdpConsumptionContribution','gdpInvestmentContribution','gdpGovernmentContribution'],market:['dealerNetTreasury','dealerRepo','dealerFailsDeliver','sofr']};
 const sourceIds={fiscal:['fiscal','treasury'],refinancing:['refinancing'],yields:['yields','treasury'],auctions:['auctions'],ownership:['ownership'],macro:['macroContributions'],market:['marketFunctioning']};
@@ -83,4 +84,23 @@ export function buildPublicationPin(archive,cutoff,period,options){
  const explanationFiles=options?.explanationStatus==='ready'?[attachment('gdp-revision-explanations.csv',publicationExplanationsCsv(archive,options.explanationArchive,cutoff,view.period))]:[];
  const captured={...series.gdp,name:`Real GDP · ${quarter} ${row.estimate} estimate`,sourceUrls:[row.sourceUrl],lastAttemptAt:null,warnings:[],coverageNote:`Official publication estimate for ${quarter}, published ${row.publicationDate}; selected dated workbook evidence through ${view.cutoff}. Retrieval is separate from publication; this is a historical published value, not the latest NIPA series.`,source:{name:'U.S. Bureau of Economic Analysis',url:row.sourceUrl,seriesIds:row.sourceIds},sourceUrl:row.sourceUrl,sourceTitle:row.sourceTitle,licenseUrl:row.licenseUrl,attribution:row.attribution,calculation:row.calculation,fetchedAt:row.provenance.at(-1).retrievedAt,provenance:row.provenance,dataStatus:'official',publicationNote:`Official publication date ${row.publicationDate}, day precision; exact publication instant unavailable.`,observations:[{date:row.period,value:row.value,sourceValue:row.sourceValue,publishedAt:null}],error:null};
  return {state:{page:'indicator',seriesId:'gdp',selected:['gdp'],window:'all',transform:'level',comparison:'native'},catalog:{gdp:captured},sources:{},snapshot:{generatedAt:dataStatus.generatedAt},context:{publicationCutoff:view.cutoff,publicationPeriod:view.period,publicationSourceContext:publicationContext(row),publicationReleases:view.releases,...evidence,attachments:[attachment('gdp-publication-history.csv',publicationCsv(archive,cutoff,view.period)),...explanationFiles]},assumptions:{publicationDatePrecision:'day',scope:'Selected official GDP publication estimates; separate from current GDP and local capture replay.'}};
+}
+
+export function buildClaimsPublicationPin(archive,seriesId,cutoff='',period=''){
+ const view=selectClaimsPublicationHistory(archive,seriesId,cutoff,period),row=view.latest;
+ if(!row)throw new Error('No official claims publication is available for this week and cutoff.');
+ const current=series[seriesId],label=seriesId==='continuedClaimsAdvance'?'Continued claims':'Initial claims';
+ const captured={
+  ...current,name:`${label} · week ending ${row.period} · ${row.estimate} published ${row.publicationDate}`,
+  definition:'Selected archived official national seasonally adjusted claims publication fact for this reference week. Advance and same-release prior comparison roles remain distinct. Not the current release context or latest revised historical series.',
+  measure:`Archived official claims publication; week ending ${row.period}; release role ${row.releaseStage}.`,
+  short:label+' · archived publication',comparisonClass:'count',frequency:row.frequency,unit:row.unit,adjustment:row.adjustment,
+  source:{name:'U.S. Department of Labor, Employment and Training Administration',url:row.sourceUrl,seriesIds:row.sourceIds},
+  sourceUrl:row.sourceUrl,sourceUrls:[row.sourceUrl],sourceTitle:row.sourceTitle,licenseUrl:row.licenseUrl,attribution:row.attribution,calculation:row.calculation,
+  sourceNotice:'',lastAttemptAt:null,warnings:[],dataStatus:'official',error:null,fetchedAt:row.provenance.at(-1)?.retrievedAt,provenance:row.provenance,
+  publicationNote:`Official publication date ${row.publicationDate}, day precision; exact publication instant is unknown.`,
+  coverageNote:`Selected archived claims publication for week ending ${row.period}, published ${row.publicationDate}; role ${row.releaseStage}. Later publications after ${view.cutoff} are excluded.`,
+  observations:[{date:row.period,value:row.value,sourceValue:row.sourceValue,publishedAt:row.publicationDate,publicationDatePrecision:'day',releaseStage:row.releaseStage,previouslyPublishedSourceValue:row.previouslyPublishedSourceValue,footnotes:row.footnotes,seasonalAdjustmentNote:row.seasonalAdjustmentNote,seasonalAdjustmentKind:row.seasonalAdjustmentKind??null}],
+ };
+ return {state:{page:'indicator',seriesId,selected:[seriesId],window:'all',transform:'level',comparison:'native'},catalog:{[seriesId]:captured},sources:{},snapshot:{generatedAt:dataStatus.generatedAt},context:{publicationSeries:seriesId,publicationCutoff:view.cutoff,publicationPeriod:view.period,publicationSelectedId:row.id,publicationReleases:view.releases,attachments:[attachment('claims-publication-history.csv',claimsPublicationCsv(archive,seriesId,cutoff,view.period))]},assumptions:{publicationDatePrecision:'day',scope:'Selected archived claims publication facts for one measurement and reference week. Same-release priors are not original advances; later annual revisions are unavailable. Publication replay is separate from retrieval replay.'}};
 }

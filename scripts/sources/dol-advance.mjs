@@ -7,6 +7,11 @@ export const DOL_ADVANCE_LICENSE='https://www.dol.gov/general/aboutdol/copyright
 export const DOL_ADVANCE_ATTRIBUTION='Source: U.S. Department of Labor, Employment and Training Administration.';
 export const DOL_ADVANCE_PUBLICATION_NOTE='DOL release dates have day precision. The announced 08:30 Eastern embargo clock does not establish an exact server-publication instant. Actual retrieval is shown separately.';
 export const DOL_ADVANCE_IDS=Object.freeze({claimsAdvance:'InitialClaims/SA/Release',continuedClaimsAdvance:'ContinuedClaims/SA/Release'});
+// Exact reviewed inserts; unknown notices require a new source review.
+export const DOL_SEASONAL_UPDATE_NOTICES=Object.freeze({
+ '2026-03-12':{kind:'scheduled-update',sourceText:'REVISION TO SEASONAL ADJUSTMENT FACTORS Note: Calendar Year (CY) 2026 seasonal factors and revised seasonal factors for CY 2021-2025 for both initial claims and continued claims will be available at https://www.bls.gov/lau/seasonal-adjustment-for-weekly-unemployment- insurance-claims.htm by 12:00 P.M. (Eastern) on Thursday, March 1 9 , 2026. Revisions to the historical series for CY 2021-2025 for both initial claims and continued claims will be published on March 19, 2026, with the release of the Unemployment Insurance Weekly Claims News Release.',note:'DOL announced 2026 seasonal factors and revised 2021–2025 factors/history for March 19, 2026. This March 12 notice schedules the update; it does not establish that the update was applied to these readings.'},
+ '2026-03-19':{kind:'applied-update',sourceText:"REVISION TO SEASONAL ADJUSTMENT FACTORS Note: This week's release reflects the annual revision to the weekly unemployment claims seasonal adjustment factors. The seasonal adjustment factors used for the UI Weekly Claims data from 2021 forward, along with the resulting seasonally adjusted values for initial claims and continuing claims, have been revised. For more information regarding the seasonal adjustment methodology, please see the additional information at the end of this news release.",note:'DOL states this release applies the annual seasonal-factor revision to initial and continued claims from 2021 forward. This selected archive retains only the advance and prior-week facts in each release, not all historical values affected by the update. A specific numeric revision cause is not inferred.'},
+});
 const maxBytes=4*1024*1024,dayMs=86400000;
 const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -47,9 +52,10 @@ function measurement(text,table,{id,expression,label,maxAge},releaseDate){
  const match=one(text,expression,id+' advance statement'),date=weekDate(match[1],match[2],releaseDate,maxAge),current=count(match[3]),change=signedChange(match[4]);
  const priorStatus=match[5],remainder=text.slice(match.index+match[0].length),boundary=/The 4\s*-\s*week moving average/.exec(remainder);
  if(!boundary)fail('missing moving-average boundary for '+id);
- const priorText=remainder.slice(0,boundary.index).trim();let priorSourceValue,oldSourceValue;
+ let priorText=remainder.slice(0,boundary.index).trim();let priorSourceValue,oldSourceValue;
+ if(id==='continuedClaimsAdvance')priorText=priorText.replace(/^This is the lowest level for insured unemployment since [A-Z][a-z]+ \d{1,2}, 20\d{2} when it was [\d,]+\. /,'');
  if(priorStatus==='revised'){
-  const revision=one(priorText,/^The previous week's level was revised (up|down) by ([\d,]+) from ([\d,]+) to ([\d,]+)\.$/,'prior-week revision');
+  const revision=one(priorText,/^The previous week's level was revised (up|down) (?:by )?([\d,]+) from ([\d,]+) to ([\d,]+)\.$/,'prior-week revision');
   priorSourceValue=revision[4];oldSourceValue=revision[3];
   if(count(priorSourceValue)-count(oldSourceValue)!==count(revision[2])*(revision[1]==='down'?-1:1))fail('prior revision arithmetic disagrees');
   if(match[6]&&count(match[6])!==count(priorSourceValue))fail('conflicting prior level');
@@ -80,8 +86,10 @@ export function parseDolAdvanceText(input,{now=new Date()}={}){
  if(!input||typeof input.firstPage!=='string'||typeof input.tableText!=='string'||input.firstPage.length>20000||input.tableText.length>500000)fail('text limits or schema');
  const first=normalized(input.firstPage),table=normalized(input.tableText);
  if(!first.includes('News Release')||!first.includes('TRANSMISSION OF MATERIALS IN THIS RELEASE IS EMBARGOED UNTIL'))fail('release header');
- const header=one(first,/8:30 A\.M\. \(Eastern\) ([A-Z][a-z]+), ([A-Z][a-z]+) (\d{1,2}), (20\d{2}) UNEMPLOYMENT INSURANCE WEEKLY CLAIMS SEASONALLY ADJUSTED DATA/,'dated seasonally adjusted release header');
- const releaseDate=calendar(header[2],header[3],header[4]);
+ const header=one(first,/8:30 A\.M\. \(Eastern\) ([A-Z][a-z]+), ([A-Z][a-z]+) (\d(?:\s*\d)?)\s*, (20\d{2}) (.*?)UNEMPLOYMENT INSURANCE WEEKLY CLAIMS SEASONALLY ADJUSTED DATA/,'dated seasonally adjusted release header');
+ const releaseDate=calendar(header[2],header[3].replace(/\s/g,''),header[4]);
+ const insert=header[5].trim(),notice=insert?DOL_SEASONAL_UPDATE_NOTICES[releaseDate]:null;
+ if(insert&&(!notice||insert!==notice.sourceText))fail('unreviewed seasonal adjustment notice');
  if(days[new Date(releaseDate+'T00:00:00Z').getUTCDay()]!==header[1])fail('release weekday disagreement');
  if(!(now instanceof Date)||!Number.isFinite(now.getTime())||Date.parse(easternInstant(releaseDate,'08:30'))>now.getTime())fail('future release or embargo not elapsed');
  const shared=" (a decrease of [\\d,]+|an increase of [\\d,]+|unchanged) from the previous week's (revised|unrevised) level(?: of ([\\d,]+))?\\.";
@@ -90,7 +98,8 @@ export function parseDolAdvanceText(input,{now=new Date()}={}){
   {id:'claimsAdvance',label:'Initial Claims',maxAge:14,expression:new RegExp('In the week ending ([A-Z][a-z]+) (\\d{1,2}), the advance figure for seasonally adjusted initial claims was ([\\d,]+),'+shared)},
   {id:'continuedClaimsAdvance',label:'Insured Unemployment',maxAge:21,expression:new RegExp('The advance number for seasonally adjusted insured unemployment during the week ending ([A-Z][a-z]+) (\\d{1,2}) was ([\\d,]+),'+shared)},
  ])series[definition.id]=measurement(first,table,definition,releaseDate);
- return {id:'dolAdvance',releaseDate,series,coverageNote:`Latest DOL advance release context, issued ${releaseDate} (day precision). Current advance readings and same-release prior comparisons are separate from the revised historical XML feed.`};
+ if(notice)for(const item of Object.values(series))for(const row of item.observations)row.footnotes.push(notice.note);
+ return {id:'dolAdvance',releaseDate,series,...(notice?{seasonalAdjustmentKind:notice.kind,seasonalAdjustmentNote:notice.note}:{}),coverageNote:`Latest DOL advance release context, issued ${releaseDate} (day precision). Current advance readings and same-release prior comparisons are separate from the revised historical XML feed.${notice?' '+notice.note:''}`};
 }
 
 export function extractDolAdvancePdf(bytes,{timeoutMs=15000}={}){

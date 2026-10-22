@@ -4,6 +4,7 @@ import {packagePanels} from './research-packages.js';
 import {selectPublicationHistory,publicationContext} from './publication-history.js';
 import {publicationExplanation} from './publication-explanation-view.js';
 import {publicationExplanationPanel} from './publication-explanation-panel.js';
+import {claimsPublicationView} from './claims-publication-view.js';
 
 const views={workspaces:'WORKSPACES',packages:'PINNED PACKAGES',changes:'CAPTURE CHANGES',publications:'PUBLICATION HISTORY'};
 const val=value=>value===null||value===undefined?'—':String(value);
@@ -14,7 +15,7 @@ function moduleEvidence(value){
  return Object.fromEntries(Object.entries(value).map(([key,source])=>[key,record(source)?{fetchedAt:source.fetchedAt,coverageNote:source.coverageNote,provenance:source.provenance,retainedInJson:true}:source]));
 }
 function sourceAnchor(url,label='Official source ↗'){
- try{const parsed=new URL(url);if(parsed.protocol==='https:'&&/^(?:[a-z0-9-]+\.)*(?:bea\.gov|bls\.gov|treasury\.gov|treasurydirect\.gov|federalreserve\.gov|newyorkfed\.org|census\.gov|doleta\.gov)$/.test(parsed.hostname)&&!parsed.username&&!parsed.password)return `<a href="${esc(parsed.href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`;}catch{/* Unverified links remain inert text. */}
+ try{const parsed=new URL(url);if(parsed.protocol==='https:'&&/^(?:[a-z0-9-]+\.)*(?:bea\.gov|bls\.gov|treasury\.gov|treasurydirect\.gov|federalreserve\.gov|newyorkfed\.org|census\.gov|doleta\.gov|dol\.gov)$/.test(parsed.hostname)&&!parsed.username&&!parsed.password)return `<a href="${esc(parsed.href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`;}catch{/* Unverified links remain inert text. */}
  return `<span>${esc(url??'Source URL unavailable')}</span>`;
 }
 
@@ -83,6 +84,7 @@ export function researchPage(state,{library={},changes={},checkpoint={},failures
  const tabs=`<nav class="research-library-nav" aria-label="Research library views">${Object.entries(views).map(([id,label])=>`<a class="action" href="#/research?view=${id}"${view===id?' aria-current="page"':''}>${label}</a>`).join('')}</nav>`;
  const warning=library.sessionOnly||library.warning?`<p class="panel-note amber" role="status">${esc(library.warning??'')} ${library.sessionOnly&&!library.warning?.includes('session-only')?'Research changes are session-only.':''} Download pinned JSON for durable storage.</p>`:'';
  const importFile=`<div class="research-import"><label for="research-import">Import pinned package (JSON)<input id="research-import" type="file" accept=".json,application/json"></label><p class="small muted">Files remain in this browser. Checksum integrity is separate from source authenticity. Existing pinned records are never overwritten.</p></div>`;
- const publications=()=>publicationState&&publicationState.status!=='ready'?publicationState.status==='error'?emptyState('Official publication archive unavailable.',publicationState.error,button('RETRY','data-retry-publications')):emptyState('Loading official publication history.','The archive loads only when this view needs it.'):publicationView(state,publicationArchive,publicationExplanations,explanationState)+publicationExplanationPanel(publicationArchive,publicationExplanations,state.publicationCutoff,state.publicationPeriod,explanationState,sourceAnchor);
+ const publicationSelector=`<div class="toolbar research-controls"><label for="publication-series">Publication measurement<select id="publication-series">${[['gdp','Real GDP growth'],['claimsAdvance','Initial claims'],['continuedClaimsAdvance','Continued claims']].map(([id,label])=>`<option value="${id}"${(state.publicationSeries??'gdp')===id?' selected':''}>${label}</option>`).join('')}</select></label></div>`;
+ const publications=()=>publicationSelector+(publicationState&&publicationState.status!=='ready'?publicationState.status==='error'?emptyState('Official publication archive unavailable.',publicationState.error,button('RETRY','data-retry-publications')):emptyState('Loading official publication history.','The archive loads only when this view needs it.'):state.publicationSeries&&state.publicationSeries!=='gdp'?claimsPublicationView(state,publicationArchive,sourceAnchor):publicationView(state,publicationArchive,publicationExplanations,explanationState)+publicationExplanationPanel(publicationArchive,publicationExplanations,state.publicationCutoff,state.publicationPeriod,explanationState,sourceAnchor));
  return heading('RESEARCH LIBRARY','Editable workspaces, immutable packages and capture evidence')+tabs+warning+(state.researchError?`<div class="empty-state amber" role="alert">${esc(state.researchError)}</div>`:'')+importFile+(view==='workspaces'?workspaceList(library):view==='packages'?packageList(state,library):view==='changes'?changeView(state,{changes,checkpoint,failures}):publications());
 }

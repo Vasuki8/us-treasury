@@ -2,12 +2,12 @@ import {isIsoDate} from './date-window.js';
 import {tabularCsv} from './model.js';
 
 /** Day precision is intentional: a release date does not prove a server publication instant. */
-export function selectPublicationHistory(archive,cutoff='',period=''){
- const retained=[...(archive?.releases??[])].sort((a,b)=>a.publicationDate.localeCompare(b.publicationDate)||a.period.localeCompare(b.period));
+export function selectPublicationHistory(archive,cutoff='',period='',{seriesId,periodLabel='quarter'}={}){
+ const retained=[...(archive?.releases??[])].filter(row=>seriesId===undefined||row.seriesId===seriesId).sort((a,b)=>a.publicationDate.localeCompare(b.publicationDate)||a.period.localeCompare(b.period));
  const periods=[...new Set(retained.map(row=>row.period))].sort();
  const date=cutoff||retained.at(-1)?.publicationDate||'';
  if(date&&!isIsoDate(date))throw new RangeError('Choose a valid publication cutoff date.');
- if(period&&!periods.includes(period))throw new RangeError('Choose a quarter contained in the official publication archive.');
+ if(period&&!periods.includes(period))throw new RangeError(`Choose a ${periodLabel} contained in the official publication archive.`);
  const selected=period||[...new Set(retained.filter(row=>row.publicationDate<=date).map(row=>row.period))].sort().at(-1)||periods[0]||'';
  const quarter=retained.filter(row=>row.period===selected),releases=quarter.filter(row=>row.publicationDate<=date);
  return {cutoff:date,period:selected,periods,releases,first:releases[0]??null,latest:releases.at(-1)??null,coverageStart:retained[0]?.publicationDate??null,coverageEnd:retained.at(-1)?.publicationDate??null,quarterCoverageEnd:quarter.at(-1)?.publicationDate??null,retainedCount:retained.length};

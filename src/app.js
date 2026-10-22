@@ -22,10 +22,13 @@ import {coverageFamilies} from './macro-registry.js';
 import {createWorkspace,openWorkspace,MAX_RESEARCH_JSON_BYTES} from './research-workspaces.js';
 import {createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv} from './research-packages.js';
 import {createResearchLibrary} from './research-library.js';
-import {buildPinContext,buildPublicationPin} from './research-context.js';
+import {buildPinContext,buildPublicationPin,buildClaimsPublicationPin} from './research-context.js';
 import {captureChanges,changesCsv,readChangeCheckpoint,writeChangeCheckpoint} from './capture-changes.js';
 import {createPublicationLoader} from './publication-loader.js';
+import {createClaimsPublicationLoader} from './claims-publication-loader.js';
+import {createPublicationController} from './publication-controller.js';
 import {publicationCsv,selectPublicationHistory} from './publication-history.js';
+import {selectClaimsPublicationHistory,claimsPublicationCsv,claimsPublicationIds} from './claims-publication-history.js';
 import {createPublicationExplanationLoader} from './publication-explanation-loader.js';
 import {publicationExplanationsCsv} from './publication-explanation-view.js';
 
@@ -43,6 +46,8 @@ let changeCheckpoint=readChangeCheckpoint(storage,dataStatus.generatedAt),change
 let changeRowsCache=null;
 let publicationArchive=null,publicationState={status:'idle',error:null};
 const publicationLoader=createPublicationLoader();
+const claimsPublicationLoader=createClaimsPublicationLoader();
+const publicationController=createPublicationController({gdpLoader:publicationLoader,claimsLoader:claimsPublicationLoader,getRoute:()=>state,onChange:()=>preserveHistoryView(main,()=>render())});
 let publicationExplanations=null,explanationState={status:'idle',error:null};
 const explanationLoader=createPublicationExplanationLoader();
 const workspaceMemory=createWorkspaceMemory();
@@ -113,25 +118,19 @@ function restoreFocus(focus) {
 
 function trackedChanges(){return [...new Set((state.saved.length?state.saved:state.selected).filter(id=>getSeries(id)))];}
 function syncPublications({retry=false}={}){
-  if(state.page!=='research'||state.researchView!=='publications'||publicationState.status==='loading'||!retry&&publicationState.status!=='idle')return;
-  publicationState={status:'loading',error:null};
-  publicationLoader.load({retry}).then(archive=>{
-    publicationArchive=archive;publicationState={status:'ready',error:null};
-    if(state.page==='research'&&state.researchView==='publications')preserveHistoryView(main,()=>render());
-  }).catch(error=>{
-    publicationState={status:'error',error:error.message};
-    if(state.page==='research'&&state.researchView==='publications')preserveHistoryView(main,()=>render());
-  });
+  publicationController.sync(state,{retry});
+  const context=publicationController.context(state.publicationSeries);
+  publicationArchive=context.archive;publicationState={status:context.status,error:context.error};
 }
 function syncPublicationExplanations({retry=false}={}){
-  if(state.page!=='research'||state.researchView!=='publications'||explanationState.status==='loading'||!retry&&explanationState.status!=='idle')return;
+  if(state.page!=='research'||state.researchView!=='publications'||claimsPublicationIds.includes(state.publicationSeries)||explanationState.status==='loading'||!retry&&explanationState.status!=='idle')return;
   explanationState={status:'loading',error:null};
   explanationLoader.load({retry}).then(archive=>{
     publicationExplanations=archive;explanationState={status:'ready',error:null};
-    if(state.page==='research'&&state.researchView==='publications')preserveHistoryView(main,()=>render());
+    if(state.page==='research'&&state.researchView==='publications'&&!claimsPublicationIds.includes(state.publicationSeries))preserveHistoryView(main,()=>render());
   }).catch(error=>{
     explanationState={status:'error',error:error.message};
-    if(state.page==='research'&&state.researchView==='publications')preserveHistoryView(main,()=>render());
+    if(state.page==='research'&&state.researchView==='publications'&&!claimsPublicationIds.includes(state.publicationSeries))preserveHistoryView(main,()=>render());
   });
 }
 function syncChanges({retry=false}={}){
@@ -276,8 +275,10 @@ async function handleResearchAction(d){
   }else if('removeWorkspace' in d){stored(await researchLibrary.removeWorkspace(d.removeWorkspace),'Workspace removal');if(activeWorkspaceId===d.removeWorkspace){activeWorkspaceId=null;researchLabel='';}}
   else if('pinResult' in d||'pinPublication' in d){
     if(pinBusy)return;
-    const args='pinPublication' in d?buildPublicationPin(publicationArchive,state.publicationCutoff,state.publicationPeriod,{explanationArchive:publicationExplanations,explanationStatus:explanationState.status}):buildPinContext(state,historyController.context(state));
-    const name='pinPublication' in d?`GDP ${periodLabel({frequency:'Quarterly'},args.context.publicationPeriod)} published by ${args.context.publicationCutoff}`:document.getElementById('research-name').value;
+    if('pinPublication' in d&&publicationState.status!=='ready')throw new Error('Load the selected official publication archive before pinning.');
+    const claims=claimsPublicationIds.includes(state.publicationSeries);
+    const args='pinPublication' in d?claims?buildClaimsPublicationPin(publicationArchive,state.publicationSeries,state.publicationCutoff,state.publicationPeriod):buildPublicationPin(publicationArchive,state.publicationCutoff,state.publicationPeriod,{explanationArchive:publicationExplanations,explanationStatus:explanationState.status}):buildPinContext(state,historyController.context(state));
+    const name='pinPublication' in d?claims?`${state.publicationSeries==='continuedClaimsAdvance'?'Continued':'Initial'} claims ${args.context.publicationPeriod} by ${args.context.publicationCutoff}`:`GDP ${periodLabel({frequency:'Quarterly'},args.context.publicationPeriod)} published by ${args.context.publicationCutoff}`:document.getElementById('research-name').value;
     pinBusy=true;render({preserveFocus:true});
     try{
       const pkg=await createResearchPackage({name,...args}),result=await researchLibrary.pinPackage(pkg);stored(result,'Frozen package');
@@ -299,9 +300,16 @@ async function handleResearchAction(d){
   }else if('retryChanges' in d)syncChanges({retry:true});
   else if('changePage' in d)navigate({changePage:Math.max(1,Number(d.changePage)||1)});
   else if('exportChanges' in d){const view=changesContext();if(view.status!=='ready')throw new Error('Verified capture changes are unavailable.');downloadCsv(changesCsv(view.rows),'meridian-capture-changes.csv','Capture-change CSV downloaded. Retrieval changes do not establish publication times or revision causes.');}
-  else if('exportPublications' in d){const view=selectPublicationHistory(publicationArchive,state.publicationCutoff,state.publicationPeriod);if(!view.releases.length)throw new Error('No official publication is available for the selected quarter and date.');downloadCsv(publicationCsv(publicationArchive,state.publicationCutoff,view.period),`meridian-gdp-publications-${view.period}.csv`,'Selected-quarter official GDP publication history downloaded with original source cells and separate retrieval provenance.');}
+  else if('exportPublications' in d){
+    if(publicationState.status!=='ready')throw new Error('Load the selected official publication archive before exporting.');
+    if(claimsPublicationIds.includes(state.publicationSeries)){
+      const view=selectClaimsPublicationHistory(publicationArchive,state.publicationSeries,state.publicationCutoff,state.publicationPeriod);if(!view.releases.length)throw new Error('No official claims publication is available for this week and date.');
+      downloadCsv(claimsPublicationCsv(publicationArchive,state.publicationSeries,state.publicationCutoff,view.period),`meridian-${state.publicationSeries}-publications-${view.period}.csv`,'Selected-measurement, selected-week official claims publications downloaded with release roles and actual retrieval receipts.');
+    }else{const view=selectPublicationHistory(publicationArchive,state.publicationCutoff,state.publicationPeriod);if(!view.releases.length)throw new Error('No official publication is available for the selected quarter and date.');downloadCsv(publicationCsv(publicationArchive,state.publicationCutoff,view.period),`meridian-gdp-publications-${view.period}.csv`,'Selected-quarter official GDP publication history downloaded with original source cells and separate retrieval provenance.');}
+  }
   else if('retryPublications' in d)syncPublications({retry:true});
   else if('exportPublicationExplanations' in d){
+    if(claimsPublicationIds.includes(state.publicationSeries))throw new Error('BEA explanations apply only to GDP publications.');
     if(explanationState.status!=='ready')throw new Error('Reviewed BEA explanations are unavailable.');
     const view=selectPublicationHistory(publicationArchive,state.publicationCutoff,state.publicationPeriod);if(!view.releases.length)throw new Error('No official publication is available for the selected quarter and date.');
     downloadCsv(publicationExplanationsCsv(publicationArchive,publicationExplanations,state.publicationCutoff,view.period),`meridian-gdp-revision-explanations-${view.period}.csv`,'Selected-quarter BEA explanation CSV downloaded with separate release and retrieval evidence. Missing explanations remain explicit.');
@@ -390,8 +398,9 @@ root.addEventListener('change',async event=>{
       navigate({page:'research',researchView:'packages',packageId:pkg.id,researchError:''});
     }catch(error){state.researchError=error.message;render({preserveFocus:true});announce(`Import rejected: ${error.message}`);}return;
   }
+  if(target.id==='publication-series'){navigate({publicationSeries:claimsPublicationIds.includes(target.value)?target.value:'gdp',publicationPeriod:''});return;}
   if(target.id==='publication-period'){navigate({publicationPeriod:target.value});return;}
-  if(target.id==='publication-cutoff'){const view=selectPublicationHistory(publicationArchive,state.publicationCutoff,state.publicationPeriod);navigate({publicationCutoff:target.value,publicationPeriod:view.period});return;}
+  if(target.id==='publication-cutoff'){const view=claimsPublicationIds.includes(state.publicationSeries)?selectClaimsPublicationHistory(publicationArchive,state.publicationSeries,state.publicationCutoff,state.publicationPeriod):selectPublicationHistory(publicationArchive,state.publicationCutoff,state.publicationPeriod);navigate({publicationCutoff:target.value,publicationPeriod:view.period});return;}
   if(target.id==='change-since'){
     try{navigate({changeSince:normalizedCutoff(target.value,changeState.history),changePage:1});}
     catch(error){state.researchError=error.message;render({preserveFocus:true});}return;

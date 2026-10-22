@@ -7,7 +7,7 @@ import { macroPage } from './macro-page.js';
 import { vintagesPage, historyStatusMessage } from './vintages-page.js';
 import { marketFunctioningPage } from './market-functioning-page.js';
 import { vintageMeasurementsComparable } from './vintages.js';
-import {defaults as routeDefaults} from './router.js';
+import {defaults as routeDefaults,routeFor} from './router.js';
 import {viewRange,workspaceReturn,indicatorHref} from './workspace-context.js';
 import {rangeControls,coverageSummary,measureLabel,changeLabel} from './research-controls.js';
 import {relatedIndicators} from './related.js';
@@ -136,7 +136,8 @@ function detailMethodology(current) {
 function claimsContextLinks(current,state) {
   const pairs={claims:['claimsAdvance','VIEW LATEST RELEASE CONTEXT ↗'],continuedClaims:['continuedClaimsAdvance','VIEW LATEST RELEASE CONTEXT ↗'],claimsAdvance:['claims','VIEW REVISED HISTORY ↗'],continuedClaimsAdvance:['continuedClaims','VIEW REVISED HISTORY ↗']};
   const pair=pairs[current.id];
-  return pair?`<nav class="context-strip" aria-label="Claims history and latest release">${link(pair[1],indicatorHref(pair[0],state))}<span class="muted">Revised history and latest release context have separate captures and can show different reference weeks.</span></nav>`:'';
+  const publicationSeries=current.agency==='dolAdvance'?current.id:pair?.[0];
+  return pair?`<nav class="context-strip" aria-label="Claims history and latest release">${link(pair[1],indicatorHref(pair[0],state))}${link('ARCHIVED PUBLICATIONS ↗',routeFor({page:'research',researchView:'publications',publicationSeries}))}<span class="muted">Revised history and latest release context have separate captures and can show different reference weeks.</span></nav>`:'';
 }
 
 function indicator(state, historyContext) {
