@@ -30,33 +30,33 @@ Keep the published total distinct from the four-component sum and rounding resid
 
 Files: new `src/current-account-gdp-trailing.js`, `tests/current-account-gdp-trailing.test.js`.
 
-- [ ] Write/run failing tests for varying denominators, exact four-quarter windows, year boundaries, incomplete initial coverage, internal gaps, invalid units/IDs, partial component missingness, nonpositive GDP, revisions, bounds and no mutation.
-- [ ] Implement `currentAccountGdpTrailing(sources,range)` with four synthetic component series, separate total series, selected reconciliation rows and supporting quarterly input points. Reuse existing guarded quarterly calculations and bounded calendars.
-- [ ] Run the new and existing formula tests.
+- [x] Write/run failing tests for varying denominators, exact four-quarter windows, year boundaries, incomplete initial coverage, internal gaps, invalid units/IDs, partial component missingness, nonpositive GDP, revisions, bounds and no mutation.
+- [x] Implement `currentAccountGdpTrailing(sources,range)` with four synthetic component series, separate total series, selected reconciliation rows and supporting quarterly input points. Reuse existing guarded quarterly calculations and bounded calendars.
+- [x] Run the new and existing formula tests.
 
 ### 2. Graphite charts and compact export
 
 Files: new `src/current-account-gdp-trailing-view.js`; `src/macro-coverage-page.js`, `src/app.js`; new view/integration tests.
 
-- [ ] Write/run failing tests for explicit total/component catalogs, shared windows, labels, partial/error states, original input strings and safe CSV.
-- [ ] Add separate total and four-line component charts in one panel with latest selected period, changes, reconciliation, historical table, method and source evidence.
-- [ ] Export one typed metadata record, unique supporting input records and rolling endpoint records in a single consistent CSV schema. Include the three-quarter lookback where needed and keep source/retrieval/publication clocks distinct.
-- [ ] Wire live chart catalogs and keyboard-export action without adding duplicate date controls or altering existing charts.
+- [x] Write/run failing tests for explicit total/component catalogs, shared windows, labels, partial/error states, original input strings and safe CSV.
+- [x] Add separate total and four-line component charts in one panel with latest selected period, changes, reconciliation, historical table, method and source evidence.
+- [x] Export one typed metadata record, unique supporting input records and rolling endpoint records in a single consistent CSV schema. Include the three-quarter lookback where needed and keep source/retrieval/publication clocks distinct.
+- [x] Wire live chart catalogs and keyboard-export action without adding duplicate date controls or altering existing charts.
 
 ### 3. Frozen compatibility
 
 Files: `src/research-context.js`, `src/research-packages.js`, `src/research-page.js`; new package/frozen tests.
 
-- [ ] Test then add optional `currentAccountGdpTrailing:{version:1,range,inputContext:'currentAccountGdpBreakdown'}` with strict envelope/reference/range validation and required retained input context.
-- [ ] Save compact original CSV and render from the referenced recorded inputs. Legacy pins never gain the new panel or live inputs.
-- [ ] Verify partial/unavailable input handling, JSON roundtrip, browser-library persistence and package bounds without increasing storage caps.
+- [x] Test then add optional `currentAccountGdpTrailing:{version:1,range,inputContext:'currentAccountGdpBreakdown'}` with strict envelope/reference/range validation and required retained input context.
+- [x] Save compact original CSV and render from the referenced recorded inputs. Legacy pins never gain the new panel or live inputs.
+- [x] Verify partial/unavailable input handling, JSON roundtrip, browser-library persistence and package bounds without increasing storage caps.
 
 ### 4. Verification and delivery
 
-- [ ] Review methodology, source reuse and final diff independently.
-- [ ] Run focused and full tests, Node 22 checks, production build and asset checks; compare immutable data files to the starting commit.
-- [ ] Verify desktop/390px/320px layouts, keyboard readouts, date windows, table access, CSV, frozen views and browser errors locally.
-- [ ] Push to `Vasuki8/us-treasury`; verify Actions deployment, matching live assets and representative pages before reporting live.
+- [x] Review methodology, source reuse and final diff independently.
+- [x] Run focused and full tests, Node 22 checks, production build and asset checks; compare immutable data files to the starting commit.
+- [x] Verify desktop/390px/320px layouts, keyboard readouts, date windows, table access, CSV, frozen views and browser errors locally.
+- [x] Push to `Vasuki8/us-treasury`; verify Actions deployment, matching live assets and representative pages before reporting live.
 
 ## Results
 
@@ -68,4 +68,4 @@ Local browser verified at 1440×1000, 390×844 and 320×740: linked Home/arrow/E
 
 Current capture: 263 complete windows (1960Q4–2026Q2), plus three leading unavailable endpoints. Latest window 2025Q3–2026Q2 uses −$942.557B current-account balance / $31,778.08B GDP = −2.966060252853539%; component and rounding details are documented in the source review. Revised capture history is not historical first-release information. Adjacent windows overlap by three quarters and changes do not identify causation.
 
-Push and deployment verification pending.
+Runtime commit `7f8f4640458317a69f6215be71b0eebf0b150a7e` was pushed to main. [Actions run 39910646882](https://github.com/Vasuki8/us-treasury/actions/runs/39910646882) passed the full Node 22/24 checks and GitHub Pages deployment. A clean checkout build and live verification confirmed all 135 deployed assets match. Live overview and external economy pages rendered, linked keyboard cursors reached 1960Q4 and 2026Q2, and CSV export succeeded without console errors. Local empty-window handling and disabled export were verified on the final build. Browser screenshot capture became unavailable during final live verification despite a fresh preview; local mobile screenshots and live accessibility/DOM/asset checks were available. All requested implementation checks are complete; this does not claim completion of the wider fiscal/macro roadmap.
