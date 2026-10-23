@@ -24,29 +24,29 @@ Calculate changes before endpoint filtering, deliberately retaining the exact pr
 
 Files: `src/current-account-gdp-contributions.js`, `tests/current-account-gdp-contributions.test.js`.
 
-- [ ] Write failing fixture tests; implement `currentAccountGdpContributions(sources, range)` returning `observations`, `allObservations`, `series:{quarterly,trailing}`, `window`, `error`, `formula`, `notice`. Rows: `{date,priorDate,quarterly,trailing}`; each horizon: `{current,prior,totalChange,components:{[id]:{value,reason}},componentSumChange,residualChange,reason}`. Current/prior are original guarded breakdown rows (quarterly or T4Q).
-- [ ] Test nonconstant GDP, exact reconciliation including nonzero residual changes, rolling overlap, lookback, bounds/custom windows, first endpoints, partial components, total-only gaps, invalid units/dates/GDP and nonfinite arithmetic. No source mutation.
+- [x] Write failing fixture tests; implement `currentAccountGdpContributions(sources, range)` returning `observations`, `allObservations`, `series:{quarterly,trailing}`, `window`, `error`, `formula`, `notice`. Rows: `{date,priorDate,quarterly,trailing}`; each horizon: `{current,prior,totalChange,components:{[id]:{value,reason}},componentSumChange,residualChange,reason}`. Current/prior are original guarded breakdown rows (quarterly or T4Q).
+- [x] Test nonconstant GDP, exact reconciliation including nonzero residual changes, rolling overlap, lookback, bounds/custom windows, first endpoints, partial components, total-only gaps, invalid units/dates/GDP and nonfinite arithmetic. No source mutation.
 
 ### 2. Graphite view, live wiring and export
 
 Files: new `src/current-account-gdp-contributions-view.js`, `tests/current-account-gdp-contributions-view.test.js`, `tests/current-account-gdp-contributions-integration.test.js`; modify `src/macro-coverage-page.js`, `src/app.js`.
 
-- [ ] Test then add `currentAccountGdpContributionsPanel(sources,range,{frozen,packageId})`, `currentAccountGdpContributionsChartCatalog(sources,{frozen})`, `currentAccountGdpContributionsCsv(sources,range)`. Catalog ID `current-account-gdp-contributions`; four distinct series per horizon in percentage points. Reuse chart/table/empty-state/source-status components and shared window.
-- [ ] Include all-four latest contributions, component sum, residual change and published-total change for both horizons, current/prior period labels, signed interpretation, formula, overlapping-window and revised-input limitations. Keep units and evidence explicit. History table first 50; CSV all selected endpoints.
-- [ ] CSV metadata + change rows + uniquely retained current/prior input-quarter rows and source evidence. No default existing CSV changes. Bind live export and frozen reconstruction to recorded context only.
+- [x] Test then add `currentAccountGdpContributionsPanel(sources,range,{frozen,packageId})`, `currentAccountGdpContributionsChartCatalog(sources,{frozen})`, `currentAccountGdpContributionsCsv(sources,range)`. Catalog ID `current-account-gdp-contributions`; four distinct series per horizon in percentage points. Reuse chart/table/empty-state/source-status components and shared window.
+- [x] Include all-four latest contributions, component sum, residual change and published-total change for both horizons, current/prior period labels, signed interpretation, formula, overlapping-window and revised-input limitations. Keep units and evidence explicit. History table first 50; CSV all selected endpoints.
+- [x] CSV metadata + change rows + uniquely retained current/prior input-quarter rows and source evidence. No default existing CSV changes. Bind live export and frozen reconstruction to recorded context only.
 
 ### 3. Immutable context and compatibility
 
 Files: `src/research-context.js`, `src/research-packages.js`, `src/research-page.js`; new contributions package/frozen tests.
 
-- [ ] Add strict optional context `{version:1,range,inputContext:'currentAccountGdpBreakdown'}` at `currentAccountGdpContributions`. Reuse six full histories once, same five original attachments, unchanged storage/package caps. Render only when context exists; legacy packages gain no live fallback or new source history.
-- [ ] Test import/export, tampered context/reference/range, partial frozen sources, reconstructed CSV isolation, all-history size and durable storage reopening. Freeze method/version and window, with explanatory scope text.
+- [x] Add strict optional context `{version:1,range,inputContext:'currentAccountGdpBreakdown'}` at `currentAccountGdpContributions`. Reuse six full histories once, same five original attachments, unchanged storage/package caps. Render only when context exists; legacy packages gain no live fallback or new source history.
+- [x] Test import/export, tampered context/reference/range, partial frozen sources, reconstructed CSV isolation, all-history size and durable storage reopening. Freeze method/version and window, with explanatory scope text.
 
 ### 4. Verification and delivery
 
-- [ ] Independent source/method review and final diff review; run all tests, focused Node 22 tests, production build and asset checks. Confirm captures/publication archives unchanged.
-- [ ] Verify desktop/narrow layout, keyboard chart readouts, source/error states and CSV behavior locally; record any browser-tool limits honestly.
-- [ ] Commit/push to `Vasuki8/us-treasury`; verify Actions and live assets/representative comparison page before reporting deployment.
+- [x] Independent source/method review and final diff review; run all tests, focused Node 22 tests, production build and asset checks. Confirm captures/publication archives unchanged.
+- [x] Check rendered desktop/narrow content and keyboard chart readouts; verify source/error states and CSV payload/action binding in tests; record browser visual/download limits honestly.
+- [x] Commit/push to `Vasuki8/us-treasury`; verify Actions and live assets/representative comparison page before reporting deployment.
 
 ## Results and decisions
 
@@ -54,6 +54,7 @@ Implemented the calculation, two Graphite charts, latest reconciliation and hist
 
 Local verification: 1,232/1,232 full-suite tests passed with loopback/temporary Git access; 178/178 focused tests passed on Node 22. The production build and smoke check passed 139 assets. A CSV input-label regression was reproduced and fixed: valid source observations no longer inherit missing-ratio warnings from a different input. All-history frozen package remains 3,087,202 bytes under the unchanged 3 MiB cap, with five unchanged attachments and no duplicated history. Source captures/publication archives are unchanged.
 
-Browser verification: local Economy page rendered both calculated contribution charts, signed readouts and the expected 2026Q2 versus Q1 total changes (−0.357 pp quarterly, +0.074 pp T4Q). Actual component markup/styles/chart rendering in 390px and 320px frames reported matching viewport/document widths of 375px/375px and 305px/305px after scrollbars; no page overflow. Browser CDP could not reliably locate controls or capture screenshots, so manual CSV download, keyboard interaction and visual pixel checks remain unconfirmed. Export payload/action binding, chart conventions, empty/error states and frozen input isolation pass automated checks. No screenshot is claimed. Temporary local preview files/servers are excluded from version control.
+Browser verification: local Economy page rendered both calculated contribution charts, signed readouts and the expected 2026Q2 versus Q1 total changes (−0.357 pp quarterly, +0.074 pp T4Q). Actual component markup/styles/chart rendering in 390px and 320px frames reported matching viewport/document widths of 375px/375px and 305px/305px after scrollbars; no page overflow. Browser CDP could not reliably locate controls or capture screenshots, so manual CSV download and visual pixel checks remain unconfirmed. Native Tab navigation focused the quarterly chart, and Home selected Q2 2025 with exact pp readouts; the linked trailing chart followed the same endpoint. Export payload/action binding, chart conventions, empty/error states and frozen input isolation pass automated checks. No screenshot is claimed. Temporary local preview files/servers are excluded from version control.
 
-Push/deployment verification pending.
+Runtime commit `a46b8a70ca0ef0ed100d00ce3015cdeb176149bd` is pushed to main. [Actions run 39986016932](https://github.com/Vasuki8/us-treasury/actions/runs/39986016932) completed successfully, including Node 22/24 verification and GitHub Pages deployment. Cloudflare remains deferred. A clean checkout of that commit built and passed its 139-asset smoke check; check-live.mjs confirmed all 139 deployed assets exactly match it. The deployed Economy page visibly exposes the new charts, export action, residual reconciliation and expected quarterly/T4Q changes with the stated methodology. Only the explicitly noted manual browser checks remain unconfirmed.
+
