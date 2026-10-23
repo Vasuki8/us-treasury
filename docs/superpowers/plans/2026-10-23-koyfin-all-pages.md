@@ -33,7 +33,7 @@
 
 - [x] Fresh review of integrated changes; address material findings.
 - [x] Full regression suite, static build and build smoke checks.
-- [ ] Publish existing GitHub Pages site; compare every live asset and inspect published routes.
+- [x] Publish existing GitHub Pages site; compare every live asset and inspect published routes.
 
 ## Evidence
 
@@ -46,4 +46,7 @@
 - Theme-neutral legends: regression failed before replacement;47 scoped view/frozen tests passed. Existing page/action checks67/67 passed.
 - Fresh independent review found no remaining material issue after the measured mobile/tablet fixes. Signed ticks, exact units, calendar/cursor geometry and frozen evidence were reviewed separately.
 - Build and smoke checks pass with149 assets. First full run:1,351/1,352 passed; only failure was the previous browser-theme hex expectations. Both expectations updated to the requested colors, preserving all focus/preference/icon assertions; navigation tests15/15 passed.
-- Final full suite passes:1,352/1,352 tests, zero failures/cancellations/skips (165688.57ms, bounded concurrency2). Deployment verification pending.
+- Final full suite passes:1,352/1,352 tests, zero failures/cancellations/skips (165688.57ms, bounded concurrency2).
+- Published runtime commit:`0d21bad8e6003edc21de3fbac794f61a8a56f788`. [GitHub Actions40036524490](https://github.com/Vasuki8/us-treasury/actions/runs/40036524490) passed Node22, Node24 and GitHub Pages deployment. Source refresh was not due and was skipped.
+- Live asset check passed:all149 published assets match the tested local build byte for byte.
+- Public browser verification:27 remaining route variants at1280/390px in Light and Graphite (108 views), no page or metric overflow, clipped chart labels, date-control overflow or captured console warnings/errors. Restored initial Light preference and default viewport; Fiscal pressure retained as the live preview.
