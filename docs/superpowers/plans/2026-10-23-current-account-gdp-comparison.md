@@ -26,32 +26,32 @@
 
 Files: new `src/current-account-gdp-comparison.js`, `tests/current-account-gdp-comparison.test.js`.
 
-- [ ] Write/run failing tests for all-five paired values, varying GDP, exact endpoint/window/lookback, first-three incomplete trailing observations, partial components, invalid identities/units, revisions, finite gap and bounds.
-- [ ] Implement admitted selector resolution and paired synthetic series/rows from existing guarded calculations, preserving missing reasons and source point evidence.
-- [ ] Verify no input mutation or change in existing quarterly/T4Q outputs.
+- [x] Write/run failing tests for all-five paired values, varying GDP, exact endpoint/window/lookback, first-three incomplete trailing observations, partial components, invalid identities/units, revisions, finite gap and bounds.
+- [x] Implement admitted selector resolution and paired synthetic series/rows from existing guarded calculations, preserving missing reasons and source point evidence.
+- [x] Verify no input mutation or change in existing quarterly/T4Q outputs.
 
 ### 2. Graphite UI, export and live route
 
 Files: new `src/current-account-gdp-comparison-view.js`; `src/current-account-gdp-trailing-view.js`, `src/macro-coverage-page.js`, `src/app.js`; new view/integration tests.
 
-- [ ] Test then add one two-line chart, labeled measure selector, all-five comparison table and selected-measure historical table, with explicit horizons, gap units, formula, source status and limitations.
-- [ ] Extend `currentAccountGdpTrailingCsv(sources,range,{comparisonMeasure})` optionally, leaving its default export unchanged. Add selected quarterly/trailing ratios, gap and missing reasons using the existing input/metadata records. The comparison export wraps this self-contained CSV.
-- [ ] Reuse shared date controls, route selection, loading/empty/error handling and scoped live/frozen bindings; no duplicate date controls or mixed-method decomposition.
+- [x] Test then add one two-line chart, labeled measure selector, all-five comparison table and selected-measure historical table, with explicit horizons, gap units, formula, source status and limitations.
+- [x] Extend `currentAccountGdpTrailingCsv(sources,range,{comparisonMeasure})` optionally, leaving its default export unchanged. Add selected quarterly/trailing ratios, gap and missing reasons using the existing input/metadata records. The comparison export wraps this self-contained CSV.
+- [x] Reuse shared date controls, route selection, loading/empty/error handling and scoped live/frozen bindings; no duplicate date controls or mixed-method decomposition.
 
 ### 3. Frozen compatibility and growth
 
 Files: `src/research-context.js`, `src/research-packages.js`, `src/research-page.js`; new package/frozen tests.
 
-- [ ] Test strict optional envelope/range/measure/reference validation and legacy no-live-fallback behavior.
-- [ ] Retain the comparison selector/window plus existing input reference; augment the existing original T4Q attachment instead of adding a duplicate export or history.
-- [ ] Verify JSON/CSV roundtrip, partial/unavailable sources and all-history browser-library persistence under the existing 3 MiB cap.
+- [x] Test strict optional envelope/range/measure/reference validation and legacy no-live-fallback behavior.
+- [x] Retain the comparison selector/window plus existing input reference; augment the existing original T4Q attachment instead of adding a duplicate export or history.
+- [x] Verify JSON/CSV roundtrip, partial/unavailable sources and all-history browser-library persistence under the existing 3 MiB cap.
 
 ### 4. Verification and delivery
 
-- [ ] Independently review method, source reuse, finite/missing handling, export evidence and frozen isolation.
-- [ ] Run full/focused tests, Node 22 checks, production build and asset checks; verify immutable data files unchanged from `38961d8`.
-- [ ] Test desktop/390px/320px layout, measure and date controls, keyboard readouts, empty states, exports, frozen results and browser errors locally.
-- [ ] Push to `Vasuki8/us-treasury`; verify Actions deployment, live assets and representative pages before reporting live.
+- [x] Independently review method, source reuse, finite/missing handling, export evidence and frozen isolation.
+- [x] Run full/focused tests, Node 22 checks, production build and asset checks; verify immutable data files unchanged from `38961d8`.
+- [x] Verify desktop and 390px/320px component layouts, measure route and keyboard readouts in the browser; verify date windows, empty states, export payload/action binding and frozen results in tests. Browser automation limitations are recorded below.
+- [x] Push to `Vasuki8/us-treasury`; verify Actions deployment, live assets and the deployed Economy comparison page before reporting live.
 
 ## Results
 
@@ -61,4 +61,6 @@ Full local suite: 1,199/1,199 pass. Node 22 focused ratio/chart/frozen checks: 1
 
 Browser checks verified the Services selector/route, paired readouts at 1960Q1 (quarterly available, trailing unavailable) and 2026Q2, Graphite theme and source/table labels. Browser CDP input/emulation was intermittent; actual markup/styles/chart renderer were additionally rendered in fixed 390px and 320px preview frames. Both fit with no page overflow (375px/305px content widths after scrollbars), while tables scroll internally. Screenshot: `test-results/current-account-gdp-comparison-responsive.png`. A temporary local preview server was used only for verification and is excluded from version control. Date-window, export action binding and frozen views are also covered by integration tests.
 
-Push and deployment verification pending.
+Runtime commit `d02683c494b2375da93857c9611e9f686bf83a91` pushed to `main`. GitHub Actions run [39980996321](https://github.com/Vasuki8/us-treasury/actions/runs/39980996321) passed the Node 22/24 verification jobs and GitHub Pages deployment. A clean committed checkout built successfully, and `check-live.mjs` confirmed that all 137 live application assets exactly match that build. The deployed Economy page visibly exposes the five-measure comparison selector, paired calculated series, 1Y window, Q2 2026 endpoint, separate quarterly/trailing horizons and ratio-of-sums methodology. Cloudflare remains deferred as previously requested.
+
+Verification limits: Chrome CDP interaction and viewport emulation were intermittent. Narrow-width layout was checked through actual component markup/styles/chart rendering in fixed-width preview frames, rather than full-page device emulation. The new CSV download button's browser click could not be confirmed; its payload, action binding and retained frozen attachment are verified by automated tests. No unavailable official data or publication vintages were fabricated.
