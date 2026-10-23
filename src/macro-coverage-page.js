@@ -8,6 +8,7 @@ import {currentAccountGdpComparisonPanel} from './current-account-gdp-comparison
 import {currentAccountGdpContributionsPanel} from './current-account-gdp-contributions-view.js';
 import {currentAccountGdpBalanceEffectsPanel} from './current-account-gdp-balance-effects-view.js';
 import {currentAccountGdpComponentEffectsPanel} from './current-account-gdp-component-effects-view.js';
+import {currentAccountGdpAllComponentEffectsPanel} from './current-account-gdp-all-component-effects-view.js';
 import {dataStatus} from './data.js';
 import {coverageFamilies} from './macro-registry.js';
 import {getSeries,latest,formatValue,formatChange,periodLabel,transformSeries} from './model.js';
@@ -39,6 +40,7 @@ export function macroCoveragePage(state={}, {embedded=false}={}){
   + (familyId==='external'?currentAccountGdpComparisonPanel(dataStatus.sources,range,{measure:id}):'')
   + (familyId==='external'?currentAccountGdpContributionsPanel(dataStatus.sources,range):'')
   + (familyId==='external'?currentAccountGdpBalanceEffectsPanel(dataStatus.sources,range):'')
+  + (familyId==='external'?currentAccountGdpAllComponentEffectsPanel(dataStatus.sources,range):'')
   + (familyId==='external'?currentAccountGdpComponentEffectsPanel(dataStatus.sources,range,{measure:id}):'')
   + (familyId==='external'?currentAccountGdpBreakdownPanel(dataStatus.sources,range):'')
   + (familyId==='external'?currentAccountGdpTrailingPanel(dataStatus.sources,range):'')

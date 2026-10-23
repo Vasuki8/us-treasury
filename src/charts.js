@@ -23,8 +23,15 @@ function svgElement(name, attributes, parent, text) {
   return node;
 }
 
-function draw(container, panels, {height = 180, bars = false, curve = false, transformed = false,cursor=null,evidenceLabel='Official snapshot'} = {}) {
+function draw(container, panels, {height = 180, bars = false, curve = false, transformed = false,cursor=null,evidenceLabel='Official snapshot',yDomain} = {}) {
   container.replaceChildren();
+  let domain;
+  if(yDomain!==undefined){
+    try {domain=JSON.parse(yDomain);} catch { /* An explicit comparison scale must never silently become an automatic scale. */ }
+    if(!Array.isArray(domain)||domain.length!==2||!domain.every(finite)||domain[0]>domain[1]){
+      container.textContent='Chart configuration error: y-domain must be a finite ordered pair.';return;
+    }
+  }
   const width = Math.max(300, Math.round(container.clientWidth));
   const h = Math.max(120,height), left = 54, right = 20, top = 28;
   const staggerCurveLabels = curve && (width-left-right) / Math.max(1,yieldCurve.length-1) < 32;
@@ -32,6 +39,9 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const pw = width-left-right, ph = h-top-bottom;
   const values = panels.flatMap(panel => panel.observations.map(o => o.value)).filter(finite);
   if (!values.length) { container.textContent = 'No observations available for this chart.'; return; }
+  if(domain&&(values.some(value=>value<domain[0]||value>domain[1])||bars&&(domain[0]>0||domain[1]<0))){
+    container.textContent='Chart configuration error: y-domain must cover every displayed value and any bar zero baseline.';return;
+  }
   const dates = [...new Set(panels.flatMap(panel => panel.observations.map(o => o.date)))].sort();
   const orderedDates = curve ? yieldCurve.map(point => point.tenor) : dates;
   const positions = orderedDates.map((date,index) => curve ? index : Date.parse(`${date}T00:00:00Z`));
@@ -44,11 +54,14 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const xPosition = position => left+(position-minX)/spanX*pw;
   const xIndex = index => xPosition(positions[index]);
   const xDate = date => curve ? xIndex(orderedDates.indexOf(date)) : xPosition(Date.parse(`${date}T00:00:00Z`));
-  let lo = Math.min(...values), hi = Math.max(...values);
-  if (bars) { lo = Math.min(0,lo); hi = Math.max(0,hi); }
+  let lo = domain?domain[0]:Math.min(...values), hi = domain?domain[1]:Math.max(...values);
+  if (bars&&!domain) { lo = Math.min(0,lo); hi = Math.max(0,hi); }
   const pad = Math.max((hi-lo)*.13,Math.abs(hi)*.015,.05);
-  lo -= bars && lo === 0 ? 0 : pad;
+  lo -= bars && !domain && lo === 0 ? 0 : pad;
   hi += pad;
+  if(domain&&(!finite(lo)||!finite(hi)||!finite(hi-lo)||hi<=lo)){
+    container.textContent='Chart configuration error: y-domain cannot be represented on a finite chart scale.';return;
+  }
   const y = value => top+(hi-value)/(hi-lo)*ph;
   const id = `chart-readout-${++chartId}`;
   const title = curve ? 'Treasury par yield curve' : panels.map(panel => panel.series.name).join(' and ');
@@ -61,6 +74,7 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
     const label = new Intl.NumberFormat('en-US',{maximumFractionDigits:Math.abs(hi-lo)<3?2:1}).format(value);
     svgElement('text',{x:left-8,y:y(value)+4,'text-anchor':'end'},svg,label);
   }
+  if(domain&&lo<=0&&hi>=0)svgElement('line',{x1:left,x2:width-right,y1:y(0),y2:y(0),class:'zero-reference',stroke:'currentColor','stroke-opacity':'.35','stroke-dasharray':'3 3','aria-hidden':'true'},svg);
   const labelDates = curve ? orderedDates : window
     ? [window.startDate, new Date(minX+(maxX-minX)/2).toISOString().slice(0,10), window.endDate]
     : [orderedDates[0], orderedDates[Math.floor((orderedDates.length-1)/2)], orderedDates.at(-1)];
@@ -162,7 +176,7 @@ export function renderCharts(root,{catalog,chartCatalogs={}}={}) {
     if(scoped&&(kind==='history-curve'||kind==='curve')){container.textContent='Chart data unavailable: yield curves are not supplied by this chart catalog.';return;}
     if(kind==='history-curve'){
       const curves=selectCurveOverlays(dataStatus.sources.yields,container.dataset.dates.split(',').filter(Boolean));
-      draw(container,curves.map(curve=>({series:getSeries('yield'),label:curve.date+(curve.available?'':' — unavailable'),unit:'Yield · %',observations:NOMINAL_YIELD_TENORS.map(tenor=>({date:tenor,value:curve.nominal[tenor]??null}))})),{height,curve:true});
+      draw(container,curves.map(curve=>({series:getSeries('yield'),label:curve.date+(curve.available?'':' — unavailable'),unit:'Yield · %',observations:NOMINAL_YIELD_TENORS.map(tenor=>({date:tenor,value:curve.nominal[tenor]??null}))})),{height,curve:true,yDomain:container.dataset.yDomain});
       return;
     }
     if (kind === 'curve') {
@@ -170,7 +184,7 @@ export function renderCharts(root,{catalog,chartCatalogs={}}={}) {
       draw(container,[
         {series:reference,label:`Latest (${dataStatus.curveDate ?? 'date unavailable'})`,unit:'Yield · %',observations:yieldCurve.map(p=>({date:p.tenor,value:p.value}))},
         {series:reference,label:`Prior (${dataStatus.previousCurveDate ?? 'date unavailable'})`,unit:'Yield · %',observations:yieldCurve.map(p=>({date:p.tenor,value:p.previous}))},
-      ],{height,curve:true});
+      ],{height,curve:true,yDomain:container.dataset.yDomain});
       return;
     }
     const ids=(scoped?container.dataset.series??'':container.dataset.series).split(',').filter(Boolean);
@@ -187,6 +201,6 @@ export function renderCharts(root,{catalog,chartCatalogs={}}={}) {
     if(!cursorCatalogs.has(cursorScope))cursorCatalogs.set(cursorScope,new Map());
     const cursors=cursorCatalogs.get(cursorScope);
     if(group&&!cursors.has(group))cursors.set(group,createLinkedCursor(result.panels));
-    draw(container,panels,{height,bars:kind==='bar',transformed:transform==='change'||comparison==='difference',cursor:group?cursors.get(group):null,evidenceLabel});
+    draw(container,panels,{height,bars:kind==='bar',transformed:transform==='change'||comparison==='difference',cursor:group?cursors.get(group):null,evidenceLabel,yDomain:container.dataset.yDomain});
   });
 }

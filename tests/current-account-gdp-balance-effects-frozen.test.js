@@ -51,7 +51,7 @@ test('partial frozen balance effects preserve unavailable denominator and compon
 });
 
 test('legacy frozen packages do not acquire balance-effects panels, reconstruction actions or method claims',async()=>{
- const args=buildPinContext(parseRoute('#/economy?family=external&window=1y'));delete args.context.currentAccountGdpBalanceEffects;delete args.context.currentAccountGdpComponentEffects;args.context.scope='Legacy retained combined ratio contributions, original CSVs and breakdown input histories.';
+ const args=buildPinContext(parseRoute('#/economy?family=external&window=1y'));delete args.context.currentAccountGdpBalanceEffects;delete args.context.currentAccountGdpComponentEffects;delete args.context.currentAccountGdpAllComponentEffects;args.context.scope='Legacy retained combined ratio contributions, original CSVs and breakdown input histories.';
  const pkg=await createResearchPackage({name:'Legacy combined ratio contributions',...args}),text=exportResearchPackage(pkg),restored=await importResearchPackage(text);
  const html=renderFrozen(restored);assert.match(html,/data-chart-catalog="current-account-gdp-contributions"/);assert.doesNotMatch(html,/data-chart-catalog="current-account-gdp-balance-effects"|data-export-frozen-current-account-gdp-balance-effects|symmetric-two-order-v1/);assert.equal(exportResearchPackage(restored),text);
 });

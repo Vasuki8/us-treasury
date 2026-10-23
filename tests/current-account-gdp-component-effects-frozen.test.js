@@ -48,12 +48,12 @@ test('partial frozen component history keeps unavailable components and denomina
 });
 
 test('legacy frozen packages acquire no component-history panel, selection or reconstruction action',async()=>{
- const args=buildPinContext(parseRoute('#/economy?family=external&window=1y'));delete args.context.currentAccountGdpComponentEffects;args.context.scope='Legacy retained total balance effects and combined ratio contributions.';
+ const args=buildPinContext(parseRoute('#/economy?family=external&window=1y'));delete args.context.currentAccountGdpComponentEffects;delete args.context.currentAccountGdpAllComponentEffects;args.context.scope='Legacy retained total balance effects and combined ratio contributions.';
  const pkg=await createResearchPackage({name:'Legacy total balance effects',...args}),text=exportResearchPackage(pkg),restored=await importResearchPackage(text),html=renderFrozen(restored);assert.match(html,/data-chart-catalog="current-account-gdp-balance-effects"/);assert.doesNotMatch(html,/data-chart-catalog="current-account-gdp-component-effects"|data-export-frozen-current-account-gdp-component-effects|id="current-account-effect-component"/);assert.equal(exportResearchPackage(restored),text);
 });
 
 test('component history renders independently of the other optional ratio, contribution and total effect panels',async()=>{
- const args=buildPinContext(parseRoute('#/economy?family=external&measure=itaSecondaryIncomeBalance&window=1y'));assert.ok(args.context.currentAccountGdpComponentEffects);for(const key of ['currentAccountGdpHistory','currentAccountGdpTrailing','currentAccountGdpComparison','currentAccountGdpContributions','currentAccountGdpBalanceEffects'])delete args.context[key];
+ const args=buildPinContext(parseRoute('#/economy?family=external&measure=itaSecondaryIncomeBalance&window=1y'));assert.ok(args.context.currentAccountGdpComponentEffects);for(const key of ['currentAccountGdpHistory','currentAccountGdpTrailing','currentAccountGdpComparison','currentAccountGdpContributions','currentAccountGdpBalanceEffects','currentAccountGdpAllComponentEffects'])delete args.context[key];
  const pkg=await createResearchPackage({name:'Only component effect history supplement',...args}),restored=await importResearchPackage(exportResearchPackage(pkg)),html=renderFrozen(restored);assert.match(html,/data-chart-catalog="current-account-gdp-component-effects"/);assert.doesNotMatch(html,/data-chart-catalog="current-account-gdp-balance-effects"|data-chart-catalog="current-account-gdp-contributions"/);
 });
 
