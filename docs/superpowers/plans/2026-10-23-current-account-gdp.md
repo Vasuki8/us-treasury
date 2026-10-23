@@ -43,7 +43,7 @@ Files: new `src/current-account-gdp-view.js`, view/integration tests; modify mac
 
 - [x] Verify existing snapshots, archive files and publication modules remain unchanged.
 - [x] Run the full local suite and production checks; inspect Graphite desktop/mobile, keyboard actions and representative export/frozen flows.
-- [ ] Push the tested change, verify Actions, compare deployed assets with a clean build and inspect representative live pages before claiming live.
+- [x] Push the tested change, verify Actions, compare deployed assets with a clean build and inspect representative live pages before claiming live.
 
 ## Local acceptance evidence
 
@@ -56,3 +56,9 @@ Files: new `src/current-account-gdp-view.js`, view/integration tests; modify mac
 ## Limits
 
 The panel covers the latest retained ITA quarter and its exact predecessor, separate from the focused history window. It is a Meridian calculation of revised inputs, with potentially different source vintages, rather than the exact value in a historical BEA release. Unknown GDP publication dates remain unknown. Historical first-release ratio vintages are not reconstructed.
+
+## Verified deployment
+
+Runtime commit `a3cfb230f86992a93fd97263905ab79a2dd638fd` was pushed to `main`. [Actions run 39903039510](https://github.com/Vasuki8/us-treasury/actions/runs/39903039510) passed complete Node 22 and Node 24 verification and GitHub Pages deployment. No redundant daily refresh ran because existing source objectives were satisfied.
+
+A clean LF checkout of that exact commit built and served all 130 assets. The deployed application matched those assets byte-for-byte. Live Trade & current account showed the calculated −3.02% ratio, exact quarter/input amounts, separate retrievals and the GDP SAAR / 4 conversion; CSV RATIO & INPUTS completed successfully. The original current-account indicator detail retained its 266-observation full history. Browser error log was empty. Local proof image: `test-results/current-account-gdp-live.png` (not committed). This completion record changes documentation only.
