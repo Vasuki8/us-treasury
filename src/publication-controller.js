@@ -1,5 +1,5 @@
 const kind=id=>['claimsAdvance','continuedClaimsAdvance'].includes(id)?'claims':'gdp';
-const active=route=>route.page==='research'&&route.researchView==='publications';
+const active=route=>route.page==='release'||route.page==='research'&&route.researchView==='publications';
 /** Cache each family independently; late completion cannot replace another view. */
 export function createPublicationController({gdpLoader,claimsLoader,getRoute,onChange}){
  const states={gdp:{status:'idle',archive:null,error:null},claims:{status:'idle',archive:null,error:null}};

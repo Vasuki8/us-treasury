@@ -5,6 +5,34 @@ const MONTHLY_URL = 'https://apps.bea.gov/national/Release/TXT/NipaDataM.txt';
 const MISSING_VALUES = new Set(['', '(NA)', '(ND)', '(D)', 'NA', 'N/A', '...', '---']);
 const NUMBER = /^[+-]?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/;
 
+export const BEA_DEPTH_QUARTERLY={
+  nominalGdp:['A191RC','1.1.5 line 1','nominal gross domestic product','dollars'],
+  privateDomesticDemand:['LB000003','1.4.6 line 8','real final sales to private domestic purchasers','real'],
+  privateDomesticDemandGrowth:['PB000003','1.4.1 line 8','real final sales to private domestic purchasers growth','growth'],
+  nominalGdi:['A261RC','1.10 line 1','nominal gross domestic income','dollars'],
+  realGdiGrowth:['A261RL','1.7.1 line 11','real gross domestic income growth','growth'],
+  nonresidentialInvestmentGrowth:['A008RL','1.1.1 line 9','real private nonresidential fixed investment growth','growth'],
+  residentialInvestmentGrowth:['A011RL','1.1.1 line 13','real private residential fixed investment growth','growth'],
+  structuresInvestmentGrowth:['A009RL','1.1.1 line 10','real nonresidential structures investment growth','growth'],
+  equipmentInvestmentGrowth:['Y033RL','1.1.1 line 11','real nonresidential equipment investment growth','growth'],
+  intellectualPropertyInvestmentGrowth:['Y001RL','1.1.1 line 12','real intellectual property products investment growth','growth'],
+  nominalExports:['B020RC','1.1.5 line 16','nominal exports of goods and services','dollars'],
+  nominalImports:['B021RC','1.1.5 line 19','nominal imports of goods and services','dollars'],
+  nominalTradeBalance:['A019RC','1.1.5 line 15','nominal external balance of goods and services','dollars'],
+};
+
+/** Exact published NIPA measurements; chained components are never summed. */
+export function parseBeaEconomicDepth(quarterly,monthly,{cutoff='9999-12-31'}={}) {
+  const raw=parseBeaBatch(quarterly,Object.values(BEA_DEPTH_QUARTERLY).map(row=>row[0]),'Q');
+  const result=Object.fromEntries(Object.entries(BEA_DEPTH_QUARTERLY).map(([id,[code,table,label,kind]])=>[id,{
+    observations:raw[code].filter(row=>row.date<=cutoff).map(row=>({...row,value:row.value===null?null:kind==='growth'?row.value:row.value/1000})),
+    sourceIds:[code],sourceUrl:QUARTERLY_URL,observationType:'official',dataStatus:'official',
+    calculation:`Published ${label}, NIPA Table ${table}; ${kind==='growth'?'percent change from the preceding quarter, seasonally adjusted annual rate; not annualized again.':`source millions of ${kind==='real'?'chained 2017':'current'} dollars / 1000 = billions, seasonally adjusted annual rate; annualized flow, not actual quarterly dollars.${kind==='real'?' Do not sum chained-dollar components.':''}`}`,
+  }]));
+  result.savingRate={observations:parseBea(monthly,'A072RC','M').filter(row=>row.date<=cutoff),sourceIds:['A072RC'],sourceUrl:MONTHLY_URL,observationType:'official',dataStatus:'official',calculation:'Published personal saving as a percentage of disposable personal income, NIPA Table 2.6 line 35; seasonally adjusted percent, not household saving dollars or a growth rate.'};
+  return result;
+}
+
 /** BEA publishes these keyless flat files as CSV despite the .txt extension. */
 export function parseBea(text, seriesCode, frequency) {
   return parseBeaBatch(text,[seriesCode],frequency)[seriesCode];
@@ -91,6 +119,7 @@ export async function collectBea({ fetchImpl = globalThis.fetch, now = new Date(
     id: 'bea',
     fetchedAt: [quarterly.retrievedAt, monthly.retrievedAt].sort().at(-1),
     series: {
+      ...parseBeaEconomicDepth(quarterly.text,monthly.text,{cutoff}),
       gdp: {
         observations: gdp,
         sourceUrl: QUARTERLY_URL,

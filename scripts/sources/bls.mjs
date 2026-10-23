@@ -6,6 +6,8 @@ export const BLS_IDS={
   cpiCore:'CUUR0000SA0L1E',cpiMonthly:'CUSR0000SA0',cpiCoreMonthly:'CUSR0000SA0L1E',
   payrollLevel:'CES0000000001',underemployment:'LNS13327709',employmentPopulation:'LNS12300000',weeklyHours:'CES0500000002',
 };
+export const BLS_DEPTH_IDS={hiresRate:'JTS000000000000000HIR',quitsRate:'JTS000000000000000QUR',layoffsRate:'JTS000000000000000LDR',primeAgeEmploymentPopulation:'LNS12300060',primeAgeParticipation:'LNS11300060',eciCompensation:'CIS1010000000000I',laborProductivity:'PRS85006092',unitLaborCosts:'PRS85006112'};
+const quarterlyDepth=new Set(['eciCompensation','laborProductivity','unitLaborCosts']);
 const endpoint='https://api.bls.gov/publicAPI/v1/timeseries/data/';
 const finite=value=>typeof value==='number' && Number.isFinite(value);
 const annualGrowth=new Set(['cpi','wages','cpiCore']);
@@ -34,6 +36,37 @@ function numeric(value) {
   const number=Number(text);
   if(!finite(number))throw new Error('Invalid nonfinite BLS numeric observation');
   return number;
+}
+
+/** Quarterly source periods have Q01-Q04, not March/June monthly observations. */
+export function parseBlsEconomicDepth(payload) {
+  if(payload.status!=='REQUEST_SUCCEEDED')throw new Error(`BLS request failed: ${(payload.message||[]).join('; ')}`);
+  const responses=payload.Results?.series;
+  if(!Array.isArray(responses))throw new Error('Missing BLS series response');
+  const result={};
+  for(const [id,code]of Object.entries(BLS_DEPTH_IDS)){
+    const sources=responses.filter(row=>row.seriesID===code);
+    if(sources.length!==1||!Array.isArray(sources[0].data)||!sources[0].data.length)throw new Error(`Missing or duplicate BLS series: ${code}`);
+    const quarterly=quarterlyDepth.has(id),seen=new Set(),observations=[];
+    for(const row of sources[0].data){
+      if(row.period===(quarterly?'Q05':'M13'))continue;
+      if(!(quarterly?/^Q0[1-4]$/:/^M(?:0[1-9]|1[0-2])$/).test(row.period)||!/^\d{4}$/.test(row.year)||row.year==='0000')throw new Error(`Invalid BLS ${quarterly?'quarterly':'monthly'} period for ${code}`);
+      const month=quarterly?(Number(row.period.slice(1))-1)*3+1:Number(row.period.slice(1));
+      const date=`${row.year}-${String(month).padStart(2,'0')}-01`;
+      if(seen.has(date))throw new Error(`Duplicate BLS observation ${code}: ${date}`);seen.add(date);
+      observations.push({date,value:numeric(row.value),sourceValue:row.value,publishedAt:null,footnotes:(row.footnotes??[]).filter(note=>note.text).map(note=>note.text)});
+    }
+    if(!observations.length)throw new Error(`Missing BLS observations for ${code}`);
+    observations.sort((a,b)=>a.date.localeCompare(b.date));
+    const calculation=id==='eciCompensation'?'Published civilian-worker total compensation Employment Cost Index, all industries and occupations; December 2005=100, seasonally adjusted; includes wages, salaries and employer benefit costs.':id==='laborProductivity'||id==='unitLaborCosts'?`Published nonfarm business ${id==='laborProductivity'?'labor productivity (real output per hour)':'unit labor cost (hourly compensation relative to labor productivity)'} growth; percent change from the preceding quarter, seasonally adjusted annual rate; not annualized again.`:id.startsWith('primeAge')?`Published seasonally adjusted ${id==='primeAgeParticipation'?'labor force participation':'employment-population'} ratio, civilian noninstitutional population aged 25–54; percent.`:`Published total nonfarm JOLTS ${id==='hiresRate'?'hires':id==='quitsRate'?'quits':'layoffs and discharges'} during the month / employment × 100; seasonally adjusted rate, not a level or the openings-rate denominator.`;
+    result[id]={observations,sourceUrl:endpoint,sourceIds:[code],calculation,observationType:'official',dataStatus:'official'};
+  }
+  const byDate=new Map(result.eciCompensation.observations.map(row=>[row.date,row]));
+  result.eciCompensationQuarterly={...result.eciCompensation,observationType:'calculated',calculation:'100 × (seasonally adjusted civilian total compensation ECI / exact previous-quarter index − 1); quarterly percent change calculated from the published indexes, not annualized and not the independently rounded published ECI growth rate.',observations:result.eciCompensation.observations.map(row=>{
+    const baseline=byDate.get(offsetMonth(row.date,-3));
+    return {...row,value:finite(row.value)&&finite(baseline?.value)&&baseline.value!==0?100*(row.value/baseline.value-1):null,baseDate:baseline?.date??null,baseValue:baseline?.sourceValue??null};
+  })};
+  return result;
 }
 
 export function parseBls(payload) {
@@ -77,9 +110,9 @@ export function parseBls(payload) {
 
 export async function collectBls({fetchImpl=globalThis.fetch,now=new Date()}={}) {
   const year=now.getUTCFullYear();
-  const request=await requestText(endpoint,{fetchImpl,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({seriesid:[...new Set(Object.values(BLS_IDS))],startyear:String(year-9),endyear:String(year)})});
+  const request=await requestText(endpoint,{fetchImpl,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({seriesid:[...new Set([...Object.values(BLS_IDS),...Object.values(BLS_DEPTH_IDS)])],startyear:String(year-9),endyear:String(year)})});
   let payload;try{payload=JSON.parse(request.text);}catch{throw new Error('BLS did not return valid JSON');}
-  const series=parseBls(payload),cutoff=now.toISOString().slice(0,10);
+  const series={...parseBls(payload),...parseBlsEconomicDepth(payload)},cutoff=now.toISOString().slice(0,10);
   for(const value of Object.values(series))value.observations=value.observations.filter(observation=>observation.date<=cutoff).slice(-120);
   const {text,...provenance}=request;
   return {id:'bls',fetchedAt:request.retrievedAt,series,provenance:[provenance],warnings:payload.message||[]};

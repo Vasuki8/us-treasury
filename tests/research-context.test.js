@@ -1,9 +1,43 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {buildPinContext,buildPublicationPin} from '../src/research-context.js';
+import {buildPinContext,buildPublicationPin,buildReleasePin} from '../src/research-context.js';
 import {createResearchPackage,exportResearchPackage,importResearchPackage} from '../src/research-packages.js';
 import {parseRoute} from '../src/router.js';import {dataStatus,series} from '../src/data.js';import {publicationArchive} from '../src/publication-archive.js';
 import {recordVintages} from '../src/vintages.js';
 import {parseCsv} from '../scripts/sources/http.mjs';
+
+test('release freezing retains the matched official result rather than current default chart selections',async()=>{
+ const state=parseRoute('#/release?publicationSeries=gdp&publicationPeriod=2026-01-01&publicationCutoff=2026-06-25');
+ // Use the same normalized selection keys as the release workspace.
+ Object.assign(state,{publicationSeries:'gdp',publicationPeriod:'2026-01-01',publicationCutoff:'2026-06-25',eventId:''});
+ const args=buildReleasePin(state,{archive:publicationArchive,publicationState:{status:'ready'}});
+ assert.deepEqual(args.state.selected,['gdp']);assert.equal(args.catalog.gdp.observations[0].value,2.1);
+ assert.equal(args.context.releaseEvidence.actual.publicationDate,'2026-06-25');
+ const pkg=await createResearchPackage({name:'Verified GDP release',...args}),text=exportResearchPackage(pkg);
+ assert.equal(exportResearchPackage(await importResearchPackage(text)),text);
+ assert.throws(()=>buildReleasePin({...state,eventId:'unknown-event'},{archive:publicationArchive,publicationState:{status:'ready'}}),/retained calendar|unavailable/i);
+ assert.throws(()=>buildReleasePin(state,{archive:null,publicationState:{status:'error'}}),/Load.*publication/i);
+});
+
+test('Overview freeze retains new topic readings, actual brief evidence and next catalysts independently of current data',async()=>{
+ const args=buildPinContext(parseRoute('#/overview'));
+ assert.deepEqual(args.state.selected,['gdp','pceCoreMonthly','payroll','policyTargetUpper']);
+ assert.ok(args.context.overviewTopicReadings.some(item=>item.id==='claimsAdvance'&&item.latest.date));
+ assert.ok(args.context.overviewBrief.some(item=>item.kind==='Verified published estimate'));
+ assert.ok(Array.isArray(args.context.nextCatalysts));
+ const pkg=await createResearchPackage({name:'Overview evidence',...args}),text=exportResearchPackage(pkg);
+ assert.deepEqual((await importResearchPackage(text)).context.overviewTopicReadings,pkg.context.overviewTopicReadings);
+ const failures=[{id:'bea',error:'Official source HTTP 503',fetchedAt:'2026-10-22T12:00:00Z'}];
+ const failed=buildPinContext(parseRoute('#/overview'),{failures});
+ assert.ok(failed.context.overviewBrief.some(row=>row.kind==='Collection problem'&&row.name===failures[0].error));
+});
+
+test('credit and fiscal results freeze the production inputs within existing portable-package limits',async()=>{
+ for(const page of ['credit','fiscal']){
+  const args=buildPinContext(parseRoute('#/'+page)),pkg=await createResearchPackage({name:page,...args}),text=exportResearchPackage(pkg);
+  assert.equal(exportResearchPackage(await importResearchPackage(text)),text);
+  if(page==='credit'){assert.match(pkg.context.scope,/three-year/i);assert.ok(pkg.context.moduleSources.bankCredit.series.bankLoans.observations.length<200);}
+ }
+});
 
 test('pin scope follows the focused measure and retains family reading dates',()=>{
  const args=buildPinContext(parseRoute('#/economy?family=housing&measure=housingCompletions&window=all'));

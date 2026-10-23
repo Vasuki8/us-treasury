@@ -1,5 +1,6 @@
 import { getSeries, latest, formatValue, formatChange, periodLabel, BLS_DATA_NOTICE } from './model.js';
 import { DAILY_REFRESH_SCHEDULE, getFreshness } from './freshness.js';
+import { measurementChange } from './measurement-change.js';
 
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -12,6 +13,7 @@ const freshnessTime=value=>value?`<time datetime="${escapeHtml(value)}">${escape
 
 /** Recorded source retrievals remain distinct from attempts and snapshot assembly. */
 export function freshnessBanner(snapshot={}, options={}) {
+  if(options.compact)return compactFreshnessBanner(snapshot,options);
   const freshness=getFreshness(snapshot, options);
   const counts=[freshness.stale.length?`${freshness.stale.length} stale`:null,freshness.cached.length?`${freshness.cached.length} cached`:null,freshness.unavailable.length?`${freshness.unavailable.length} unavailable`:null].filter(Boolean);
   const state=counts.join(' · ')||`All ${freshness.entries.length} sources captured`;
@@ -36,6 +38,14 @@ export function freshnessBanner(snapshot={}, options={}) {
 
 export function button(label, attrs = '', className = 'action') {
   return `<button type="button" class="${escapeHtml(className)}" ${attrs}>${escapeHtml(label)}</button>`;
+}
+
+function compactFreshnessBanner(snapshot,options) {
+ const freshness=getFreshness(snapshot,options),affected=freshness.entries.filter(item=>item.stale||item.status!=='available');
+ const relevant=affected.filter(item=>!options.relevantIds||options.relevantIds.includes(item.id));
+ const counts=[freshness.stale.length?`${freshness.stale.length} overdue`:null,freshness.cached.length?`${freshness.cached.length} cached`:null,freshness.unavailable.length?`${freshness.unavailable.length} unavailable`:null].filter(Boolean).join(' · ');
+ const sources=freshness.entries.map(item=>`<li><strong>${escapeHtml(item.label)}</strong> · ${item.stale?'Daily refresh overdue · ':''}${item.status}<br>Last successful retrieval: ${freshnessTime(item.fetchedAt)} · Last attempt: ${freshnessTime(item.lastAttemptAt)}${item.error?`<p class="amber">${escapeHtml(item.error)}</p>`:''}</li>`).join('');
+ return `<section class="freshness-banner compact-freshness" data-state="${freshness.state}" aria-label="Data freshness"><div class="snapshot-status"><span>Snapshot <time datetime="${escapeHtml(snapshot.generatedAt??'')}">${escapeHtml(snapshot.generatedAt?.replace('T',' ').replace('Z',' UTC')??'unavailable')}</time></span><details class="freshness-details"><summary>${escapeHtml(counts||'Source captures current')} · Refresh details</summary><p>Last successful source refresh: ${freshnessTime(freshness.lastSuccessfulRefresh)}. Latest attempt: ${freshnessTime(freshness.lastAttemptAt)}.</p><p>Daily target 23:37 UTC + 60 minutes. This describes pipeline health; a recent retrieval can contain an older economic reference period. Reload to check for a newer deployed snapshot.</p><button type="button" class="action" data-reload-snapshot>Reload snapshot</button><ul class="freshness-source-list">${sources}</ul></details></div>${relevant.length?`<p class="view-source-warning"><strong>Affects this view:</strong> ${relevant.map(item=>`${escapeHtml(item.label)} — ${item.stale?'refresh overdue':item.status==='cached'?'cached after failed refresh':'unavailable'}`).join('; ')}. Last successful retrievals and attempts are in Refresh details; check the official source if timing matters.</p>`:''}</section>`;
 }
 
 export function heading(title, subtitle, actions = '') {
@@ -66,7 +76,7 @@ export function metrics(ids) {
     const series = getSeries(id);
     if (!series) return '';
     const observation = latest(series);
-    return `<a class="metric" href="#/series/${encodeURIComponent(id)}"${series.error ? ` title="${escapeHtml(series.error)}"` : ''}><span class="metric-name">${escapeHtml(series.short)}</span><strong class="metric-value">${escapeHtml(formatValue(series, observation?.value))}</strong><span class="metric-change">${escapeHtml(formatChange(series))}</span><span class="metric-period">${escapeHtml(observation ? periodLabel(series, observation.date) : 'Unavailable')}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span>${coverageBadge(series)}</a>`;
+    return `<a class="metric" href="#/series/${encodeURIComponent(id)}"${series.error ? ` title="${escapeHtml(series.error)}"` : ''}><span class="metric-name">${escapeHtml(series.short)}</span><strong class="metric-value">${escapeHtml(formatValue(series, observation?.value))}</strong><span class="metric-change">${escapeHtml(measurementChange(series).text)}</span><span class="metric-period">${escapeHtml(observation ? periodLabel(series, observation.date) : 'Unavailable')}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span>${coverageBadge(series)}</a>`;
   }).join('')}</section>`;
 }
 
@@ -79,7 +89,7 @@ export function seriesTable(ids) {
     const series = getSeries(id);
     if (!series) return '';
     const observation = latest(series);
-    return `<tr><th scope="row">${seriesLink(id)}<span class="table-code mono muted">${escapeHtml(series.code)}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span>${coverageBadge(series)}${!observation && series.error ? `<span class="table-code muted">${escapeHtml(series.error)}</span>` : ''}</th><td class="num">${escapeHtml(formatValue(series, observation?.value))}</td><td class="num muted">${escapeHtml(formatChange(series))}</td><td class="mono">${escapeHtml(observation ? periodLabel(series, observation.date) : '—')}</td></tr>`;
+    return `<tr><th scope="row">${seriesLink(id)}<span class="table-code mono muted">${escapeHtml(series.code)}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span>${coverageBadge(series)}${!observation && series.error ? `<span class="table-code muted">${escapeHtml(series.error)}</span>` : ''}</th><td class="num">${escapeHtml(formatValue(series, observation?.value))}</td><td class="num muted">${escapeHtml(measurementChange(series).text)}</td><td class="mono">${escapeHtml(observation ? periodLabel(series, observation.date) : '—')}</td></tr>`;
   }).join('');
   return table(['INDICATOR', 'LATEST', 'PERIOD CHANGE', 'OBSERVATION'], rows, 'Official macroeconomic snapshot; unavailable observations appear as a dash');
 }

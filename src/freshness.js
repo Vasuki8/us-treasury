@@ -1,4 +1,11 @@
 const targets = [
+  ['data','householdDebt','Federal Reserve household debt service'],
+  ['data','loanDelinquency','Federal Reserve bank loan delinquency'],
+  ['data','bankCredit','Federal Reserve bank credit'],
+  ['data','lendingSurvey','Federal Reserve lending survey'],
+  ['data','fedBalance','Federal Reserve balance sheet'],
+  ['data','onRrp','New York Fed overnight reverse repos'],
+  ['calendar','fomc','Federal Reserve FOMC calendar'],
   ['data', 'treasury', 'Treasury data'],
   ['data', 'bls', 'BLS data'],
   ['data', 'bea', 'BEA data'],

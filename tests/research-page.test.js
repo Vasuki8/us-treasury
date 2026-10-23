@@ -14,7 +14,7 @@ test('research routes preserve library views and bounded package/cutoff context'
 test('library explains editable versus frozen research and escapes user labels',()=>{
  const state=parseRoute('#/research'),record=createWorkspace({name:'My <workspace>',state:{...state,page:'explore'}});
  const html=researchPage(state,{library:{workspaces:[record],packages:[],sessionOnly:true,warning:'Quota <warning>'}});
- assert.match(html,/My &lt;workspace&gt;/);assert.match(html,/latest snapshot/);assert.match(html,/frozen|immutable/i);assert.match(html,/session-only/);assert.match(html,/data-open-workspace/);assert.match(html,/type="file"/);
+ assert.match(html,/My &lt;workspace&gt;/);assert.match(html,/latest snapshot/);assert.match(html,/frozen|immutable/i);assert.match(html,/session-only/);assert.match(html,/data-open-workspace/);assert.doesNotMatch(html,/type="file"/);assert.match(researchPage({...state,researchView:'packages'},{library:{}}),/type="file"/);
 });
 test('frozen viewer shows captured inputs, exact observations and original export actions',async()=>{
  const pkg=await createResearchPackage({name:'Pinned <GDP>',state:{...parseRoute('#/series/gdp?window=all'),selected:['gdp']},catalog:series,context:{attachments:[]}});

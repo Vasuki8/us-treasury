@@ -83,6 +83,26 @@ test('keeps debt held by public distinct from gross debt and validates their sum
   assert.throws(() => parseFiscalDebt(payload), /debt|reconcil/i);
 });
 
+test('public debt preserves more than 100 actual dates for quarter-end nominal-GDP context',()=>{
+  const data=Array.from({length:400},(_,i)=>({record_date:new Date(Date.UTC(2025,0,i+1)).toISOString().slice(0,10),debt_held_public_amt:'30000000000000',intragov_hold_amt:'7000000000000',tot_pub_debt_out_amt:'37000000000000'}));
+  const result=parseFiscalDebt({data},'2026-06-30');
+  assert.equal(result.observations.length,400);assert.equal(result.observations[0].date,'2025-01-01');
+  assert.equal(result.debtBreakdown.length,400);
+});
+
+test('history collection quarantines source debt-accounting anomalies with raw evidence and a visible warning',()=>{
+  const payload={data:[{record_date:'2025-08-04',debt_held_public_amt:'29523300148538.85',intragov_hold_amt:'7314864649375.46',tot_pub_debt_out_amt:'36828164797914.31'}]};
+  assert.throws(()=>parseFiscalDebt(payload),/reconcile/i,'strict direct parser still rejects unreconciled values');
+  const result=parseFiscalDebt(payload,'2026-10-23',{quarantineSourceResiduals:true});
+  assert.equal(result.observations[0].value,null,'an affected row is not published as validated public debt');
+  assert.equal(result.observations[0].sourceValue,'29523300148538.85');
+  assert.equal(result.debtBreakdown[0].publicDebt,null);
+  assert.equal(result.debtBreakdown[0].reconciliationResidualUSD,-10000000000);
+  assert.equal(result.debtBreakdown[0].sourceValues.tot_pub_debt_out_amt,'36828164797914.31');
+  assert.match(result.warnings[0],/2025-08-04.*unavailable.*10,000,000,000/i);
+  assert.throws(()=>parseFiscalDebt({...payload,meta:{'total-count':2}},'2026-10-23',{quarantineSourceResiduals:true}),/pagination/i);
+});
+
 test('collector uses only exact approved official endpoints, retains hashes and rejects redirects', async () => {
   const fixture = tables(); const requested = [];
   const fetchImpl = async url => {

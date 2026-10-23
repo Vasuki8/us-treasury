@@ -1,12 +1,18 @@
+import {creditContextPolicies,matchesCreditContextFeed,assertCreditContextData,fomcCalendarPolicy,matchesFomcCalendarFeed,assertFomcCalendarData} from './credit-context-policy.mjs';
 import { easternFields } from './sources/calendar-utils.mjs';
 import { researchPolicies, matchesResearchFeed, assertResearchData } from './research-policy.mjs';
 import { assertVintageData } from './vintage-policy.mjs';
 import {macroCoveragePolicies,matchesMacroCoverageFeed,assertMacroCoverageData} from './macro-coverage-policy.mjs';
 import {dolAdvancePolicy,matchesDolAdvanceFeed,assertDolAdvanceData} from './dol-advance-policy.mjs';
+import {economicDepthPolicies,matchesEconomicDepthFeed,assertEconomicDepthData} from './economic-depth-policy.mjs';
+import { momentumPolicies, assertMomentumData } from './momentum-policy.mjs';
 
 // Dataset-specific commercial reuse review. Evidence and limitations: docs/data-sources.md.
 // An official-looking hostname alone does not establish reuse rights.
 export const dataPolicies = [
+  ...creditContextPolicies,
+  ...economicDepthPolicies,
+  ...momentumPolicies,
   dolAdvancePolicy,
   ...researchPolicies,
   ...macroCoveragePolicies,
@@ -50,6 +56,8 @@ export const dataPolicies = [
 ];
 
 function matchesFeed(value, feed) {
+  if(matchesCreditContextFeed(value,feed))return true;
+  if(matchesEconomicDepthFeed(value,feed))return true;
   if(matchesDolAdvanceFeed(value,feed))return true;
   if(matchesMacroCoverageFeed(value,feed))return true;
   if(matchesResearchFeed(value,feed))return true;
@@ -68,6 +76,7 @@ function matchesFeed(value, feed) {
 }
 
 export const calendarPolicies = {
+  fomc:fomcCalendarPolicy,
   bls: {
     reviewedOn:'2026-10-21',commercialUse:true,
     basis:'BLS public-domain electronic publications; agency-authored release schedule metadata, with source credit',
@@ -107,6 +116,7 @@ export const calendarPolicies = {
 };
 
 function calendarFeed(value,id) {
+  if(id==='fomc')return matchesFomcCalendarFeed(value);
   try {
     const url=new URL(value);
     if(url.username||url.password||url.search||url.hash)return false;
@@ -176,6 +186,7 @@ function assertCalendarData(snapshot) {
   const captured=new Map();
   for(const [id,source] of Object.entries(snapshot.calendar?.sources??{})) {
     const policy=calendarPolicies[id];
+    if(id==='fomc')assertFomcCalendarData(source);
     if(!Object.hasOwn(calendarPolicies,id)||!policy.commercialUse)throw new Error(`Commercial reuse review required for calendar source: ${id}`);
     if(id==='treasury-yield-timing')assertYieldTiming(source);
     else if(Object.hasOwn(source,'timing'))throw new Error(`Unreviewed timing metadata for calendar source: ${id}`);
@@ -199,6 +210,9 @@ function assertCalendarData(snapshot) {
 
 /** Stop publication or snapshot replacement when data exceed the reviewed scope. */
 export function assertCommercialData(snapshot) {
+  assertCreditContextData(snapshot);
+  assertEconomicDepthData(snapshot);
+  assertMomentumData(snapshot);
   assertDolAdvanceData(snapshot);
   assertMacroCoverageData(snapshot);
   assertResearchData(snapshot);
@@ -207,6 +221,10 @@ export function assertCommercialData(snapshot) {
     const policies=dataPolicies.filter(policy=>policy.agency===agency && policy.commercialUse===true);
     if(!policies.length)throw new Error(`Commercial reuse review required for source: ${agency}`);
     for(const [id,series] of Object.entries(source.series ?? {})) {
+      if(series.fetchedAt!==undefined){
+        const time=Date.parse(series.fetchedAt);
+        if(typeof series.fetchedAt!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(series.fetchedAt)||!Number.isFinite(time)||time>Date.parse(source.fetchedAt)||!(source.provenance??[]).some(receipt=>Date.parse(receipt.retrievedAt)===time))throw new Error(`Unreviewed measurement retrieval provenance for ${agency}/${id}`);
+      }
       const policy=policies.find(policy=>Object.hasOwn(policy.series,id));
       if(!policy)throw new Error(`Commercial reuse review required for series: ${agency}/${id}`);
       const approvedIds=policy.series[id];

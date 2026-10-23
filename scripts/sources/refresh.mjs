@@ -3,9 +3,20 @@ import { assertCommercialData } from '../data-policy.mjs';
 import { OfficialSourceHttpError } from './http.mjs';
 import { recordVintages } from '../../src/vintages.js';
 import { registry } from '../../src/registry.js';
+import {isIsoDate} from '../../src/date-window.js';
+import {harmonizeTreasuryYieldHistory} from './treasury.mjs';
 
 const calendarLinks=[{name:'BLS release calendar',url:'https://www.bls.gov/schedule/'},{name:'BEA release schedule',url:'https://www.bea.gov/news/schedule/'},{name:'Census release schedule',url:'https://www.census.gov/economic-indicators/calendar-listview.html'},{name:'DOL claims release schedule',url:'https://oui.doleta.gov/unemploy/claims_arch.asp'},{name:'Treasury Fiscal Data release calendar',url:'https://fiscaldata.treasury.gov/release-calendar/'},{name:'Treasury yield publication timing',url:'https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology'}];
 const calendarCoverage='Schedules cover Employment Situation, CPI, JOLTS, national GDP, Personal Income and Outlays, Census advance retail sales and New Residential Construction, DOL weekly claims and Treasury Debt to the Penny. Treasury debt entries retain the agency calendar\'s estimated dates and times. Treasury yield publication timing appears separately as ongoing guidance when a verified capture is available; it adds no dated events. DOL dates expand its published Thursday rule and explicit holiday exceptions within a 90-day upcoming window. Auctions are not ingested. Dates can change; a scheduled time does not confirm publication or results.';
+
+export function validateCalendarEventTiming(id,event) {
+  if(id==='fomc'){
+    if(event.sourceId!=='fomc'||!isIsoDate(event.date)||event.datePrecision!=='day'||event.time!==null||event.scheduledAt!==null)throw new Error('Invalid date-only FOMC date/time precision');
+    return;
+  }
+  const fields=easternFields(event.scheduledAt);
+  if(fields.date!==event.date||fields.time!==event.time)throw new Error(`Invalid calendar Eastern date/time for ${id}`);
+}
 
 function validateCalendar(id,result) {
   if(!result||result.id!==id||!Array.isArray(result.events)||result.events.length>2000||!Number.isFinite(Date.parse(result.fetchedAt))||!result.provenance?.length)throw new Error(`Invalid official calendar response for ${id}`);
@@ -13,8 +24,7 @@ function validateCalendar(id,result) {
   for(const event of result.events) {
     if(seen.has(event.id)||typeof event.name!=='string'||!event.name.trim()||event.name.length>1000)throw new Error(`Invalid or duplicate calendar event for ${id}`);
     seen.add(event.id);
-    const fields=easternFields(event.scheduledAt);
-    if(fields.date!==event.date||fields.time!==event.time)throw new Error(`Invalid calendar Eastern date/time for ${id}`);
+    validateCalendarEventTiming(id,event);
     if(['actual','consensus','forecast','publishedAt'].some(key=>Object.hasOwn(event,key)))throw new Error('Calendar schedules cannot establish publication results');
   }
   assertCommercialData({calendar:{sources:{[id]:result}},releases:result.events});
@@ -75,6 +85,19 @@ export async function refreshSnapshot({previous={},collectors={},calendarCollect
       sources[id]={...(prior||{id,series:{},fetchedAt:null,provenance:[],warnings:[]}),status:prior?.fetchedAt?'error':'unavailable',lastAttemptAt:checkedAt,error:String(error.message||error)};
     }
   }));
+  // A partial refresh must not replace the retained main 10Y history with only
+  // this year's rows. Actual per-row capture times choose overlapping values.
+  if((Object.hasOwn(collectors,'treasury')||Object.hasOwn(collectors,'yields'))&&sources.treasury?.series?.yield&&sources.yields?.curveHistory?.length){
+    try{
+      const harmonized=harmonizeTreasuryYieldHistory(sources.treasury,sources.yields,{previousTreasury:previous.sources?.treasury});
+      validate(harmonized,checkedAt.slice(0,10));
+      assertCommercialData({sources:{treasury:harmonized}});
+      sources.treasury=harmonized;
+    }catch(error){
+      const prior=previous.sources?.treasury;
+      sources.treasury={...(prior??{id:'treasury',series:{},fetchedAt:null,provenance:[],warnings:[]}),status:prior?.fetchedAt?'error':'unavailable',lastAttemptAt:checkedAt,error:`Treasury 10Y history reconciliation failed: ${String(error.message||error)}`};
+    }
+  }
   const calendar=await calendarPromise;
   const cachedCalendarSources=allowCachedBlsCalendar&&Object.hasOwn(calendarCollectors,'bls')&&canPublishCachedBls(calendar.sources.bls,now)?['bls']:[];
   if(requireAll||allowCachedBlsCalendar) {
@@ -84,7 +107,7 @@ export async function refreshSnapshot({previous={},collectors={},calendarCollect
     ];
     if(failures.length)throw new Error(`Required official refresh failed; snapshot was not replaced. ${failures.join('; ')}`);
   }
-  const releases=Object.values(calendar.sources??{}).flatMap(source=>source.events??[]).sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)||a.id.localeCompare(b.id));
+  const releases=Object.values(calendar.sources??{}).flatMap(source=>source.events??[]).sort((a,b)=>(a.scheduledAt??a.date).localeCompare(b.scheduledAt??b.date)||a.id.localeCompare(b.id));
   const generatedAt=new Date(Math.max(Date.now(),Date.parse(checkedAt),...[...Object.values(sources),...Object.values(calendar.sources??{})].map(source=>Date.parse(source.fetchedAt)||0))).toISOString();
   const publicationPolicy=allowCachedBlsCalendar?{mode:'allow-cached-bls-calendar',cachedCalendarSources}:Object.keys(calendarCollectors).length===0?previous.publicationPolicy:null;
   const seriesMetadata=Object.fromEntries(Object.entries(registry).map(([id,metadata])=>[id,{...metadata,observationType:metadata.observationType??'official'}]));

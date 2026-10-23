@@ -117,7 +117,8 @@ test('collector can retrieve historical debt instead of filtering only the lates
   const fetchImpl = async (url, options) => {
     const target = new URL(url);
     if (target.hostname !== 'api.fiscaldata.treasury.gov') return otherSources(url, options);
-    const historical = target.searchParams.get('filter') === 'record_date:lte:2026-01-02';
+    const historical = target.searchParams.get('filter') === 'record_date:gte:2017-01-01,record_date:lte:2026-01-02';
+    assert.equal(target.searchParams.get('page[size]'),'10000');
     return new Response(JSON.stringify({ data: [{ record_date: historical ? '2026-01-02' : '2026-10-20', tot_pub_debt_out_amt: '39000000000000' }] }));
   };
   const result = await treasury().collectTreasury({ now: new Date('2026-01-02T12:00:00Z'), fetchImpl });

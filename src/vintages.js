@@ -7,7 +7,8 @@ const seriesFields = ['sourceIds', 'sourceUrl', 'calculation', 'dataStatus', 'co
 // newly admitted and needs its originating program in replayed rights metadata.
 const housingSeriesFields = [...seriesFields, 'programName'];
 const advanceSeriesFields = [...seriesFields, 'publicationNote'];
-const seriesFieldsFor = source => source === 'housing' ? housingSeriesFields : source === 'dolAdvance' ? advanceSeriesFields : seriesFields;
+const seriesFieldsFor = source => source === 'macroContributions' ? [...seriesFields,'contributionScope','parentContribution'] : source === 'treasury' ? [...seriesFields,'fetchedAt'] : source === 'housing' ? housingSeriesFields : source === 'dolAdvance' ? advanceSeriesFields : seriesFields;
+const sourceFieldsFor = source => source === 'householdDebt' ? [...sourceFields,'methodology'] : sourceFields;
 const clone = value => JSON.parse(JSON.stringify(value));
 const own = (value, key) => Object.hasOwn(value, key);
 
@@ -55,7 +56,7 @@ function observations(rows) {
   }).sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function normalizedSource(source, id, seriesMetadata = {}) {
+function normalizedSource(source, id, seriesMetadata = {}, retained = null) {
   sourceId(id);
   if (source.id !== undefined && source.id !== id) throw new Error('Vintage source identity mismatch');
   const fetchedAt = timestamp(source.fetchedAt);
@@ -64,9 +65,14 @@ function normalizedSource(source, id, seriesMetadata = {}) {
     sourceId(key);
     if (!item || typeof item !== 'object') throw new Error('Invalid vintage series');
     const defaults = own(seriesMetadata, key) ? metadata(seriesMetadata[key] ?? {}, measurementFields) : {};
-    return [key, { ...defaults, ...metadata(item, seriesFieldsFor(id)), observations: observations(item.observations) }];
+    const fields=seriesFieldsFor(id).filter(field=>!(field==='fetchedAt'&&retained&&!own(retained.series[key]??{},field)));
+    if(fields.includes('fetchedAt')&&own(item,'fetchedAt')){
+      const retrieved=timestamp(item.fetchedAt);
+      if(retrieved>fetchedAt||!(source.provenance??[]).some(receipt=>timestamp(receipt.retrievedAt)===retrieved))throw new Error('Measurement retrieval timestamp has no actual capture provenance');
+    }
+    return [key, { ...defaults, ...metadata(item, fields), observations: observations(item.observations) }];
   }));
-  const result = { id, fetchedAt, ...metadata(source, sourceFields), provenance: clone(source.provenance ?? []), series };
+  const result = { id, fetchedAt, ...metadata(source, sourceFieldsFor(id)), provenance: clone(source.provenance ?? []), series };
   canonical(result);
   return result;
 }
@@ -93,7 +99,7 @@ function ordered(vintages) {
 export function applyVintageCapture(sources, capture) {
   if (!sources[capture.sourceId] && !capture.baseline) throw new Error('Vintage delta is missing its baseline');
   const source = sources[capture.sourceId] ?? { id: capture.sourceId, series: {} };
-  for (const key of sourceFields) delete source[key];
+  for (const key of sourceFieldsFor(capture.sourceId)) delete source[key];
   Object.assign(source, clone(capture.metadata ?? {}), { fetchedAt: capture.capturedAt, provenance: clone(capture.provenance ?? []) });
   for (const id of capture.removedSeries) delete source.series[sourceId(id)];
   for (const [id, delta] of Object.entries(capture.series)) {
@@ -129,7 +135,7 @@ function deltaCapture(previous, next, recordedAt) {
     const nextMetadata = metadata(current, fields);
     if (!prior || upserts.length || deletedDates.length || !equal(metadata(prior, fields), nextMetadata)) series[id] = { metadata: nextMetadata, upserts: clone(upserts), deletedDates };
   }
-  return { sourceId: next.id, capturedAt: next.fetchedAt, recordedAt, baseline: !previous, metadata: metadata(next, sourceFields), provenance: clone(next.provenance), series, removedSeries };
+  return { sourceId: next.id, capturedAt: next.fetchedAt, recordedAt, baseline: !previous, metadata: metadata(next, sourceFieldsFor(next.id)), provenance: clone(next.provenance), series, removedSeries };
 }
 
 /** Append baseline plus changed observation records; never edit a retained capture. */
@@ -144,7 +150,7 @@ export function recordVintages(previousVintages, previousSources = {}, newSource
     const known = sameKey ? asKnownOn(result, fetchedAt).sources[id] : null;
     // Current registry changes apply only to genuinely new retrievals. A retained
     // key keeps its captured definitions when the source omitted those fields.
-    const next = normalizedSource(input, id, known ? known.series : seriesMetadata);
+    const next = normalizedSource(input, id, known ? known.series : seriesMetadata,known);
     if (next.fetchedAt > recordedAt) throw new Error('Vintage capture retrieval is after its recorded time');
     if (sameKey) {
       if (!equal(known, next)) throw new Error('Immutable vintage capture collision: same source retrieval key has different data');

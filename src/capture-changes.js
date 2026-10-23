@@ -2,7 +2,10 @@ import {applyVintageCapture,normalizeVintageTimestamp,vintageMeasurementsCompara
 import {tabularCsv,BLS_DATA_NOTICE} from './model.js';
 const checkpointKey='meridian.change-checkpoint.v1';
 const clone=value=>JSON.parse(JSON.stringify(value));
-const metadata=value=>Object.fromEntries(Object.entries(value??{}).filter(([key])=>key!=='observations'));
+const metadata=value=>Object.fromEntries(Object.entries(value??{}).filter(([key])=>!['observations','fetchedAt'].includes(key)));
+// Retain receipt lineage in captures and exports without reporting each
+// successful confirmation as a change to the measurement or agency notes.
+const observationMetadata=value=>Object.fromEntries(Object.entries(value??{}).filter(([key])=>!['retrievedAt','sourceSha256'].includes(key)));
 const sourceMetadata=value=>Object.fromEntries(Object.entries(value??{}).filter(([key])=>!['id','series','fetchedAt','provenance'].includes(key)));
 const stable=value=>value&&typeof value==='object'?Array.isArray(value)?`[${value.map(stable).join(',')}]`:`{${Object.keys(value).sort().map(key=>`${JSON.stringify(key)}:${stable(value[key])}`).join(',')}}`:JSON.stringify(value);
 const changedFields=(a={},b={})=>[...new Set([...Object.keys(a),...Object.keys(b)])].filter(key=>stable(a[key])!==stable(b[key]));
@@ -31,7 +34,7 @@ export function captureChanges(history,{ids=[],since}={}){
     const prior=oldRows.get(observation.date);
     if(!prior)add(!previous?'first-capture':lastPrevious&&observation.date<lastPrevious?'historical-backfill':'new-period',observation.date,observation.value,null,observation.publishedAt??null);
     else if(prior.value!==observation.value)add('value-change',observation.date,observation.value,prior.value,observation.publishedAt??null);
-    else{const fields=changedFields(prior,observation);if(fields.length)add('observation-metadata-change',observation.date,observation.value,prior.value,observation.publishedAt??null,fields);}
+    else{const fields=changedFields(observationMetadata(prior),observationMetadata(observation));if(fields.length)add('observation-metadata-change',observation.date,observation.value,prior.value,observation.publishedAt??null,fields);}
     oldRows.delete(observation.date);
    }
    for(const prior of oldRows.values())add('coverage-removal',prior.date,null,prior.value,prior.publishedAt??null);

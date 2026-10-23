@@ -4,7 +4,7 @@ import { parseMacroContributions, collectMacroContributions } from '../scripts/s
 
 const codes = ['A191RL', 'DPCERY', 'A006RY', 'A822RY', 'A020RY', 'A021RY'];
 function fixture(values = [2.2, 2.51, .82, -.01, .56, -1.66], period = '2026Q2') {
-  return '%SeriesCode,Period,Value\r\n' + codes.map((code, i) => `${code},${period},${values[i]}`).join('\r\n') + '\r\nA191RX,2026Q2,99999\r\nA191RL,2025,2.0\r\n';
+  return '%SeriesCode,Period,Value\r\n' + codes.map((code, i) => `${code},${period},${values[i]}`).join('\r\n') + '\r\nA191RX,2026Q2,99999\r\nA191RL,2025,2.0\r\n'+[['A007RY',1.28],['A014RY',-.46],['DGDSRY',1.01],['DSERRY',1.5]].map(([code,value])=>`${code},${period},${value}`).join('\r\n')+'\r\n';
 }
 
 test('parses official NIPA contribution codes without adding chained-dollar components', () => {

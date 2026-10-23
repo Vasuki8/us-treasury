@@ -6,7 +6,7 @@ try{page=await import('../src/yields-page.js');}catch(error){if(error.code!=='ER
 const fixture={status:'ok',fetchedAt:'2026-10-22T03:00:00Z',curveHistory:[{date:'2026-01-02',nominal:{'2Y':3,'10Y':4},real:{'10Y':2}},{date:'2026-10-21',nominal:{'2Y':4,'10Y':5},real:{'10Y':2.5}}],provenance:[{url:'https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2026/all?type=daily_treasury_yield_curve'},{url:'https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2026/all?type=daily_treasury_real_yield_curve'}]};
 test('yield page exposes actual overlay dates and distinguishes inflation compensation and model limitations',()=>{
   assert.ok(page,'Yield explanation page exists');const html=page.yieldsPage({},fixture);
-  for(const phrase of ['YIELD EXPLANATIONS','WHAT CHANGED','WHAT CONTRIBUTED','WHY IT MATTERS','LIMITATIONS','inflation compensation','not pure expected inflation','not an exact','2026-10-21','data-export-yield-curves'])assert.ok(html.toLowerCase().includes(phrase.toLowerCase()),phrase);
+  for(const phrase of ['RATES &amp; CURVES','WHAT CHANGED','WHAT CONTRIBUTED','WHY IT MATTERS','LIMITATIONS','inflation compensation','not pure expected inflation','not an exact','2026-10-21','data-export-yield-curves'])assert.ok(html.toLowerCase().includes(phrase.toLowerCase()),phrase);
   assert.match(html,/id="yield-curve-date-a"/);assert.match(html,/data-kind="history-curve"/);
 });
 test('unavailable selected dates remain selected and explicit instead of showing another curve date',()=>{

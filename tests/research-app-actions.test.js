@@ -5,12 +5,13 @@ import {createWorkspace,openWorkspace,MAX_RESEARCH_JSON_BYTES} from '../src/rese
 import {createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv} from '../src/research-packages.js';
 import {createResearchLibrary as createLibrary} from '../src/research-library.js';
 const createResearchLibrary=storage=>createLibrary(storage,{locks:{request:async(_name,_options,callback)=>callback()}});
-import {buildPinContext,buildPublicationPin,buildClaimsPublicationPin} from '../src/research-context.js';
+import {buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin} from '../src/research-context.js';
 import {parseRoute,routeFor} from '../src/router.js';
 import {updateWorkspaceSelection} from '../src/workspace-context.js';
 import {normalizedCutoff} from '../src/vintages-page.js';
 import {normalizeVintageTimestamp} from '../src/vintages.js';
-import {dataStatus} from '../src/data.js';
+import {dataStatus,series} from '../src/data.js';
+import {getSeries} from '../src/model.js';
 import {publicationArchive} from '../src/publication-archive.js';
 import {publicationCsv,selectPublicationHistory} from '../src/publication-history.js';
 import {publicationExplanationsCsv} from '../src/publication-explanation-view.js';
@@ -50,11 +51,12 @@ async function app(hash='#/series/gdp?window=all',{archive=publicationArchive,ex
  const values=new Map(),storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
  const researchLibrary=await createResearchLibrary(storage),inputs=new Map([['research-name',{value:'Handler research'}]]),downloads=[],chartCalls=[],listeners=new Map(),announcements=[];
  const location={hash},history={pushState:(_state,_title,route)=>{location.hash=route;},replaceState:(_state,_title,route)=>{location.hash=route;}};
- const env={createWorkspace,openWorkspace,createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,MAX_RESEARCH_JSON_BYTES,buildPinContext,buildPublicationPin,buildClaimsPublicationPin,selectClaimsPublicationHistory,claimsPublicationCsv,claimsPublicationIds,normalizedCutoff,normalizeVintageTimestamp,researchLibrary,parseRoute,routeFor,updateWorkspaceSelection,dataStatus,publicationArchive:archive,publicationState:{status:publicationStatus},publicationExplanations:explanations,explanationState:{status:explanationStatus},publicationExplanationsCsv,publicationCsv,selectPublicationHistory,periodLabel,changesCsv,writeChangeCheckpoint,storage,
+ const env={createWorkspace,openWorkspace,createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,MAX_RESEARCH_JSON_BYTES,buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin,selectClaimsPublicationHistory,claimsPublicationCsv,claimsPublicationIds,normalizedCutoff,normalizeVintageTimestamp,researchLibrary,parseRoute,routeFor,updateWorkspaceSelection,dataStatus,series,getSeries,publicationArchive:archive,publicationState:{status:publicationStatus},publicationExplanations:explanations,explanationState:{status:explanationStatus},publicationExplanationsCsv,publicationCsv,selectPublicationHistory,periodLabel,changesCsv,writeChangeCheckpoint,storage,
   state:{...parseRoute(hash),saved:[]},activeWorkspaceId:null,researchLabel:'',pinBusy:false,changeCheckpoint:{enabled:true,since:'2026-10-01T12:00:00.000Z',snapshotAt:'2026-10-01T12:00:00.000Z'},changeState:{status:'ready',history:{captures:[]}},historyController:{context:()=>({historyState:{status:'idle'}})},
   document:{getElementById:id=>inputs.get(id)},location,history,main:{},window:{addEventListener:(name,callback)=>listeners.set(name,callback)},cancelAnimationFrame(){},requestAnimationFrame(callback){callback();return 1;},render(){},rememberWorkspace(){},announce:message=>announcements.push(message),renderCharts:(root,options)=>chartCalls.push(options),downloadCsv:(content,name)=>downloads.push({content,name}),downloadJson:pkg=>downloads.push({content:exportResearchPackage(pkg),name:'json'}),changesContext:()=>({status:'ready',rows:[]}),syncChanges(){}};
  const change=/root\.addEventListener\('change',async event=>\{([^]*?)\n\}\);/.exec(source);assert.ok(change,'App change delegation must exist');
  const code=`let {${Object.keys(env).join(',')}}=env;\n`
+  +section('function trackedChanges()','function syncPublications(')
   +section('function currentPackage()','function researchActions()')
   +section('function navigate(',"window.addEventListener('hashchange'")
   +section('function stored(',"root.addEventListener('click'")
@@ -104,6 +106,17 @@ test('actual claims publication actions use one series/week/cutoff for CSV and f
  const archive=claimsFixture(),current=await app('#/research?view=publications&publicationSeries=claimsAdvance&period=2026-03-07&publishedBy=2026-03-19',{archive});
  await current.handleResearchAction({exportPublications:''});assert.equal(current.downloads.at(-1).content,claimsPublicationCsv(archive,'claimsAdvance','2026-03-19','2026-03-07'));assert.match(current.downloads.at(-1).name,/claimsAdvance.*2026-03-07/);
  await current.handleResearchAction({pinPublication:''});const pkg=current.researchLibrary.getPackage(current.state().packageId);assert.deepEqual(pkg.request.ids,['claimsAdvance']);assert.equal(pkg.context.publicationSeries,'claimsAdvance');assert.equal(pkg.catalog.claimsAdvance.observations[0].value,201);assert.equal(pkg.context.attachments[0].content,current.downloads[0].content);
+});
+
+test('the release workspace Freeze action stores its verified publication and supports an unavailable archive safely',async()=>{
+ const current=await app('#/release?period=2026-01-01&publishedBy=2026-06-25');
+ await current.handleResearchAction({pinResult:''});
+ const pkg=current.researchLibrary.getPackage(current.state().packageId);
+ assert.equal(current.state().researchView,'packages');assert.deepEqual(pkg.request.ids,['gdp']);
+ assert.equal(pkg.context.releaseEvidence.actual.value,2.1);assert.equal(pkg.context.releaseEvidence.actual.publicationDate,'2026-06-25');
+ const failed=await app('#/release',{publicationStatus:'error'});
+ await assert.rejects(failed.handleResearchAction({pinResult:''}),/Load.*publication/i);
+ assert.equal(failed.researchLibrary.listPackages().length,0);
 });
 
 test('switching publication measurement clears cross-measure periods and retained weeks survive cutoff changes',async()=>{

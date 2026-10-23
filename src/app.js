@@ -1,3 +1,7 @@
+import { fiscalGdpCsv } from './fiscal-gdp-view.js';
+import { creditContextCsv,fomcDocumentsCsv } from './credit-context-page.js';
+import { moveFollowed } from './watchlist-monitor.js';
+import { relevantRefreshIds } from './research-status.js';
 import { releases, dataStatus,series } from './data.js';
 import { filterSeries, getSeries, latest, formatValue, formatChange, toCsv,periodLabel } from './model.js';
 import {fiscalFinancingCsv} from './research-exports.js';
@@ -22,7 +26,7 @@ import {coverageFamilies} from './macro-registry.js';
 import {createWorkspace,openWorkspace,MAX_RESEARCH_JSON_BYTES} from './research-workspaces.js';
 import {createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv} from './research-packages.js';
 import {createResearchLibrary} from './research-library.js';
-import {buildPinContext,buildPublicationPin,buildClaimsPublicationPin} from './research-context.js';
+import {buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin} from './research-context.js';
 import {captureChanges,changesCsv,readChangeCheckpoint,writeChangeCheckpoint} from './capture-changes.js';
 import {createPublicationLoader} from './publication-loader.js';
 import {createClaimsPublicationLoader} from './claims-publication-loader.js';
@@ -37,10 +41,11 @@ const main = document.getElementById('main-content');
 const status = document.getElementById('app-status');
 mountCompactNavigation(document.querySelector('.functionbar'));
 // Recheck source age while keeping native disclosure state independent of routes.
-mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus);
+
 let storage;
 try { storage = window.localStorage; } catch { /* Session remains usable without persistence. */ }
 let state = { ...parseRoute(location.hash), ...readPreferences(storage) };
+const freshnessController=mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus,{getOptions:()=>({compact:true,relevantIds:relevantRefreshIds(state,series)})});
 const researchLibrary=await createResearchLibrary(storage);
 let changeCheckpoint=readChangeCheckpoint(storage,dataStatus.generatedAt),changeState={status:'idle',ids:[],history:null,error:null},changeKey='',activeWorkspaceId=null,researchLabel='',pinBusy=false;
 let changeRowsCache=null;
@@ -57,7 +62,7 @@ const historyController = createHistoryController(historyLoader, {
   getRoute:() => state,
   onChange:() => preserveHistoryView(main, () => render()),
 });
-const pageNames = {research:"Research library",macroCoverage:'Macro coverage',overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',watchlist:'Watchlist',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Yield explanations',auctions:'Auction demand',ownership:'Debt ownership',macro:'Macro drivers',vintages:'Captured by',market:'Market functioning'};
+const pageNames = {release:'Release evidence',credit:'Credit & banking',research:"Saved research",macroCoverage:'Economy',overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',watchlist:'Watchlist',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Rates & curves',auctions:'Auction demand',ownership:'Debt ownership',macro:'GDP contributions',vintages:'Retrieval history',market:'Market functioning'};
 
 document.querySelector('.skip-link').addEventListener('click',event=>{
   event.preventDefault();
@@ -117,24 +122,28 @@ function restoreFocus(focus) {
 }
 
 function trackedChanges(){return [...new Set((state.saved.length?state.saved:state.selected).filter(id=>getSeries(id)))];}
+function trackedFailures(){
+ const agencies=new Set(trackedChanges().map(id=>series[id].agency));
+ return Object.entries(dataStatus.sources).filter(([id,source])=>agencies.has(id)&&source.status!=='ok').map(([id,source])=>({id,...source}));
+}
 function syncPublications({retry=false}={}){
   publicationController.sync(state,{retry});
   const context=publicationController.context(state.publicationSeries);
   publicationArchive=context.archive;publicationState={status:context.status,error:context.error};
 }
 function syncPublicationExplanations({retry=false}={}){
-  if(state.page!=='research'||state.researchView!=='publications'||claimsPublicationIds.includes(state.publicationSeries)||explanationState.status==='loading'||!retry&&explanationState.status!=='idle')return;
+  if(!(state.page==='release'||state.page==='research'&&state.researchView==='publications')||claimsPublicationIds.includes(state.publicationSeries)||explanationState.status==='loading'||!retry&&explanationState.status!=='idle')return;
   explanationState={status:'loading',error:null};
   explanationLoader.load({retry}).then(archive=>{
     publicationExplanations=archive;explanationState={status:'ready',error:null};
-    if(state.page==='research'&&state.researchView==='publications'&&!claimsPublicationIds.includes(state.publicationSeries))preserveHistoryView(main,()=>render());
+    if((state.page==='release'||state.page==='research'&&state.researchView==='publications')&&!claimsPublicationIds.includes(state.publicationSeries))preserveHistoryView(main,()=>render());
   }).catch(error=>{
     explanationState={status:'error',error:error.message};
-    if(state.page==='research'&&state.researchView==='publications'&&!claimsPublicationIds.includes(state.publicationSeries))preserveHistoryView(main,()=>render());
+    if((state.page==='release'||state.page==='research'&&state.researchView==='publications')&&!claimsPublicationIds.includes(state.publicationSeries))preserveHistoryView(main,()=>render());
   });
 }
 function syncChanges({retry=false}={}){
-  if(state.page!=='research'||state.researchView!=='changes')return;
+  if(!(state.page==='research'&&state.researchView==='changes'||['overview','watchlist'].includes(state.page)&&changeCheckpoint.enabled))return;
   const ids=trackedChanges(),key=ids.join(',');
   if(key===changeKey&&(changeState.status==='loading'||!retry&&['ready','error'].includes(changeState.status)))return;
   changeKey=key;changeState={status:'loading',ids,history:null,error:null};
@@ -143,11 +152,11 @@ function syncChanges({retry=false}={}){
     const captures=new Map();
     for(const history of histories)for(const capture of history.captures)captures.set(capture.sourceId+'|'+capture.capturedAt,capture);
     changeState={status:'ready',ids,history:{version:1,captures:[...captures.values()].sort((a,b)=>a.capturedAt.localeCompare(b.capturedAt)||a.sourceId.localeCompare(b.sourceId))},error:null};
-    if(state.page==='research'&&state.researchView==='changes')preserveHistoryView(main,()=>render());
+    if(['overview','watchlist'].includes(state.page)||state.page==='research'&&state.researchView==='changes')preserveHistoryView(main,()=>render());
   }).catch(error=>{
     if(changeKey!==key)return;
     changeState={status:'error',ids,history:null,error:error.message};
-    if(state.page==='research'&&state.researchView==='changes')preserveHistoryView(main,()=>render());
+    if(['overview','watchlist'].includes(state.page)||state.page==='research'&&state.researchView==='changes')preserveHistoryView(main,()=>render());
   });
 }
 function changesContext(){
@@ -165,19 +174,23 @@ function researchActions(){
   const alert=changeCheckpoint.enabled&&dataStatus.generatedAt>changeCheckpoint.snapshotAt?'<p class="panel-note amber" role="status">A newer snapshot is available since your local change checkpoint. <a href="#/research?view=changes">Review captured changes and collector failures</a>. A new snapshot does not itself establish a new economic release.</p>':'';
   if(state.page==='research')return alert;
   const active=researchLibrary.getWorkspace(activeWorkspaceId),name=researchLabel||active?.name||`${pageNames[state.page]} research`;
-  return alert+`<section class="research-savebar" aria-label="Save research"><label for="research-name">Research name<input id="research-name" value="${esc(name)}" maxlength="80" autocomplete="off"></label><div class="actions"><button type="button" class="action" data-save-workspace>${active?'UPDATE WORKSPACE':'SAVE WORKSPACE'}</button><button type="button" class="action" data-pin-result${pinBusy?' disabled':''}>${pinBusy?'PINNING…':'PIN RESULT'}</button><a class="action" href="#/research">SAVED RESEARCH</a>${active?'<button type="button" class="link-button" data-clear-workspace>NEW WORKSPACE</button>':''}</div><p class="small muted">${active?`Editing ${esc(active.name)}. `:''}Workspaces reopen current data. Pins freeze up to four scoped measurements and retain relevant module inputs, assumptions and original exports.</p>${state.researchError?`<p class="amber" role="alert">${esc(state.researchError)}</p>`:''}</section>`;
+  return alert+`<details class="context-save"${state.researchError?' open':''}><summary>SAVE</summary><section class="research-savebar" aria-label="Save research"><label for="research-name">Research name<input id="research-name" value="${esc(name)}" maxlength="80" autocomplete="off"></label><div class="actions"><button type="button" class="action" data-save-workspace>${active?'UPDATE SAVED VIEW':'SAVE VIEW'}</button><button type="button" class="action" data-pin-result${pinBusy?' disabled':''}>${pinBusy?'FREEZING…':'FREEZE RESULT'}</button><a class="action" href="#/research">SAVED RESEARCH</a>${active?'<button type="button" class="link-button" data-clear-workspace>NEW WORKSPACE</button>':''}</div><p class="small muted">${active?`Editing ${esc(active.name)}. `:''}Workspaces reopen current data. Pins freeze up to four scoped measurements and retain relevant module inputs, assumptions and original exports.</p>${state.researchError?`<p class="amber" role="alert">${esc(state.researchError)}</p>`:''}</section></details>`;
 }
 
 function render({focusHeading=false,preserveFocus=false}={}) {
   const focus=preserveFocus?rememberFocus():null;
+  const saveOpen=main.querySelector('.context-save')?.open??false;
   historyController.sync(state);
   syncChanges();
   syncPublications();
   syncPublicationExplanations();
   applyAppearance();
-  const agencies=new Set(trackedChanges().map(id=>series[id].agency));
-  const failures=Object.entries(dataStatus.sources).filter(([id,source])=>agencies.has(id)&&source.status!=='ok').map(([id,source])=>({id,...source}));
-  main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${researchActions()}${renderPage(state,{...historyController.context(state),library:researchLibrary.getState(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationArchive,publicationState,publicationExplanations,explanationState})}`;
+  const failures=trackedFailures();
+  main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${renderPage(state,{...historyController.context(state),library:researchLibrary.getState(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationArchive,publicationState,publicationExplanations,explanationState})}`;
+  main.querySelector('.page-heading .actions')?.insertAdjacentHTML('beforeend',researchActions());
+  if(saveOpen&&main.querySelector('.context-save'))main.querySelector('.context-save').open=true;
+  document.getElementById('ticker').hidden=true;
+  freshnessController.refresh();
   syncCompactNavigation(root,state);
   document.getElementById('ticker').innerHTML=['yield','unrate','cpi','payroll'].map(id=>{
     const item=getSeries(id);
@@ -277,7 +290,7 @@ async function handleResearchAction(d){
     if(pinBusy)return;
     if('pinPublication' in d&&publicationState.status!=='ready')throw new Error('Load the selected official publication archive before pinning.');
     const claims=claimsPublicationIds.includes(state.publicationSeries);
-    const args='pinPublication' in d?claims?buildClaimsPublicationPin(publicationArchive,state.publicationSeries,state.publicationCutoff,state.publicationPeriod):buildPublicationPin(publicationArchive,state.publicationCutoff,state.publicationPeriod,{explanationArchive:publicationExplanations,explanationStatus:explanationState.status}):buildPinContext(state,historyController.context(state));
+    const args='pinPublication' in d?claims?buildClaimsPublicationPin(publicationArchive,state.publicationSeries,state.publicationCutoff,state.publicationPeriod):buildPublicationPin(publicationArchive,state.publicationCutoff,state.publicationPeriod,{explanationArchive:publicationExplanations,explanationStatus:explanationState.status}):state.page==='release'?buildReleasePin(state,{archive:publicationArchive,publicationState,explanationArchive:publicationExplanations,explanationStatus:explanationState.status}):buildPinContext(state,{...historyController.context(state),changes:changesContext(),checkpoint:changeCheckpoint,failures:trackedFailures()});
     const name='pinPublication' in d?claims?`${state.publicationSeries==='continuedClaimsAdvance'?'Continued':'Initial'} claims ${args.context.publicationPeriod} by ${args.context.publicationCutoff}`:`GDP ${periodLabel({frequency:'Quarterly'},args.context.publicationPeriod)} published by ${args.context.publicationCutoff}`:document.getElementById('research-name').value;
     pinBusy=true;render({preserveFocus:true});
     try{
@@ -328,6 +341,7 @@ root.addEventListener('click',async event=>{
     try{await handleResearchAction(d);}catch(error){state.researchError=error.message;announce(`Research action unavailable: ${error.message}`);}
     if(location.hash===before)render({preserveFocus:true});return;
   }
+  if('watchMove' in d){state.saved=moveFollowed(state.saved,d.watchMove,Number(d.direction));const durable=persist();render({preserveFocus:true});announce(durable?'Watchlist order saved.':'Order changed for this session; browser storage is unavailable.');return;}
   if('reloadSnapshot' in d){
     const url=new URL(window.location.href);
     url.searchParams.set('_refresh',Date.now().toString(36));
@@ -380,6 +394,9 @@ root.addEventListener('click',async event=>{
       downloadCsv(vintagesCsv(history.history,{cutoff:state.vintageCutoff??history.latestCaptureAt,seriesId:state.vintageSeries}),'meridian-vintages.csv','Vintage CSV downloaded at the selected UTC retrieval cutoff. First captured is distinct from first released.');
     } catch(error) {announce(`Export unavailable: ${error.message}`);}
   }
+  else if('exportFiscalGdp' in d)downloadCsv(fiscalGdpCsv(dataStatus.sources),'meridian-fiscal-gdp-ratios.csv','Defined fiscal ratios downloaded with aligned nominal GDP denominator, formulas, timing and retrieval provenance.');
+  else if('exportCredit' in d)downloadCsv(creditContextCsv(dataStatus.sources),'meridian-credit-context.csv','Official credit and policy context downloaded with distinct reference dates, units and reuse notices.');
+  else if('exportFomc' in d)downloadCsv(fomcDocumentsCsv(dataStatus.calendar.sources.fomc),'meridian-fomc-references.csv','Dated official FOMC references downloaded; document links do not substitute for captured contents.');
   else if('exportMacro' in d)downloadCsv(macroContributionsCsv(dataStatus.sources.macroContributions),'meridian-macro.csv','Macro CSV downloaded with published GDP contributions and unavailable CPI effects labeled.');
   else if('exportOwnership' in d)downloadCsv(ownershipCsv(dataStatus.sources.ownership),'meridian-ownership.csv','Ownership CSV downloaded with separate reporting dates, valuations and reuse notices.');
   else if('copyLink' in d) {
@@ -390,6 +407,7 @@ root.addEventListener('click',async event=>{
 
 root.addEventListener('change',async event=>{
   const target=event.target;
+  if(target.id==='watchlist-sort'||target.id==='watchlist-group'){state={...state,...(target.id==='watchlist-sort'?{watchlistSort:target.value}:{watchlistGroup:target.checked})};const durable=persist();render({preserveFocus:true});announce(durable?'Monitoring preferences saved.':'Monitoring preferences changed for this session; browser storage is unavailable.');return;}
   if(target.id==='research-import'){
     const file=target.files?.[0];if(!file)return;
     try{

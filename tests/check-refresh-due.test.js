@@ -13,11 +13,11 @@ const scratchRoot = path.join(root, 'test-results');
 const now = new Date('2026-10-22T00:17:00.000Z');
 const at = '2026-10-21T23:37:00.000Z';
 const source = () => ({ status: 'ok', fetchedAt: at, lastAttemptAt: at, error: null, failure: null });
-const researchSources={fiscal:'Treasury fiscal pressure',refinancing:'Treasury debt maturity profile',yields:'Treasury yield history',auctions:'Treasury auction results',ownership:'Federal Reserve Treasury ownership',macroContributions:'BEA GDP contributions',marketFunctioning:'New York Fed dealer and funding data',policyRates:'Federal Reserve policy rates',activity:'Federal Reserve industrial activity',housing:'Census housing construction'};
+const researchSources={householdDebt:'Federal Reserve household debt service',loanDelinquency:'Federal Reserve bank loan delinquency',bankCredit:'Federal Reserve bank credit',lendingSurvey:'Federal Reserve lending survey',fedBalance:'Federal Reserve balance sheet',onRrp:'New York Fed overnight reverse repos',fiscal:'Treasury fiscal pressure',refinancing:'Treasury debt maturity profile',yields:'Treasury yield history',auctions:'Treasury auction results',ownership:'Federal Reserve Treasury ownership',macroContributions:'BEA GDP contributions',marketFunctioning:'New York Fed dealer and funding data',policyRates:'Federal Reserve policy rates',activity:'Federal Reserve industrial activity',housing:'Census housing construction'};
 const dataIds=['treasury','bls','bea','dol','dolAdvance','census',...Object.keys(researchSources)];
 const snapshot = () => ({
   sources: Object.fromEntries(dataIds.map(id => [id, source()])),
-  calendar: { sources: Object.fromEntries(['bls', 'bea', 'census', 'dol', 'treasury', 'treasury-yield-timing'].map(id => [id, source()])) },
+  calendar: { sources: Object.fromEntries(['fomc','bls', 'bea', 'census', 'dol', 'treasury', 'treasury-yield-timing'].map(id => [id, source()])) },
 });
 const cachedBls = () => ({
   id: 'bls', status: 'error', fetchedAt: '2026-10-20T12:00:00.000Z', lastAttemptAt: at,
@@ -39,7 +39,7 @@ async function guard() {
   return module.getDailyRefreshPlan;
 }
 
-test('the guard skips twenty-two successful captures from the latest scheduled start', async () => {
+test('the guard skips twenty-nine successful captures from the latest scheduled start', async () => {
   const plan = (await guard())(snapshot(), { now });
   assert.equal(plan.required, false);
   assert.equal(plan.expectedRefreshAt, at);
@@ -60,13 +60,13 @@ test('a missed daily slot is due immediately at its start and remains due at bot
     const plan = getPlan(value, { now: new Date(clock) });
     assert.equal(plan.required, required, clock);
     assert.equal(plan.expectedRefreshAt, expected, clock);
-    assert.equal(plan.pendingSources.length, required ? 22 : 0, clock);
+    assert.equal(plan.pendingSources.length, required ? 29 : 0, clock);
   }
 });
 
 test('every canonical source is required while assembly and recent attempts cannot stand in for captures', async () => {
   const getPlan = await guard();
-  for (const [kind, ids] of [['sources', dataIds], ['calendar', ['bls', 'bea', 'census', 'dol', 'treasury', 'treasury-yield-timing']]]) {
+  for (const [kind, ids] of [['sources', dataIds], ['calendar', ['fomc','bls', 'bea', 'census', 'dol', 'treasury', 'treasury-yield-timing']]]) {
     for (const id of ids) {
       const value = snapshot();
       const entry = kind === 'sources' ? value.sources[id] : value.calendar.sources[id];
@@ -114,7 +114,7 @@ test('missing, malformed, failed and future captures require another refresh', a
   for (const value of [undefined, null, {}, [], { sources: {}, calendar: null }]) {
     const plan = getPlan(value, { now });
     assert.equal(plan.required, true);
-    assert.equal(plan.pendingSources.length, 22);
+    assert.equal(plan.pendingSources.length, 29);
   }
 });
 

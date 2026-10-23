@@ -8,6 +8,8 @@ const raw = {
   CUUR0000SA0L1E:[250,260], CUSR0000SA0:[300,303], CUSR0000SA0L1E:[250,252.5],
   LNS13327709:[7.5,8], LNS12300000:[60,60.1], CES0500000002:[34.2,34.3],
 };
+const depthCodes=['JTS000000000000000HIR','JTS000000000000000QUR','JTS000000000000000LDR','LNS12300060','LNS11300060','CIS1010000000000I','PRS85006092','PRS85006112'];
+const quarterly=code=>['CIS1010000000000I','PRS85006092','PRS85006112'].includes(code);
 
 function payload(overrides={}) {
   return {status:'REQUEST_SUCCEEDED',message:[],Results:{series:Object.entries(raw).map(([seriesID,values])=>({seriesID,data:[
@@ -15,7 +17,7 @@ function payload(overrides={}) {
     {year:'2026',period:'M01',value:String(values[1]),footnotes:[{code:'P',text:'preliminary'}]},
     {year:'2025',period:'M12',value:String(values[0]),footnotes:[]},
     {year:'2025',period:'M13',value:'999',footnotes:[]},
-  ]})),...overrides}};
+  ]})).concat(depthCodes.map(seriesID=>({seriesID,data:[{year:'2026',period:quarterly(seriesID)?'Q02':'M08',value:'3.3',footnotes:[]}]}))),...overrides}};
 }
 
 test('BLS parses levels, exact-year changes, payroll differences and openings units', () => {
@@ -121,27 +123,28 @@ test('missing or ambiguous required raw series reject the complete family rather
   assert.throws(()=>parseBls(overflow),/invalid|finite/i);
 });
 
-test('collector requests twelve unique keyless series once across ten calendar years and filters future dates',async()=>{
+test('collector requests twenty unique keyless series once across ten calendar years and filters future dates',async()=>{
   let captured;
   const p=payload();
-  p.Results.series.forEach(s=>s.data.push({year:'2027',period:'M01',value:'999',footnotes:[]}));
+  p.Results.series.forEach(s=>s.data.push({year:'2027',period:quarterly(s.seriesID)?'Q01':'M01',value:'999',footnotes:[]}));
   const result=await collectBls({now:new Date('2026-10-22T00:00:00Z'),fetchImpl:async(url,options)=>{
     captured={url,options,body:JSON.parse(options.body)};
     return new Response(JSON.stringify(p),{status:200,headers:{'content-type':'application/json'}});
   }});
   assert.equal(captured.url,'https://api.bls.gov/publicAPI/v1/timeseries/data/');
   assert.equal(captured.options.method,'POST');
-  assert.deepEqual([...captured.body.seriesid].sort(),Object.keys(raw).sort());
+  assert.deepEqual([...captured.body.seriesid].sort(),[...Object.keys(raw),...depthCodes].sort());
+  assert.ok(captured.body.seriesid.length<=25,'unregistered query stays within the official 25-series limit');
   assert.equal(captured.body.startyear,'2017');assert.equal(captured.body.endyear,'2026');
   assert.equal(Object.hasOwn(captured.body,'registrationkey'),false);
-  assert.equal(Object.keys(result.series).length,17);
+  assert.equal(Object.keys(result.series).length,26);
   assert.equal(result.provenance.length,1);assert.match(result.provenance[0].sha256,/^[a-f0-9]{64}$/);
   assert.ok(Object.values(result.series).every(s=>s.observations.every(o=>o.date<='2026-10-22')));
 });
 
 test('collector retains ten calendar years and derives exact-year changes before applying its retention limit',async()=>{
   const p=payload();
-  for(const source of p.Results.series)source.data=Array.from({length:132},(_,i)=>({year:String(2016+Math.floor(i/12)),period:`M${String(i%12+1).padStart(2,'0')}`,value:String(i+100),footnotes:[]}));
+  for(const source of p.Results.series)source.data=Array.from({length:quarterly(source.seriesID)?44:132},(_,i)=>({year:String(2016+Math.floor(i/(quarterly(source.seriesID)?4:12))),period:quarterly(source.seriesID)?`Q0${i%4+1}`:`M${String(i%12+1).padStart(2,'0')}`,value:String(i+100),footnotes:[]}));
   const result=await collectBls({now:new Date('2026-12-31T00:00:00Z'),fetchImpl:async()=>new Response(JSON.stringify(p),{status:200})});
   assert.equal(result.series.cpiCoreIndex.observations.length,120);
   assert.equal(result.series.cpiCoreIndex.observations[0].date,'2017-01-01');

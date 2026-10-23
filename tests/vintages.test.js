@@ -5,6 +5,30 @@ import { recordVintages, asKnownOn, revisionHistory } from '../src/vintages.js';
 const times = ['2026-10-01T12:00:00.000Z', '2026-10-02T12:00:00.000Z', '2026-10-03T12:00:00.000Z'];
 const observation = (date, value, extra = {}) => ({ date, value, publishedAt: null, ...extra });
 const source = (fetchedAt, observations, extra = {}) => ({ id: 'treasury', fetchedAt, coverageNote: 'Current reviewed source coverage', provenance: [{ url: 'https://api.fiscaldata.treasury.gov/example', sha256: 'a'.repeat(64), retrievedAt: fetchedAt }], series: { test: { sourceIds: ['official-code'], sourceUrl: 'https://api.fiscaldata.treasury.gov/example', calculation: 'Official observation, no conversion', dataStatus: 'official', observations } }, ...extra });
+
+test('new household captures retain their methodology and compound Treasury captures retain per-measure retrieval clocks',()=>{
+ const first=source(times[0],[observation('2026-07-01',1)]);
+ const legacy=recordVintages(null,{},sources(first),{checkedAt:times[2]});
+ const richer=structuredClone(first);richer.series.test.fetchedAt=times[0];
+ assert.deepEqual(recordVintages(legacy,{},sources(richer),{checkedAt:times[2]}),legacy,'additional collection metadata cannot rewrite an old immutable key');
+ const next=source(times[1],[observation('2026-07-01',1)]);next.series.test.fetchedAt=times[0];next.provenance.push(first.provenance[0]);
+ const result=recordVintages(legacy,{},sources(next),{checkedAt:times[2]});
+ assert.equal(asKnownOn(result,times[1]).sources.treasury.series.test.fetchedAt,times[0]);
+ for(const invalid of ['invalid',times[2],'2026-10-01T13:00:00.000Z']){
+  const bad=structuredClone(next);bad.series.test.fetchedAt=invalid;
+  assert.throws(()=>recordVintages(legacy,{},sources(bad),{checkedAt:times[2]}),/retriev|timestamp|provenance/i);
+ }
+ const household={...source(times[1],[observation('2026-07-01',1)]),id:'householdDebt',methodology:'credit-bureau-2024'};
+ const history=recordVintages(null,{}, {householdDebt:household},{checkedAt:times[2]});
+ assert.equal(asKnownOn(history,times[1]).sources.householdDebt.methodology,'credit-bureau-2024');
+});
+test('GDP subcomponent replay retains its parent and prevents later double-counting',()=>{
+ const value={...source(times[1],[observation('2026-07-01',1)]),id:'macroContributions'};
+ Object.assign(value.series.test,{contributionScope:'subcomponent',parentContribution:'investment'});
+ const history=recordVintages(null,{}, {macroContributions:value},{checkedAt:times[2]});
+ const restored=asKnownOn(history,times[1]).sources.macroContributions.series.test;
+ assert.equal(restored.contributionScope,'subcomponent');assert.equal(restored.parentContribution,'investment');
+});
 const sources = item => ({ treasury: item });
 const record = (vintages, previous, next, checkedAt = times[2]) => recordVintages(vintages, previous ? sources(previous) : {}, next ? sources(next) : {}, { checkedAt });
 

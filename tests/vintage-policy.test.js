@@ -13,6 +13,17 @@ const url='https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt';
 const source=(fetchedAt,value)=>({id:'bea',fetchedAt,series:{gdp:{sourceIds:['A191RL'],sourceUrl:url,dataStatus:'official',calculation:'Published real GDP growth',observations:[{date:'2026-07-01',value,publishedAt:null,sourceValue:String(value)}]}},provenance:[{url,sha256:'a'.repeat(64),retrievedAt:fetchedAt,lastModified:null}]});
 const fixture=()=>recordVintages(null,{bea:source(t1,2.2)},{bea:source(t2,2.4)},{checkedAt:t2});
 
+test('new Board ZIP captures retain only their exact reviewed member names',()=>{
+ for(const [id,filename] of Object.entries({bankCredit:'H8_data.xml',lendingSurvey:'SLOOS_data.xml',fedBalance:'H41_data.xml',householdDebt:'DSR_data.xml',loanDelinquency:'CHGDEL_data.xml'})){
+  const entry={...source(t2,2.4),id};entry.provenance[0].filename=filename;
+  const captures=recordVintages(null,{}, {[id]:entry},{checkedAt:t2});
+  assert.doesNotThrow(()=>assertVintageData(captures,()=>{}));
+  for(const mutate of [item=>{item.filename='unreviewed.xml';},item=>{item.usageNote='not reviewed for Board';}]){
+   const bad=structuredClone(captures);mutate(bad.captures[0].provenance[0]);assert.throws(()=>assertVintageData(bad,()=>{}),/provenance|member/i);
+  }
+ }
+});
+
 test('archive admission checks every actual retrieval state with its captured metadata',()=>{
   const vintages=fixture(),seen=[];
   assertVintageData(vintages,snapshot=>{

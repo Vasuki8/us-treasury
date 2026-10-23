@@ -1,3 +1,8 @@
+import { fiscalGdpCsv } from './fiscal-gdp-view.js';
+import { evidenceBrief,nextCatalysts } from './research-brief.js';
+import {watchlistMonitor,monitorUpdateLabel} from './watchlist-monitor.js';
+import { fiscalGdpContext } from './economic-depth.js';
+import { creditContextCsv,fomcDocumentsCsv,creditWindowSources } from './credit-context-page.js';
 import {series,dataStatus,releases} from './data.js';
 import {routeFor} from './router.js';
 import {coverageFamilies} from './macro-registry.js';
@@ -13,12 +18,13 @@ import {macroContributionsCsv} from './macro-page.js';
 import {marketFunctioningCsv} from './market-functioning-page.js';
 import {fiscalFinancingCsv} from './research-exports.js';
 import {selectPublicationHistory,publicationCsv,publicationContext} from './publication-history.js';
-import {periodLabel} from './model.js';
+import {periodLabel,transformSeries} from './model.js';
 import {publicationExplanationRows,publicationExplanationsCsv} from './publication-explanation-view.js';
 import {selectClaimsPublicationHistory,claimsPublicationCsv} from './claims-publication-history.js';
+import {matchReleaseEvidence,selectReleaseEvidence,releaseDelivery} from './release-evidence.js';
 
-const moduleIds={overview:['unrate','cpi','gdp','yield'],labor:['payroll','unrate','underemployment','weeklyHours'],fiscal:['receipts','outlays','netInterest','primaryDeficit'],refinancing:['marketableDebt'],yields:['yield','realYield10','spread2s10s','inflationComp10'],auctions:['auctionOfferingMonthly'],ownership:['foreignTreasuryHoldings','fedTreasuryHoldings','somaTreasuryHoldings'],macro:['gdpTotalContribution','gdpConsumptionContribution','gdpInvestmentContribution','gdpGovernmentContribution'],market:['dealerNetTreasury','dealerRepo','dealerFailsDeliver','sofr']};
-const sourceIds={fiscal:['fiscal','treasury'],refinancing:['refinancing'],yields:['yields','treasury'],auctions:['auctions'],ownership:['ownership'],macro:['macroContributions'],market:['marketFunctioning']};
+const moduleIds={credit:['bankLoans','bankDeposits','ciStandardsLarge','onRrpAccepted'],overview:['unrate','cpi','gdp','yield'],labor:['payroll','unrate','underemployment','weeklyHours'],fiscal:['receipts','outlays','netInterest','primaryDeficit'],refinancing:['marketableDebt'],yields:['yield','realYield10','spread2s10s','inflationComp10'],auctions:['auctionOfferingMonthly'],ownership:['foreignTreasuryHoldings','fedTreasuryHoldings','somaTreasuryHoldings'],macro:['gdpTotalContribution','gdpConsumptionContribution','gdpInvestmentContribution','gdpGovernmentContribution'],market:['dealerNetTreasury','dealerRepo','dealerFailsDeliver','sofr']};
+const sourceIds={credit:['bankCredit','lendingSurvey','fedBalance','onRrp','householdDebt','loanDelinquency'],fiscal:['fiscal','treasury'],refinancing:['refinancing'],yields:['yields','treasury'],auctions:['auctions'],ownership:['ownership'],macro:['macroContributions'],market:['marketFunctioning']};
 const attachment=(name,content)=>({name,content,type:'text/csv'});
 const measurementFields=['name','unit','frequency','adjustment','definition','observationType','format','precision','periodType','dateConvention','measure','calculation'];
 const strings=values=>[...new Set(values.filter(value=>typeof value==='string'&&value.trim()))];
@@ -35,21 +41,35 @@ function capturedMeasurement(current,source,item,id,agency){
   licenseUrl:item.licenseUrl??source.licenseUrl??item.termsUrl??source.termsUrl??'',
   termsUrl:item.termsUrl??source.termsUrl??item.licenseUrl??source.licenseUrl??'',
   sourceTitle:item.sourceTitle??source.sourceTitle??'',coverageNote:item.coverageNote??source.coverageNote??'',
-  fetchedAt:source.fetchedAt,provenance:source.provenance,dataStatus:'captured-as-known',error:null};
+  fetchedAt:item.fetchedAt??source.fetchedAt,provenance:source.provenance,dataStatus:'captured-as-known',error:null};
 }
 
 /** Build explicitly scoped frozen inputs; never promise a mutable URL is a saved result. */
-export function buildPinContext(state,{historyState,catalog=series,sources=dataStatus.sources,snapshot=dataStatus,events=releases,now=new Date()}={}){
+export function buildPinContext(state,{historyState,catalog=series,sources=dataStatus.sources,snapshot=dataStatus,events=releases,now=new Date(),changes={},checkpoint={},failures=[]}={}){
  let selected=state.page==='indicator'?[state.seriesId]:state.page==='macroCoverage'?[state.macroMeasure]:state.page==='watchlist'?state.saved:moduleIds[state.page]??state.selected;
  let capturedCatalog=catalog,capturedSources=sources;
  const context={page:state.page,route:routeFor(state),moduleSources:Object.fromEntries((sourceIds[state.page]??[]).filter(id=>sources[id]).map(id=>[id,sources[id]])),attachments:[],scope:'Selected registered measurements; explicitly retained supplementary inputs and CSVs when present.'};
  const assumptions={comparison:state.page==='explore'&&state.exploreMode==='compare'?state.comparison:'native',transform:state.page==='indicator'?state.transform:'level',missingDates:'No interpolation or frequency aggregation; unmatched dates remain unavailable.'};
+ if(state.page==='overview'){
+  selected=['gdp','pceCoreMonthly','payroll','policyTargetUpper'];
+  context.overviewTopicReadings=['gdp','realSpendingMonthly','pceCoreMonthly','pceCore','payroll','unrate','claimsAdvance','continuedClaimsAdvance','policyTargetLower','policyTargetUpper','effr','yield','spread2s10s','publicDebt','interestRevenueRatio'].filter(id=>catalog[id]).map(id=>{const item=catalog[id];return {id,name:item.name,unit:item.unit,frequency:item.frequency,adjustment:item.adjustment,definition:item.definition,observationType:item.observationType,calculation:item.calculation,latest:item.observations.at(-1)??null,prior:item.observations.at(-2)??null,fetchedAt:item.fetchedAt,source:item.source,provenance:item.provenance};});
+  context.overviewChartInputs=['pceMonthly','pceCoreMonthly','payroll','realSpendingMonthly','realDisposableIncomeMonthly','industrialProduction'].filter(id=>catalog[id]).map(id=>{const item=catalog[id],shown=transformSeries(item,'level',12);return {id,name:item.name,unit:item.unit,frequency:item.frequency,adjustment:item.adjustment,calculation:item.calculation,fetchedAt:item.fetchedAt,source:item.source,provenance:item.provenance,observations:shown.observations};});
+  context.overviewBrief=evidenceBrief({catalog,sources,changes:changes.rows??[],failures});context.overviewCheckpoint=checkpoint;
+  context.overviewFollowing=watchlistMonitor(state.saved??[],{catalog,events,now}).map(({id,current,nextEvent})=>({id,name:current.name,status:current.dataStatus,update:monitorUpdateLabel(id,changes,checkpoint),nextEvent}));
+  context.nextCatalysts=nextCatalysts(events,{now});context.calendarStatus=snapshot.calendar;
+  context.scope='Four primary chart measurements plus frozen topic readings, chart inputs, factual update brief and selected upcoming schedule context. All values and clocks are retained; no current data is substituted on reopening.';
+ }
  if(state.page==='macroCoverage')context.familyReadings=coverageFamilies[state.macroFamily].ids.map(id=>({id,name:catalog[id].name,unit:catalog[id].unit,definition:catalog[id].definition,latest:catalog[id].observations.at(-1)??null,fetchedAt:catalog[id].fetchedAt,source:catalog[id].source}));
  if(state.page==='refinancing'){
   Object.assign(assumptions,{horizonMonths:state.refinancingHorizon,shockBps:state.refinancingShock,interpretation:'Hypothetical higher/lower-rate refinancing sensitivity, not a rate forecast; observed instruments are separate from future issuance assumptions.'});
   context.attachments=[attachment('refinancing-observed.csv',refinancingCsv(sources.refinancing)),attachment('refinancing-scenarios.csv',refinancingCsv(sources.refinancing,{scenario:true,horizonMonths:state.refinancingHorizon,shockBps:state.refinancingShock}))];
  }
- if(state.page==='fiscal')context.attachments=[attachment('fiscal-financing.csv',fiscalFinancingCsv(sources.fiscal))];
+ if(state.page==='fiscal'){context.attachments=[attachment('fiscal-financing.csv',fiscalFinancingCsv(sources.fiscal)),attachment('fiscal-gdp-ratios.csv',fiscalGdpCsv(sources))];context.fiscalRatios=fiscalGdpContext(sources);const dates=context.fiscalRatios?.deficitToGdp?.denominatorPeriods??[];context.fiscalNominalGdpInput={...sources.bea,series:{nominalGdp:{...sources.bea?.series?.nominalGdp,observations:(sources.bea?.series?.nominalGdp?.observations??[]).filter(row=>dates.includes(row.date))}}};}
+ if(state.page==='credit'){
+  context.moduleSources=creditWindowSources(sources);
+  context.attachments=[attachment('credit-context.csv',creditContextCsv(sources)),attachment('fomc-references.csv',fomcDocumentsCsv(snapshot.calendar?.sources?.fomc))];
+  context.scope='Primary selected measurements and the compact credit page: exact three-year chart and CSV inputs for each source group, with original definitions, receipt provenance and policy references. Full retained histories remain available in indicator details.';
+ }
  if(state.page==='yields')context.attachments=[attachment('yield-curve-overlays.csv',yieldCurvesCsv(sources.yields,state))];
  if(state.page==='auctions')context.attachments=[attachment('auction-results.csv',auctionsCsv(sources.auctions,{securityType:state.auctionType,auctionId:state.auctionId})),attachment('auction-peers.csv',auctionsCsv(sources.auctions,{securityType:state.auctionType,auctionId:state.auctionId,benchmark:true}))];
  if(state.page==='ownership')context.attachments=[attachment('debt-ownership.csv',ownershipCsv(sources.ownership))];
@@ -74,6 +94,18 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
  selected=[...new Set(selected??[])].filter(id=>Object.hasOwn(capturedCatalog,id)).slice(0,4);
  if(!selected.length)throw new Error('Select at least one available registered measurement to pin.');
  return {state:{...pinState,selected},catalog:capturedCatalog,sources:capturedSources,snapshot:{generatedAt:snapshot.generatedAt,checkedAt:snapshot.checkedAt},context,assumptions};
+}
+
+export function buildReleasePin(state,{archive,publicationState,explanationArchive,explanationStatus,events=releases}={}){
+ if(publicationState?.status!=='ready'||!archive)throw new Error('Load the selected official publication archive before freezing.');
+ const event=events.find(row=>row.id===state.eventId)??null;
+ if(state.eventId&&!event)throw new Error('This event is outside retained calendar coverage.');
+ const selection={seriesId:state.publicationSeries,period:state.publicationPeriod??'',publicationCutoff:state.publicationCutoff??''};
+ const view=event?matchReleaseEvidence(event,archive,selection):selectReleaseEvidence(archive,selection);
+ if(view.status!=='verified')throw new Error(view.reason??'Verified release evidence unavailable.');
+ const row=view.actual,args=row.seriesId==='gdp'?buildPublicationPin(archive,row.publicationDate,row.period,{explanationArchive,explanationStatus}):buildClaimsPublicationPin(archive,row.seriesId,row.publicationDate,row.period);
+ Object.assign(args.context,{releaseEvidence:view,releaseSchedule:event,releaseDelivery:releaseDelivery(event,row),releaseRoute:routeFor(state)});
+ return args;
 }
 
 export function buildPublicationPin(archive,cutoff,period,options){

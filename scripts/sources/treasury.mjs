@@ -1,6 +1,6 @@
 import { parseCsv, requestText } from './http.mjs';
 
-const DEBT_URL = 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page%5Bsize%5D=100';
+const DEBT_URL = 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page%5Bsize%5D=10000';
 const TENORS = [
   ['1M', 1 / 12, ['1 Mo']],
   ['1.5M', 0.125, ['1.5 Month', '1.5 Mo']],
@@ -111,17 +111,56 @@ function yieldUrl(year) {
   return `https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/${year}/all?type=daily_treasury_yield_curve&field_tdr_date_value=${year}&page&_format=csv`;
 }
 
+/** Reuse equivalent approved nominal par curves, retaining each input's real capture. */
+export function harmonizeTreasuryYieldHistory(treasury,yields,{previousTreasury}={}) {
+  if(!treasury?.series?.yield||!yields?.curveHistory?.length)return treasury;
+  const nominalCapture=item=>{
+    try{return new URL(item.url).searchParams.get('type')==='daily_treasury_yield_curve';}catch{return false;}
+  };
+  const byDate=new Map();
+  const add=(source,rows)=>{
+    const seen=new Set();
+    for(const row of rows){
+      if(seen.has(row.date))throw new Error('Duplicate date in main 10Y source history');seen.add(row.date);
+    const sourceUrl=yieldUrl(Number(row.date.slice(0,4)));
+      if(row.sourceUrl&&row.sourceUrl!==sourceUrl)throw new Error('Invalid annual source URL for main 10Y history');
+      const captures=(source.provenance??[]).filter(item=>item.url===sourceUrl&&(!row.sourceSha256||row.sourceSha256===item.sha256)&&(!row.retrievedAt||!item.retrievedAt||row.retrievedAt===item.retrievedAt));
+      if(!captures.length)throw new Error('Missing captured annual provenance for main 10Y yield history');
+      const capture=captures.sort((a,b)=>(a.retrievedAt??'').localeCompare(b.retrievedAt??'')).at(-1);
+      const retrievedAt=row.retrievedAt??capture.retrievedAt??source.series?.yield?.fetchedAt??source.fetchedAt;
+      if(!Number.isFinite(Date.parse(retrievedAt)))throw new Error('Missing actual capture time for main 10Y yield history');
+      const value=row.value;
+      if(value!==null&&(typeof value!=='number'||!Number.isFinite(value)))throw new Error('Invalid main 10Y yield value');
+      const candidate={date:isoDate(row.date),value,publishedAt:null,sourceUrl,retrievedAt,sourceSha256:capture.sha256};
+      const existing=byDate.get(row.date);
+      if(!existing||Date.parse(retrievedAt)>=Date.parse(existing.retrievedAt))byDate.set(row.date,candidate);
+    }
+  };
+  if(previousTreasury?.series?.yield?.observations?.length)add(previousTreasury,previousTreasury.series.yield.observations);
+  add(treasury,treasury.series.yield.observations);
+  add(yields,yields.curveHistory.map(row=>({date:row.date,value:row.nominal?.['10Y']??null})));
+  const observations=sortedUnique([...byDate.values()]);
+  requireUsable(observations,'yield');
+  const provenance=[...(treasury.provenance??[]),...(previousTreasury?.provenance??[]).filter(nominalCapture),...(yields.provenance??[]).filter(nominalCapture)];
+  const merged=new Map(provenance.map(item=>[`${item.url}|${item.retrievedAt}|${item.sha256}`,item]));
+  const fetchedAt=observations.map(row=>row.retrievedAt).sort((a,b)=>Date.parse(a)-Date.parse(b)).at(-1);
+  const sourceFetchedAt=[treasury.fetchedAt,fetchedAt,...[...merged.values()].map(row=>row.retrievedAt)].filter(time=>Number.isFinite(Date.parse(time))).sort((a,b)=>Date.parse(a)-Date.parse(b)).at(-1);
+  return {...treasury,fetchedAt:sourceFetchedAt,series:{...treasury.series,...(treasury.series.debt?{debt:{...treasury.series.debt,fetchedAt:treasury.series.debt.fetchedAt??treasury.fetchedAt}}:{}),yield:{...treasury.series.yield,observations,fetchedAt,sourceUrl:yieldUrl(Number(observations.at(-1).date.slice(0,4))),coverageNote:'Retained official 10-year nominal par history from the approved annual curve files. Each row retains its actual retrieval timestamp and response hash; later captures win only on matching dates. No filled dates or synthetic publication times.',calculation:'Published daily 10-year Treasury nominal par yield, percent; reused from the approved dated nominal curve history. Annual source URL and capture provenance retained; no synthetic release date or fill.'}},provenance:[...merged.values()]};
+}
+
 export async function collectTreasury({ fetchImpl = globalThis.fetch, now = new Date() } = {}) {
   const cutoff = now.toISOString().slice(0, 10);
   const year = now.getUTCFullYear();
   const sourceUrl = yieldUrl(year);
-  const debtUrl = `${DEBT_URL}&filter=record_date:lte:${cutoff}`;
+  const debtUrl = `${DEBT_URL}&filter=record_date:gte:${year-9}-01-01,record_date:lte:${cutoff}`;
   const [debtResponse, currentYieldResponse] = await Promise.all([
     requestText(debtUrl, { fetchImpl }),
     requestText(sourceUrl, { fetchImpl }),
   ]);
   const responses = [debtResponse, currentYieldResponse];
-  const debt = requireUsable(parseDebt(JSON.parse(debtResponse.text)).filter(row => row.date <= cutoff), 'debt');
+  const debtPayload=JSON.parse(debtResponse.text);
+  if(Number(debtPayload.meta?.['total-pages']??1)>1)throw new Error('Treasury debt history exceeds reviewed single-page bound');
+  const debt = requireUsable(parseDebt(debtPayload).filter(row => row.date <= cutoff&&row.date>=`${year-9}-01-01`), 'debt');
   let rows = parseYieldRows(currentYieldResponse.text).filter(row => row.date <= cutoff);
   const tenYearIndex = TENORS.findIndex(([tenor]) => tenor === '10Y');
   if (rows.filter(row => row.rates[tenYearIndex] !== null).length < 36) {
@@ -140,6 +179,7 @@ export async function collectTreasury({ fetchImpl = globalThis.fetch, now = new 
         sourceUrl: debtUrl,
         sourceIds: ['tot_pub_debt_out_amt'],
         dataStatus: 'official',
+        coverageNote:'Ten calendar years of actual debt record dates; weekends and missing dates are not filled. Current published history captured at its actual retrieval date, not historical first releases.',
       },
       yield: {
         observations: curve.observations,

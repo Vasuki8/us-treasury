@@ -11,7 +11,7 @@ function fixture() {
 
 test('macro page explains published GDP accounting contributions, units, signs and timing', () => {
   const html = macroPage(fixture());
-  for (const text of ['MACRO DRIVERS', '2026 Q2', '2.2%', '2.51', '-1.66', '-0.02', 'percentage points', '2026-10-21T22:00:00.000Z', 'Release date: unknown', 'HTTP 403', 'WHAT CHANGED', 'WHAT CONTRIBUTED', 'WHY IT MATTERS', 'LIMITATIONS']) assert.ok(html.includes(text), text);
+  for (const text of ['GDP CONTRIBUTIONS', '2026 Q2', '2.2%', '2.51', '-1.66', '-0.02', 'percentage points', '2026-10-21T22:00:00.000Z', 'Release date: unknown', 'HTTP 403', 'WHAT CHANGED', 'WHAT CONTRIBUTED', 'WHY IT MATTERS', 'LIMITATIONS']) assert.ok(html.includes(text), text);
   assert.match(html, /data-export-macro/);
   assert.match(html, /imports.*published sign|published sign.*imports/is);
   assert.match(html, /chained-dollar/i);

@@ -269,7 +269,7 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
 @media(max-width:600px) { .shell { grid-template-columns:1fr; } .rail { display:none; } .brandbar { gap:8px; } .brand { font-size:14px; } .data-mode { margin-left:auto; } .appearance { font-size:10px; } .brandbar .appearance { margin-left:auto; } .functionbar { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)) auto; gap:0; padding:0 5px; } .functionbar>a { min-width:0; min-height:44px; padding:0 5px; } .functionbar .nav-secondary,.nav-full-label { display:none; } .nav-short-label,.navigation-more { display:block; } .command-hint { display:none; } .commandbar label { font-size:10px; } .ticker a { flex:1; min-width:145px; padding:6px 10px; } main { padding:8px; } h1 { font-size:18px; } .metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .metric { border-bottom:1px solid var(--border); } .metric:nth-child(3) { border-right:1px solid var(--border); } .metric:nth-child(2n) { border-right:0; } .metric:nth-last-child(-n+2) { border-bottom:0; } .metric-value { font-size:21px; } .metric-period { font-size:11px; } .calendar-detail { display:block; } .page-heading { align-items:flex-start; } .footline { font-size:9px; } .research-navigation { flex-wrap:nowrap; overflow-x:auto; scrollbar-width:thin; } .research-navigation a { flex-shrink:0; min-height:44px; border:0; color:var(--muted); } .research-navigation a[aria-current="page"] { background:transparent; color:var(--text); box-shadow:inset 0 -2px var(--accent); } }
 @media(pointer:coarse) { .action,.functionbar a,.tabs button,.calendar-days button { min-height:42px; } input:not([type="checkbox"]),select { font-size:16px; min-height:38px; } td button,th button { min-height:34px; } }
 @media(prefers-reduced-motion:no-preference) { button,a,input,select { transition:background-color .12s; } }
-.research-savebar { display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px; margin:0 0 12px; padding:10px; border:1px solid var(--border); border-radius:5px; background:var(--panel); }
+.research-savebar { display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px; margin:0; padding:10px; border:1px solid var(--border); border-radius:5px; background:var(--panel); }
 .research-savebar label { display:grid; gap:4px; flex:1 1 180px; max-width:340px; min-width:0; color:var(--muted); }
 .research-savebar input { width:100%; min-width:0; }
 .research-savebar p { flex:1 0 100%; margin:0; }
@@ -310,3 +310,58 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
 .claims-publication-table th:nth-child(5){width:30%}
 .claims-publication-table th:nth-child(6){width:18%}
 .claims-publication-table td p{margin:0 0 8px}
+
+/* Research journey: economic content precedes optional administration. */
+#ticker[hidden] { display:none; }
+.compact-freshness { padding:5px 10px; font-size:11px; }
+.snapshot-status { display:flex; gap:4px 16px; align-items:baseline; flex-wrap:wrap; }
+.snapshot-status .freshness-details { flex:1; margin:0; }
+.snapshot-status .freshness-details>summary { min-height:0; padding:2px 0; width:auto; }
+.view-source-warning { margin:3px 0 0; color:var(--freshness-warning); }
+.snapshot-status .freshness-source-list li { padding:8px; border:1px solid var(--border); }
+.context-save { position:relative; }
+.context-save>summary { cursor:pointer; padding:7px 12px; border:1px solid var(--border); border-radius:4px; color:var(--link); background:var(--raised); }
+.context-save .research-savebar { position:absolute; right:0; top:calc(100% + 5px); width:min(440px,calc(100vw - 32px)); z-index:40; box-shadow:0 8px 24px #0004; }
+.context-save .research-savebar .actions { flex-wrap:wrap; }
+.supporting-details { margin:10px 0; padding:9px 12px; border:1px solid var(--border); border-radius:4px; background:var(--panel); min-width:0; }
+.supporting-details>summary { cursor:pointer; color:var(--link); padding:4px 0; }
+.supporting-details[open]>summary { margin-bottom:8px; }
+.topic-cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin-bottom:10px; }
+.topic-card { background:var(--panel); border:1px solid var(--border); border-radius:5px; padding:11px; min-width:0; }
+.topic-card h2 { font-size:13px; margin:0 0 6px; }
+.topic-reading { display:grid; grid-template-columns:1fr auto; align-items:baseline; gap:3px 8px; padding:7px 0; border-top:1px solid var(--divider); text-decoration:none; color:var(--text); }
+.topic-reading strong { font-family:Consolas,monospace; font-size:21px; font-weight:500; font-variant-numeric:tabular-nums; }
+.topic-reading small { grid-column:1/-1; font-size:11px; overflow-wrap:anywhere; }
+.topic-card .panel-note { padding:6px 0 0; }
+.brief-list { list-style:none; padding:0; margin:0; }
+.brief-list li { padding:10px 12px; border-top:1px solid var(--divider); overflow-wrap:anywhere; }
+.brief-list .pill { margin-right:7px; }
+.brief-list p { margin-top:5px; }
+.comparison-starters { display:flex; align-items:center; flex-wrap:wrap; gap:5px; margin:9px 0; }
+.catalog-filters { display:flex; align-items:end; gap:9px; padding:0 10px 10px; flex-wrap:wrap; }
+.catalog-filters .filter-body { padding:0; display:flex; gap:9px; flex-wrap:wrap; }
+.indicator-chart { margin-bottom:10px; }
+.indicator-context { flex-wrap:wrap; }
+.indicator-context .mono { white-space:normal; }
+.navigation-menu { max-height:70vh; overflow:auto; overscroll-behavior:contain; }
+@media(max-width:1100px) { .topic-cards { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:900px) {
+ .page-heading>.actions { position:relative; width:100%; }
+ .context-save { position:static; }
+ .context-save .research-savebar { left:0; right:auto; top:calc(100% + 5px); width:min(440px,100%); }
+}
+@media(max-width:600px) {
+ .topic-cards { grid-template-columns:1fr; }
+ .page-heading { gap:8px; }
+ .topic-reading strong { font-size:23px; }
+ .context-save>summary,.supporting-details>summary,.watchlist-workspace details>summary { min-height:44px; display:flex; align-items:center; }
+ .snapshot-status { gap:0 8px; }
+ .compact-freshness { margin:5px 8px 0; padding:5px 8px; }
+ .snapshot-status .freshness-details>summary { min-height:32px; padding:2px 0; }
+ .view-source-warning { font-size:11px; }
+ .comparison-starters .action,.catalog-filters .action { min-height:44px; }
+ .catalog-filters { align-items:stretch; }
+ .catalog-filters label { flex:1; }
+ .catalog-filters select { font-size:16px; min-height:44px; max-width:100%; }
+ .watchlist-workspace .actions button { min-width:44px; }
+}

@@ -44,7 +44,9 @@ export function parseRoute(hash = '') {
       state.page = 'indicator';
       const id = path.slice('/series/'.length);
       state.seriesId = Object.hasOwn(series, id) ? id : defaults.seriesId;
-    } else if (path === '/calendar') state.page = 'calendar';
+    } else if (path === '/release') state.page = 'release';
+    else if (path === '/credit') state.page = 'credit';
+    else if (path === '/calendar') state.page = 'calendar';
     else if (path === '/explore') state.page = 'explore';
     else if (path === '/fiscal') state.page = 'fiscal';
     else if (path === '/refinancing') state.page = 'refinancing';
@@ -90,7 +92,7 @@ export function parseRoute(hash = '') {
     if (state.calendarMonth !== 'upcoming' && state.day !== 'all' && !state.day.startsWith(state.calendarMonth + '-')) state.day = 'all';
     state.calendarTopic = topics.includes(p.get('calendarTopic')) ? p.get('calendarTopic') : 'All topics';
     state.watchOnly = p.get('watch') === '1';
-    state.eventId = releases.some(event => event.id === p.get('event')) ? p.get('event') : defaults.eventId;
+    state.eventId = state.page==='release'?(p.get('event')??'').slice(0,200):releases.some(event => event.id === p.get('event')) ? p.get('event') : defaults.eventId;
   } catch {
     // A malformed externally supplied URL should leave the workspace usable.
   }
@@ -99,9 +101,9 @@ export function parseRoute(hash = '') {
 
 export function routeFor(input) {
   const state = { ...defaults, ...input };
-  const path = {research:"/research",macroCoverage:'/economy',overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',watchlist:'/watchlist',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',macro:'/macro',vintages:'/vintages',market:'/market'}[state.page] || '/overview';
+  const path = {release:'/release',credit:'/credit',research:"/research",macroCoverage:'/economy',overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',watchlist:'/watchlist',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',macro:'/macro',vintages:'/vintages',market:'/market'}[state.page] || '/overview';
   const p = new URLSearchParams();
-  if(state.page==='research'){
+  if(['research','release'].includes(state.page)){
     p.set('view',state.researchView);if(state.packageId)p.set('package',state.packageId);
     if(state.changeSince)p.set('since',state.changeSince);if(state.changePage>1)p.set('changePage',String(state.changePage));
     if(state.publicationCutoff)p.set('publishedBy',state.publicationCutoff);
@@ -151,7 +153,7 @@ export function routeFor(input) {
     if(state.window==='custom'){p.set('start',state.startDate);p.set('end',state.endDate);}
     const returnTo=safeReturnTo(state.returnTo);if(returnTo&&state.page!=='watchlist')p.set('return',returnTo);
   }
-  if (state.page === 'calendar') {
+  if (state.page === 'calendar'||state.page==='release') {
     if (state.calendarMonth !== 'upcoming') p.set('month', state.calendarMonth);
     if (state.day !== 'all') p.set('day', state.day);
     if (state.calendarTopic !== 'All topics') p.set('calendarTopic', state.calendarTopic);

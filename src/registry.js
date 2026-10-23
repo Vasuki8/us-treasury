@@ -1,5 +1,8 @@
+import { economicDepthRegistry } from './economic-depth-registry.js';
+import { creditContextRegistry } from './credit-context-registry.js';
 import { researchRegistry } from './research-registry.js';
 import { macroRegistry } from './macro-registry.js';
+import { momentumRegistry } from './momentum-registry.js';
 const bls={name:'Bureau of Labor Statistics',url:'https://www.bls.gov/'};
 const bea={name:'Bureau of Economic Analysis',url:'https://www.bea.gov/'};
 const treasury={name:'U.S. Treasury',url:'https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics'};
@@ -10,6 +13,9 @@ const monthly={frequency:'Monthly',adjustment:'Seasonally adjusted'};
 export const registry={
   ...researchRegistry,
   ...macroRegistry,
+  ...momentumRegistry,
+  ...economicDepthRegistry,
+  ...creditContextRegistry,
   unrate:{id:'unrate',code:'LNS14000000',name:'Unemployment rate',short:'Unemployment',topic:'Labor',...monthly,...percent,agency:'bls',source:{...bls,url:'https://www.bls.gov/cps/'},definition:'U-3 unemployment rate: unemployed people as a share of the civilian labor force, age 16 and older.'},
   payroll:{id:'payroll',observationType:'calculated',code:'CES0000000001 Δ',name:'Nonfarm payroll employment change',short:'Nonfarm payrolls',topic:'Labor',...monthly,unit:'Thousands of jobs',precision:0,format:'thousands',agency:'bls',source:{...bls,url:'https://www.bls.gov/ces/'},definition:'Change in seasonally adjusted total nonfarm payroll employment from the exact preceding month. Source levels are in thousands of jobs; payroll employment counts jobs, not unique people.'},
   cpi:{id:'cpi',observationType:'calculated',code:'CUUR0000SA0 Y/Y',name:'Consumer price inflation',short:'CPI inflation',topic:'Inflation',frequency:'Monthly',...percent,unit:'Percent year over year',adjustment:'Not seasonally adjusted',agency:'bls',source:{...bls,url:'https://www.bls.gov/cpi/'},definition:'Year-over-year change in the all-items CPI for all urban consumers, US city average, using the unadjusted index and the same month a year earlier.'},

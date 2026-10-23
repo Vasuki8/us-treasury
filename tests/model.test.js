@@ -108,7 +108,12 @@ test('production calendar contains traced official schedules without invented pu
   for(const event of releases) {
     assert.ok(dataStatus.calendar.sources[event.sourceId].events.some(captured=>captured.id===event.id));
     assert.ok(event.seriesIds.every(id=>Object.hasOwn(series,id)));
-    assert.match(event.scheduledAt,/^\d{4}-\d{2}-\d{2}T/);
+    if(event.sourceId==='fomc') {
+      assert.equal(event.datePrecision,'day');
+      assert.equal(event.time,null);
+      assert.equal(event.scheduledAt,null);
+      assert.match(event.date,/^\d{4}-\d{2}-\d{2}$/);
+    } else assert.match(event.scheduledAt,/^\d{4}-\d{2}-\d{2}T/);
     for(const key of ['actual','consensus','forecast','publishedAt'])assert.equal(Object.hasOwn(event,key),false);
   }
 });

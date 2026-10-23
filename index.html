@@ -26,25 +26,25 @@
     <nav class="functionbar" aria-label="Main navigation">
       <a href="#/overview" data-nav="overview" aria-keyshortcuts="F1">Overview</a>
       <a href="#/economy/labor" data-nav="labor" aria-keyshortcuts="F2"><span class="nav-full-label">Labor market</span><span class="nav-short-label">Labor</span></a>
-      <a class="nav-secondary" href="#/series/unrate" data-nav="indicator" id="indicator-nav" aria-keyshortcuts="F3">Indicator</a>
+      <a class="nav-secondary" href="#/series/unrate" data-nav="indicator" id="indicator-nav" aria-keyshortcuts="F3">Recent indicator</a>
       <a href="#/calendar" data-nav="calendar" aria-keyshortcuts="F4">Calendar</a>
       <a href="#/explore" data-nav="explore" aria-keyshortcuts="F5"><span class="nav-full-label">Explore data</span><span class="nav-short-label">Explore</span></a>
-      <a class="nav-secondary" href="#/fiscal" data-nav="fiscal" data-nav-group="research">Research</a>
+      <a class="nav-secondary" href="#/fiscal" data-nav="fiscal" data-nav-group="research">Treasury &amp; funding</a>
       <details class="navigation-more" id="navigation-more">
         <summary aria-label="More pages">More<svg aria-hidden="true" focusable="false" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 4.5 3 3 3-3"/></svg></summary>
-        <div class="navigation-menu">
-          <a href="#/series/unrate" data-nav="indicator" id="indicator-mobile">Indicator detail</a>
+        <div class="navigation-menu"><p class="navigation-group-label">My research</p>
+          <a href="#/series/unrate" data-nav="indicator" id="indicator-mobile">Recent indicator</a>
           <a href="#/watchlist" data-nav="watchlist">Watchlist <span class="nav-count" id="mobile-saved-count">0</span></a>
           <a href="#/research" data-nav="research">Saved research</a>
-          <p class="navigation-group-label">Research modules</p>
-          <a href="#/economy" data-nav="macroCoverage">Macro coverage</a>
-          <a href="#/fiscal" data-nav="fiscal">Fiscal pressure</a>
+          <a href="#/research?view=packages">Frozen results</a><p class="navigation-group-label">Economy</p>
+          <a href="#/economy" data-nav="macroCoverage">Economy</a>
+          <a href="#/economy?family=prices">Prices</a><a href="#/economy/labor">Labor</a><a href="#/economy?family=activity">Activity &amp; income</a><a href="#/economy?family=housing">Housing</a><a href="#/economy?family=policy">Policy rates</a><a href="#/credit" data-nav="credit">Credit &amp; banking</a><p class="navigation-group-label">Treasury &amp; funding</p><a href="#/fiscal" data-nav="fiscal">Fiscal pressure</a>
           <a href="#/refinancing" data-nav="refinancing">Refinancing risk</a>
-          <a href="#/yields" data-nav="yields">Yield explanations</a>
+          <a href="#/yields" data-nav="yields">Rates &amp; curves</a>
           <a href="#/auctions" data-nav="auctions">Auction demand</a>
           <a href="#/ownership" data-nav="ownership">Debt ownership</a>
-          <a href="#/macro" data-nav="macro">Macro drivers</a>
-          <a href="#/vintages" data-nav="vintages">Revision history</a>
+          <a href="#/macro" data-nav="macro">GDP contributions</a>
+          <p class="navigation-group-label">Evidence</p><a href="#/research?view=publications">Official publication history</a><a href="#/research?view=changes">Captured changes</a><a href="#/vintages" data-nav="vintages">Retrieval history</a>
           <a href="#/market" data-nav="market">Market functioning</a>
         </div>
       </details>
@@ -61,28 +61,28 @@
         <div class="rail-title">WORKSPACE</div>
         <a href="#/overview" data-nav="overview"><span class="code">US</span>Overview</a>
         <a href="#/economy/labor" data-nav="labor"><span class="code">LAB</span>Labor market</a>
-        <a href="#/series/unrate" data-nav="indicator" id="indicator-rail"><span class="code">IND</span>Indicator detail</a>
+        <a href="#/series/unrate" data-nav="indicator" id="indicator-rail"><span class="code">IND</span>Recent indicator</a>
         <a href="#/calendar" data-nav="calendar"><span class="code">CAL</span>Calendar</a>
         <a href="#/explore" data-nav="explore"><span class="code">EXP</span>Explore data</a>
         <a href="#/research" data-nav="research"><span class="code">SAV</span>Saved research</a>
         <hr><div class="rail-title">RESEARCH</div>
-        <a href="#/economy" data-nav="macroCoverage"><span class="code">ECO</span>Macro coverage</a>
+        <a href="#/economy" data-nav="macroCoverage"><span class="code">ECO</span>Economy</a>
         <a href="#/fiscal" data-nav="fiscal"><span class="code">FIS</span>Fiscal pressure</a>
         <a href="#/refinancing" data-nav="refinancing"><span class="code">REF</span>Refinancing risk</a>
-        <a href="#/yields" data-nav="yields"><span class="code">YLD</span>Yield explanations</a>
+        <a href="#/yields" data-nav="yields"><span class="code">YLD</span>Rates &amp; curves</a>
         <a href="#/auctions" data-nav="auctions"><span class="code">AUC</span>Auction demand</a>
         <a href="#/ownership" data-nav="ownership"><span class="code">OWN</span>Debt ownership</a>
-        <a href="#/macro" data-nav="macro"><span class="code">MAC</span>Macro drivers</a>
-        <a href="#/vintages" data-nav="vintages"><span class="code">REV</span>Revision history</a>
+        <a href="#/macro" data-nav="macro"><span class="code">MAC</span>GDP contributions</a>
+        <a href="#/vintages" data-nav="vintages"><span class="code">REV</span>Retrieval history</a>
         <a href="#/market" data-nav="market"><span class="code">MKT</span>Market functioning</a>
-        <hr><div class="rail-title">QUICK SERIES</div>
+        <a href="#/credit" data-nav="credit"><span class="code">CRD</span>Credit &amp; banking</a><hr><div class="rail-title">QUICK SERIES</div>
         <a href="#/series/gdp"><span class="code">GDP</span>Real growth</a>
         <a href="#/series/cpi"><span class="code">CPI</span>Inflation</a>
         <a href="#/series/debt"><span class="code">DBT</span>Federal debt</a>
         <a href="#/series/yield"><span class="code">UST</span>Treasury 10Y</a>
         <hr><div class="rail-title"><a href="#/watchlist" data-nav="watchlist">MY WATCHLIST <span id="saved-count">0</span></a></div>
         <div id="saved-list" class="saved-list"></div>
-        <hr><div class="rail-note">UNITED STATES<br><span class="mono">ET · USD</span><br><br>OFFICIAL SNAPSHOT<br>Agency retrieval status</div><div id="source-status" class="definitions"></div>
+        <hr><div class="rail-note">UNITED STATES<br><span class="mono">ET · USD</span><br><br>OFFICIAL SNAPSHOT<br>Agency retrieval status</div><details><summary>Collection details</summary><div id="source-status" class="definitions"></div></details>
       </aside>
       <main id="main-content" tabindex="-1"><div class="loading">Loading workspace…</div></main>
     </div>

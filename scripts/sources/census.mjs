@@ -70,7 +70,7 @@ export function parseCensusCsv(text,{now=new Date()}={}) {
     return {...row,value:finite(row.value)&&finite(baseline?.value)&&baseline.value!==0?100*(row.value/baseline.value-1):null,
       baseDate:baseline?.date??null,baseValue:baseline?.sourceValue??null,
       footnotes:row.date===latestDate?['Advance estimate; subject to revision. Nominal sales adjusted for seasonal, holiday and trading-day differences, not price changes.']:[]};
-  }).slice(-36);
+  });
   if(!observations.some(row=>finite(row.value)))fail('no usable monthly growth observations');
   const update=sections.get('DATA UPDATED ON');
   if(update.length!==1||!update[0].length)fail('file update metadata');
@@ -87,5 +87,6 @@ export async function collectCensus({fetchImpl=globalThis.fetch,now=new Date()}=
   return {id:'census',fetchedAt:request.retrievedAt,series:{retail:{observations:parsed.observations,sourceUrl:CENSUS_URL,
     sourceIds:['MARTS:44X72:SM:US:SA'],dataStatus:'official',calculation:'100 × (seasonally adjusted nominal sales / exact previous-month sales − 1)',
     attribution:`Source: U.S. Census Bureau, ${PROGRAM}. Monthly percent changes calculated from published sales levels.`,programName:PROGRAM}},
+    coverageNote:'All available monthly total-retail observations from the approved MARTS bulk file. Current revised history, captured on the actual retrieval date; earlier observations are not historical first releases. Missing exact monthly baselines remain unavailable.',
     provenance:[{...metadata,filename:'MARTS-mf.csv',fileUpdatedAt:parsed.fileUpdatedAt,usageNote}],warnings:parsed.notes};
 }

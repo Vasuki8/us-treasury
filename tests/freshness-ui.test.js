@@ -6,12 +6,12 @@ const captured='2026-10-21T23:18:30.150Z';
 const retained='2026-10-21T22:48:25.560Z';
 const attempt='2026-10-22T23:37:00.000Z';
 const ids=['treasury','bls','bea','dol','census'];
-const researchSources={fiscal:'Treasury fiscal pressure',refinancing:'Treasury debt maturity profile',yields:'Treasury yield history',auctions:'Treasury auction results',ownership:'Federal Reserve Treasury ownership',macroContributions:'BEA GDP contributions',marketFunctioning:'New York Fed dealer and funding data',policyRates:'Federal Reserve policy rates',activity:'Federal Reserve industrial activity',housing:'Census housing construction'};
+const researchSources={householdDebt:'Federal Reserve household debt service',loanDelinquency:'Federal Reserve bank loan delinquency',bankCredit:'Federal Reserve bank credit',lendingSurvey:'Federal Reserve lending survey',fedBalance:'Federal Reserve balance sheet',onRrp:'New York Fed overnight reverse repos',fiscal:'Treasury fiscal pressure',refinancing:'Treasury debt maturity profile',yields:'Treasury yield history',auctions:'Treasury auction results',ownership:'Federal Reserve Treasury ownership',macroContributions:'BEA GDP contributions',marketFunctioning:'New York Fed dealer and funding data',policyRates:'Federal Reserve policy rates',activity:'Federal Reserve industrial activity',housing:'Census housing construction'};
 function snapshot() {
   const source=()=>({status:'ok',fetchedAt:captured,lastAttemptAt:captured});
   return {generatedAt:'2099-01-01T00:00:00.000Z',checkedAt:attempt,
     sources:Object.fromEntries([...ids,'dolAdvance',...Object.keys(researchSources)].map(id=>[id,source()])),
-    calendar:{checkedAt:attempt,sources:Object.fromEntries([...ids,'treasury-yield-timing'].map(id=>[id,source()]))}};
+    calendar:{checkedAt:attempt,sources:Object.fromEntries([...ids,'fomc','treasury-yield-timing'].map(id=>[id,source()]))}};
 }
 function banner(value, now = new Date('2026-10-21T23:20:00.000Z')) {
   assert.equal(typeof ui.freshnessBanner,'function','the shared freshness banner must exist');
@@ -27,7 +27,7 @@ test('banner labels the last successful source retrieval separately from a later
   assert.match(html,/Latest attempt/);
   assert.ok(html.includes(`datetime="${attempt}"`));
   assert.doesNotMatch(html,/2099/,'assembly time must not masquerade as source success');
-  assert.match(html,/All 22 sources captured/);
+  assert.match(html,/All 29 sources captured/);
   assert.doesNotMatch(html,/role="alert"|aria-live/,'static snapshot metadata should not repeatedly interrupt navigation');
 });
 
@@ -48,9 +48,9 @@ test('cached calendar is named prominently while current BLS statistics remain d
 test('first failures are unavailable and do not invent a successful refresh',()=>{
   const html=banner({generatedAt:'2026-10-23T01:00:00.000Z',checkedAt:attempt,sources:{bls:{status:'unavailable',fetchedAt:null,error:'Not retrieved'}}});
   assert.match(html,/No successful source refresh recorded/);
-  assert.match(html,/22 unavailable/);
+  assert.match(html,/29 unavailable/);
   assert.match(html,/Unavailable/);
-  assert.doesNotMatch(html,/All 22 sources captured|Cached:/);
+  assert.doesNotMatch(html,/All 29 sources captured|Cached:/);
   assert.doesNotMatch(html,/datetime="2026-10-23T01/);
 });
 
@@ -85,16 +85,16 @@ test('daily warning starts at the deadline, names stale sources and offers a sna
 
 test('successful but old captures get a stale warning without being relabeled as failed or cached',()=>{
   const html=banner(snapshot(),new Date('2026-10-22T00:37:00.000Z'));
-  assert.match(html,/22 stale/);
+  assert.match(html,/29 stale/);
   assert.match(html,/Stale · Captured/);
   assert.match(html,/data-state="partial"/);
-  assert.doesNotMatch(html,/All 22 sources captured|Cached:/);
+  assert.doesNotMatch(html,/All 29 sources captured|Cached:/);
   assert.match(html,/this snapshot/,'the warning describes the displayed capture, not live agency availability');
 });
 
 test('unavailable sources are distinct from a missed daily capture',()=>{
   const html=banner({},new Date('2026-10-22T00:37:00.000Z'));
-  assert.match(html,/22 unavailable/);
+  assert.match(html,/29 unavailable/);
   assert.doesNotMatch(html,/Daily refresh overdue|data-reload-snapshot|\d+ stale/);
 });
 

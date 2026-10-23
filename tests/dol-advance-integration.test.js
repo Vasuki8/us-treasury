@@ -12,7 +12,10 @@ import {compareSeries,toCsv} from '../src/model.js';
 import {parseCsv} from '../scripts/sources/http.mjs';
 import {createResearchPackage,exportResearchPackage,importResearchPackage,researchPackageCsv} from '../src/research-packages.js';
 
-const ids=['claimsAdvance','continuedClaimsAdvance'],at='2026-10-22T21:10:00.000Z',nextAt='2026-10-29T21:10:00.000Z';
+const ids=['claimsAdvance','continuedClaimsAdvance'];
+// A synthetic retrieval must follow the independently refreshed historical feed.
+const at=new Date(Math.max(Date.parse(snapshot.sources.dol.fetchedAt),Date.parse('2026-10-22T21:10:00.000Z'))+1000).toISOString();
+const nextAt=new Date(Date.parse(at)+7*86400000).toISOString();
 function source(input=releaseFixture(),fetchedAt=at){return {...parseDolAdvanceText(input,{now:new Date(fetchedAt)}),fetchedAt,provenance:[{url:'https://www.dol.gov/ui/data.pdf',sha256:'a'.repeat(64),retrievedAt:fetchedAt,lastModified:null}],warnings:[]};}
 function catalog(input){return Object.fromEntries(ids.map(id=>[id,{...registry[id],...input.series[id],source:{...registry[id].source,seriesIds:input.series[id].sourceIds},fetchedAt:input.fetchedAt,provenance:input.provenance,dataStatus:'official'}]));}
 
@@ -20,7 +23,7 @@ test('an independent advance refresh never changes revised history, calendars or
  const previous={sources:{dol:structuredClone(snapshot.sources.dol)},calendar:structuredClone(snapshot.calendar),publicationPolicy:structuredClone(snapshot.publicationPolicy)},before=JSON.stringify(previous);
  const next=await refreshSnapshot({previous,collectors:{dolAdvance:async()=>source()},now:new Date(at)});
  assert.equal(JSON.stringify(previous),before);assert.deepEqual(next.sources.dol,previous.sources.dol);assert.deepEqual(next.calendar,previous.calendar);assert.deepEqual(next.publicationPolicy,previous.publicationPolicy);assertCommercialData(next);
- assert.equal(next.vintages.captures.length,2);assert.equal(asKnownOn(next.vintages,'2026-10-22T21:09:59.999Z').sources.dolAdvance,undefined);
+ assert.equal(next.vintages.captures.length,2);assert.equal(asKnownOn(next.vintages,new Date(Date.parse(at)-1).toISOString()).sources.dolAdvance,undefined);
  const replay=asKnownOn(next.vintages,at).sources.dolAdvance;
  assert.equal(replay.series.claimsAdvance.observations.at(-1).value,194);assert.equal(replay.series.continuedClaimsAdvance.observations.at(-1).date,'2026-10-10');assert.equal(replay.series.claimsAdvance.publicationNote,source().series.claimsAdvance.publicationNote);
  assert.equal(asKnownOn(next.vintages,at).sources.dol.series.claims.observations.length,3117);
@@ -28,9 +31,9 @@ test('an independent advance refresh never changes revised history, calendars or
 
 test('advance failure retains only its own cached context and provenance without inventing captures or substituting history',async()=>{
  const good=await refreshSnapshot({previous:{sources:{dol:snapshot.sources.dol}},collectors:{dolAdvance:async()=>source()},now:new Date(at)}),prior=JSON.stringify(good.vintages);
- const failed=await refreshSnapshot({previous:good,collectors:{dolAdvance:async()=>{throw Error('Official PDF HTTP 403');}},now:new Date('2026-10-22T21:11:00.000Z')});
+ const failed=await refreshSnapshot({previous:good,collectors:{dolAdvance:async()=>{throw Error('Official PDF HTTP 403');}},now:new Date(Date.parse(at)+60000)});
  assert.deepEqual(failed.sources.dol,good.sources.dol);assert.equal(failed.sources.dolAdvance.status,'error');assert.equal(failed.sources.dolAdvance.fetchedAt,at);assert.deepEqual(failed.sources.dolAdvance.series,good.sources.dolAdvance.series);assert.equal(JSON.stringify(failed.vintages),prior);
- const entries=getFreshness(failed,{now:new Date('2026-10-22T21:12:00Z')}).entries;
+ const entries=getFreshness(failed,{now:new Date(Date.parse(at)+120000)}).entries;
  assert.equal(entries.find(row=>row.id==='data:dolAdvance').status,'cached');assert.equal(entries.find(row=>row.id==='data:dol').status,'available');
  const first=await refreshSnapshot({collectors:{dolAdvance:async()=>{throw Error('Unavailable');}},now:new Date(at)});assert.equal(first.sources.dolAdvance.status,'unavailable');assert.deepEqual(first.sources.dolAdvance.series,{});
  await assert.rejects(refreshSnapshot({previous:good,collectors:{dolAdvance:async()=>{throw Error('Missing SA table');}},now:new Date(nextAt),requireAll:true}),/Required official refresh failed/);

@@ -8,8 +8,8 @@ export const series=Object.fromEntries(Object.entries(registry).map(([id,metadat
   return [id,{
     ...metadata,observationType:metadata.observationType??official?.observationType??'official',
     source:{...metadata.source,seriesIds:official?.sourceIds||[]},observations:official?.observations||[],dataStatus,
-    fetchedAt:source?.fetchedAt||null,lastAttemptAt:source?.lastAttemptAt||null,error:source?.error||(!official?'This official source is not connected.':null),
-    measure:official?.measure??'',provenance:source?.provenance??[],calculation:official?.calculation||'',sourceUrl:official?.sourceUrl||metadata.source.url,sourceUrls:official?.sourceUrls??[],
+    fetchedAt:official?.fetchedAt||source?.fetchedAt||null,lastAttemptAt:source?.lastAttemptAt||null,error:source?.error||(!official?'This official source is not connected.':null),
+    measure:official?.measure??'',provenance:official?.provenance??source?.provenance??[],calculation:official?.calculation||'',sourceUrl:official?.sourceUrl||metadata.source.url,sourceUrls:official?.sourceUrls??[],
     sourceNotice:official?.sourceNotice??official?.redistributionNotice??'',licenseUrl:official?.licenseUrl??official?.termsUrl??'',attribution:official?.attribution??'',sourceTitle:official?.sourceTitle??'',
     coverageNote:official?.coverageNote||source?.coverageNote||'',publicationNote:official?.publicationNote??publicationNote,
   }];

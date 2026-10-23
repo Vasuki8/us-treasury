@@ -5,7 +5,7 @@ import { mountFreshnessBanner } from '../src/freshness-controller.js';
 
 const capturedAt = '2026-10-21T23:18:30.000Z';
 const targetIds = ['treasury', 'bls', 'bea', 'dol', 'census'];
-const researchIds = ['fiscal','refinancing','yields','auctions','ownership','macroContributions','marketFunctioning','policyRates','activity','housing'];
+const researchIds = ['householdDebt','loanDelinquency','bankCredit','lendingSurvey','fedBalance','onRrp','fiscal','refinancing','yields','auctions','ownership','macroContributions','marketFunctioning','policyRates','activity','housing'];
 function snapshot() {
   const source = () => ({ status: 'ok', fetchedAt: capturedAt, lastAttemptAt: capturedAt });
   return {

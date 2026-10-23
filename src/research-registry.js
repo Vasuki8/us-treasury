@@ -53,3 +53,6 @@ for(const [id,name,code,definition] of [
  ['effr','Effective federal funds rate (EFFR)','EFFR:percentRate','Published volume-weighted median unsecured federal funds rate.'],
  ['sofrEffrSpread','SOFR minus EFFR','SOFR − EFFR','100 × same-effective-date SOFR minus EFFR. Distinct funding markets; descriptive difference, not an exact credit or liquidity decomposition.'],
 ])researchRegistry[id]={id,name,short:name,code,definition:definition+' Effective business dates are not release timestamps; missing dates are not filled.',agency:'marketFunctioning',topic:'Market functioning',frequency:'Daily',unit:id==='sofrEffrSpread'?'Basis points':'Percent',format:id==='sofrEffrSpread'?'basisPoints':'percent',precision:2,changeInBasisPoints:id!=='sofrEffrSpread',observationType:id==='sofrEffrSpread'?'calculated':'official',adjustment:'Not seasonally adjusted',source:{name:'Federal Reserve Bank of New York, Reference Rates',url:'https://www.newyorkfed.org/markets/reference-rates'}};
+
+researchRegistry.gdpTotalContribution.name="Real GDP growth · contribution-table headline";
+researchRegistry.gdpTotalContribution.short="GDP growth · contribution table";

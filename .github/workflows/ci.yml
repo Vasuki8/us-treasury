@@ -16,6 +16,9 @@ on:
     - cron: '37 23 * * *'
     # Catch a missed/delayed daily trigger; the guard skips completed captures.
     - cron: '17 0,1 * * *'
+    # GDP/claims 08:30 Eastern post-release checks across both DST offsets.
+    # Bounded retries remain best effort; schedule time does not verify a result.
+    - cron: '47 12,13,14 * * 1-5'
 
 permissions:
   contents: read
@@ -27,13 +30,15 @@ concurrency:
 
 jobs:
   refresh_check:
-    name: Check whether the daily refresh is due
+    name: Check daily and supported release refresh objectives
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh_data))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       required: ${{ steps.check.outputs.required }}
       expected_refresh_at: ${{ steps.check.outputs.expected_refresh_at }}
+      sources: ${{ steps.check.outputs.sources }}
+      refresh_kind: ${{ steps.check.outputs.refresh_kind }}
     steps:
       - name: Check out the exact starting commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -49,7 +54,7 @@ jobs:
       - name: Check all registered daily capture outcomes
         id: check
         # Only this explicit manual option forces a repeat of a completed run.
-        run: node scripts/check-refresh-due.mjs ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_data && '--force' || '' }}
+        run: node scripts/check-release-refresh.mjs ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_data && '--force' || '' }}
 
   refresh:
     name: Refresh official data and calendars
@@ -78,7 +83,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Refresh official sources and retain verified BLS calendar on access denial
-        run: npm run data:refresh -- --allow-cached-bls-calendar
+        run: npm run data:refresh -- ${{ needs.refresh_check.outputs.sources && format('--require-all --sources={0}', needs.refresh_check.outputs.sources) || '--allow-cached-bls-calendar' }}
 
       - name: Test the refreshed snapshot
         run: npm test

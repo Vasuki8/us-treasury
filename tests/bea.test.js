@@ -61,13 +61,14 @@ test('BEA parser rejects duplicate periods, invalid periods and malformed number
 });
 
 const companions='DPCCRG,2026M08,130.455\nDPCERGM,2026M08,0.3\nDPCCRGM,2026M08,0.2\nDPCERX,2026M08,"16,955,276"\nDPCERAM,2026M08,0.6\nA067RX,2026M08,"18,410,473"\nA067RM,2026M08,0.0\n';
+const depthQuarterly=['A191RC','LB000003','PB000003','A261RC','A261RL','A008RL','A011RL','A009RL','Y033RL','Y001RL','B020RC','B021RC','A019RC'].map(code=>`${code},2026Q2,1000`).join('\n');
 function fixtureFetch({ quarterly = header + 'A191RL,2026Q2,"2.2"\nA191RL,2027Q1,"9.9"', monthly, familyDefaults=true } = {}) {
   return async url => {
     if (url === 'https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt') {
-      return new Response(quarterly, { headers: { 'content-type': 'text/plain', 'last-modified': 'Wed, 30 Sep 2026 12:30:00 GMT' } });
+      return new Response(quarterly+'\n'+depthQuarterly, { headers: { 'content-type': 'text/plain', 'last-modified': 'Wed, 30 Sep 2026 12:30:00 GMT' } });
     }
     if (url === 'https://apps.bea.gov/national/Release/TXT/NipaDataM.txt') {
-      return new Response(monthly+(familyDefaults?'\n'+companions:''), { headers: { 'content-type': 'text/plain' } });
+      return new Response(monthly+(familyDefaults?'\n'+companions:'')+'\nA072RC,2026M08,4', { headers: { 'content-type': 'text/plain' } });
     }
     throw new Error(`Unexpected official BEA URL ${url}`);
   };
@@ -125,7 +126,7 @@ test('BEA collector propagates upstream failure rather than supplying sample val
 test('BEA coherent family preserves published monthly rates, exact core annual changes and annualized real-dollar scale',async()=>{
  const monthly=header+'DPCERG,2025M08,125\nDPCERG,2026M08,131.579\nDPCCRG,2025M08,125\n'+companions;
  const result=await bea().collectBea({now:new Date('2026-10-21T12:00:00Z'),fetchImpl:fixtureFetch({monthly,familyDefaults:false})});
- assert.equal(Object.keys(result.series).length,11);
+ assert.equal(Object.keys(result.series).length,25);
  assert.equal(result.series.pceIndex.observations.at(-1).value,131.579);
  assert.equal(result.series.pceCoreIndex.observations.at(-1).value,130.455);
  assert.ok(Math.abs(result.series.pceCore.observations.at(-1).value-4.364)<1e-10);

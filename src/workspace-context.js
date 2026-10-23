@@ -16,7 +16,7 @@ export function indicatorHref(seriesId,state={}) {
 export function workspaceReturn(state={}) {
   const href=safeReturnTo(state.returnTo);if(!href)return null;
   const route=parseRoute(href);
-  return {href,label:route.page==='watchlist'?'BACK TO WATCHLIST':route.page==='macroCoverage'?'BACK TO MACRO COVERAGE':route.exploreMode==='compare'?'BACK TO COMPARISON':route.query?'BACK TO RESULTS':'BACK TO CATALOG'};
+  return {href,label:route.page==='watchlist'?'BACK TO WATCHLIST':route.page==='macroCoverage'?'BACK TO ECONOMY':route.exploreMode==='compare'?'BACK TO COMPARISON':route.query?'BACK TO RESULTS':'BACK TO CATALOG'};
 }
 
 /** Update the selection in the immediate return and its bounded watchlist origin. */

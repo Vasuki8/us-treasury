@@ -5,6 +5,7 @@ const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value)
 const provenanceFields=new Set(['url','sha256','retrievedAt','lastModified']);
 const censusProvenanceFields=new Set(['filename','fileUpdatedAt','usageNote']);
 const censusZipMembers={census:'MARTS-mf.csv',housing:'RESCONST-mf.csv'};
+const boardZipMembers={bankCredit:'H8_data.xml',lendingSurvey:'SLOOS_data.xml',fedBalance:'H41_data.xml',householdDebt:'DSR_data.xml',loanDelinquency:'CHGDEL_data.xml'};
 
 function canonical(value){
   if(value===null||typeof value==='string'||typeof value==='boolean')return JSON.stringify(value);
@@ -17,8 +18,10 @@ function canonical(value){
 function retrievalProvenance(capture,capturedAt){
   if(!Array.isArray(capture.provenance)||!capture.provenance.length)fail('capture has no original retrieval provenance');
   const zipMember=Object.hasOwn(censusZipMembers,capture.sourceId)?censusZipMembers[capture.sourceId]:null;
+  const boardMember=Object.hasOwn(boardZipMembers,capture.sourceId)?boardZipMembers[capture.sourceId]:null;
   const retrievals=capture.provenance.map(item=>{
-    if(!object(item)||Object.keys(item).some(key=>!provenanceFields.has(key)&&!(zipMember&&censusProvenanceFields.has(key)))||typeof item.url!=='string'||!/^[a-f0-9]{64}$/.test(item.sha256))fail('invalid provenance fields, content or SHA256');
+    if(!object(item)||Object.keys(item).some(key=>!provenanceFields.has(key)&&!(zipMember&&censusProvenanceFields.has(key))&&!(boardMember&&key==='filename'))||typeof item.url!=='string'||!/^[a-f0-9]{64}$/.test(item.sha256))fail('invalid provenance fields, content or SHA256');
+    if(boardMember&&item.filename!==boardMember)fail('unreviewed Board provenance ZIP member');
     if(item.lastModified!==undefined&&item.lastModified!==null&&typeof item.lastModified!=='string')fail('invalid provenance last-modified metadata');
     if(zipMember){
       if([...censusProvenanceFields].some(key=>item[key]!==undefined&&typeof item[key]!=='string'))fail('invalid Census provenance metadata');

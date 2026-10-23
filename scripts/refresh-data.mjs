@@ -1,3 +1,5 @@
+import { collectBankCredit,collectLendingSurvey,collectFedBalance,collectOnRrp,collectHouseholdDebt,collectLoanDelinquency } from './sources/credit-context.mjs';
+import { collectFomcCalendar } from './sources/calendar-fomc.mjs';
 import { appendFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { snapshot as previousRoot } from '../src/official-snapshot.js';
@@ -27,8 +29,9 @@ import { collectMarketFunctioning } from './sources/market-functioning.mjs';
 import { collectPolicyRates } from './sources/policy-rates.mjs';
 import { collectActivity } from './sources/activity.mjs';
 import { collectHousing } from './sources/housing.mjs';
+import {addMomentumSeries} from '../src/momentum.js';
 
-const all={treasury:collectTreasury,bls:collectBls,bea:collectBea,dol:collectDol,dolAdvance:collectDolAdvance,census:collectCensus,fiscal:async options=>{const result=await collectFiscal(options);return {...result,series:{...result.series,...deriveFiscalSeries(result)}};},refinancing:collectRefinancing,yields:collectYields,auctions:collectAuctions,ownership:collectOwnership,macroContributions:collectMacroContributions,marketFunctioning:collectMarketFunctioning,policyRates:collectPolicyRates,activity:collectActivity,housing:collectHousing};
+const all={householdDebt:collectHouseholdDebt,loanDelinquency:collectLoanDelinquency,bankCredit:collectBankCredit,lendingSurvey:collectLendingSurvey,fedBalance:collectFedBalance,onRrp:collectOnRrp,treasury:collectTreasury,bls:async options=>addMomentumSeries(await collectBls(options)),bea:async options=>addMomentumSeries(await collectBea(options)),dol:collectDol,dolAdvance:collectDolAdvance,census:collectCensus,fiscal:async options=>{const result=await collectFiscal(options);return {...result,series:{...result.series,...deriveFiscalSeries(result)}};},refinancing:collectRefinancing,yields:collectYields,auctions:collectAuctions,ownership:collectOwnership,macroContributions:collectMacroContributions,marketFunctioning:collectMarketFunctioning,policyRates:collectPolicyRates,activity:collectActivity,housing:collectHousing};
 const requireAll=process.argv.includes('--require-all');
 const allowCachedBlsCalendar=process.argv.includes('--allow-cached-bls-calendar');
 if(requireAll&&allowCachedBlsCalendar)throw new Error('Cannot combine --require-all and --allow-cached-bls-calendar; publication modes are mutually exclusive.');
@@ -38,7 +41,7 @@ const collectors=Object.fromEntries(selection.filter(id=>id!=='calendar').map(id
   console.log(`Retrieving ${id.toUpperCase()} official data…`);
   return all[id](options);
 }]));
-const calendarCollectors=selection.includes('calendar')?{bls:collectBlsCalendar,bea:collectBeaCalendar,census:collectCensusCalendar,dol:collectDolCalendar,treasury:collectTreasuryCalendar,'treasury-yield-timing':collectTreasuryYieldTiming}:{};
+const calendarCollectors=selection.includes('calendar')?{fomc:collectFomcCalendar,bls:collectBlsCalendar,bea:collectBeaCalendar,census:collectCensusCalendar,dol:collectDolCalendar,treasury:collectTreasuryCalendar,'treasury-yield-timing':collectTreasuryYieldTiming}:{};
 const previous={...previousRoot,vintages:await loadSnapshotHistory(previousRoot,{directory:fileURLToPath(new URL('../src/',import.meta.url))})};
 if(selection.includes('calendar'))console.log('Retrieving BLS, BEA, Census, DOL and Treasury official schedules and yield timing…');
 const snapshot=await refreshSnapshot({previous,collectors,calendarCollectors,requireAll,allowCachedBlsCalendar});

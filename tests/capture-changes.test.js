@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {recordVintages} from '../src/vintages.js';
+import {recordVintages,asKnownOn} from '../src/vintages.js';
 import {captureChanges,changesCsv,readChangeCheckpoint,writeChangeCheckpoint} from '../src/capture-changes.js';
 const source=(time,rows,definition='Level')=>({id:'test',fetchedAt:time,series:{amount:{sourceIds:['A'],unit:'Dollars',definition,observations:rows.map(([date,value])=>({date,value}))}},provenance:[{url:'https://example.com/data',sha256:'a'.repeat(64),retrievedAt:time}]});
 const a=source('2026-10-20T12:00:00Z',[['2026-08-01',1],['2026-09-01',null]]),b=source('2026-10-21T12:00:00Z',[['2026-07-01',0],['2026-08-01',2],['2026-09-01',null],['2026-10-01',3]]);
@@ -11,6 +11,23 @@ test('capture feed separates new periods, backfills, revisions and unchanged con
  const c={...b,fetchedAt:'2026-10-22T12:00:00Z',provenance:[{...b.provenance[0],retrievedAt:'2026-10-22T12:00:00Z'}]};
  h=recordVintages(h,{test:b},{test:c},{checkedAt:c.fetchedAt});assert.deepEqual(captureChanges(h,{ids:['amount'],since:b.fetchedAt}),[]);
  assert.ok(changes.every(row=>row.publicationDate===null));assert.match(changesCsv(changes),/historical-backfill/);
+});
+test('new measurement and row receipts confirm unchanged values without creating monitoring changes',()=>{
+ const time1='2026-10-20T12:00:00.000Z',time2='2026-10-21T12:00:00.000Z',url='https://example.com/annual-yields.csv';
+ const treasury=(time,hash)=>({id:'treasury',fetchedAt:time,provenance:[{url,sha256:hash.repeat(64),retrievedAt:time}],series:{yield:{unit:'Percent',definition:'Published nominal par yield',sourceIds:['BC_10YEAR'],sourceUrl:url,fetchedAt:time,observations:[{date:'2026-10-19',value:4,publishedAt:null,sourceUrl:url,retrievedAt:time,sourceSha256:hash.repeat(64)}]}}});
+ const first=treasury(time1,'a');
+ let history=recordVintages(null,{}, {treasury:first},{checkedAt:time1});const baseline=JSON.stringify(history.captures[0]);
+ const second=treasury(time2,'b');history=recordVintages(history,{}, {treasury:second},{checkedAt:time2});
+ assert.deepEqual(captureChanges(history,{ids:['yield'],since:time1}),[],'receipt-only changes must remain confirmations, even when another part of the annual response changes its hash');
+ const replayed=asKnownOn(history,time2).sources.treasury;
+ assert.equal(replayed.series.yield.fetchedAt,time2);assert.equal(replayed.series.yield.observations[0].retrievedAt,time2);assert.equal(replayed.series.yield.observations[0].sourceSha256,'b'.repeat(64));
+ assert.equal(JSON.stringify(history.captures[0]),baseline,'the original receipt remains immutable');
+ const time3='2026-10-22T12:00:00.000Z',third=treasury(time3,'c');third.series.yield.definition='Updated measurement definition';third.series.yield.observations[0].footnotes=['New agency note'];
+ history=recordVintages(history,{}, {treasury:third},{checkedAt:time3});
+ const changes=captureChanges(history,{ids:['yield'],since:time2});
+ assert.deepEqual(changes.find(row=>row.kind==='metadata-change').changedFields,['definition']);
+ assert.deepEqual(changes.find(row=>row.kind==='observation-metadata-change').changedFields,['footnotes']);
+ assert.ok(changes.every(row=>row.provenance[0].retrievedAt===time3&&row.previousProvenance[0].retrievedAt===time2));
 });
 test('metadata and removed coverage are distinct from economic revisions and source nulls are preserved',()=>{
  let h=recordVintages(null,{}, {test:a},{checkedAt:a.fetchedAt});const c=source(b.fetchedAt,[['2026-09-01',0]],'Changed definition');

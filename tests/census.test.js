@@ -35,7 +35,7 @@ test('Census rejects the wrong dataset/schema, duplicates and invalid selected v
   }
 });
 
-test('Census filters future periods then retains 36 observations after calculating growth', () => {
+test('Census filters future periods and retains the full approved revised history after calculating growth', () => {
   const periods=[],rows=[];
   for(let index=0;index<40;index++) {
     const date=new Date(Date.UTC(2023,index,1));
@@ -43,8 +43,8 @@ test('Census filters future periods then retains 36 observations after calculati
     rows.push(`${index+1},7,4,0,9,1,${100+index}`);
   }
   const result=parse(csv({periods,rows}),{now:new Date('2026-03-15T00:00:00Z')});
-  assert.equal(result.observations.length,36);assert.equal(result.observations[0].date,'2023-04-01');
-  assert.ok(result.observations[0].value!==null);assert.equal(result.observations.at(-1).date,'2026-03-01');
+  assert.equal(result.observations.length,39);assert.equal(result.observations[0].date,'2023-01-01');
+  assert.equal(result.observations[0].value,null);assert.ok(result.observations[1].value!==null);assert.equal(result.observations.at(-1).date,'2026-03-01');
   assert.ok(!result.observations.at(-1).footnotes.some(note=>/advance estimate/i.test(note)));
 });
 

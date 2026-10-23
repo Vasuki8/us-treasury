@@ -2,13 +2,35 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
+import { promisify, isDeepStrictEqual } from 'node:util';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const execute=promisify(execFile);
 const root=fileURLToPath(new URL('../',import.meta.url));
 const scratchRoot=path.join(root,'test-results');
+// The full 12 MB admitted snapshot and 72 retained captures take about 28 s to
+// validate and rewrite in the measured manual fixture. Keep full coverage and a
+// bounded allowance for successful publication; early rejection stays at 20 s.
+const publicationTimeout=60000;
+const independentCalendars=[
+  ['calendar-bea.mjs','collectBeaCalendar','bea'],
+  ['calendar-census.mjs','collectCensusCalendar','census'],
+  ['calendar-dol.mjs','collectDolCalendar','dol'],
+  ['calendar-treasury.mjs','collectTreasuryCalendar','treasury'],
+  ['timing-treasury-yields.mjs','collectTreasuryYieldTiming','treasury-yield-timing'],
+  ['calendar-fomc.mjs','collectFomcCalendar','fomc'],
+];
+
+function nextFixtureAttemptAt(snapshot){
+  const priorTimes=[snapshot.generatedAt,snapshot.checkedAt,
+    ...Object.values(snapshot.sources).map(source=>source.fetchedAt),
+    ...Object.values(snapshot.calendar.sources).map(source=>source.fetchedAt),
+    ...(snapshot.vintageArchive?.captures??[]).flatMap(capture=>[capture.capturedAt,capture.recordedAt]),
+  ].filter(Boolean).map(value=>Date.parse(value));
+  assert.ok(priorTimes.length&&priorTimes.every(Number.isFinite),'fixture derives time from valid stored capture timestamps');
+  return new Date(Math.max(...priorTimes)+1000).toISOString();
+}
 
 async function withCliFixture(run) {
   await mkdir(scratchRoot,{recursive:true});
@@ -45,7 +67,7 @@ test('strict all-source CLI failure leaves the snapshot byte-for-byte unchanged'
 
 test('default manual CLI failure records retained source status and exits unsuccessfully',async()=>{
   await withCliFixture(async({directory,destination,original})=>{
-    await assert.rejects(execute(process.execPath,['--import','./unavailable.mjs','scripts/refresh-data.mjs','--sources=bls'],{cwd:directory,timeout:20000}),error=>error.code===1);
+    await assert.rejects(execute(process.execPath,['--import','./unavailable.mjs','scripts/refresh-data.mjs','--sources=bls'],{cwd:directory,timeout:publicationTimeout}),error=>error.code===1);
     const retained=await readFile(destination);
     assert.notDeepEqual(retained,original,'manual mode still writes the attempted-source failure for display');
     const {snapshot}=await import(`${pathToFileURL(destination).href}?manual`);
@@ -64,27 +86,22 @@ test('strict calendar CLI publishes successful current coverage when BLS has nev
     bls.provenance=bls.provenance.filter(item=>item.url.includes('/2026/'));
     snapshot.releases=snapshot.releases.filter(event=>event.sourceId!=='bls'||event.date.startsWith('2026-'));
     await writeFile(destination,`export const snapshot = ${JSON.stringify(snapshot)};\n`);
-    // Hold the five independent, already-verified agency responses constant while
+    // Hold independent, already-verified agency responses constant while
     // exercising the real BLS collector, strict refresh assembly and CLI writer.
-    for(const [filename,exportName,id] of [
-      ['calendar-bea.mjs','collectBeaCalendar','bea'],
-      ['calendar-census.mjs','collectCensusCalendar','census'],
-      ['calendar-dol.mjs','collectDolCalendar','dol'],
-      ['calendar-treasury.mjs','collectTreasuryCalendar','treasury'],
-      ['timing-treasury-yields.mjs','collectTreasuryYieldTiming','treasury-yield-timing'],
-    ])await writeFile(path.join(directory,'scripts','sources',filename),`import {snapshot} from '../../src/official-snapshot.js';\nexport async function ${exportName}(){return snapshot.calendar.sources[${JSON.stringify(id)}];}\n`);
+    for(const [filename,exportName,id] of independentCalendars)await writeFile(path.join(directory,'scripts','sources',filename),`import {snapshot} from '../../src/official-snapshot.js';\nexport async function ${exportName}(){return snapshot.calendar.sources[${JSON.stringify(id)}];}\n`);
+    const attemptAt=nextFixtureAttemptAt(snapshot);
     const html='<title>Schedule of Selected Releases 2026</title><table class="release-list"><thead><tr><th>Date</th><th>Time</th><th>Release</th></tr></thead><tbody><tr><td class="date-cell">Friday, November 6, 2026</td><td class="time-cell">08:30 AM</td><td class="desc-cell"><strong>Employment Situation</strong> for October 2026</td></tr></tbody></table><p>All times on calendar are Eastern Time.</p>';
     await writeFile(path.join(directory,'first-year-only.mjs'),`
       const NativeDate=Date;
       globalThis.Date=class extends NativeDate {
-        constructor(...args){super(...(args.length?args:['2026-10-21T12:00:00.000Z']));}
-        static now(){return NativeDate.parse('2026-10-21T12:00:00.000Z');}
+        constructor(...args){super(...(args.length?args:[${JSON.stringify(attemptAt)}]));}
+        static now(){return NativeDate.parse(${JSON.stringify(attemptAt)});}
       };
       globalThis.fetch=async url=>url==='https://www.bls.gov/schedule/2026/home.htm'
         ?new Response(${JSON.stringify(html)},{status:200})
         :new Response('Annual calendar not yet published',{status:404});
     `);
-    await execute(process.execPath,['--import','./first-year-only.mjs','scripts/refresh-data.mjs','--sources=calendar','--require-all'],{cwd:directory,timeout:20000});
+    await execute(process.execPath,['--import','./first-year-only.mjs','scripts/refresh-data.mjs','--sources=calendar','--require-all'],{cwd:directory,timeout:publicationTimeout});
     const {snapshot:published}=await import(`${pathToFileURL(destination).href}?published`);
     assert.equal(published.calendar.status,'partial');
     assert.equal(published.calendar.sources.bls.status,'ok');
@@ -99,13 +116,7 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
   const {snapshot}=await import(pathToFileURL(path.join(directory,'src','official-snapshot.js')).href);
   // New committed captures must never make this simulated refresh travel back
   // in time. Retain their original timestamps and advance only the fixture clock.
-  const priorTimes=[snapshot.generatedAt,snapshot.checkedAt,
-    ...Object.values(snapshot.sources).map(source=>source.fetchedAt),
-    ...Object.values(snapshot.calendar.sources).map(source=>source.fetchedAt),
-    ...(snapshot.vintageArchive?.captures??[]).flatMap(capture=>[capture.capturedAt,capture.recordedAt]),
-  ].filter(Boolean).map(value=>Date.parse(value));
-  assert.ok(priorTimes.length&&priorTimes.every(Number.isFinite),'fixture derives time from valid stored capture timestamps');
-  const attemptAt=new Date(Math.max(...priorTimes)+1000).toISOString();
+  const attemptAt=nextFixtureAttemptAt(snapshot);
   // Keep every other verified source deterministic while exercising the real
   // BLS HTTP collector, publication gate and atomic CLI writer together.
   await writeFile(path.join(directory,'scripts','sources','fixture-retrieval.mjs'),`
@@ -114,6 +125,13 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
       const update=value=>{
         if(!value||typeof value!=='object')return;
         if(typeof value.url==='string'&&typeof value.sha256==='string'&&Object.hasOwn(value,'retrievedAt'))value.retrievedAt=retrievedAt;
+        if(Object.hasOwn(value,'fetchedAt'))value.fetchedAt=retrievedAt;
+        if(typeof value.sourceUrl==='string'&&Object.hasOwn(value,'retrievedAt')){
+          const receipt=source.provenance.find(item=>item.url===value.sourceUrl&&(!value.sourceSha256||item.sha256===value.sourceSha256));
+          if(!receipt)throw new Error('Fixture row has no matching original response receipt');
+          value.retrievedAt=retrievedAt;
+          if(Object.hasOwn(value,'sourceSha256'))value.sourceSha256=receipt.sha256;
+        }
         for(const item of Object.values(value))update(item);
       };
       update(source);
@@ -122,6 +140,9 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
   `);
   // Preserve the collector's admission constants while replacing only its fetch.
   await cp(path.join(directory,'scripts','sources','dol-advance.mjs'),path.join(directory,'scripts','sources','dol-advance-original.mjs'));
+  await cp(path.join(directory,'scripts','sources','treasury.mjs'),path.join(directory,'scripts','sources','treasury-original.mjs'));
+  const creditCollectors=[['collectBankCredit','bankCredit'],['collectLendingSurvey','lendingSurvey'],['collectFedBalance','fedBalance'],['collectOnRrp','onRrp'],['collectHouseholdDebt','householdDebt'],['collectLoanDelinquency','loanDelinquency']];
+  await writeFile(path.join(directory,'scripts','sources','credit-context.mjs'),`import {snapshot} from '../../src/official-snapshot.js';\nimport {refreshedCapture} from './fixture-retrieval.mjs';\n${creditCollectors.map(([name,id])=>`export async function ${name}(){return refreshedCapture(snapshot.sources[${JSON.stringify(id)}]);}`).join('\n')}\n`);
   for(const [filename,exportName,id,calendar] of [
     ['treasury.mjs','collectTreasury','treasury',false],
     ['bls.mjs','collectBls','bls',false],
@@ -139,12 +160,8 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
     ['policy-rates.mjs','collectPolicyRates','policyRates',false],
     ['activity.mjs','collectActivity','activity',false],
     ['housing.mjs','collectHousing','housing',false],
-    ['calendar-bea.mjs','collectBeaCalendar','bea',true],
-    ['calendar-census.mjs','collectCensusCalendar','census',true],
-    ['calendar-dol.mjs','collectDolCalendar','dol',true],
-    ['calendar-treasury.mjs','collectTreasuryCalendar','treasury',true],
-    ['timing-treasury-yields.mjs','collectTreasuryYieldTiming','treasury-yield-timing',true],
-  ])await writeFile(path.join(directory,'scripts','sources',filename),`${id==='dolAdvance'?"export * from './dol-advance-original.mjs';\n":''}import {snapshot} from '../../src/official-snapshot.js';\nimport {refreshedCapture} from './fixture-retrieval.mjs';\nexport async function ${exportName}(){${failOther&&id==='bea'&&!calendar?"throw new Error('BEA unavailable');":`return refreshedCapture(snapshot.${calendar?'calendar.':''}sources[${JSON.stringify(id)}]);`}}\n`);
+    ...independentCalendars.map(row=>[...row,true]),
+  ])await writeFile(path.join(directory,'scripts','sources',filename),`${id==='dolAdvance'?"export * from './dol-advance-original.mjs';\n":id==='treasury'&&!calendar?"export * from './treasury-original.mjs';\n":''}import {snapshot} from '../../src/official-snapshot.js';\nimport {refreshedCapture} from './fixture-retrieval.mjs';\nexport async function ${exportName}(){${failOther&&id==='bea'&&!calendar?"throw new Error('BEA unavailable');":`return refreshedCapture(snapshot.${calendar?'calendar.':''}sources[${JSON.stringify(id)}]);`}}\n`);
   await writeFile(path.join(directory,'blocked-bls.mjs'),`
     const NativeDate=Date;
     globalThis.Date=class extends NativeDate {
@@ -161,7 +178,7 @@ test('approved cached-BLS CLI mode publishes other sources and reports the origi
     const {snapshot:prior}=await import(`${pathToFileURL(destination).href}?prior-cached`);
     const attemptAt=await blockedBlsFixture(directory);
     const summary=path.join(directory,'summary.md');
-    const result=await execute(process.execPath,['--import','./blocked-bls.mjs','scripts/refresh-data.mjs','--allow-cached-bls-calendar'],{cwd:directory,timeout:20000,env:{...process.env,GITHUB_STEP_SUMMARY:summary}});
+    const result=await execute(process.execPath,['--import','./blocked-bls.mjs','scripts/refresh-data.mjs','--allow-cached-bls-calendar'],{cwd:directory,timeout:publicationTimeout,env:{...process.env,GITHUB_STEP_SUMMARY:summary}});
     const {snapshot:published}=await import(`${pathToFileURL(destination).href}?cached-published`);
     assert.notDeepEqual(await readFile(destination),original);
     assert.deepEqual(published.publicationPolicy,{mode:'allow-cached-bls-calendar',cachedCalendarSources:['bls']});
@@ -176,8 +193,23 @@ test('approved cached-BLS CLI mode publishes other sources and reports the origi
     for(const [id,source] of Object.entries(published.sources)){
       assert.equal(source.status,'ok');
       assert.equal(source.fetchedAt,attemptAt);
-      assert.ok(source.provenance.every(item=>item.retrievedAt===source.fetchedAt),'simulated successful responses carry their new actual retrieval time');
-      assert.deepEqual(source.provenance.map(item=>item.sha256),prior.sources[id].provenance.map(item=>item.sha256),'identical simulated response bytes retain their hashes');
+      if(id==='treasury'){
+        const nominal=receipt=>new URL(receipt.url).searchParams.get('type')==='daily_treasury_yield_curve';
+        const originalNominal=prior.sources.treasury.provenance.filter(nominal);
+        const fresh=source.provenance.filter(item=>item.retrievedAt===attemptAt);
+        const responseIdentity=item=>`${item.url}|${item.sha256}`;
+        const expectedResponses=[...prior.sources.treasury.provenance,...prior.sources.yields.provenance.filter(nominal)];
+        assert.deepEqual([...new Set(fresh.map(responseIdentity))].sort(),[...new Set(expectedResponses.map(responseIdentity))].sort(),'fresh Treasury and curve responses retain the exact fixture URLs and byte hashes');
+        for(const item of source.provenance.filter(item=>item.retrievedAt!==attemptAt))assert.ok(originalNominal.some(original=>isDeepStrictEqual(item,original)),'historical Treasury receipts remain unchanged original captures');
+        for(const original of originalNominal)assert.ok(source.provenance.some(item=>isDeepStrictEqual(item,original)),'harmonization retains every original historical yield receipt');
+      }else{
+        assert.ok(source.provenance.every(item=>item.retrievedAt===source.fetchedAt),`${id} simulated successful responses carry their new actual retrieval time`);
+        assert.deepEqual(source.provenance.map(item=>item.sha256),prior.sources[id].provenance.map(item=>item.sha256),'identical simulated response bytes retain their hashes');
+      }
+      for(const measurement of Object.values(source.series)){
+        if(measurement.fetchedAt)assert.ok(source.provenance.some(receipt=>receipt.retrievedAt===measurement.fetchedAt),'measurement retrieval retains an actual simulated response receipt');
+        for(const row of measurement.observations)if(row.retrievedAt)assert.ok(source.provenance.some(receipt=>receipt.url===row.sourceUrl&&receipt.retrievedAt===row.retrievedAt&&receipt.sha256===row.sourceSha256),'row retrieval and hash match their exact source response');
+      }
     }
     for(const [id,source] of Object.entries(published.calendar.sources))if(id!=='bls')assert.equal(source.status,'ok');
     assert.match(result.stdout,/warning.*BLS.*cached|BLS.*cached/i);

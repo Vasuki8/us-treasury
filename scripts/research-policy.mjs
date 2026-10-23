@@ -36,9 +36,9 @@ export const researchPolicies=[...marketPolicies,{
  basis:'Conditional commercial/business reuse under New York Fed Terms of Use; titles, copyright, source/terms links and downstream same-conditions notice retained; modified aggregation labeled',terms:['https://www.newyorkfed.org/privacy/termsofuse.html'],feed:'nyfed-soma',
  series:{somaTreasuryHoldings:['SOMA:treasury-adjusted-par']},
 },{
- id:'bea-published-growth-contributions',agency:'macroContributions',reviewedOn:'2026-10-21',commercialUse:true,
+ id:'bea-published-growth-contributions',agency:'macroContributions',reviewedOn:'2026-10-23',commercialUse:true,
  basis:'BEA public-domain NIPA 1.1.2 published statistical contributions with citation; no chained-dollar approximations',terms:['https://www.bea.gov/help/faq/147','https://www.bea.gov/help/guidelines-for-citing-bea'],feed:'bea-contributions',
- series:{gdpTotalContribution:['A191RL'],gdpConsumptionContribution:['DPCERY'],gdpInvestmentContribution:['A006RY'],gdpGovernmentContribution:['A822RY'],gdpExportsContribution:['A020RY'],gdpImportsContribution:['A021RY']},
+ series:{gdpTotalContribution:['A191RL'],gdpConsumptionContribution:['DPCERY'],gdpInvestmentContribution:['A006RY'],gdpGovernmentContribution:['A822RY'],gdpExportsContribution:['A020RY'],gdpImportsContribution:['A021RY'],gdpFixedInvestmentContribution:['A007RY'],gdpInventoriesContribution:['A014RY'],gdpConsumptionGoodsContribution:['DGDSRY'],gdpConsumptionServicesContribution:['DSERRY']},
 }];
 export function matchesResearchFeed(value,feed){
   if(matchesMarketFeed(value,feed))return true;
@@ -65,6 +65,15 @@ export function matchesResearchFeed(value,feed){
 export function assertResearchData(snapshot){
   assertMarketData(snapshot.sources?.marketFunctioning);
   if((snapshot.sources?.macroContributions?.cpiCategoryEffects?.observations??[]).length)throw new Error('CPI effects observations require separate source admission');
+  const contributionSource=snapshot.sources?.macroContributions;
+  const subcomponents={gdpFixedInvestmentContribution:'gdpInvestmentContribution',gdpInventoriesContribution:'gdpInvestmentContribution',gdpConsumptionGoodsContribution:'gdpConsumptionContribution',gdpConsumptionServicesContribution:'gdpConsumptionContribution'};
+  for(const [id,parentContribution]of Object.entries(subcomponents)){
+    const item=contributionSource?.series?.[id];
+    if(!item)continue; // Earlier immutable captures retain their original six measurements.
+    if(item.contributionScope!=='subcomponent'||item.parentContribution!==parentContribution||item.observationType!=='official')throw new Error(`Unreviewed GDP subcomponent measurement scope: ${id}`);
+    if(!contributionSource.provenance?.some(capture=>capture.url===item.sourceUrl&&/^[a-f0-9]{64}$/.test(capture.sha256)))throw new Error(`Missing GDP subcomponent captured provenance: ${id}`);
+    if(item.observations?.some(row=>row.publishedAt!==null))throw new Error(`Unreviewed GDP subcomponent historical publication timing: ${id}`);
+  }
   for(const item of Object.values(snapshot.sources?.ownership?.series??{}))if(item.sourceUrl?.startsWith('https://markets.newyorkfed.org/')){
     if(item.sourceTitle!=='SOMA Holdings'||item.termsUrl!=='https://www.newyorkfed.org/privacy/termsofuse.html'||!item.attribution?.includes('Federal Reserve Bank of New York')||!item.redistributionNotice?.includes('permissions, conditions and restrictions'))throw new Error('Required SOMA commercial redistribution conditions missing');
   }

@@ -1,4 +1,5 @@
 import {dataStatus} from './data.js';
+import { fiscalGdpPanel } from './fiscal-gdp-view.js';
 import {fiscalContributors,fiscalCategoryChanges} from './fiscal.js';
 import {getSeries,latest,formatValue} from './model.js';
 import {heading,button,panel,metrics,chart,seriesTable,table,emptyState,escapeHtml as esc} from './ui.js';
@@ -13,6 +14,7 @@ export function fiscalPage(source=dataStatus.sources.fiscal){
   return heading('FISCAL PRESSURE','Receipts, spending and net budget interest · official observations + calculated metrics',button('COMPARE TRENDS','data-compare="receiptsTtm,outlaysTtm,netInterestTtm"')+button('CSV FISCAL','data-export-fiscal'))
     +`<p class="panel-note"><strong>WHAT CHANGED.</strong> Monthly cash flows and exact trailing 12-month totals, distinct from fiscal-year-to-date values. ${source?.fetchedAt?`MTS retrieved ${esc(source.fetchedAt)} · ${source.status==='ok'?'Captured':'CACHED'}.`:'Fiscal source unavailable.'} Actual release date: unknown unless supplied by the source.</p>`
     +metrics(['receiptsTtm','outlaysTtm','primaryDeficitTtm','netInterestTtm','interestRevenueRatio','publicDebt'])
+    +fiscalGdpPanel({...dataStatus.sources,fiscal:source})
     +`<div class="grid g11">${panel('01','TRAILING 12-MONTH FISCAL TRENDS',chart(['receiptsTtm','outlaysTtm','netInterestTtm'],{height:235}),'','USD billions · calculated sums of 12 consecutive months; incomplete windows remain missing.')}${panel('02','WHAT CONTRIBUTED',contributors,'','Accounting decomposition of a same-month year-over-year deficit change; it does not establish economic causation.')}</div>`
     +panel('03','MONTHLY OBSERVATIONS',seriesTable(['receipts','outlays','netInterest','budgetDeficit','primaryDeficit']),'','Receipts, outlays and net budget interest are official observations; deficits are calculated. Positive deficits are shortfalls; negative values are surpluses.')
     +panel('04','LARGEST NAMED CATEGORY CHANGES',categories.length?table(['RECEIPT / OUTLAY CATEGORY','DEFICIT CONTRIBUTION','GROUP'],categories.slice(0,8).map(item=>row(item.name,item.deficitContribution,item.group)).join('')):emptyState('Comparable category changes unavailable.'),'','Largest absolute same-month year-over-year changes among matching source categories. This selected list is not a complete additive decomposition; unmatched or missing categories are omitted.')
