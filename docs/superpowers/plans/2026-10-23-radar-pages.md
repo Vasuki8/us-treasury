@@ -61,7 +61,7 @@
 - [x] Integrate common Radar CSS and isolated page CSS fragments. Verify existing IDs/actions, precise bounds and all source-data files unchanged.
 - [x] Run focused integration and complete full suite, production build and smoke checks. Review the whole change independently for specification and quality; fix material findings with scoped re-review.
 - [x] Browser-check four new pages plus Labor, both themes and all specified widths. Exercise calendar filters/preview, Catalog selection/search, comparison modes/window/export, indicator tabs/return and Save/Freeze continuity.
-- [ ] Obtain economist and investor acceptance of the implemented placement; integrate/publish through existing workflow, verify exact live build and representative live routes, preserve deployment evidence.
+- [x] Obtain economist and investor acceptance of the implemented placement; integrate/publish through existing workflow, verify exact live build and representative live routes, preserve deployment evidence.
 
 ## Final local verification
 
@@ -72,3 +72,11 @@
 - Actual workflows: Calendar selection/reveal/focus and filter recovery; Catalog search and4-series selection; native/indexed-eligibility-error/difference comparisons; custom-window export; detail/back preserves selection/query/mode/window; source data/methodology/retrieval tabs; Overview/Labor/Explore navigation; Save view and Freeze result. Comparison CSV downloaded8 observations across four measures and Aug/Sep2026 dates; frozen result retains same two-observation panels with units/baselines/provenance.
 - Missing-value export downloaded1 UNRATE period-change row for2017-01-01 with blank numeric value, Percentage points, original BLS source URL and retrieval timestamp. Invalid and genuinely empty histories remain disabled.
 - Browser density measurements at1440: Catalog compact124.24px row/padding10 vs comfortable136.24px/padding16; Calendar79.61px/padding12 vs89.61px/padding17. Scope leaves Labor/specialist styling intact. Source snapshots and publication archives unchanged; captured browser warn/error logs empty.
+
+## Deployment verification
+
+- Published **47e6fabc8f1352708e41da7f4e7d35e5444a2015** to the existing main branch by fast-forward. Original untracked exports/output/tmp were preserved.
+- [Actions run40024894589](https://github.com/Vasuki8/us-treasury/actions/runs/40024894589) succeeded: tests/build/smoke on Node22 and24, then GitHub Pages. No official-data refresh was required. Existing hosting settings were retained.
+- `node scripts/check-live.mjs https://vasuki8.github.io/us-treasury/`: passed; **all149 deployed assets exactly match the tested local production build** after terminal-whitespace cleanup. Tracked source uses consistent LF endings.
+- Actual public browser checks on Overview, Unemployment indicator, October Calendar and full Catalog: each has its Radar renderer and no page overflow at desktop1265px Graphite and390px Light (375px content after scrollbar). Catalog retains136 native-unit cells. Public browser warning/error capture was empty. Original Graphite preference and viewport restored after verification.
+- Opened a fresh versioned Overview tab as the user-facing result. Local domain verdicts, implementation reports, final review/re-review and passing full-suite log are retained under untracked `output/radar-primary-pages-delivery-2026-10-23/` in the main checkout. No remaining material findings; physical-device testing was not performed.
