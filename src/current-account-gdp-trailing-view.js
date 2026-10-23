@@ -60,14 +60,17 @@ export function currentAccountGdpTrailingChartCatalog(sources={}, {frozen=false}
 }
 
 /** A single CSV schema uses metadata, unique input-quarter and rolling-ratio records. */
-export function currentAccountGdpTrailingCsv(sources={},range={preset:'all'}){
+export function currentAccountGdpTrailingCsv(sources={},range={preset:'all'},{comparisonMeasure=null}={}){
+ const comparison=comparisonMeasure!==null;
+ if(comparison&&!definitions.some(item=>item.id&&item.id===comparisonMeasure))throw new RangeError('Comparison measure must be a current-account balance or one of its four admitted components.');
  const result=currentAccountGdpTrailing(sources,range),rows=result.error?[]:result.observations;
  const observed=definitions.filter(item=>item.id),inputIds=[...observed.map(item=>item.id),'nominalGdp'];
  const metrics=['value_percent','change_percentage_points','balance_t4q_billions','missing','unavailable_reason'];
  const fields=['value_billions','source_value','source_period_label','publication_date','footnotes_ref','observation_type'];
  const headers=['record_type','reference_quarter','window_start_quarter','window_end_quarter','input_quarters_json','nominal_gdp_t4q_billions',
   ...definitions.flatMap(item=>metrics.map(field=>`${item.ratioId}_${field}`)),...inputIds.flatMap(id=>fields.map(field=>`${id}_${field}`)),
-  'observation_type','ratio_unit','balance_unit','input_metadata_json','footnote_dictionary_json','calculation','limitations','attribution','metadata_scope'];
+  'observation_type','ratio_unit','balance_unit','input_metadata_json','footnote_dictionary_json','calculation','limitations','attribution','metadata_scope',
+  ...(comparison?['comparison_measure_id','comparison_quarterly_value_percent','comparison_trailing_value_percent','comparison_gap_percentage_points','comparison_quarterly_unavailable_reason','comparison_trailing_unavailable_reason','comparison_gap_unavailable_reason']:[])];
  const details=Object.fromEntries(['beaIta','bea'].map(agency=>[agency,Object.fromEntries((agency==='bea'?['nominalGdp']:observed.map(item=>item.id)).map(id=>{
   const input=currentAccountGdpInput(sources[agency],id);
   return [id,{sourceIds:input.item.sourceIds??[],unit:id==='nominalGdp'?'USD billions (SAAR)':'USD billions per quarter (not annualized)',sourceUnit:id==='nominalGdp'?'USD millions (SAAR)':'USD millions per quarter (not annualized)',url:input.url,title:input.title,retrievedAt:input.retrievedAt,capturedAt:input.capturedAt,captureStatus:input.status,tableReleaseDate:agency==='beaIta'?sources.beaIta?.tableReleaseDate??null:null,provenance:input.provenance,licenseUrl:input.license,attribution:input.attribution}];
@@ -75,6 +78,11 @@ export function currentAccountGdpTrailingCsv(sources={},range={preset:'all'}){
  const footnotes=new Map(),footnoteDictionary=Object.create(null);
  const footnoteRef=value=>{const key=JSON.stringify(value??[]);if(!footnotes.has(key)){const id=`f${footnotes.size}`;footnotes.set(key,id);footnoteDictionary[id]=value??[];}return footnotes.get(key);};
  const records=[{record_type:'metadata',ratio_unit:'Percent of nominal GDP',balance_unit:'USD billions over four quarters',input_metadata_json:JSON.stringify(details),calculation:result.formula+'; component sum = sum of four component ratios; residual = published total ratio minus component sum.',limitations:LIMITATIONS,attribution:CREDIT,metadata_scope:'This metadata record applies to all input and ratio records. Ratio/balance units describe calculated ratio records; input units are in input_metadata_json. Input records retain each supporting source quarter once, with per-series observation_type official or unavailable. Each *_footnotes_ref resolves to an exact array in footnote_dictionary_json. Ratio records identify the ending reference quarter and all four input quarters. nominalGdp_value_billions is SAAR; sum each value divided by 4 for nominal_gdp_t4q_billions. Original source values are USD millions. Changes require the exact preceding endpoint also in this export.'}];
+ if(comparison){
+  records[0].comparison_measure_id=comparisonMeasure;
+  records[0].calculation+=' Quarterly = 100 × same-quarter balance / (GDP SAAR / 4); comparison gap = quarterly minus trailing four quarters, in percentage points.';
+  records[0].metadata_scope+=' Comparison fields use the selected comparison_measure_id and the same ending reference quarter, with separate quarterly and four-quarter GDP denominators. The gap compares different horizons; it is not a revision or a change from the previous quarter. Quarterly inputs use the input record at reference_quarter. Trailing inputs use the four input_quarters_json dates.';
+ }
  const inputs=new Map();
  for(const row of rows){
   for(const definition of observed){
@@ -94,6 +102,12 @@ export function currentAccountGdpTrailingCsv(sources={},range={preset:'all'}){
  for(const [index,row] of rows.entries()){
   const previous=exactPrior(row,rows[index-1])?rows[index-1]:null,record={record_type:'ratio',observation_type:'calculated',reference_quarter:row.date,window_start_quarter:row.startDate,window_end_quarter:row.endDate,input_quarters_json:JSON.stringify(row.inputDates),nominal_gdp_t4q_billions:row.total.nominalGdpQuarter};
   for(const item of definitions){const point=item.point(row),prior=previous?item.point(previous):null;for(const [field,value] of [['value_percent',point.value],['change_percentage_points',change(point.value,prior?.value)],['balance_t4q_billions',point.currentAccountBalance],['missing',!finite(point.value)],['unavailable_reason',point.reason]])record[`${item.ratioId}_${field}`]=value;}
+  if(comparison){
+   const trailing=comparisonMeasure==='currentAccountBalance'?row.total:row.components[comparisonMeasure],quarterly=trailing.inputPoints.at(-1),gap=change(quarterly?.value,trailing.value);
+   Object.assign(record,{comparison_quarterly_value_percent:quarterly?.value??null,comparison_trailing_value_percent:trailing.value,comparison_gap_percentage_points:gap,
+    comparison_quarterly_unavailable_reason:quarterly?.reason??null,comparison_trailing_unavailable_reason:trailing.reason,
+    comparison_gap_unavailable_reason:finite(gap)?null:quarterly?.reason||trailing.reason||'The difference between the two horizons is nonfinite or unavailable.'});
+  }
   records.push(record);
  }
  const raw=new Set(headers.filter(key=>key.endsWith('_source_value')));

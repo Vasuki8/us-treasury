@@ -5,6 +5,8 @@ import {currentAccountGdpCsv,currentAccountGdpHistoryCsv} from './current-accoun
 import {currentAccountGdpHistoryChartCatalog} from './current-account-gdp-history-view.js';
 import {currentAccountGdpBreakdownCsv,currentAccountGdpBreakdownChartCatalog} from './current-account-gdp-breakdown-view.js';
 import {currentAccountGdpTrailingCsv,currentAccountGdpTrailingChartCatalog} from './current-account-gdp-trailing-view.js';
+import {currentAccountGdpComparisonCsv,currentAccountGdpComparisonChartCatalog} from './current-account-gdp-comparison-view.js';
+import {CURRENT_ACCOUNT_GDP_COMPARISON_MEASURES} from './current-account-gdp-comparison.js';
 import { moveFollowed } from './watchlist-monitor.js';
 import { relevantRefreshIds } from './research-status.js';
 import { releases, dataStatus,series } from './data.js';
@@ -175,14 +177,16 @@ function changesContext(){
 }
 function currentPackage(){return state.page==='research'&&state.researchView==='packages'?researchLibrary.getPackage(state.packageId):null;}
 function renderCurrentCharts(){
- const pkg=currentPackage(),history=pkg?.context.currentAccountGdpHistory,breakdown=pkg?.context.currentAccountGdpBreakdown,trailing=pkg?.context.currentAccountGdpTrailing;
+ const pkg=currentPackage(),history=pkg?.context.currentAccountGdpHistory,breakdown=pkg?.context.currentAccountGdpBreakdown,trailing=pkg?.context.currentAccountGdpTrailing,comparison=pkg?.context.currentAccountGdpComparison;
  const chartCatalogs=pkg?{
   ...(history?currentAccountGdpHistoryChartCatalog(history.sources,{frozen:true}):{}),
   ...(breakdown?currentAccountGdpBreakdownChartCatalog(breakdown.sources,{frozen:true}):{}),
   ...(trailing&&breakdown?currentAccountGdpTrailingChartCatalog(breakdown.sources,{frozen:true}):{}),
+  ...(comparison&&breakdown?currentAccountGdpComparisonChartCatalog(breakdown.sources,{frozen:true}):{}),
  }:state.page==='macroCoverage'&&state.macroFamily==='external'?{
   ...currentAccountGdpHistoryChartCatalog(dataStatus.sources),...currentAccountGdpBreakdownChartCatalog(dataStatus.sources),
   ...currentAccountGdpTrailingChartCatalog(dataStatus.sources),
+  ...currentAccountGdpComparisonChartCatalog(dataStatus.sources),
  }:{};
  renderCharts(main,{...(pkg?{catalog:pkg.catalog}:{}),chartCatalogs});
 }
@@ -398,6 +402,7 @@ root.addEventListener('click',async event=>{
   else if('exportCurrentAccountGdpHistory' in d)downloadCsv(currentAccountGdpHistoryCsv(dataStatus.sources,viewRange(state)),'meridian-current-account-gdp-history.csv','Historical current-account-to-GDP ratios downloaded for the chart window, with exact quarterly inputs, missing values, calculation and separate BEA retrieval evidence.');
   else if('exportCurrentAccountGdpBreakdown' in d)downloadCsv(currentAccountGdpBreakdownCsv(dataStatus.sources,viewRange(state)),'meridian-current-account-gdp-breakdown.csv','Historical current-account component ratios downloaded for the shared chart window, with original BEA inputs, published total, rounding reconciliation and separate retrieval evidence.');
   else if('exportCurrentAccountGdpTrailing' in d)downloadCsv(currentAccountGdpTrailingCsv(dataStatus.sources,viewRange(state)),'meridian-current-account-gdp-trailing.csv','Trailing-four-quarter ratios downloaded for the shared window, with supporting quarterly inputs, source evidence and rounding reconciliation.');
+  else if('exportCurrentAccountGdpComparison' in d)downloadCsv(currentAccountGdpComparisonCsv(dataStatus.sources,viewRange(state),state.macroMeasure),'meridian-current-account-gdp-comparison.csv','Quarterly and trailing-four-quarter ratios downloaded with the selected balance, horizon gaps and original BEA inputs.');
   else if('exportFiscal' in d)exportCsv(['receipts','outlays','netInterest','budgetDeficit','primaryDeficit','receiptsTtm','outlaysTtm','netInterestTtm','primaryDeficitTtm','interestRevenueRatio','publicDebt']);
   else if('exportFiscalFinancing' in d){
     downloadCsv(fiscalFinancingCsv(dataStatus.sources.fiscal),'meridian-fiscal-financing.csv','MTS financing CSV downloaded with reported amounts and calculated residuals; release dates remain unknown.');
@@ -453,6 +458,7 @@ root.addEventListener('change',async event=>{
   const fields={'topic-filter':'topic','frequency-filter':'frequency','transform-select':'transform','comparison-select':'comparison','calendar-topic':'calendarTopic','yield-curve-date-a':'yieldDateA','yield-curve-date-b':'yieldDateB','auction-type':'auctionType','vintage-cutoff':'vintageCutoff','vintage-series':'vintageSeries'};
   if(target.id==='macro-family'&&Object.hasOwn(coverageFamilies,target.value))navigate({macroFamily:target.value,macroMeasure:coverageFamilies[target.value].defaultMeasure});
   else if(target.id==='macro-measure'&&coverageFamilies[state.macroFamily].ids.includes(target.value))navigate({macroMeasure:target.value});
+  else if(target.id==='current-account-comparison-measure'&&state.macroFamily==='external'&&CURRENT_ACCOUNT_GDP_COMPARISON_MEASURES.some(item=>item.id===target.value))navigate({macroMeasure:target.value});
   else if(target.id==='refinancing-horizon')navigate({refinancingHorizon:Number(target.value)});
   else if(['window-start','window-end'].includes(target.id))navigate({window:'custom',startDate:document.getElementById('window-start').value,endDate:document.getElementById('window-end').value});
   else if(target.id==='refinancing-shock')navigate({refinancingShock:Number(target.value)});

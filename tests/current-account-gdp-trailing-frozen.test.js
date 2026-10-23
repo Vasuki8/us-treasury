@@ -21,7 +21,7 @@ test('external pins retain one trailing window reference and reuse full breakdow
  assert.ok(sources.beaIta.series.currentAccountBalance.observations.some(row=>row.date<'2023-07-01'),'Full retained input evidence must preserve all three lookback quarters independently of displayed endpoints.');
  assert.equal(canonicalJson(snapshot.sources),before);
  const {currentAccountGdpTrailingCsv}=await import('../src/current-account-gdp-trailing-view.js');
- const csv=args.context.attachments.find(file=>file.name==='current-account-gdp-trailing.csv');assert.ok(csv);assert.equal(csv.content,currentAccountGdpTrailingCsv(sources,retained.range));
+ const csv=args.context.attachments.find(file=>file.name==='current-account-gdp-trailing.csv');assert.ok(csv);assert.equal(csv.content,currentAccountGdpTrailingCsv(sources,retained.range,{comparisonMeasure:args.context.currentAccountGdpComparison.measure}));
  const pkg=await createResearchPackage({name:'Trailing-four-quarter frozen ratios',...args}),text=exportResearchPackage(pkg),restored=await importResearchPackage(text);
  assert.equal(exportResearchPackage(restored),text);assert.deepEqual(restored.context.currentAccountGdpTrailing,retained);assert.equal(restored.context.attachments.find(file=>file.name===csv.name).content,csv.content);
  const html=renderFrozen(restored);assert.match(html,/data-chart-catalog="current-account-gdp-trailing"/);assert.match(html,/FROZEN[^<]*(?:TRAILING|T4Q)/);assert.doesNotMatch(html,/data-export-current-account-gdp-trailing/);
@@ -39,7 +39,7 @@ test('partial trailing inputs remain frozen without current GDP or missing compo
 
 test('older breakdown packages never acquire a trailing chart or attachment when reopened',async()=>{
  const args=buildPinContext(parseRoute('#/economy?family=external&window=1y'));
- delete args.context.currentAccountGdpTrailing;args.context.attachments=args.context.attachments.filter(file=>file.name!=='current-account-gdp-trailing.csv');
+ delete args.context.currentAccountGdpTrailing;delete args.context.currentAccountGdpComparison;args.context.attachments=args.context.attachments.filter(file=>file.name!=='current-account-gdp-trailing.csv');
  const pkg=await createResearchPackage({name:'Legacy historical breakdown',...args}),text=exportResearchPackage(pkg),restored=await importResearchPackage(text);
  const html=renderFrozen(restored);assert.match(html,/data-chart-catalog="current-account-gdp-breakdown"/);assert.doesNotMatch(html,/data-chart-catalog="current-account-gdp-trailing"|current-account-gdp-trailing\.csv/);assert.equal(exportResearchPackage(restored),text);
 });
