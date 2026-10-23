@@ -23,6 +23,7 @@ import {publicationExplanationRows,publicationExplanationsCsv} from './publicati
 import {selectClaimsPublicationHistory,claimsPublicationCsv} from './claims-publication-history.js';
 import {matchReleaseEvidence,selectReleaseEvidence,releaseDelivery} from './release-evidence.js';
 import {currentAccountContext,currentAccountCsv} from './current-account-view.js';
+import {currentAccountGdpCsv} from './current-account-gdp-view.js';
 
 const moduleIds={credit:['bankLoans','bankDeposits','ciStandardsLarge','onRrpAccepted'],overview:['unrate','cpi','gdp','yield'],labor:['payroll','unrate','underemployment','weeklyHours'],fiscal:['receipts','outlays','netInterest','primaryDeficit'],refinancing:['marketableDebt'],yields:['yield','realYield10','spread2s10s','inflationComp10'],auctions:['auctionOfferingMonthly'],ownership:['foreignTreasuryHoldings','fedTreasuryHoldings','somaTreasuryHoldings'],macro:['gdpTotalContribution','gdpConsumptionContribution','gdpInvestmentContribution','gdpGovernmentContribution'],market:['dealerNetTreasury','dealerRepo','dealerFailsDeliver','sofr']};
 const sourceIds={credit:['bankCredit','lendingSurvey','fedBalance','onRrp','householdDebt','loanDelinquency'],fiscal:['fiscal','treasury'],refinancing:['refinancing'],yields:['yields','treasury'],auctions:['auctions'],ownership:['ownership'],macro:['macroContributions'],market:['marketFunctioning']};
@@ -65,8 +66,10 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
   const source=sources.beaIta??{},result=currentAccountContext(source),dates=[result.previousDate,result.date].filter(Boolean);
   context.currentAccountInputs={...source,series:Object.fromEntries(Object.entries(source.series??{}).map(([id,item])=>[id,{...item,observations:item.observations.filter(row=>dates.includes(row.date))}]))};
   context.currentAccountSummary=result;
-  context.attachments=[attachment('current-account-current-prior.csv',currentAccountCsv(source))];
-  context.scope='Selected focused history plus latest topic readings and exact current/prior quarterly ITA balances, source metadata, dataset release date, accounting explanation and original scoped CSV. NIPA trade remains distinct; full other-measure histories are not frozen.';
+  const gdp=sources.bea??{};
+  context.currentAccountGdpDenominator={...gdp,series:Object.fromEntries(Object.entries(gdp.series??{}).filter(([id])=>id==='nominalGdp').map(([id,item])=>[id,{...item,observations:item.observations.filter(row=>dates.includes(row.date))}]))};
+  context.attachments=[attachment('current-account-current-prior.csv',currentAccountCsv(source)),attachment('current-account-gdp.csv',currentAccountGdpCsv(sources))];
+  context.scope='Selected focused history plus latest topic readings, exact current/prior quarterly ITA balances and same-quarter nominal GDP SAAR inputs. Retains independent source metadata/retrievals, the ITA table release date, accounting context, calculated GDP ratios and both original scoped CSVs. NIPA trade remains distinct; full other-measure histories are not frozen.';
  }
  if(state.page==='refinancing'){
   Object.assign(assumptions,{horizonMonths:state.refinancingHorizon,shockBps:state.refinancingShock,interpretation:'Hypothetical higher/lower-rate refinancing sensitivity, not a rate forecast; observed instruments are separate from future issuance assumptions.'});
