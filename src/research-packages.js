@@ -120,6 +120,22 @@ function validateContext(context){
   const observations=history.sources.beaIta.series?.currentAccountBalance?.observations??[];
   if(currentAccountGdpQuarterSpan(observations[0]?.date,observations.at(-1)?.date)>MAX_CURRENT_ACCOUNT_GDP_HISTORY_QUARTERS)fail('current-account GDP history calendar-quarter span limit');
  }
+ if(context.currentAccountGdpBreakdown!==undefined){
+  const breakdown=context.currentAccountGdpBreakdown;
+  if(!object(breakdown)||Object.keys(breakdown).length!==3||['version','range','sources'].some(key=>!Object.hasOwn(breakdown,key))||breakdown.version!==1)fail('current-account GDP breakdown envelope');
+  validateRange(breakdown.range);
+  if(!object(breakdown.sources)||Object.keys(breakdown.sources).length!==2||['beaIta','bea'].some(key=>!Object.hasOwn(breakdown.sources,key)))fail('current-account GDP breakdown sources');
+  const itaIds=['currentAccountBalance','itaGoodsBalance','itaServicesBalance','itaPrimaryIncomeBalance','itaSecondaryIncomeBalance'];
+  validateCurrentAccountInputs(breakdown.sources.beaIta,{label:'current-account GDP breakdown ITA inputs',seriesIds:itaIds,maxObservations:MAX_CURRENT_ACCOUNT_GDP_HISTORY_QUARTERS});
+  validateCurrentAccountInputs(breakdown.sources.bea,{label:'current-account GDP breakdown GDP inputs',seriesIds:['nominalGdp'],maxObservations:MAX_CURRENT_ACCOUNT_GDP_HISTORY_QUARTERS,extraMetadata:['dataStatus']});
+  let firstIta='',lastIta='';
+  for(const [agency,source]of Object.entries(breakdown.sources))for(const item of Object.values(source.series??{})){
+   const rows=item.observations,first=rows[0]?.date,last=rows.at(-1)?.date;
+   if(currentAccountGdpQuarterSpan(first,last)>MAX_CURRENT_ACCOUNT_GDP_HISTORY_QUARTERS)fail('current-account GDP breakdown calendar-quarter span limit');
+   if(agency==='beaIta'&&first){if(!firstIta||first<firstIta)firstIta=first;if(!lastIta||last>lastIta)lastIta=last;}
+  }
+  if(currentAccountGdpQuarterSpan(firstIta,lastIta)>MAX_CURRENT_ACCOUNT_GDP_HISTORY_QUARTERS)fail('current-account GDP breakdown combined ITA calendar-quarter span limit');
+ }
  if(context.attachments!==undefined){
   if(!Array.isArray(context.attachments)||context.attachments.length>20)fail('attachment count');
   const names=new Set();

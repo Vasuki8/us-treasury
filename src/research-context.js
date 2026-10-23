@@ -24,6 +24,7 @@ import {selectClaimsPublicationHistory,claimsPublicationCsv} from './claims-publ
 import {matchReleaseEvidence,selectReleaseEvidence,releaseDelivery} from './release-evidence.js';
 import {currentAccountContext,currentAccountCsv} from './current-account-view.js';
 import {currentAccountGdpCsv,currentAccountGdpHistoryCsv} from './current-account-gdp-view.js';
+import {currentAccountGdpBreakdownCsv} from './current-account-gdp-breakdown-view.js';
 import {viewRange} from './workspace-context.js';
 
 const moduleIds={credit:['bankLoans','bankDeposits','ciStandardsLarge','onRrpAccepted'],overview:['unrate','cpi','gdp','yield'],labor:['payroll','unrate','underemployment','weeklyHours'],fiscal:['receipts','outlays','netInterest','primaryDeficit'],refinancing:['marketableDebt'],yields:['yield','realYield10','spread2s10s','inflationComp10'],auctions:['auctionOfferingMonthly'],ownership:['foreignTreasuryHoldings','fedTreasuryHoldings','somaTreasuryHoldings'],macro:['gdpTotalContribution','gdpConsumptionContribution','gdpInvestmentContribution','gdpGovernmentContribution'],market:['dealerNetTreasury','dealerRepo','dealerFailsDeliver','sofr']};
@@ -71,8 +72,10 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
   context.currentAccountGdpDenominator={...gdp,series:Object.fromEntries(Object.entries(gdp.series??{}).filter(([id])=>id==='nominalGdp').map(([id,item])=>[id,{...item,observations:item.observations.filter(row=>dates.includes(row.date))}]))};
   const historySources=Object.fromEntries([['beaIta','currentAccountBalance'],['bea','nominalGdp']].map(([agency,id])=>{const original=sources[agency]??{};return [agency,{...original,series:original.series?.[id]?{[id]:original.series[id]}:{}}];}));
   context.currentAccountGdpHistory={version:1,range:viewRange(state),sources:historySources};
-  context.attachments=[attachment('current-account-current-prior.csv',currentAccountCsv(source)),attachment('current-account-gdp.csv',currentAccountGdpCsv(sources)),attachment('current-account-gdp-history.csv',currentAccountGdpHistoryCsv(sources,viewRange(state)))];
-  context.scope='Selected focused history, latest topic readings, exact current/prior ITA/GDP context, and full retained current-account and nominal GDP input histories for the selected historical ratio window. Retains independent source metadata/retrievals, ITA table release date, original scoped CSVs and missing-quarter evidence. NIPA trade remains distinct; other full measurement histories are not frozen.';
+  const breakdownItaIds=['currentAccountBalance','itaGoodsBalance','itaServicesBalance','itaPrimaryIncomeBalance','itaSecondaryIncomeBalance'];
+  context.currentAccountGdpBreakdown={version:1,range:viewRange(state),sources:{beaIta:{...source,series:Object.fromEntries(breakdownItaIds.filter(id=>source.series?.[id]).map(id=>[id,source.series[id]]))},bea:historySources.bea}};
+  context.attachments=[attachment('current-account-current-prior.csv',currentAccountCsv(source)),attachment('current-account-gdp.csv',currentAccountGdpCsv(sources)),attachment('current-account-gdp-history.csv',currentAccountGdpHistoryCsv(sources,viewRange(state))),attachment('current-account-gdp-breakdown.csv',currentAccountGdpBreakdownCsv(sources,viewRange(state)))];
+  context.scope='Selected focused history, latest topic readings, exact current/prior ITA/GDP context, and full retained current-account total, four component balances and nominal GDP input histories for the selected historical ratio and breakdown windows. Retains independent source metadata/retrievals, ITA table release date, original scoped CSVs, reconciliation residuals and missing-quarter evidence. NIPA trade remains distinct; other full measurement histories are not frozen.';
  }
  if(state.page==='refinancing'){
   Object.assign(assumptions,{horizonMonths:state.refinancingHorizon,shockBps:state.refinancingShock,interpretation:'Hypothetical higher/lower-rate refinancing sensitivity, not a rate forecast; observed instruments are separate from future issuance assumptions.'});

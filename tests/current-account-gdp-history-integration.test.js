@@ -7,6 +7,7 @@ import {renderPage} from '../src/pages.js';
 import {buildPinContext} from '../src/research-context.js';
 import {currentAccountGdpHistoryCsv} from '../src/current-account-gdp-view.js';
 import {currentAccountGdpHistoryChartCatalog} from '../src/current-account-gdp-history-view.js';
+import {currentAccountGdpBreakdownChartCatalog} from '../src/current-account-gdp-breakdown-view.js';
 import {createResearchPackage,exportResearchPackage,importResearchPackage} from '../src/research-packages.js';
 import {MAX_RESEARCH_JSON_BYTES} from '../src/research-workspaces.js';
 
@@ -39,7 +40,7 @@ test('live and frozen app chart bindings never borrow current ratio data for a l
  const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8'),start=source.indexOf('function renderCurrentCharts()'),end=source.indexOf('function researchActions()',start);
  assert.ok(start>=0&&end>start);
  const calls=[],state=parseRoute('#/economy?family=external'),main={};let pkg=null;
- const run=new Function('currentPackage','renderCharts','main','dataStatus','state','currentAccountGdpHistoryChartCatalog',source.slice(start,end)+';return renderCurrentCharts;')(()=>pkg,(...args)=>calls.push(args),main,snapshot,state,currentAccountGdpHistoryChartCatalog);
+ const run=new Function('currentPackage','renderCharts','main','dataStatus','state','currentAccountGdpHistoryChartCatalog','currentAccountGdpBreakdownChartCatalog',source.slice(start,end)+';return renderCurrentCharts;')(()=>pkg,(...args)=>calls.push(args),main,snapshot,state,currentAccountGdpHistoryChartCatalog,currentAccountGdpBreakdownChartCatalog);
  run();assert.equal(calls.at(-1)[1].chartCatalogs['current-account-gdp-history'].catalog.currentAccountToGdp.observations.length,snapshot.sources.beaIta.series.currentAccountBalance.observations.length);
  pkg={catalog:{},context:{}};run();assert.deepEqual(calls.at(-1)[1].chartCatalogs,{});
  const args=buildPinContext(state);pkg={catalog:{},context:args.context};run();

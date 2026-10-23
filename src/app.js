@@ -3,6 +3,7 @@ import { creditContextCsv,fomcDocumentsCsv } from './credit-context-page.js';
 import {currentAccountCsv} from './current-account-view.js';
 import {currentAccountGdpCsv,currentAccountGdpHistoryCsv} from './current-account-gdp-view.js';
 import {currentAccountGdpHistoryChartCatalog} from './current-account-gdp-history-view.js';
+import {currentAccountGdpBreakdownCsv,currentAccountGdpBreakdownChartCatalog} from './current-account-gdp-breakdown-view.js';
 import { moveFollowed } from './watchlist-monitor.js';
 import { relevantRefreshIds } from './research-status.js';
 import { releases, dataStatus,series } from './data.js';
@@ -173,8 +174,13 @@ function changesContext(){
 }
 function currentPackage(){return state.page==='research'&&state.researchView==='packages'?researchLibrary.getPackage(state.packageId):null;}
 function renderCurrentCharts(){
- const pkg=currentPackage(),history=pkg?.context.currentAccountGdpHistory;
- const chartCatalogs=pkg?(history?currentAccountGdpHistoryChartCatalog(history.sources,{frozen:true}):{}):state.page==='macroCoverage'&&state.macroFamily==='external'?currentAccountGdpHistoryChartCatalog(dataStatus.sources):{};
+ const pkg=currentPackage(),history=pkg?.context.currentAccountGdpHistory,breakdown=pkg?.context.currentAccountGdpBreakdown;
+ const chartCatalogs=pkg?{
+  ...(history?currentAccountGdpHistoryChartCatalog(history.sources,{frozen:true}):{}),
+  ...(breakdown?currentAccountGdpBreakdownChartCatalog(breakdown.sources,{frozen:true}):{}),
+ }:state.page==='macroCoverage'&&state.macroFamily==='external'?{
+  ...currentAccountGdpHistoryChartCatalog(dataStatus.sources),...currentAccountGdpBreakdownChartCatalog(dataStatus.sources),
+ }:{};
  renderCharts(main,{...(pkg?{catalog:pkg.catalog}:{}),chartCatalogs});
 }
 function researchActions(){
@@ -387,6 +393,7 @@ root.addEventListener('click',async event=>{
   else if('exportCurrentAccount' in d)downloadCsv(currentAccountCsv(dataStatus.sources.beaIta),'meridian-current-account-current-prior.csv','Official current-account and component balances downloaded for the exact current and preceding quarters, with nonannualized units and BEA provenance.');
   else if('exportCurrentAccountGdp' in d)downloadCsv(currentAccountGdpCsv(dataStatus.sources),'meridian-current-account-gdp.csv','Calculated current-account-to-GDP ratios downloaded with exact quarterly inputs, GDP SAAR divided by four, percentage-point change and separate BEA retrieval evidence.');
   else if('exportCurrentAccountGdpHistory' in d)downloadCsv(currentAccountGdpHistoryCsv(dataStatus.sources,viewRange(state)),'meridian-current-account-gdp-history.csv','Historical current-account-to-GDP ratios downloaded for the chart window, with exact quarterly inputs, missing values, calculation and separate BEA retrieval evidence.');
+  else if('exportCurrentAccountGdpBreakdown' in d)downloadCsv(currentAccountGdpBreakdownCsv(dataStatus.sources,viewRange(state)),'meridian-current-account-gdp-breakdown.csv','Historical current-account component ratios downloaded for the shared chart window, with original BEA inputs, published total, rounding reconciliation and separate retrieval evidence.');
   else if('exportFiscal' in d)exportCsv(['receipts','outlays','netInterest','budgetDeficit','primaryDeficit','receiptsTtm','outlaysTtm','netInterestTtm','primaryDeficitTtm','interestRevenueRatio','publicDebt']);
   else if('exportFiscalFinancing' in d){
     downloadCsv(fiscalFinancingCsv(dataStatus.sources.fiscal),'meridian-fiscal-financing.csv','MTS financing CSV downloaded with reported amounts and calculated residuals; release dates remain unknown.');

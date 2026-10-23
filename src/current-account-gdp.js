@@ -1,4 +1,4 @@
-import { currentAccountRegistry } from './current-account-registry.js';
+import { currentAccountRegistry, currentAccountDefinitions, itaLocator } from './current-account-registry.js';
 import { economicDepthRegistry } from './economic-depth-registry.js';
 import { resolveDateWindow, windowObservations } from './date-window.js';
 
@@ -42,13 +42,17 @@ function calendarIssue(series, label) {
 }
 
 /** Validate each source once and index exact reference quarters without nearest-date matching. */
-function ratioInputs(sources) {
-  const numerator = sources?.beaIta?.series?.currentAccountBalance;
+export function currentAccountGdpRatioInputs(sources, numeratorId = 'currentAccountBalance') {
+  const definition = currentAccountRegistry[numeratorId];
+  const locator = currentAccountDefinitions.find(([id]) => id === numeratorId);
+  const label = numeratorId === 'currentAccountBalance' ? 'current-account' : definition?.name ?? String(numeratorId);
+  const labelSentence = label.charAt(0).toUpperCase() + label.slice(1);
+  const numerator = sources?.beaIta?.series?.[numeratorId];
   const denominator = sources?.bea?.series?.nominalGdp;
   const observations = Array.isArray(numerator?.observations) ? numerator.observations : [];
   const dates = observations.every(row => typeof row?.date === 'string') ? observations.map(row => row.date).sort() : [];
-  const numeratorCalendarIssue = calendarIssue(numerator, 'current-account');
-  const numeratorIssue = metadataIssue(numerator, 'ITA:T1.1:line30:World:SA:Q', currentAccountRegistry.currentAccountBalance, 'current-account') || numeratorCalendarIssue;
+  const numeratorCalendarIssue = calendarIssue(numerator, label);
+  const numeratorIssue = !definition || !locator ? `Unadmitted current-account numerator ${label}.` : metadataIssue(numerator, itaLocator(locator[1]), definition, label) || numeratorCalendarIssue;
   const denominatorIssue = metadataIssue(denominator, 'A191RC', economicDepthRegistry.nominalGdp, 'nominal GDP') || calendarIssue(denominator, 'nominal GDP');
   const numerators = numeratorIssue ? new Map() : new Map(numerator.observations.map(row => [row.date, row]));
   const denominators = denominatorIssue ? new Map() : new Map(denominator.observations.map(row => [row.date, row]));
@@ -59,8 +63,8 @@ function ratioInputs(sources) {
     const nominalGdpSaar = !denominatorIssue && finite(denominatorObservation?.value) ? denominatorObservation.value : null;
     const nominalGdpQuarter = nominalGdpSaar !== null && nominalGdpSaar > 0 ? nominalGdpSaar / 4 : null;
     let reason = numeratorIssue || denominatorIssue;
-    if (!reason && !referenceDate) reason = 'Current-account quarter date is unavailable.';
-    if (!reason && currentAccountBalance === null) reason = `Current-account observation is missing or nonfinite for ${referenceDate}.`;
+    if (!reason && !referenceDate) reason = `${labelSentence} quarter date is unavailable.`;
+    if (!reason && currentAccountBalance === null) reason = `${labelSentence} observation is missing or nonfinite for ${referenceDate}.`;
     if (!reason && nominalGdpSaar === null) reason = `Nominal GDP observation is missing or nonfinite for ${referenceDate}.`;
     if (!reason && nominalGdpQuarter === null) reason = `Nominal GDP must be positive for ${referenceDate}.`;
     const calculated = reason ? null : 100 * currentAccountBalance / nominalGdpQuarter;
@@ -76,7 +80,7 @@ function ratioInputs(sources) {
 
 /** Match quarterly ITA amounts with nominal GDP flows without annualizing either input twice. */
 export function currentAccountGdpContext(sources = {}) {
-  const { dates, point } = ratioInputs(sources);
+  const { dates, point } = currentAccountGdpRatioInputs(sources);
   // Include a retained null latest balance; never move the result to an older overlap.
   const date = dates.at(-1) ?? null;
   const previousDate = precedingQuarter(date);
@@ -100,7 +104,7 @@ function quarterCalendar(startDate, endDate) {
 
 /** Full retained revised history, selected with the same date windows as official series charts. */
 export function currentAccountGdpHistory(sources = {}, range = { preset: 'all' }) {
-  const inputs = ratioInputs(sources);
+  const inputs = currentAccountGdpRatioInputs(sources);
   const span = currentAccountGdpQuarterSpan(inputs.dates[0], inputs.dates.at(-1));
   const spanError = span > MAX_CURRENT_ACCOUNT_GDP_HISTORY_QUARTERS ? `Retained current-account GDP history spans ${span} quarters, exceeding the ${MAX_CURRENT_ACCOUNT_GDP_HISTORY_QUARTERS}-quarter calculated-history limit.` : null;
   const dates = inputs.numeratorCalendarIssue || spanError ? [] : quarterCalendar(inputs.dates[0], inputs.dates.at(-1));

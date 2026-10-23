@@ -1,5 +1,5 @@
 import {currentAccountGdpContext,currentAccountGdpHistory} from './current-account-gdp.js';
-import {BEA_ITA_URL,BEA_ITA_LICENSE} from './current-account-registry.js';
+import {BEA_ITA_URL,BEA_ITA_LICENSE,currentAccountRegistry} from './current-account-registry.js';
 import {csvCell,tabularCsv} from './model.js';
 import {panel,table,button,escapeHtml as esc} from './ui.js';
 
@@ -14,15 +14,15 @@ function safeUrl(value,fallback){
  try{const url=new URL(value);if(url.protocol==='https:'&&!url.username&&!url.password)return url.href;}catch{/* Missing/unsafe recorded links use the reviewed official reference. */}
  return fallback;
 }
-function input(source={},id){
+export function currentAccountGdpInput(source={},id){
  const item=source?.series?.[id]??{},isGdp=id==='nominalGdp',url=item.sourceUrl??(isGdp?GDP_URL:BEA_ITA_URL);
  const provenance=(item.provenance??source?.provenance??[]).filter(row=>row.url===url);
  return {source,item,url,provenance,retrievedAt:provenance.at(-1)?.retrievedAt??item.fetchedAt??source?.fetchedAt??null,
   capturedAt:item.fetchedAt??source?.fetchedAt??null,status:source?.status==='ok'?'official':source?.fetchedAt?'cached':'unavailable',
-  title:item.sourceTitle??(isGdp?'NIPA Table 1.1.5 line 1 · current-dollar GDP':'ITA Table 1.1 line 30 · current-account balance'),
+  title:item.sourceTitle??(isGdp?'NIPA Table 1.1.5 line 1 · current-dollar GDP':`${currentAccountRegistry[id]?.code??'ITA Table 1.1'} · ${currentAccountRegistry[id]?.name??id}`),
   license:item.licenseUrl??BEA_ITA_LICENSE,attribution:item.attribution??'Source: U.S. Bureau of Economic Analysis.'};
 }
-function inputs(sources){return {numerator:input(sources?.beaIta,'currentAccountBalance'),denominator:input(sources?.bea,'nominalGdp')};}
+function inputs(sources){return {numerator:currentAccountGdpInput(sources?.beaIta,'currentAccountBalance'),denominator:currentAccountGdpInput(sources?.bea,'nominalGdp')};}
 function sourceStatus(details,label,frozen){
  const status=details.status==='official'?'Official capture':details.status==='cached'?'Cached input':'Unavailable';
  return `<p class="panel-note"><strong>${esc(label)} · ${esc(frozen?'Recorded '+status:status)}</strong> · Retrieved ${esc(details.retrievedAt??'not recorded')}.${details.source?.error?` <span class="amber">${esc(details.source.error)}</span>`:''} <a href="${esc(safeUrl(details.url,label==='Nominal GDP'?GDP_URL:BEA_ITA_URL))}" target="_blank" rel="noopener noreferrer">${esc(details.title)} ↗</a></p>`;
