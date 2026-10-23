@@ -22,7 +22,7 @@ test('weekly chart readouts identify the week-ending date', () => {
 });
 
 // Exercise the real SVG renderer; only the browser's element boundary is replaced.
-function withRenderedCharts(range, comparison, run, {linked=false,transform='level',frozen=false,width=374}={}) {
+function withRenderedCharts(range, comparison, run, {linked=false,transform='level',frozen=false,width=374,height=180,valueScale=1,unit=series.debt.unit}={}) {
   class Element {
     constructor(tag) { this.tag = tag; this.attributes = {}; this.children = []; this.listeners = {}; }
     setAttribute(name, value) { this.attributes[name] = String(value); }
@@ -35,8 +35,8 @@ function withRenderedCharts(range, comparison, run, {linked=false,transform='lev
   const nodes = element => [element, ...element.children.filter(child => typeof child !== 'string').flatMap(nodes)];
   const ids = ['chart-long', 'chart-short'];
   const fixture = (id, observations, frequency) => ({
-    ...series.debt, id, name: id, short: id, comparisonClass: 'amount', frequency,
-    observations: observations.map(([date, value]) => ({ date, value })),
+    ...series.debt, id, name: id, short: id, comparisonClass: 'amount', frequency, unit,
+    observations: observations.map(([date, value]) => ({ date, value:value*valueScale })),
   });
   series[ids[0]] = fixture(ids[0], [['2026-01-01', 1], ['2026-02-01', 2], ['2026-04-01', 4]], 'Daily');
   series[ids[1]] = fixture(ids[1], [['2026-02-01', 5], ['2026-03-01', 6]], 'Monthly');
@@ -46,7 +46,7 @@ function withRenderedCharts(range, comparison, run, {linked=false,transform='lev
     const containers = (comparison === 'indexed' ? [null] : ids).map(panelId => {
       const container = new Element('div');
       container.clientWidth = width;
-      container.dataset = { series: ids.join(','), range: JSON.stringify(range), comparison,transform, ...(panelId ? { panelId } : {}),...(linked?{cursorGroup:'comparison'}:{}) };
+      container.dataset = { series: ids.join(','), range: JSON.stringify(range), comparison,transform,height:String(height), ...(panelId ? { panelId } : {}),...(linked?{cursorGroup:'comparison'}:{}) };
       return container;
     });
     renderCharts({ querySelectorAll: () => containers },frozen?{catalog:series}:{});
@@ -74,6 +74,51 @@ test('narrow chart panels use their actual width and only endpoint date labels w
    assert.equal(dates.length,2);assert.equal(dates[0].textContent,'1 Jan 2026');assert.equal(dates[1].textContent,'1 Apr 2026');
   }
  },{width:232});
+});
+
+test('large positive and negative axis readings fit inside narrow and wide SVGs without consuming the plot',()=>{
+ for(const width of [210,232,390,1280])for(const valueScale of [10000.123,-25000.123,1e12,-1e12]){
+  withRenderedCharts({preset:'all'},'native',({containers,nodes,paths})=>{
+   for(const [index,container]of containers.entries()){
+    const rendered=nodes(container),svg=rendered.find(node=>node.tag==='svg'),ticks=rendered.filter(node=>node.tag==='text'&&node.attributes['text-anchor']==='end'&&Number(node.attributes.y)<170);
+    assert.equal(svg.attributes.viewBox,`0 0 ${width} 180`);
+    assert.equal(ticks.length,4);
+    for(const tick of ticks)assert.ok(Number(tick.attributes.x)-tick.textContent.length*6.6>=4,`${tick.textContent} must fit within the SVG at ${width}px`);
+    assert.ok(paths[index].width>=100,'The smallest chart retains at least 100px for observations.');
+    for(const x of paths[index].xs)assert.ok(x>=paths[index].left-.01&&x<=paths[index].left+paths[index].width+.01);
+    svg.listeners.keydown({key:'Home',preventDefault(){}});
+    const guide=rendered.find(node=>node.attributes.class==='guide');
+    assert.ok(Number(guide.attributes.x1)>=paths[index].left);
+    assert.ok(Number(guide.attributes.x1)<=paths[index].left+paths[index].width);
+    assert.match(container.children.find(node=>node.tag==='div').textContent,index?/^Feb 2026/:/^1 Jan 2026/);
+   }
+  },{width,valueScale});
+ }
+});
+
+test('ordinary short axis readings retain the existing 54px plot margin',()=>{
+ withRenderedCharts({preset:'all'},'native',({paths})=>{
+  for(const path of paths)assert.equal(path.left,54);
+ },{width:210});
+});
+
+test('long unit descriptions wrap above the plot without losing their exact text or reducing font size',()=>{
+ const unit='USD billions per quarter (not annualized)';
+ for(const width of [210,232,320,390,1280]){
+  withRenderedCharts({preset:'all'},'native',({containers,nodes})=>{
+   for(const container of containers){
+    const rendered=nodes(container),label=rendered.find(node=>node.tag==='text'&&node.textContent===unit),lines=label.children.filter(node=>node.tag==='tspan'),hit=rendered.find(node=>node.tag==='rect'&&node.attributes.fill==='transparent');
+    assert.ok(label,'The complete original unit remains visible SVG text.');
+    assert.equal(label.attributes['font-size'],undefined);
+    if(width<=320)assert.ok(lines.length>1,'Narrow charts need multiple unit lines.');
+    const visibleLines=lines.length?lines:[label];
+    for(const line of visibleLines)assert.ok(Number(line.attributes.x)+line.textContent.length*6.6<=width-20,`${line.textContent} must fit at ${width}px`);
+    assert.ok(Number(hit.attributes.y)>=Math.max(...visibleLines.map(line=>Number(line.attributes.y)))+14,'The plot starts below every unit line.');
+    assert.ok(Number(hit.attributes.height)>=60,'Even a 120px requested chart keeps a usable plot below wrapped units.');
+    assert.match(rendered.find(node=>node.tag==='title').textContent,/USD billions per quarter \(not annualized\)/);
+   }
+  },{width,unit,height:120});
+ }
 });
 
 test('calendar panels align exact shared dates and leave shorter source coverage inside the requested extent', () => {

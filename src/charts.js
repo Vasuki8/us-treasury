@@ -33,10 +33,7 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
     }
   }
   const width = Math.max(210, Math.round(container.clientWidth));
-  const h = Math.max(120,height), left = 54, right = 20, top = 28;
-  const staggerCurveLabels = curve && (width-left-right) / Math.max(1,yieldCurve.length-1) < 32;
-  const bottom = staggerCurveLabels ? 46 : 30;
-  const pw = width-left-right, ph = h-top-bottom;
+  const right = 20;
   const values = panels.flatMap(panel => panel.observations.map(o => o.value)).filter(finite);
   if (!values.length) { container.textContent = 'No observations available for this chart.'; return; }
   if(domain&&(values.some(value=>value<domain[0]||value>domain[1])||bars&&(domain[0]>0||domain[1]<0))){
@@ -51,9 +48,6 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const minX = window ? Date.parse(`${window.startDate}T00:00:00Z`) : positions[0];
   const maxX = window ? Date.parse(`${window.endDate}T00:00:00Z`) : positions.at(-1);
   const spanX = maxX-minX || 1;
-  const xPosition = position => left+(position-minX)/spanX*pw;
-  const xIndex = index => xPosition(positions[index]);
-  const xDate = date => curve ? xIndex(orderedDates.indexOf(date)) : xPosition(Date.parse(`${date}T00:00:00Z`));
   let lo = domain?domain[0]:Math.min(...values), hi = domain?domain[1]:Math.max(...values);
   if (bars&&!domain) { lo = Math.min(0,lo); hi = Math.max(0,hi); }
   const pad = Math.max((hi-lo)*.13,Math.abs(hi)*.015,.05);
@@ -62,17 +56,42 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   if(domain&&(!finite(lo)||!finite(hi)||!finite(hi-lo)||hi<=lo)){
     container.textContent='Chart configuration error: y-domain cannot be represented on a finite chart scale.';return;
   }
+  const tickValues = Array.from({length:4},(_,index)=>lo+(hi-lo)*index/3);
+  const tickFormat = new Intl.NumberFormat('en-US',{maximumFractionDigits:Math.abs(hi-lo)<3?2:1});
+  let tickLabels = tickValues.map(value=>tickFormat.format(value));
+  // Reserve seven pixels per 11px monospace character, plus the tick gap and
+  // edge padding. Keep ordinary axes stable and leave at least 100px to plot.
+  const labelMargin = labels => Math.max(54,...labels.map(label=>label.length*7+12));
+  const maximumLeft = Math.min(120,width-right-100);
+  if(labelMargin(tickLabels)>maximumLeft)tickLabels=tickValues.map(value=>value.toExponential(1));
+  const left = Math.min(maximumLeft,labelMargin(tickLabels));
+  const unitLines = [], unitCharacters = Math.max(1,Math.floor((width-left-right)/7));
+  let remainingUnit = panels[0].unit;
+  while(remainingUnit.length>unitCharacters){
+    const space = remainingUnit.lastIndexOf(' ',unitCharacters-1), end = space>0?space+1:unitCharacters;
+    unitLines.push(remainingUnit.slice(0,end));remainingUnit=remainingUnit.slice(end);
+  }
+  unitLines.push(remainingUnit);
+  const top = 28+(unitLines.length-1)*14;
+  const staggerCurveLabels = curve && (width-left-right) / Math.max(1,yieldCurve.length-1) < 32;
+  const bottom = staggerCurveLabels ? 46 : 30;
+  const h = Math.max(120,height,top+bottom+60);
+  const pw = width-left-right, ph = h-top-bottom;
+  const xPosition = position => left+(position-minX)/spanX*pw;
+  const xIndex = index => xPosition(positions[index]);
+  const xDate = date => curve ? xIndex(orderedDates.indexOf(date)) : xPosition(Date.parse(`${date}T00:00:00Z`));
   const y = value => top+(hi-value)/(hi-lo)*ph;
   const id = `chart-readout-${++chartId}`;
   const title = curve ? 'Treasury par yield curve' : panels.map(panel => panel.series.name).join(' and ');
   const svg = svgElement('svg',{viewBox:`0 0 ${width} ${h}`,tabindex:0,role:'group','aria-label':`${title}. ${evidenceLabel}. Use left and right arrow keys for exact values.`,'aria-describedby':id},container);
   svgElement('title',{},svg,`${title} · ${panels[0].unit} · ${evidenceLabel}`);
-  svgElement('text',{x:left,y:14},svg,panels[0].unit);
+  const unitLabel = svgElement('text',{x:left,y:14},svg);
+  if(unitLines.length===1)unitLabel.textContent=unitLines[0];
+  else unitLines.forEach((line,index)=>svgElement('tspan',{x:left,y:14+index*14},unitLabel,line));
   for (let index=0;index<4;index++) {
-    const value = lo+(hi-lo)*index/3;
+    const value = tickValues[index];
     svgElement('line',{x1:left,x2:width-right,y1:y(value),y2:y(value),class:'gridline'},svg);
-    const label = new Intl.NumberFormat('en-US',{maximumFractionDigits:Math.abs(hi-lo)<3?2:1}).format(value);
-    svgElement('text',{x:left-8,y:y(value)+4,'text-anchor':'end'},svg,label);
+    svgElement('text',{x:left-8,y:y(value)+4,'text-anchor':'end'},svg,tickLabels[index]);
   }
   if(domain&&lo<=0&&hi>=0)svgElement('line',{x1:left,x2:width-right,y1:y(0),y2:y(0),class:'zero-reference',stroke:'currentColor','stroke-opacity':'.35','stroke-dasharray':'3 3','aria-hidden':'true'},svg);
   const labelDates = curve ? orderedDates : window

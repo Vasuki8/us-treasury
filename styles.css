@@ -1,9 +1,9 @@
-:root { color-scheme:light; font-family:'Segoe UI',Arial,Helvetica,sans-serif; font-size:12px; background:#f4f6fa; }
-:root[data-theme="Graphite"] { color-scheme:dark; background:#17191f; }
+:root { color-scheme:light; font-family:'Segoe UI',Arial,Helvetica,sans-serif; font-size:12px; background:#f7f5ec; }
+:root[data-theme="Graphite"] { color-scheme:dark; background:#19151f; }
 * { box-sizing: border-box; }
 body { margin: 0; }
-#app { --bg:#17191f; --panel:#1d2028; --raised:#242831; --head:#222630; --border:#383e4a; --field-border:#667188; --text:#e9edf4; --muted:#abb3c2; --accent:#a4b4ff; --on-accent:#171c2b; --cyan:#75cfc0; --hover:#303746; --field:#181c24; --rail:#191d24; --selected:#303a51; --stripe:#21252e; --divider:#303642; --grid:#343b49; --link:#b3c2ff; --row:29px; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; }
-#app[data-theme="Light"] { color-scheme:light; --bg:#f4f6fa; --panel:#fff; --raised:#edf1f7; --head:#f9fbfe; --border:#d6dde8; --field-border:#8190a7; --text:#1d293b; --muted:#59667a; --accent:#335bcc; --on-accent:#fff; --cyan:#0b776c; --hover:#e9eef8; --field:#fff; --rail:#fbfcfe; --selected:#e8eefc; --stripe:#f7f9fc; --divider:#e1e6ee; --grid:#e5eaf2; --link:#335bcc; }
+#app { --bg:#19151f; --panel:#24202b; --raised:#302936; --head:#24202b; --border:#494050; --field-border:#65576d; --text:#f1edda; --muted:#bcb1c4; --accent:#dfea88; --on-accent:#19151f; --cyan:#d9a67f; --hover:#302936; --field:#211b28; --rail:#211b28; --selected:#34372b; --stripe:#211b28; --divider:#352e3d; --grid:#352e3d; --link:#f1edda; --row:29px; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; }
+#app[data-theme="Light"] { color-scheme:light; --bg:#f7f5ec; --panel:#fdfbf4; --raised:#eee8ef; --head:#fdfbf4; --border:#d9d1d8; --field-border:#a497a9; --text:#342b41; --muted:#6b6173; --accent:#745092; --on-accent:#fff; --cyan:#9e503a; --hover:#eee8ef; --field:#fffcf7; --rail:#fdfbf4; --selected:#eae2ee; --stripe:#f8f5ef; --divider:#e9e1e7; --grid:#e9e1e7; --link:#342b41; }
 #app[data-density="comfortable"] { --row:39px; font-size:13px; }
 [hidden] { display:none!important; }
 button, input, select { font:inherit; color:inherit; border-radius:4px; }
@@ -372,9 +372,6 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
  .watchlist-workspace .actions button { min-width:44px; }
 }
 
-/* Current Light and Graphite palettes are independent of the compact workspace layout. */
-#app:is([data-page="overview"],[data-page="labor"],[data-page="indicator"],[data-page="calendar"],[data-page="explore"]) { --bg:#19151f; --panel:#24202b; --raised:#302936; --head:#24202b; --border:#494050; --field-border:#65576d; --text:#f1edda; --muted:#bcb1c4; --accent:#dfea88; --on-accent:#19151f; --cyan:#d9a67f; --hover:#302936; --field:#211b28; --rail:#211b28; --selected:#34372b; --stripe:#211b28; --divider:#352e3d; --grid:#352e3d; --link:#f1edda; }
-#app:is([data-page="overview"],[data-page="labor"],[data-page="indicator"],[data-page="calendar"],[data-page="explore"])[data-theme="Light"] { --bg:#f7f5ec; --panel:#fdfbf4; --raised:#eee8ef; --head:#fdfbf4; --border:#d9d1d8; --field-border:#a497a9; --text:#342b41; --muted:#6b6173; --accent:#745092; --on-accent:#fff; --cyan:#9e503a; --hover:#eee8ef; --field:#fffcf7; --rail:#fdfbf4; --selected:#eae2ee; --stripe:#f8f5ef; --divider:#e9e1e7; --grid:#e9e1e7; --link:#342b41; }
 /* Labor uses the shared palette and compact Koyfin panel composition. */
 .labor-radar { --labor-warning:#e0b887; min-width:0; container-type:inline-size; padding:0; border:0; color:var(--text); font:12px/1.4 'Segoe UI',Arial,sans-serif; }
 #app[data-theme="Light"] .labor-radar { --labor-warning:#83542a; }
@@ -487,6 +484,10 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
 .labor-source-row { padding:8px 0; border-bottom:1px solid var(--divider); font-size:11px; overflow-wrap:anywhere; }
 #app[data-density="comfortable"] .labor-table tbody th,#app[data-density="comfortable"] .labor-table tbody td { padding-top:11px; padding-bottom:11px; }
 #app[data-density="comfortable"] .labor-table .labor-group-heading th { padding-top:9px; padding-bottom:9px; }
+@container (max-width:900px) {
+ .koyfin-page .metrics:has(>.metric:nth-child(3)) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .koyfin-page .metrics:has(>.metric:nth-child(5)) { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
 @container (max-width:850px) {
  .labor-desk { grid-template-columns:minmax(0,1fr) 235px; gap:10px; }
  .labor-table .labor-spark-col { display:none; }
@@ -525,36 +526,60 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
 }
 
 /* Compact Koyfin workspaces; the existing palette and app shell are inherited. */
-.radar-page { min-width:0; container-type:inline-size; color:var(--text); font:12px/1.4 'Segoe UI',Arial,sans-serif; }
-.radar-page * { min-width:0; }
-.radar-page h1 { font-size:20px; line-height:1.3; font-weight:500; letter-spacing:0; overflow-wrap:anywhere; }
-.radar-page h2 { font-size:12px; line-height:1.4; font-weight:500; letter-spacing:.025em; }
-.radar-page h3 { font-size:12px; font-weight:500; letter-spacing:0; }
-.radar-page .page-heading { margin-bottom:10px; }
-.radar-page .panel-head { flex-wrap:wrap; }
-.radar-page .panel-head .actions a,.radar-page .panel-head .actions button { white-space:normal; }
-.radar-page .panel-head button,.radar-page .panel-head a { font-size:11px; }
-.radar-page .panel-note { overflow-wrap:anywhere; }
-.radar-page .grid { gap:10px; margin-bottom:10px; }
-.radar-page .chart svg { min-width:0; }
-.radar-page .chart-readout { font-size:11px; gap:6px 14px; }
-.radar-page .coverage-summary { padding:8px 9px; font-size:11px; overflow-wrap:anywhere; }
-.radar-page .toolbar label { flex-wrap:wrap; }
-.radar-page .date-window-inputs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-.radar-page .date-window-inputs label { min-width:0; }
-.radar-page .date-window-inputs input { width:100%; max-width:100%; }
-.radar-page input,.radar-page select { max-width:100%; }
-.radar-page .tabs button { font-size:11px; min-height:34px; }
-.radar-page .tab-panel { padding:9px; }
-.radar-page thead th { font-size:11px; white-space:normal; }
+:is(.radar-page,.koyfin-page) { min-width:0; container-type:inline-size; color:var(--text); font:12px/1.4 'Segoe UI',Arial,sans-serif; }
+:is(.radar-page,.koyfin-page) * { min-width:0; }
+:is(.radar-page,.koyfin-page) h1 { font-size:20px; line-height:1.3; font-weight:500; letter-spacing:0; overflow-wrap:anywhere; }
+:is(.radar-page,.koyfin-page) h2 { font-size:12px; line-height:1.4; font-weight:500; letter-spacing:.025em; }
+:is(.radar-page,.koyfin-page) h3 { font-size:12px; font-weight:500; letter-spacing:0; }
+:is(.radar-page,.koyfin-page) .page-heading { margin-bottom:10px; }
+:is(.radar-page,.koyfin-page) .panel-head { flex-wrap:wrap; }
+:is(.radar-page,.koyfin-page) .panel-head .actions a,:is(.radar-page,.koyfin-page) .panel-head .actions button { white-space:normal; }
+:is(.radar-page,.koyfin-page) .panel-head button,:is(.radar-page,.koyfin-page) .panel-head a { font-size:11px; }
+:is(.radar-page,.koyfin-page) .panel-note { overflow-wrap:anywhere; }
+:is(.radar-page,.koyfin-page) .grid { gap:10px; margin-bottom:10px; }
+:is(.radar-page,.koyfin-page) .chart svg { min-width:0; }
+:is(.radar-page,.koyfin-page) .chart-readout { font-size:11px; gap:6px 14px; }
+:is(.radar-page,.koyfin-page) .coverage-summary { padding:8px 9px; font-size:11px; overflow-wrap:anywhere; }
+:is(.radar-page,.koyfin-page) .toolbar label { flex-wrap:wrap; }
+:is(.radar-page,.koyfin-page) .date-window-inputs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+:is(.radar-page,.koyfin-page) .date-window-inputs label { min-width:0; }
+:is(.radar-page,.koyfin-page) .date-window-inputs input { width:100%; max-width:100%; }
+:is(.radar-page,.koyfin-page) input,:is(.radar-page,.koyfin-page) select { max-width:100%; }
+:is(.radar-page,.koyfin-page) .tabs button { font-size:11px; min-height:34px; }
+:is(.radar-page,.koyfin-page) .tab-panel { padding:9px; }
+:is(.radar-page,.koyfin-page) thead th { font-size:11px; white-space:normal; }
 .radar-page tbody th,.radar-page tbody td { white-space:normal; overflow-wrap:anywhere; }
-.radar-page td.num { white-space:nowrap; }
-.radar-page .table-code { font-size:11px; }
-.radar-page .pill { font-size:11px; white-space:normal; }
-.radar-page .facts dd,.radar-page .context-strip { overflow-wrap:anywhere; }
-.radar-page details>summary { cursor:pointer; }
-#app[data-density="comfortable"] .radar-page tbody tr:not(.calendar-day)>th,
-#app[data-density="comfortable"] .radar-page tbody tr:not(.calendar-day)>td { padding-top:10px; padding-bottom:10px; }
+:is(.radar-page,.koyfin-page) td.num { white-space:nowrap; }
+:is(.radar-page,.koyfin-page) .table-code { font-size:11px; }
+:is(.radar-page,.koyfin-page) .pill { font-size:11px; white-space:normal; }
+:is(.radar-page,.koyfin-page) .facts dd,:is(.radar-page,.koyfin-page) .context-strip { overflow-wrap:anywhere; }
+:is(.radar-page,.koyfin-page) details>summary { cursor:pointer; }
+#app[data-density="comfortable"] :is(.radar-page,.koyfin-page) tbody tr:not(.calendar-day)>th,
+#app[data-density="comfortable"] :is(.radar-page,.koyfin-page) tbody tr:not(.calendar-day)>td { padding-top:10px; padding-bottom:10px; }
+
+/* Specialist workspaces reuse the same panels, with locally scrollable evidence tables. */
+.koyfin-page>.panel,.koyfin-page>.watchlist-workspace>.panel { margin-bottom:10px; }
+.koyfin-page>.action { margin:0 0 10px; }
+.koyfin-page .panel>.actions { padding:9px; }
+.koyfin-page .panel>p:not([class]) { padding:8px 10px; }
+.koyfin-page .panel>details { margin:0 10px 10px; }
+.koyfin-page .table-code { max-width:420px; white-space:normal; overflow-wrap:anywhere; }
+.koyfin-page .section-copy { margin-bottom:10px; color:var(--muted); font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
+.koyfin-page .coverage-warning { padding:9px 10px; color:var(--muted); font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
+.koyfin-page .release-facts { grid-template-columns:180px minmax(0,1fr); gap:7px 14px; }
+.koyfin-page .release-facts dd { max-width:none; text-align:left; }
+.koyfin-page .metrics { grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; border:0; background:transparent; margin-bottom:10px; }
+.koyfin-page .metrics:has(>.metric:only-child) { grid-template-columns:minmax(0,1fr); max-width:320px; }
+.koyfin-page .metrics:where(:has(>.metric:last-child:nth-child(2))) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.koyfin-page .metrics:where(:has(>.metric:last-child:nth-child(3))) { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.koyfin-page .metrics:where(:has(>.metric:last-child:nth-child(4))) { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.koyfin-page .metrics:where(:has(>.metric:last-child:nth-child(5))) { grid-template-columns:repeat(5,minmax(0,1fr)); }
+.koyfin-page .g11 .metrics:has(>.metric:nth-child(3)) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.koyfin-page .metric { padding:9px 10px; border:1px solid var(--border); border-radius:5px; background:var(--panel); }
+.koyfin-page .metric-name { min-height:0; margin-bottom:5px; font-size:11px; line-height:1.35; white-space:normal; overflow-wrap:anywhere; }
+.koyfin-page .metric-value { font-size:24px; }
+.koyfin-page .metric-change { margin-top:4px; font-size:11px; line-height:1.45; white-space:normal; overflow-wrap:anywhere; }
+.koyfin-page .metric-period { margin-top:4px; font-size:11px; overflow-wrap:anywhere; }
 
 /* Overview: compact topic cards and paired evidence/chart panels. */
 .radar-overview .overview-snapshot-note { margin-bottom:9px; font-size:11px; color:var(--muted); }
@@ -661,7 +686,11 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
  .radar-explore .radar-comparison-desk>.panel>.toolbar { grid-template-columns:minmax(0,1fr); }
 }
 @container (max-width:650px) {
- .radar-page .g11,.radar-page .g21,.radar-page .g12 { grid-template-columns:minmax(0,1fr); }
+ :is(.radar-page,.koyfin-page) .g11,:is(.radar-page,.koyfin-page) .g21,:is(.radar-page,.koyfin-page) .g12 { grid-template-columns:minmax(0,1fr); }
+ .koyfin-page .filter-body { display:grid; grid-template-columns:minmax(0,1fr); }
+ .koyfin-page .filter-body label { min-width:0; }
+ .koyfin-page .filter-body input,.koyfin-page .filter-body select { width:100%; }
+ .koyfin-page .metrics:has(>.metric:nth-child(3)) { grid-template-columns:repeat(2,minmax(0,1fr)); }
  .radar-overview .overview-evidence-desk,.radar-overview .overview-momentum,.radar-overview .overview-following .brief-list { grid-template-columns:minmax(0,1fr); }
  .radar-indicator .indicator-snapshot { grid-template-columns:minmax(0,1fr); gap:10px; }
  .radar-indicator .indicator-provenance { padding:9px 0 0; border-left:0; border-top:1px solid var(--divider); }
@@ -689,17 +718,21 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
  .radar-explore .comparison-reading-notes,.radar-explore .builder-list { grid-template-columns:minmax(0,1fr); }
 }
 @container (max-width:430px) {
- .radar-page .date-window-inputs { grid-template-columns:minmax(0,1fr); }
- .radar-page h1 { font-size:19px; }
+ :is(.radar-page,.koyfin-page) .date-window-inputs { grid-template-columns:minmax(0,1fr); }
+ :is(.radar-page,.koyfin-page) h1 { font-size:19px; }
+ .koyfin-page .release-facts { grid-template-columns:minmax(0,1fr); gap:4px; }
+ .koyfin-page .release-facts dd { margin-bottom:8px; }
 }
 @media (max-width:600px) {
- .radar-page .action,.radar-page .link-button,.radar-page .tabs button,.radar-page details>summary { min-height:44px; }
- .radar-page input,.radar-page select { font-size:16px; min-height:44px; }
- .radar-page input[type="checkbox"] { min-height:18px; width:18px; height:18px; }
- .radar-page .page-heading>.actions { width:100%; }
+ :is(.radar-page,.koyfin-page) .action,:is(.radar-page,.koyfin-page) .link-button,:is(.radar-page,.koyfin-page) .tabs button,:is(.radar-page,.koyfin-page) details>summary { min-height:44px; }
+ :is(.radar-page,.koyfin-page) input,:is(.radar-page,.koyfin-page) select { font-size:16px; min-height:44px; }
+ :is(.radar-page,.koyfin-page) input[type="checkbox"] { min-height:18px; width:18px; height:18px; }
+ :is(.radar-page,.koyfin-page) .page-heading>.actions { width:100%; }
  .radar-overview .topic-card .panel-note .action { min-height:44px; }
  .radar-explore .catalog-table input[type="checkbox"] { margin:12px 0; }
  .radar-explore .series-chip .link-button { min-width:44px; }
  .radar-explore .radar-selection-tray>.action { width:100%; justify-content:center; }
  .radar-calendar .calendar-event th .link-button { width:100%; }
+ .koyfin-page .metric { padding-inline:8px; }
+ .koyfin-page .metric-value { font-size:clamp(17px,5vw,21px); }
 }

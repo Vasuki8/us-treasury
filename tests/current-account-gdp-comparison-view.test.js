@@ -3,8 +3,26 @@ import assert from 'node:assert/strict';
 import {parseCsv} from '../scripts/sources/http.mjs';
 import {currentAccountGdpTrailingFixture as fixture} from './helpers/current-account-gdp-trailing-fixture.js';
 import {currentAccountGdpTrailingCsv} from '../src/current-account-gdp-trailing-view.js';
+import {currentAccountGdpBalanceEffectsPanel} from '../src/current-account-gdp-balance-effects-view.js';
+import {currentAccountGdpComponentEffectsPanel} from '../src/current-account-gdp-component-effects-view.js';
+import {currentAccountGdpAllComponentEffectsPanel} from '../src/current-account-gdp-all-component-effects-view.js';
 const view=await import('../src/current-account-gdp-comparison-view.js').catch(()=>({}));
 const all={preset:'all'},records=csv=>{const [headers,...rows]=parseCsv(csv);assert.equal(new Set(headers).size,headers.length);assert.ok(rows.every(row=>row.length===headers.length));return rows.map(row=>Object.fromEntries(headers.map((key,i)=>[key,row[i]])));};
+
+test('live and frozen chart legends identify their measures without relying on theme-specific color names',()=>{
+ const panels=[
+  [view.currentAccountGdpComparisonPanel,/Chart readouts identify Quarterly and Trailing four quarters\./,false],
+  [currentAccountGdpBalanceEffectsPanel,/Chart readouts identify Balance change effect and GDP-denominator effect\./,true],
+  [currentAccountGdpComponentEffectsPanel,/Chart readouts identify Balance change effect and GDP-denominator effect\./,true],
+  [currentAccountGdpAllComponentEffectsPanel,/Chart readouts identify Balance change effect and GDP-denominator effect\./,false],
+ ];
+ for(const [render,labels,combinedLine]of panels)for(const frozen of [false,true]){
+  const html=render(fixture(),all,{frozen});
+  assert.doesNotMatch(html,/lavender|teal/i,'Chart explanations must remain accurate in either color theme.');
+  assert.match(html,labels,'Measures must be named explicitly alongside their chart.');
+  if(combinedLine)assert.match(html,/The dashed third line is Combined ratio change\./);
+ }
+});
 
 test('comparison panel supplies two labeled horizons, five-measure selector, all-five table and independent source evidence',()=>{
  assert.equal(typeof view.currentAccountGdpComparisonPanel,'function');
