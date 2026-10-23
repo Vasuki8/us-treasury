@@ -51,7 +51,7 @@
 - [x] Exercise focused-history change, CSV scope, Follow, comparison presets, detail/back navigation, Save view and Freeze result against real application state.
 - [x] Economist and investor reviewers check the implemented order and visible semantics; fresh code reviewer checks the final diff.
 - [x] Fix any material findings; rerun only the affected checks and required build/full suite after code changes.
-- [ ] Integrate and publish through the existing workflow only after checks pass, then verify deployed content. Preserve the exact published revision in delivery evidence.
+- [x] Integrate and publish through the existing workflow only after checks pass, then verify deployed content. Preserve the exact published revision in delivery evidence.
 
 ## Verification before deployment
 
@@ -62,3 +62,11 @@
 - Browser checks at outer widths 320/390/736/1024/1440 in Light and Graphite retained all 23 rows without page-level horizontal overflow. Native mobile date controls fit; open Save menu fits at 320. Theme preference survives reload. Screenshots inspected at mobile and desktop widths; these are browser viewport checks, not physical-device testing.
 - Actual UI workflows verified: group/search, focused measure, exact custom windows, detail/back and comparison/back, comparison starters, Follow, downloaded CSV, Save view and Freeze result. The wages CSV and frozen result both retained exactly the two Aug/Sep 2026 observations in the selected Aug 1–Sep 30 interval. Frozen result retained provenance. Keyboard Home/End reached exact first/last ECI readings. Methodology now opens its selected tab; all three calendar charts share the ECI focus's April-to-April bounds.
 - Future empty windows disable export and show no out-of-window change; invalid reversed dates show an alert. Browser console warning/error capture was empty. Source snapshots, observations and publication archives are unchanged.
+
+## Deployment verification
+
+- Published commit **e687a53f4d078aa6e61f3a94f2b2337d894f7656** contains the reviewed runtime `c96c8de` and acceptance documentation. Integrated by fast-forward into main; original untracked exports/output/tmp were preserved.
+- [GitHub Actions run 40020368880](https://github.com/Vasuki8/us-treasury/actions/runs/40020368880) succeeded: tests, build and smoke checks on Node 22 and 24, followed by GitHub Pages deployment. Official-data refresh was skipped because none was required. Existing hosting settings were preserved.
+- `node scripts/check-live.mjs https://vasuki8.github.io/us-treasury/` passed: **all 145 public assets exactly match the locally tested build**. Tracked source files use LF endings consistently with the deployed build.
+- Live browser at `https://vasuki8.github.io/us-treasury/#/economy/labor`: all 23 rows and four group headings, default U-6 analysis, no page overflow in desktop Graphite and 390px Light checks. Quarterly ECI focus produced identical April 2025–April 2026 calendar boundaries on focused/payroll/unemployment charts. Captured warning/error logs were empty. Restored the browser's original Graphite preference after testing both themes.
+- Local review reports and full final test log were preserved in the main checkout's untracked `output/labor-radar-delivery-2026-10-23/` before temporary-worktree cleanup. No remaining material findings. Physical devices were not tested.
