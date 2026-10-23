@@ -5,6 +5,7 @@ import {selectPublicationHistory,publicationContext} from './publication-history
 import {publicationExplanation} from './publication-explanation-view.js';
 import {publicationExplanationPanel} from './publication-explanation-panel.js';
 import {claimsPublicationView} from './claims-publication-view.js';
+import {currentAccountPanel} from './current-account-view.js';
 
 const views={workspaces:'SAVED VIEWS',packages:'FROZEN RESULTS',changes:'CAPTURED CHANGES',publications:'PUBLICATION HISTORY'};
 const val=value=>value===null||value===undefined?'—':String(value);
@@ -52,7 +53,7 @@ function frozenViewer(pkg){
  const evidence={snapshot:pkg.snapshot,assumptions:pkg.assumptions,sources:pkg.sources,context:{...pkg.context,moduleSources:moduleEvidence(pkg.context.moduleSources),attachments:attachments.map(({name,type})=>({name,type,retainedInJson:true}))}};
  const text=JSON.stringify(evidence,null,2),excerpt=text.slice(0,14000);
  return panel('02',`READ-ONLY / ${pkg.name}`,`<div class="context-strip"><span>PINNED <b>${esc(pkg.createdAt)}</b></span><span>WINDOW <b>${esc(pkg.resolvedWindow.label)}</b></span><span>VALUES <b>${esc(pkg.request.comparison==='native'?pkg.request.transform:pkg.request.comparison)}</b></span></div><p class="panel-note">Frozen inputs, observations, methods and exports are independent of the current snapshot. Checksum SHA-256: <span class="mono break-all">${esc(pkg.checksum.value)}</span>. A checksum detects changed content; it does not authenticate an agency or an imported file. Imported source claims remain unverified; this viewer never fetches package URLs.</p><div class="actions">${button('DOWNLOAD JSON',`data-package-json="${esc(pkg.id)}"`)}${button('CSV FROZEN VALUES',`data-package-csv="${esc(pkg.id)}"`)}</div>`)
-  +frozenOverview(pkg.context)+histories+panel('03','FROZEN ASSUMPTIONS & SOURCE EVIDENCE',`<p class="panel-note">Full module inputs, definitions, original retrieval provenance, rights notices and assumptions are retained in the portable JSON. Publication dates are separate from retrieval dates; unknown publication instants remain unknown. Specialist CSV files preserve their original export scope.</p><div class="actions">${attachmentActions}</div><details><summary>Inspect evidence and assumptions</summary><pre class="research-json">${esc(excerpt)}${text.length>excerpt.length?'\n… Complete evidence is retained in DOWNLOAD JSON.':''}</pre></details>`)+frozenExplanations(pkg.context);
+  +frozenOverview(pkg.context)+(pkg.context.currentAccountInputs?currentAccountPanel(pkg.context.currentAccountInputs,{frozen:true}):'')+histories+panel('03','FROZEN ASSUMPTIONS & SOURCE EVIDENCE',`<p class="panel-note">Full module inputs, definitions, original retrieval provenance, rights notices and assumptions are retained in the portable JSON. Publication dates are separate from retrieval dates; unknown publication instants remain unknown. Specialist CSV files preserve their original export scope.</p><div class="actions">${attachmentActions}</div><details><summary>Inspect evidence and assumptions</summary><pre class="research-json">${esc(excerpt)}${text.length>excerpt.length?'\n… Complete evidence is retained in DOWNLOAD JSON.':''}</pre></details>`)+frozenExplanations(pkg.context);
 }
 
 function packageList(state,library){

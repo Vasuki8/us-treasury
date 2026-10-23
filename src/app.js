@@ -1,5 +1,6 @@
 import { fiscalGdpCsv } from './fiscal-gdp-view.js';
 import { creditContextCsv,fomcDocumentsCsv } from './credit-context-page.js';
+import {currentAccountCsv} from './current-account-view.js';
 import { moveFollowed } from './watchlist-monitor.js';
 import { relevantRefreshIds } from './research-status.js';
 import { releases, dataStatus,series } from './data.js';
@@ -377,6 +378,7 @@ root.addEventListener('click',async event=>{
   else if('resetCalendar' in d)navigate({calendarMonth:'upcoming',day:'all',calendarTopic:'All topics',watchOnly:false});
   else if('export' in d)exportCsv();
   else if('exportMacroMeasure' in d)exportCsv([state.macroMeasure]);
+  else if('exportCurrentAccount' in d)downloadCsv(currentAccountCsv(dataStatus.sources.beaIta),'meridian-current-account-current-prior.csv','Official current-account and component balances downloaded for the exact current and preceding quarters, with nonannualized units and BEA provenance.');
   else if('exportFiscal' in d)exportCsv(['receipts','outlays','netInterest','budgetDeficit','primaryDeficit','receiptsTtm','outlaysTtm','netInterestTtm','primaryDeficitTtm','interestRevenueRatio','publicDebt']);
   else if('exportFiscalFinancing' in d){
     downloadCsv(fiscalFinancingCsv(dataStatus.sources.fiscal),'meridian-fiscal-financing.csv','MTS financing CSV downloaded with reported amounts and calculated residuals; release dates remain unknown.');

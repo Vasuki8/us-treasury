@@ -66,8 +66,48 @@ function matchingCsv(actual,expected){
   try{return canonicalJson(researchJsonCopy(JSON.parse(cell)))===canonicalJson(JSON.parse(computed[index][column]));}catch{return false;}
  }));
 }
+
+/** Supplementary ITA inputs are recorded claims, but must be safe to render. */
+function validateCurrentAccountInputs(source){
+ const invalid=detail=>fail(`current-account inputs: ${detail}`);
+ const text=(item,fields)=>{
+  for(const field of fields)if(item[field]!==undefined&&item[field]!==null&&typeof item[field]!=='string')invalid(`${field} must be text`);
+ };
+ const strings=(item,field)=>{
+  if(item[field]!==undefined&&(!Array.isArray(item[field])||item[field].some(value=>typeof value!=='string')))invalid(`${field} must be an array of text`);
+ };
+ const dates=(item,fields)=>{
+  for(const field of fields)if(item[field]!==undefined&&item[field]!==null&&!isIsoDate(item[field]))invalid(`${field} must be an ISO date`);
+ };
+ const metadata=['id','sourceTitle','sourceUrl','licenseUrl','termsUrl','attribution','sourceNotice','redistributionNotice','coverageNote','publicationNote','calculation','unit','sourceUnit','sourceUnits','frequency','adjustment','dateConvention','periodType','comparisonClass','observationType','definition'];
+ const evidence=item=>{
+  if(item.provenance===undefined)return;
+  if(!Array.isArray(item.provenance)||item.provenance.some(row=>!object(row)))invalid('provenance must be an array of records');
+  for(const row of item.provenance)text(row,['url','sha256','retrievedAt','lastModified']);
+ };
+ if(!object(source))invalid('source must be a record');
+ text(source,[...metadata,'error','fetchedAt','lastAttemptAt']);
+ if(source.status!==undefined&&!['ok','error','unavailable'].includes(source.status))invalid('source status');
+ dates(source,['tableReleaseDate','nextReleaseDate','coverageStart','coverageEnd']);
+ strings(source,'warnings');strings(source,'sourceUrls');evidence(source);
+ if(source.series!==undefined&&!object(source.series))invalid('series must be a record');
+ const ids=new Set(['currentAccountBalance','itaGoodsServicesBalance','itaGoodsBalance','itaServicesBalance','itaPrimaryIncomeBalance','itaSecondaryIncomeBalance']);
+ for(const [id,item]of Object.entries(source.series??{})){
+  if(!ids.has(id)||!object(item))invalid('unknown or malformed series');
+  text(item,metadata);strings(item,'sourceIds');strings(item,'sourceUrls');evidence(item);
+  if(!Array.isArray(item.observations)||item.observations.length>50000)invalid('observations must be a bounded array');
+  let previous='';
+  for(const row of item.observations){
+   if(!object(row)||!isIsoDate(row.date)||!/^\d{4}-(?:01|04|07|10)-01$/.test(row.date)||row.date<=previous)invalid('ordered unique quarter-start dates required');
+   if(row.value!==null&&(typeof row.value!=='number'||!Number.isFinite(row.value)))invalid('finite or null observation values required');
+   previous=row.date;
+   text(row,['sourceValue','sourcePeriodLabel','publishedAt']);strings(row,'footnotes');
+  }
+ }
+}
 function validateContext(context){
  if(!object(context))fail('context must be data');
+ if(context.currentAccountInputs!==undefined)validateCurrentAccountInputs(context.currentAccountInputs);
  if(context.attachments!==undefined){
   if(!Array.isArray(context.attachments)||context.attachments.length>20)fail('attachment count');
   const names=new Set();

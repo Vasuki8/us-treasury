@@ -9,6 +9,7 @@ const targets = [
   ['data', 'treasury', 'Treasury data'],
   ['data', 'bls', 'BLS data'],
   ['data', 'bea', 'BEA data'],
+  ['data', 'beaIta', 'BEA international transactions'],
   ['data', 'dol', 'DOL ETA data'],
   ['data', 'dolAdvance', 'DOL advance claims release'],
   ['data', 'census', 'Census data'],

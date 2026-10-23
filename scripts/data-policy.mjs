@@ -6,10 +6,12 @@ import {macroCoveragePolicies,matchesMacroCoverageFeed,assertMacroCoverageData} 
 import {dolAdvancePolicy,matchesDolAdvanceFeed,assertDolAdvanceData} from './dol-advance-policy.mjs';
 import {economicDepthPolicies,matchesEconomicDepthFeed,assertEconomicDepthData} from './economic-depth-policy.mjs';
 import { momentumPolicies, assertMomentumData } from './momentum-policy.mjs';
+import {beaItaPolicy,matchesBeaItaFeed,assertBeaItaData} from './bea-ita-policy.mjs';
 
 // Dataset-specific commercial reuse review. Evidence and limitations: docs/data-sources.md.
 // An official-looking hostname alone does not establish reuse rights.
 export const dataPolicies = [
+  beaItaPolicy,
   ...creditContextPolicies,
   ...economicDepthPolicies,
   ...momentumPolicies,
@@ -56,6 +58,7 @@ export const dataPolicies = [
 ];
 
 function matchesFeed(value, feed) {
+  if(matchesBeaItaFeed(value,feed))return true;
   if(matchesCreditContextFeed(value,feed))return true;
   if(matchesEconomicDepthFeed(value,feed))return true;
   if(matchesDolAdvanceFeed(value,feed))return true;
@@ -210,6 +213,7 @@ function assertCalendarData(snapshot) {
 
 /** Stop publication or snapshot replacement when data exceed the reviewed scope. */
 export function assertCommercialData(snapshot) {
+  assertBeaItaData(snapshot);
   assertCreditContextData(snapshot);
   assertEconomicDepthData(snapshot);
   assertMomentumData(snapshot);

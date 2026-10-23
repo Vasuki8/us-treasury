@@ -5,7 +5,7 @@ export function relevantRefreshIds(state,catalog) {
  let ids=moduleSources[state.page]??[];
  if(state.page==='indicator')ids=[catalog[state.seriesId]?.agency];
  if(state.page==='watchlist')ids=(state.saved??[]).map(id=>catalog[id]?.agency);
- if(state.page==='macroCoverage')ids=[catalog[state.macroMeasure]?.agency];
+ if(state.page==='macroCoverage')ids=state.macroFamily==='external'?['beaIta','bea']:[catalog[state.macroMeasure]?.agency];
  if(state.page==='explore')ids=(state.selected??[]).map(id=>catalog[id]?.agency);
  if(state.page==='release')return [`calendar:${state.publicationSeries==='gdp'?'bea':'dol'}`,`data:${state.publicationSeries==='gdp'?'bea':'dolAdvance'}`];
  return [...new Set(ids.filter(Boolean))].map(id=>`data:${id}`);

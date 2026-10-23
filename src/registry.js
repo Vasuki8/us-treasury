@@ -3,6 +3,7 @@ import { creditContextRegistry } from './credit-context-registry.js';
 import { researchRegistry } from './research-registry.js';
 import { macroRegistry } from './macro-registry.js';
 import { momentumRegistry } from './momentum-registry.js';
+import {currentAccountRegistry} from './current-account-registry.js';
 const bls={name:'Bureau of Labor Statistics',url:'https://www.bls.gov/'};
 const bea={name:'Bureau of Economic Analysis',url:'https://www.bea.gov/'};
 const treasury={name:'U.S. Treasury',url:'https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics'};
@@ -14,6 +15,7 @@ export const registry={
   ...researchRegistry,
   ...macroRegistry,
   ...momentumRegistry,
+  ...currentAccountRegistry,
   ...economicDepthRegistry,
   ...creditContextRegistry,
   unrate:{id:'unrate',code:'LNS14000000',name:'Unemployment rate',short:'Unemployment',topic:'Labor',...monthly,...percent,agency:'bls',source:{...bls,url:'https://www.bls.gov/cps/'},definition:'U-3 unemployment rate: unemployed people as a share of the civilian labor force, age 16 and older.'},

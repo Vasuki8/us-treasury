@@ -148,7 +148,7 @@ export function sourceNotice(sources = {}) {
 
 /** Last successful retrieval and latest attempt remain separate after failures. */
 export function sourceStatusList(sources = {}, { compact = false } = {}) {
-  const names = { treasury: 'TREASURY', bls: 'BLS', bea: 'BEA', dol: 'DOL ETA', census: 'CENSUS' };
+  const names = { treasury: 'TREASURY', bls: 'BLS', bea: 'BEA', beaIta:'BEA INTERNATIONAL TRANSACTIONS', dol: 'DOL ETA', census: 'CENSUS' };
   const entries = Object.entries(sources);
   if (!entries.length) return '<p class="panel-note">Source retrieval metadata is unavailable.</p>';
   return entries.map(([id, source]) => {

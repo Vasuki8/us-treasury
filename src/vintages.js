@@ -7,8 +7,8 @@ const seriesFields = ['sourceIds', 'sourceUrl', 'calculation', 'dataStatus', 'co
 // newly admitted and needs its originating program in replayed rights metadata.
 const housingSeriesFields = [...seriesFields, 'programName'];
 const advanceSeriesFields = [...seriesFields, 'publicationNote'];
-const seriesFieldsFor = source => source === 'macroContributions' ? [...seriesFields,'contributionScope','parentContribution'] : source === 'treasury' ? [...seriesFields,'fetchedAt'] : source === 'housing' ? housingSeriesFields : source === 'dolAdvance' ? advanceSeriesFields : seriesFields;
-const sourceFieldsFor = source => source === 'householdDebt' ? [...sourceFields,'methodology'] : sourceFields;
+const seriesFieldsFor = source => source === 'beaIta' ? [...seriesFields,'comparisonClass','sourceUnit','publicationNote'] : source === 'macroContributions' ? [...seriesFields,'contributionScope','parentContribution'] : source === 'treasury' ? [...seriesFields,'fetchedAt'] : source === 'housing' ? housingSeriesFields : source === 'dolAdvance' ? advanceSeriesFields : seriesFields;
+const sourceFieldsFor = source => source === 'beaIta' ? [...sourceFields,'tableReleaseDate','nextReleaseDate'] : source === 'householdDebt' ? [...sourceFields,'methodology'] : sourceFields;
 const clone = value => JSON.parse(JSON.stringify(value));
 const own = (value, key) => Object.hasOwn(value, key);
 
