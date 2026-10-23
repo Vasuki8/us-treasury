@@ -162,6 +162,14 @@ function validateContext(context){
   validateRange(effects.range);
   if(effects.inputContext!=='currentAccountGdpBreakdown'||context.currentAccountGdpBreakdown===undefined)fail('current-account GDP balance effects retained input context');
  }
+ if(context.currentAccountGdpComponentEffects!==undefined){
+  const effects=context.currentAccountGdpComponentEffects;
+  if(!object(effects)||Object.keys(effects).length!==5||['version','method','measure','range','inputContext'].some(key=>!Object.hasOwn(effects,key))||effects.version!==1)fail('current-account GDP component effects envelope');
+  if(effects.method!=='symmetric-two-order-v1')fail('current-account GDP component effects method');
+  if(!['itaGoodsBalance','itaServicesBalance','itaPrimaryIncomeBalance','itaSecondaryIncomeBalance'].includes(effects.measure))fail('current-account GDP component effects measurement');
+  validateRange(effects.range);
+  if(effects.inputContext!=='currentAccountGdpBreakdown'||context.currentAccountGdpBreakdown===undefined)fail('current-account GDP component effects retained input context');
+ }
  if(context.attachments!==undefined){
   if(!Array.isArray(context.attachments)||context.attachments.length>20)fail('attachment count');
   const names=new Set();

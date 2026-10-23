@@ -7,6 +7,7 @@ import {currentAccountGdpTrailingPanel} from './current-account-gdp-trailing-vie
 import {currentAccountGdpComparisonPanel} from './current-account-gdp-comparison-view.js';
 import {currentAccountGdpContributionsPanel} from './current-account-gdp-contributions-view.js';
 import {currentAccountGdpBalanceEffectsPanel} from './current-account-gdp-balance-effects-view.js';
+import {currentAccountGdpComponentEffectsPanel} from './current-account-gdp-component-effects-view.js';
 import {dataStatus} from './data.js';
 import {coverageFamilies} from './macro-registry.js';
 import {getSeries,latest,formatValue,formatChange,periodLabel,transformSeries} from './model.js';
@@ -38,6 +39,7 @@ export function macroCoveragePage(state={}, {embedded=false}={}){
   + (familyId==='external'?currentAccountGdpComparisonPanel(dataStatus.sources,range,{measure:id}):'')
   + (familyId==='external'?currentAccountGdpContributionsPanel(dataStatus.sources,range):'')
   + (familyId==='external'?currentAccountGdpBalanceEffectsPanel(dataStatus.sources,range):'')
+  + (familyId==='external'?currentAccountGdpComponentEffectsPanel(dataStatus.sources,range,{measure:id}):'')
   + (familyId==='external'?currentAccountGdpBreakdownPanel(dataStatus.sources,range):'')
   + (familyId==='external'?currentAccountGdpTrailingPanel(dataStatus.sources,range):'')
   + (embedded?'':panel('00','LATEST TOPIC READINGS',table(['MEASUREMENT / DEFINITION','LATEST','REFERENCE PERIOD','SOURCE STATUS / FULL COVERAGE'],rows,'Current topic readings and explicit source periods')))

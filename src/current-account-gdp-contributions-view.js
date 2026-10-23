@@ -1,5 +1,6 @@
 import {currentAccountGdpContributions} from './current-account-gdp-contributions.js';
 import {currentAccountGdpBalanceEffects,CURRENT_ACCOUNT_GDP_BALANCE_EFFECTS_CHART} from './current-account-gdp-balance-effects.js';
+import {CURRENT_ACCOUNT_GDP_EFFECT_COMPONENTS,CURRENT_ACCOUNT_GDP_COMPONENT_EFFECTS_CHART,currentAccountGdpComponentEffectSeries} from './current-account-gdp-component-effects.js';
 import {CURRENT_ACCOUNT_GDP_COMPONENTS} from './current-account-gdp-breakdown.js';
 import {currentAccountGdpRatioInputs} from './current-account-gdp.js';
 import {currentAccountGdpInput,currentAccountGdpSourceStatus} from './current-account-gdp-view.js';
@@ -42,36 +43,42 @@ export function currentAccountGdpContributionsPanel(sources={},range={preset:'al
  return panel('Δ Q/T4Q',`${frozen?'FROZEN ':''}COMPONENT CONTRIBUTIONS TO RATIO CHANGES`,body,action);
 }
 
-export function currentAccountGdpContributionsChartCatalog(sources={}, {frozen=false,effects=false,includeContributions=true}={}){
+export function currentAccountGdpContributionsChartCatalog(sources={}, {frozen=false,effects=false,componentEffects=false,includeContributions=true}={}){
  const result=currentAccountGdpContributions(sources);
- const split=effects?currentAccountGdpBalanceEffects(sources):null;
+ const split=effects||componentEffects?currentAccountGdpBalanceEffects(sources):null;
+ const componentSeries=componentEffects?CURRENT_ACCOUNT_GDP_EFFECT_COMPONENTS.flatMap(({id})=>Object.values(currentAccountGdpComponentEffectSeries(split,id)).flat()):[];
  return {...(includeContributions?{[CURRENT_ACCOUNT_GDP_CONTRIBUTIONS_CHART]:{catalog:Object.fromEntries(Object.values(result.series).flat().map(item=>[item.id,item])),evidenceLabel:frozen?'Frozen calculated accounting contributions · recorded BEA inputs':'Calculated accounting contributions · captured BEA inputs'}}:{}),
-  ...(split?{[CURRENT_ACCOUNT_GDP_BALANCE_EFFECTS_CHART]:{catalog:Object.fromEntries(Object.values(split.series).flat().map(item=>[item.id,item])),evidenceLabel:frozen?'Frozen calculated symmetric balance/GDP effects · recorded BEA inputs':'Calculated symmetric balance/GDP effects · captured BEA inputs'}}:{})};
+  ...(effects&&split?{[CURRENT_ACCOUNT_GDP_BALANCE_EFFECTS_CHART]:{catalog:Object.fromEntries(Object.values(split.series).flat().map(item=>[item.id,item])),evidenceLabel:frozen?'Frozen calculated symmetric balance/GDP effects · recorded BEA inputs':'Calculated symmetric balance/GDP effects · captured BEA inputs'}}:{}),
+  ...(componentEffects?{[CURRENT_ACCOUNT_GDP_COMPONENT_EFFECTS_CHART]:{catalog:Object.fromEntries(componentSeries.map(item=>[item.id,item])),evidenceLabel:frozen?'Frozen calculated component balance/GDP effects · recorded BEA inputs':'Calculated component balance/GDP effects · captured BEA inputs'}}:{})};
 }
 
 /** Complete selected changes plus unique current/prior supporting quarters and provenance. */
-export function currentAccountGdpContributionsCsv(sources={},range={preset:'all'},{effects=false}={}){
+export function currentAccountGdpContributionsCsv(sources={},range={preset:'all'},{effects=false,componentMeasure=null}={}){
+ if(componentMeasure!==null&&(!effects||!CURRENT_ACCOUNT_GDP_EFFECT_COMPONENTS.some(item=>item.id===componentMeasure)))throw new RangeError('Selected effect CSV requires effects=true and one of the four admitted component balances.');
  const result=effects?currentAccountGdpBalanceEffects(sources,range):currentAccountGdpContributions(sources,range),rows=result.error?[]:result.observations;
  const headers=['record_type','horizon','reference_quarter','prior_reference_quarter','measure_id','label','current_ratio_percent','prior_ratio_percent','contribution_percentage_points','unavailable_reason','current_window_quarters_json','prior_window_quarters_json','input_reference_quarter','input_series_id','value_billions','source_value','source_period_label','publication_date','footnotes_json','observation_type','input_metadata_json','calculation','limitations','attribution'];
  if(effects)headers.push('balance_effect_percentage_points','gdp_effect_percentage_points','current_balance_billions','prior_balance_billions','balance_change_billions','current_gdp_billions','prior_gdp_billions','effect_method','effect_unavailable_reason');
- const ids=['currentAccountBalance',...CURRENT_ACCOUNT_GDP_COMPONENTS.map(item=>item.id)];
+ if(componentMeasure!==null)headers.push('component_measure_id');
+ const ids=componentMeasure!==null?[componentMeasure]:['currentAccountBalance',...CURRENT_ACCOUNT_GDP_COMPONENTS.map(item=>item.id)];
  const details=Object.fromEntries(['beaIta','bea'].map(agency=>[agency,Object.fromEntries((agency==='bea'?['nominalGdp']:ids).map(id=>{const input=currentAccountGdpInput(sources[agency],id);return [id,{sourceIds:input.item.sourceIds??[],frequency:'Quarterly',adjustment:'Seasonally adjusted',dateConvention:'quarter-start',unit:id==='nominalGdp'?'USD billions (SAAR)':'USD billions per quarter (not annualized)',sourceUnit:id==='nominalGdp'?'USD millions (SAAR)':'USD millions per quarter (not annualized)',url:input.url,title:input.title,retrievedAt:input.retrievedAt,capturedAt:input.capturedAt,captureStatus:input.status,tableReleaseDate:agency==='beaIta'?sources.beaIta?.tableReleaseDate??null:null,provenance:input.provenance,licenseUrl:input.license,attribution:input.attribution}];}))]));
  const records=[{record_type:'metadata',observation_type:'calculated',input_metadata_json:JSON.stringify(details),calculation:result.formula+'; all contribution/change values are percentage points, current/prior ratios are percent of nominal GDP. Supporting inputs include the exact predecessor outside the selected window. GDP input value_billions is SAAR; divide each quarterly GDP by four once before summing. Residual change reconciles the authoritative published total, not a forced sum.',limitations,attribution}];
  if(effects){records[0].effect_method=result.method;records[0].calculation+=' Symmetric two-order allocation: '+result.effectFormula;records[0].limitations+=' '+result.effectNotice;}
+ if(componentMeasure!==null){records[0].component_measure_id=componentMeasure;records[0].calculation+=' Selected-component scope: change records contain only this component at both horizons. Input records contain only its official balance and nominal GDP, including exact predecessor lookback; full total/component reconciliation is available in the all-component effect export.';}
  const dates=new Set();
  for(const row of rows)for(const [key]of horizons){
   const h=row[key],current=inputDates(h.current,key),prior=inputDates(h.prior,key);
   for(const date of [...current,...prior])dates.add(date);
-  for(const item of definitions){
+  for(const item of componentMeasure!==null?definitions.filter(item=>item.id===componentMeasure):definitions){
    const record={record_type:'change',horizon:key,reference_quarter:row.date,prior_reference_quarter:row.priorDate,measure_id:item.id,label:item.label,current_ratio_percent:ratio(h.current,item.id),prior_ratio_percent:ratio(h.prior,item.id),contribution_percentage_points:contribution(h,item.id),unavailable_reason:reason(h,item.id),current_window_quarters_json:JSON.stringify(current),prior_window_quarters_json:JSON.stringify(prior),observation_type:'calculated'};
    if(effects){const e=h.effects[item.id];Object.assign(record,{balance_effect_percentage_points:e.balanceEffect,gdp_effect_percentage_points:e.gdpEffect,current_balance_billions:e.currentBalance,prior_balance_billions:e.priorBalance,balance_change_billions:e.balanceChange,current_gdp_billions:e.currentGdp,prior_gdp_billions:e.priorGdp,effect_method:result.method,effect_unavailable_reason:e.reason});}
+   if(componentMeasure!==null)record.component_measure_id=componentMeasure;
    records.push(record);
   }
  }
  const inputs=Object.fromEntries(ids.map(id=>[id,currentAccountGdpRatioInputs(sources,id)]));
  for(const date of [...dates].sort()){
   for(const id of [...ids,'nominalGdp']){
-   const gdp=id==='nominalGdp',point=inputs[gdp?'currentAccountBalance':id].point(date),observation=gdp?point.denominatorObservation:point.numeratorObservation;
+   const gdp=id==='nominalGdp',point=inputs[gdp?ids[0]:id].point(date),observation=gdp?point.denominatorObservation:point.numeratorObservation;
    const value=gdp?point.nominalGdpSaar:point.currentAccountBalance;
    records.push({record_type:'input',input_reference_quarter:date,input_series_id:id,value_billions:value,source_value:observation?.sourceValue??null,source_period_label:observation?.sourcePeriodLabel??null,publication_date:observation?.publishedAt??null,footnotes_json:JSON.stringify(observation?.footnotes??[]),observation_type:observation?'official':'unavailable',unavailable_reason:finite(value)?null:point.reason});
   }

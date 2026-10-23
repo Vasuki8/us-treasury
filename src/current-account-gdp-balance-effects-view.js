@@ -35,6 +35,6 @@ export function currentAccountGdpBalanceEffectsPanel(sources={},range={preset:'a
  return panel('Δ N/D',`${frozen?'FROZEN ':''}BALANCE CHANGES VS GDP-DENOMINATOR EFFECTS`,body,action);
 }
 
-export function currentAccountGdpBalanceEffectsCsv(sources={},range={preset:'all'}){
- return currentAccountGdpContributionsCsv(sources,range,{effects:true});
+export function currentAccountGdpBalanceEffectsCsv(sources={},range={preset:'all'},{componentMeasure=null}={}){
+ return currentAccountGdpContributionsCsv(sources,range,{effects:true,componentMeasure});
 }

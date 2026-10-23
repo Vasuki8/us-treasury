@@ -1,0 +1,43 @@
+import {currentAccountGdpComponentEffects,CURRENT_ACCOUNT_GDP_EFFECT_COMPONENTS,CURRENT_ACCOUNT_GDP_COMPONENT_EFFECTS_CHART,resolveCurrentAccountComponentEffectMeasure} from './current-account-gdp-component-effects.js';
+import {currentAccountGdpBalanceEffectsCsv} from './current-account-gdp-balance-effects-view.js';
+import {currentAccountGdpSourceStatus} from './current-account-gdp-view.js';
+import {BEA_ITA_LICENSE} from './current-account-registry.js';
+import {periodLabel} from './model.js';
+import {panel,table,button,emptyState,escapeHtml as esc} from './ui.js';
+
+const finite=value=>typeof value==='number'&&Number.isFinite(value);
+const number=(value,digits=3)=>finite(value)?value.toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits}):'Unavailable';
+const quarter=date=>date?periodLabel({frequency:'Quarterly'},date):'Unavailable';
+const horizons=[['quarterly','Quarterly'],['trailing','Trailing four quarters']];
+const fields=['balanceEffect','gdpEffect','totalChange'];
+const cells=e=>fields.map(field=>`<td class="num">${esc(number(e[field]))}</td>`).join('');
+const dates=(row,key)=>!row?'Unavailable':key==='quarterly'?quarter(row.date):`${quarter(row.startDate)}–${quarter(row.endDate)}`;
+
+export function currentAccountGdpComponentEffectsPanel(sources={},range={preset:'all'},{measure='itaGoodsBalance',frozen=false,packageId=null}={}){
+ const result=currentAccountGdpComponentEffects(sources,range,measure),selected=result.measure.id,rows=result.error?[]:result.observations,latest=rows.at(-1);
+ const fallback=!frozen&&selected!==measure?'<p class="panel-note">This component-only view defaults to Goods when the focused measure is a total or another measurement.</p>':'';
+ const selector=frozen?`<p class="panel-note"><strong>Frozen component:</strong> ${esc(result.measure.label)}</p>`:`<div class="toolbar macro-family-controls"><label for="current-account-effect-component">Effect history component<select id="current-account-effect-component" aria-label="Effect history component">${CURRENT_ACCOUNT_GDP_EFFECT_COMPONENTS.map(item=>`<option value="${esc(item.id)}"${item.id===selected?' selected':''}>${esc(item.label)}</option>`).join('')}</select></label><p class="small muted">Uses the shared date window. Choosing a component also sets the focused history and comparison balance.</p></div>`;
+ const chartContent=result.error?emptyState('Component effect history unavailable.',result.error):!rows.length?emptyState('No retained ending quarters in this window.','Choose another shared date window above.'):horizons.map(([key,label])=>{
+  const available=rows.some(row=>fields.some(field=>finite(row[key].effects[selected][field])));
+  const chart=available?`<div class="chart" data-chart data-chart-catalog="${CURRENT_ACCOUNT_GDP_COMPONENT_EFFECTS_CHART}" data-series="${esc(result.series[key].map(item=>item.id).join(','))}" data-kind="line" data-transform="level" data-comparison="native" data-cursor-group="current-account-component-effects" data-height="250" data-range="${esc(JSON.stringify(range))}"><p class="chart-fallback muted">${esc(result.measure.label)} · ${esc(label)} calculated effects loading.</p></div>`:emptyState(`${result.measure.label} · ${label} effects unavailable.`,'The selected component needs valid exact-quarter inputs. Missing reasons remain in the readings and CSV.');
+  return `<p class="panel-note"><strong>${esc(result.measure.label)} · ${esc(label)} effect history · percentage points</strong></p>`+chart;
+ }).join('');
+ const readings=latest?`<p class="panel-note"><strong>What changed · ${esc(result.measure.label)} · ${esc(quarter(latest.date))} versus ${esc(quarter(latest.priorDate))}:</strong> the same selected endpoint is used for both horizons, even when an input is missing. Positive effects move toward surplus; negative effects move toward deficit.</p>`
+  +table(['SELECTED COMPONENT / HORIZON','BALANCE EFFECT · PP','GDP-DENOMINATOR EFFECT · PP','COMBINED CHANGE · PP'],horizons.map(([key,label])=>{const e=latest[key].effects[selected];return `<tr><th scope="row">${esc(label)}${e.reason?`<span class="table-code amber">${esc(e.reason)}</span>`:''}</th>${cells(e)}</tr>`;}).join(''),`${result.measure.label} latest quarterly and trailing-four-quarter balance/GDP effects`)
+  +horizons.map(([key,label])=>{const h=latest[key],e=h.effects[selected];return `<p class="panel-note">${esc(label)}: ${esc(dates(h.current,key))} versus ${esc(dates(h.prior,key))}. Signed component balance ${esc(number(e.priorBalance))} → ${esc(number(e.currentBalance))} USD billions; matching GDP flow ${esc(number(e.priorGdp))} → ${esc(number(e.currentGdp))} USD billions.</p>`;}).join(''):'';
+ const histories=rows.length?horizons.map(([key,label])=>`<details class="frozen-observations"><summary>${esc(result.measure.label)} · ${esc(label)} data · First ${Math.min(50,rows.length)} of ${rows.length} selected endpoints</summary>${table(['ENDING QUARTER / PRIOR','BALANCE EFFECT · PP','GDP EFFECT · PP','COMBINED CHANGE · PP'],rows.slice(0,50).map(row=>{const e=row[key].effects[selected];return `<tr><th scope="row">${esc(quarter(row.date))}<span class="table-code muted">versus ${esc(quarter(row.priorDate))}</span>${e.reason?`<span class="table-code amber">${esc(e.reason)}</span>`:''}</th>${cells(e)}</tr>`;}).join(''),`${result.measure.label} ${label.toLowerCase()} component effect history`)}</details>`).join(''):'';
+ const body=selector+fallback+`<p class="panel-note"><strong>${frozen?'Frozen calculated history':'Calculated history'}</strong> · ${esc(result.measure.label)} · ${esc(result.window.label)} · ${rows.length} selected ending quarters. Lavender: balance effect; teal: GDP-denominator effect; third line: combined component ratio change. The split is not added again to the combined change.</p>`
+  +chartContent+readings+histories
+  +`<p class="panel-note"><strong>Method:</strong> ${esc(result.method)}. ${esc(result.effectFormula)} The two possible sequential orders are averaged, allocating their interaction equally. Quarterly GDP is SAAR / 4; T4Q uses separately summed balances and matching quarterly GDP flows. These are Meridian accounting calculations from official inputs, not official BEA contributions or evidence of economic causation.</p>`
+  +`<p class="panel-note"><strong>Why it matters:</strong> shows whether the selected trade or income ratio change came from its dollar balance, the mechanical GDP scaling effect, or offsetting movements. Rising GDP moves a negative balance ratio toward zero while reducing a positive balance ratio; this need not mean the dollar balance improved.</p>`
+  +`<p class="panel-note"><strong>Limitations:</strong> exact quarterly changes require two consecutive quarters; adjacent T4Q changes require five raw quarters and overlap by three. Calculations and predecessor lookback precede endpoint filtering. Missing/nonfinite splits remain gaps while a valid combined change can still display; the latest reading never falls back to an older quarter. Revised ITA/GDP inputs may have different retrieval vintages. Reference dates identify quarters, not publication instants; unknown historical first-publication dates remain unknown. CSV contains the complete selected history and unique component/GDP supporting inputs, including pre-window lookback.</p>`
+  +currentAccountGdpSourceStatus(sources,{frozen,numeratorId:selected})
+  +`<p class="panel-note">BEA ITA Table 1.1 selected component (lines 32–35); nominal GDP A191RC, NIPA Table 1.1.5. ITA table release: ${esc(sources.beaIta?.tableReleaseDate??'unknown')}. Source: U.S. Bureau of Economic Analysis. Component effect history calculated by Meridian. <a href="${BEA_ITA_LICENSE}" target="_blank" rel="noopener noreferrer">BEA reuse terms ↗</a>${frozen?' CSV is reconstructed from recorded inputs, component, method and window; original attachments keep their original scope.':''}</p>`;
+ const disabled=result.error||!rows.length?' disabled title="A valid window with retained endpoints is required."':'';
+ const action=frozen?(packageId?button('CSV RECONSTRUCTED COMPONENT',`data-export-frozen-current-account-gdp-component-effects="${esc(packageId)}"${disabled}`):''):button('CSV COMPONENT & INPUTS',`data-export-current-account-gdp-component-effects${disabled}`);
+ return panel('Δ C/GDP',`${frozen?'FROZEN ':''}COMPONENT BALANCE & GDP EFFECT HISTORY`,body,action);
+}
+
+export function currentAccountGdpComponentEffectsCsv(sources={},range={preset:'all'},measure='itaGoodsBalance'){
+ return currentAccountGdpBalanceEffectsCsv(sources,range,{componentMeasure:resolveCurrentAccountComponentEffectMeasure(measure)});
+}

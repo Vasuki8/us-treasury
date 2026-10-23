@@ -22,14 +22,15 @@ export function currentAccountGdpInput(source={},id){
   title:item.sourceTitle??(isGdp?'NIPA Table 1.1.5 line 1 · current-dollar GDP':`${currentAccountRegistry[id]?.code??'ITA Table 1.1'} · ${currentAccountRegistry[id]?.name??id}`),
   license:item.licenseUrl??BEA_ITA_LICENSE,attribution:item.attribution??'Source: U.S. Bureau of Economic Analysis.'};
 }
-function inputs(sources){return {numerator:currentAccountGdpInput(sources?.beaIta,'currentAccountBalance'),denominator:currentAccountGdpInput(sources?.bea,'nominalGdp')};}
+function inputs(sources,numeratorId='currentAccountBalance'){return {numerator:currentAccountGdpInput(sources?.beaIta,numeratorId),denominator:currentAccountGdpInput(sources?.bea,'nominalGdp')};}
 function sourceStatus(details,label,frozen){
  const status=details.status==='official'?'Official capture':details.status==='cached'?'Cached input':'Unavailable';
  return `<p class="panel-note"><strong>${esc(label)} · ${esc(frozen?'Recorded '+status:status)}</strong> · Retrieved ${esc(details.retrievedAt??'not recorded')}.${details.source?.error?` <span class="amber">${esc(details.source.error)}</span>`:''} <a href="${esc(safeUrl(details.url,label==='Nominal GDP'?GDP_URL:BEA_ITA_URL))}" target="_blank" rel="noopener noreferrer">${esc(details.title)} ↗</a></p>`;
 }
-export function currentAccountGdpSourceStatus(sources={}, {frozen=false}={}){
- const {numerator,denominator}=inputs(sources);
- return sourceStatus(numerator,'Current account',frozen)+sourceStatus(denominator,'Nominal GDP',frozen);
+export function currentAccountGdpSourceStatus(sources={}, {frozen=false,numeratorId='currentAccountBalance'}={}){
+ const id=Object.hasOwn(currentAccountRegistry,numeratorId)?numeratorId:'currentAccountBalance',label=id==='currentAccountBalance'?'Current account':currentAccountRegistry[id].name;
+ const {numerator,denominator}=inputs(sources,id);
+ return sourceStatus(numerator,label,frozen)+sourceStatus(denominator,'Nominal GDP',frozen);
 }
 
 /** Calculated current/prior context; callers must supply live or frozen sources explicitly. */
