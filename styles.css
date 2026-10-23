@@ -371,9 +371,9 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
  .watchlist-workspace .actions button { min-width:44px; }
 }
 
-/* Radar stays local to Labor; the shared application shell keeps its theme. */
-#app[data-page="labor"] { --bg:#19151f; --panel:#24202b; --raised:#302936; --head:#24202b; --border:#494050; --field-border:#65576d; --text:#f1edda; --muted:#bcb1c4; --accent:#dfea88; --on-accent:#19151f; --cyan:#d9a67f; --hover:#302936; --field:#211b28; --rail:#211b28; --selected:#34372b; --stripe:#211b28; --divider:#352e3d; --grid:#352e3d; --link:#f1edda; }
-#app[data-page="labor"][data-theme="Light"] { --bg:#f7f5ec; --panel:#fdfbf4; --raised:#eee8ef; --head:#fdfbf4; --border:#d9d1d8; --field-border:#a497a9; --text:#342b41; --muted:#6b6173; --accent:#745092; --on-accent:#fff; --cyan:#9e503a; --hover:#eee8ef; --field:#fffcf7; --rail:#fdfbf4; --selected:#eae2ee; --stripe:#f8f5ef; --divider:#e9e1e7; --grid:#e9e1e7; --link:#342b41; }
+/* The five primary workspaces share Radar; specialist workspaces keep their palette. */
+#app:is([data-page="overview"],[data-page="labor"],[data-page="indicator"],[data-page="calendar"],[data-page="explore"]) { --bg:#19151f; --panel:#24202b; --raised:#302936; --head:#24202b; --border:#494050; --field-border:#65576d; --text:#f1edda; --muted:#bcb1c4; --accent:#dfea88; --on-accent:#19151f; --cyan:#d9a67f; --hover:#302936; --field:#211b28; --rail:#211b28; --selected:#34372b; --stripe:#211b28; --divider:#352e3d; --grid:#352e3d; --link:#f1edda; }
+#app:is([data-page="overview"],[data-page="labor"],[data-page="indicator"],[data-page="calendar"],[data-page="explore"])[data-theme="Light"] { --bg:#f7f5ec; --panel:#fdfbf4; --raised:#eee8ef; --head:#fdfbf4; --border:#d9d1d8; --field-border:#a497a9; --text:#342b41; --muted:#6b6173; --accent:#745092; --on-accent:#fff; --cyan:#9e503a; --hover:#eee8ef; --field:#fffcf7; --rail:#fdfbf4; --selected:#eae2ee; --stripe:#f8f5ef; --divider:#e9e1e7; --grid:#e9e1e7; --link:#342b41; }
 .labor-radar { --bg:#19151f; --panel:#24202b; --text:#f1edda; --muted:#bcb1c4; --border:#494050; --divider:#352e3d; --grid:#352e3d; --accent:#dfea88; --cyan:#d9a67f; --link:#f1edda; --field:#211b28; --field-border:#65576d; --hover:#302936; --selected:#34372b; --labor-warning:#e0b887; background:var(--bg); color:var(--text); padding:23px; border:1px solid var(--border); min-width:0; container-type:inline-size; font:13px/1.45 'Segoe UI',Arial,sans-serif; }
 #app[data-theme="Light"] .labor-radar { --bg:#f7f5ec; --panel:#fdfbf4; --text:#342b41; --muted:#6b6173; --border:#d9d1d8; --divider:#e9e1e7; --grid:#e9e1e7; --accent:#745092; --cyan:#9e503a; --link:#342b41; --field:#fffcf7; --field-border:#a497a9; --hover:#eee8ef; --selected:#eae2ee; --labor-warning:#83542a; }
 .labor-radar * { min-width:0; }
@@ -484,3 +484,246 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
 @media(max-width:600px) { .labor-compare-control,.labor-radar .labor-follow { min-width:44px; min-height:44px; }.labor-row-actions { flex-direction:column; gap:0; } }
 @container (max-width:430px) { .labor-radar .date-window-inputs { grid-template-columns:minmax(0,1fr); } }
 @container (max-width:650px) { .labor-table thead th { font-size:11px; white-space:normal; overflow-wrap:anywhere; } }
+
+/* Shared Radar page foundations. Data-specific arrangements stay page-scoped. */
+.radar-page { min-width:0; container-type:inline-size; padding:23px; border:1px solid var(--border); background:var(--bg); color:var(--text); font:13px/1.45 'Segoe UI',Arial,sans-serif; }
+.radar-page * { min-width:0; }
+.radar-page a { color:var(--link); }
+.radar-page a:hover { text-decoration:underline; }
+.radar-page h1 { font-size:33px; line-height:1.1; letter-spacing:-1.3px; font-weight:500; overflow-wrap:anywhere; }
+.radar-page h2 { font-size:15px; line-height:1.3; letter-spacing:-.15px; font-weight:500; }
+.radar-page h3 { font-size:13px; font-weight:500; letter-spacing:0; }
+.radar-page .page-heading { align-items:flex-start; margin-bottom:20px; gap:12px; }
+.radar-page .subtitle { font-size:12px; margin-top:8px; }
+.radar-page .action { padding:7px 10px; min-height:31px; border-radius:3px; font-size:11px; background:var(--panel); color:var(--text); }
+.radar-page .action.primary { background:var(--accent); color:var(--on-accent); }
+.radar-page .link-button { color:var(--text); font-size:11px; }
+.radar-page input,.radar-page select { max-width:100%; border-radius:3px; padding:7px 9px; background:var(--field); }
+.radar-page .panel { border:0; border-top:1px solid var(--border); border-radius:0; background:transparent; }
+.radar-page .panel-head { min-height:0; padding:15px 0 12px; background:transparent; border:0; gap:10px; flex-wrap:wrap; }
+.radar-page .panel-head .index { color:var(--accent); margin-right:8px; font-size:11px; }
+.radar-page .panel-head .actions a,.radar-page .panel-head .actions button { white-space:normal; }
+.radar-page .panel-body { padding:8px 0; }
+.radar-page .panel-note { padding:9px 0; border:0; font-size:11px; overflow-wrap:anywhere; }
+.radar-page .grid { gap:24px; margin-bottom:22px; }
+.radar-page .chart { background:transparent; border:0; padding:0; }
+.radar-page .chart svg { min-width:0; }
+.radar-page .chart text { font:11px 'Segoe UI',Arial,sans-serif; }
+.radar-page .chart .series-line { stroke-width:1.8; }
+.radar-page .chart .bar { opacity:.8; }
+.radar-page .chart-readout { padding:6px 0; font:11px/1.45 'Segoe UI',Arial,sans-serif; gap:8px 16px; }
+.radar-page .coverage-summary { border-top:1px solid var(--border); margin-top:10px; padding-top:10px; }
+.radar-page .toolbar { background:transparent; padding:8px 0 13px; gap:12px; flex-wrap:wrap; }
+.radar-page .toolbar label { flex-wrap:wrap; }
+.radar-page .date-window-controls .actions { gap:3px; }
+.radar-page .date-window-controls .action { border:0; border-bottom:2px solid transparent; border-radius:0; padding:6px 8px; background:transparent; color:var(--muted); }
+.radar-page .date-window-controls .action[aria-pressed="true"] { border-bottom-color:var(--accent); color:var(--text); }
+.radar-page .date-window-inputs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.radar-page .date-window-inputs label { min-width:0; }
+.radar-page .date-window-inputs input { width:100%; }
+.radar-page .tabs { background:transparent; gap:12px; flex-wrap:wrap; }
+.radar-page .tabs button { padding:10px 0; min-height:36px; font-size:11px; }
+.radar-page .tab-panel { padding:12px 0; }
+.radar-page table { font-size:12px; }
+.radar-page thead th { background:transparent; font-size:11px; white-space:normal; }
+.radar-page tbody th,.radar-page tbody td { white-space:normal; padding:10px 8px; overflow-wrap:anywhere; }
+.radar-page td.num { white-space:nowrap; }
+.radar-page tbody tr:nth-child(even) { background:transparent; }
+.radar-page .table-code { font:11px/1.45 'Segoe UI',Arial,sans-serif; }
+.radar-page .pill { white-space:normal; font:10px/1.4 'Segoe UI',Arial,sans-serif; border-radius:2px; }
+.radar-page .facts dd,.radar-page .context-strip { overflow-wrap:anywhere; }
+.radar-page .supporting-details { border-top:1px solid var(--border); margin-top:18px; }
+.radar-page details>summary { padding:12px 0; cursor:pointer; font-size:12px; }
+.radar-page .empty-state { padding:20px 0; }
+@container (max-width:650px) { .radar-page .g11,.radar-page .g21,.radar-page .g12 { grid-template-columns:minmax(0,1fr); } }
+@container (max-width:430px) { .radar-page h1 { font-size:29px; }.radar-page .page-heading { flex-direction:column; }.radar-page .date-window-inputs { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:600px) { .radar-page { padding:16px 12px; }.radar-page .action,.radar-page .link-button,.radar-page .tabs button,.radar-page details>summary { min-height:44px; }.radar-page input,.radar-page select { min-height:44px; font-size:16px; }.radar-page input[type="checkbox"] { min-height:18px; width:18px; height:18px; }.radar-page .date-window-controls .action { padding-inline:6px; }.radar-page .page-heading>.actions { width:100%; } }
+
+/* Radar overview and indicator arrangements. */
+/* Overview: a six-topic economic map, followed by the evidence desk. */
+.radar-overview .overview-snapshot-note { margin:0 0 15px; font-size:11px; color:var(--muted); }
+.radar-overview .topic-cards { grid-template-columns:repeat(3,minmax(0,1fr)); gap:0 24px; margin-bottom:26px; border-top:2px solid var(--text); }
+.radar-overview .topic-card { padding:17px 0 13px; background:transparent; border:0; border-bottom:1px solid var(--border); border-radius:0; }
+.radar-overview .topic-card h2 { margin:0 0 11px; font-size:15px; }
+.radar-overview .topic-card h2 a { display:block; }
+.radar-overview .topic-reading { grid-template-columns:minmax(0,1fr) auto; padding:11px 0; gap:4px 12px; }
+.radar-overview .topic-reading>span { font-size:12px; line-height:1.4; }
+.radar-overview .topic-reading strong { font:500 26px/1.1 'Segoe UI',Arial,sans-serif; letter-spacing:-.8px; }
+.radar-overview .topic-reading small { font-size:11px; line-height:1.4; }
+.radar-overview .topic-card .panel-note { margin-top:5px; line-height:1.5; }
+.radar-overview .topic-card .panel-note .action { padding:0; min-height:26px; border:0; background:transparent; }
+.radar-overview .overview-evidence-desk { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:26px; margin-bottom:20px; }
+.radar-overview .brief-list li { padding:11px 0; }
+.radar-overview .brief-list li>a { font-size:12px; }
+.radar-overview .brief-list p { font-size:11px; line-height:1.55; }
+.radar-overview .overview-following { margin-bottom:24px; }
+.radar-overview .overview-following .brief-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 26px; }
+.radar-overview .overview-momentum { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:26px; margin-bottom:22px; }
+.radar-overview .overview-activity { margin-bottom:20px; }
+
+/* Indicator: one latest native reading, then a focused history workspace. */
+.radar-indicator .return-context { padding:0 0 14px; border:0; background:transparent; }
+.radar-indicator .return-context .action { padding:0; border:0; background:transparent; }
+.radar-indicator .indicator-snapshot { display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,1fr); gap:28px; padding:20px 0; border-top:2px solid var(--text); border-bottom:1px solid var(--border); }
+.radar-indicator .indicator-latest-label { color:var(--muted); font-size:11px; margin:0 0 12px; }
+.radar-indicator .indicator-native-reading { display:flex; align-items:center; flex-wrap:wrap; gap:12px 22px; }
+.radar-indicator .indicator-native-reading .big-value { font:500 47px/1.05 'Segoe UI',Arial,sans-serif; letter-spacing:-1.6px; font-variant-numeric:tabular-nums; }
+.radar-indicator .indicator-native-reading>span { font-size:11px; color:var(--muted); }
+.radar-indicator .indicator-native-reading b { font-weight:500; color:var(--text); }
+.radar-indicator .indicator-reference { margin-top:14px; font-size:11px; color:var(--muted); }
+.radar-indicator .indicator-reference b { color:var(--text); font-weight:500; margin-left:5px; }
+.radar-indicator .indicator-change { margin-top:9px; font-size:12px; line-height:1.5; }
+.radar-indicator .indicator-prior { font-size:11px; margin-top:6px; color:var(--muted); }
+.radar-indicator .indicator-prior b { font-weight:500; }
+.radar-indicator .indicator-provenance { display:grid; grid-template-columns:100px minmax(0,1fr); align-content:start; gap:9px 14px; border-left:1px solid var(--border); padding-left:26px; margin:0; font-size:11px; }
+.radar-indicator .indicator-provenance dt { color:var(--muted); }
+.radar-indicator .indicator-provenance dd { margin:0; overflow-wrap:anywhere; }
+.radar-indicator .indicator-definition { max-width:950px; margin:7px 0; }
+.radar-indicator .indicator-chart { margin:22px 0 24px; }
+.radar-indicator .indicator-chart .toolbar { align-items:flex-start; justify-content:space-between; }
+.radar-indicator .indicator-chart .date-window-controls { flex:1 1 470px; padding:0; background:transparent; border:0; }
+.radar-indicator .indicator-chart .toolbar>label { flex:0 1 210px; display:grid; gap:7px; font-size:11px; color:var(--muted); }
+.radar-indicator .indicator-evidence { margin-bottom:18px; }
+.radar-indicator .related-series { padding:14px 0; border:0; border-top:1px solid var(--border); background:transparent; gap:8px 14px; }
+.radar-indicator .related-series .action { padding:4px 0; min-height:28px; border:0; background:transparent; }
+
+@container (max-width:850px) {
+ .radar-overview .topic-cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .radar-overview .overview-evidence-desk { grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }
+ .radar-indicator .indicator-snapshot { grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:20px; }
+ .radar-indicator .indicator-provenance { grid-template-columns:minmax(0,1fr); gap:3px; padding-left:20px; }
+ .radar-indicator .indicator-provenance dd { margin-bottom:7px; }
+}
+@container (max-width:650px) {
+ .radar-overview .overview-evidence-desk,.radar-overview .overview-momentum { grid-template-columns:minmax(0,1fr); gap:20px; }
+ .radar-overview .overview-following .brief-list { grid-template-columns:minmax(0,1fr); }
+ .radar-indicator .indicator-snapshot { grid-template-columns:minmax(0,1fr); gap:18px; }
+ .radar-indicator .indicator-provenance { grid-template-columns:100px minmax(0,1fr); gap:7px 12px; padding:16px 0 0; border-left:0; border-top:1px solid var(--border); }
+ .radar-indicator .indicator-provenance dd { margin:0; }
+ .radar-indicator .indicator-chart .toolbar>label { flex-basis:100%; }
+}
+@container (max-width:430px) {
+ .radar-overview .topic-cards { grid-template-columns:minmax(0,1fr); }
+ .radar-overview .topic-card { padding:15px 0 10px; }
+ .radar-overview .topic-reading { padding:9px 0; }
+ .radar-indicator .indicator-native-reading .big-value { font-size:40px; }
+ .radar-indicator .indicator-native-reading { gap:10px 15px; }
+ .radar-indicator .indicator-provenance { grid-template-columns:84px minmax(0,1fr); }
+}
+@media(max-width:600px) {
+ .radar-overview .topic-card .panel-note .action,.radar-indicator .return-context .action,.radar-indicator .related-series .action { min-height:44px; }
+}
+
+/* Radar calendar and explore arrangements. */
+/* Calendar: a chronological schedule beside a compact evidence preview. */
+.radar-calendar .radar-calendar-desk { grid-template-columns:minmax(0,1.9fr) minmax(240px,1fr); gap:26px; margin:8px 0 24px; align-items:start; }
+.radar-calendar .calendar-toolbar { border-top:1px solid var(--border); padding:15px 0; }
+.radar-calendar .calendar-toolbar>label { display:flex; gap:7px; align-items:center; color:var(--muted); font-size:11px; }
+.radar-calendar .calendar-toolbar .check-label { color:var(--text); }
+.radar-calendar #calendar-selected-preview { scroll-margin-top:16px; }
+.radar-calendar .calendar-detail { display:block; }
+.radar-calendar .detail-title { font-size:21px; letter-spacing:-.4px; padding:2px 0 8px; line-height:1.2; }
+.radar-calendar .detail-sub { margin:0; padding:0; line-height:1.65; }
+.radar-calendar .calendar-detail .facts { grid-template-columns:80px minmax(0,1fr); }
+.radar-calendar .calendar-basis { font-size:10px; color:var(--muted); margin-left:4px; }
+.radar-calendar .calendar-evidence,.radar-calendar .calendar-related { border-top:1px solid var(--divider); }
+.radar-calendar .calendar-detail .actions { flex-wrap:wrap; gap:6px; }
+.radar-calendar .calendar-detail .panel-note { line-height:1.6; }
+.radar-calendar .calendar-source-capture { padding:4px 0 10px; overflow-wrap:anywhere; }
+.radar-calendar .table-wrap { overflow-x:auto; }
+.radar-calendar table { width:100%; table-layout:fixed; }
+.radar-calendar thead th:first-child { width:94px; }
+.radar-calendar thead th:last-child { width:112px; }
+.radar-calendar .calendar-day th { padding:20px 0 8px; border-bottom:1px solid var(--border); background:transparent; color:var(--accent); font:12px 'Segoe UI',Arial,sans-serif; }
+.radar-calendar .calendar-event td,.radar-calendar .calendar-event th { vertical-align:top; padding:12px 8px; border-bottom:1px solid var(--divider); }
+.radar-calendar .calendar-event td:first-child { padding-left:0; white-space:normal; font-size:11px; }
+.radar-calendar .calendar-event th .link-button { font:13px/1.4 'Segoe UI',Arial,sans-serif; padding:0; display:block; white-space:normal; }
+.radar-calendar .calendar-event.selected-row { background:var(--selected); }
+.radar-calendar .calendar-preview-jump { display:block; margin-top:7px; white-space:normal; padding:0; }
+.radar-calendar .calendar-context .definitions { grid-template-columns:minmax(0,1fr); }
+
+/* Explore: a discovery table and a separate chart workbench. */
+.radar-explore .explore-tabs { border-top:1px solid var(--border); border-bottom:1px solid var(--border); gap:26px; }
+.radar-explore .explore-tabs button { padding:14px 0; letter-spacing:.06em; }
+.radar-explore .explore-tabs button[aria-selected="true"] { color:var(--text); border-bottom-color:var(--accent); }
+.radar-explore .comparison-starters { gap:6px 12px; padding:10px 0; margin:0 0 12px; }
+.radar-explore .comparison-starters>span { width:100%; font-size:10px; letter-spacing:.08em; }
+.radar-explore .comparison-starters .action { padding:3px 0; background:transparent; color:var(--muted); }
+.radar-explore .catalog-search-label { display:block; margin-bottom:6px; color:var(--muted); font-size:11px; }
+.radar-explore #catalog-search { width:100%; max-width:650px; padding:12px; font-size:14px; }
+.radar-explore .catalog-filters { padding:6px 0 17px; gap:12px; }
+.radar-explore .catalog-filters label { display:grid; gap:5px; color:var(--muted); font-size:11px; }
+.radar-explore .catalog-table { width:100%; table-layout:fixed; }
+.radar-explore .catalog-table thead th:first-child { width:32px; }
+.radar-explore .catalog-table thead th:nth-child(2) { width:34%; }
+.radar-explore .catalog-table thead th:nth-child(3) { width:25%; }
+.radar-explore .catalog-table .catalog-frequency { width:12%; }
+.radar-explore .catalog-table .catalog-source { width:22%; }
+.radar-explore .catalog-table tbody th { font-weight:400; }
+.radar-explore .catalog-table td,.radar-explore .catalog-table th { vertical-align:top; }
+.radar-explore .catalog-table tbody td:first-child { padding-left:0; }
+.radar-explore .catalog-table input[type="checkbox"] { margin-top:3px; }
+.radar-explore td.catalog-reading { white-space:normal; }
+.radar-explore .catalog-reading strong { font:19px/1.3 Consolas,monospace; font-weight:400; }
+.radar-explore .catalog-reading .catalog-unit { color:var(--muted); white-space:normal; }
+.radar-explore .catalog-reading .catalog-period { margin-top:7px; white-space:normal; }
+.radar-explore .catalog-period time { display:block; }
+.radar-explore .catalog-identity-meta { display:none; }
+.radar-explore .catalog-coverage { color:var(--muted); margin-top:6px; }
+.radar-explore .radar-selection-tray { background:transparent; border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:12px 0; margin-bottom:14px; gap:8px; }
+.radar-explore .radar-selection-tray>span:first-child { margin-right:5px; letter-spacing:.06em; }
+.radar-explore .series-chip { padding:6px 8px; background:var(--selected); border:0; border-radius:3px; gap:7px; }
+.radar-explore .series-chip>span { overflow-wrap:anywhere; }
+.radar-explore .series-chip .link-button { flex-shrink:0; min-width:24px; text-align:center; }
+.radar-explore .comparison-reading-notes { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 24px; margin:0 0 18px; font-size:11px; color:var(--muted); }
+.radar-explore .comparison-reading-notes strong { color:var(--text); font-weight:500; }
+.radar-explore .radar-comparison-desk>.panel>.toolbar { display:grid; grid-template-columns:minmax(200px,1fr) minmax(0,2fr); align-items:start; padding-bottom:22px; }
+.radar-explore .radar-comparison-desk>.panel>.toolbar>label { display:grid; align-items:start; gap:7px; color:var(--muted); font-size:11px; }
+.radar-explore .date-window-controls { background:transparent; padding:0; border:0; }
+.radar-explore .comparison-panel { margin:8px 0 24px; border-bottom:1px solid var(--border); padding-bottom:15px; }
+.radar-explore .chart-caption { margin:10px 0 14px; padding:0; font-size:14px; }
+.radar-explore .builder-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+.radar-explore .builder-list>p { grid-column:1/-1; }
+.radar-explore .builder-series { border-bottom:1px solid var(--divider); padding:12px 0; }
+.radar-explore .builder-series h3 { margin:6px 0; }
+
+@container (max-width:850px) {
+  .radar-calendar .radar-calendar-desk { grid-template-columns:minmax(0,1fr); gap:20px; }
+  .radar-explore .catalog-source { display:none; }
+  .radar-explore .catalog-identity-meta { display:block; }
+  .radar-explore .catalog-table thead th:nth-child(2) { width:45%; }
+  .radar-explore .catalog-table thead th:nth-child(3) { width:34%; }
+  .radar-explore .radar-comparison-desk>.panel>.toolbar { grid-template-columns:minmax(0,1fr); }
+}
+@media (max-width:736px) {
+  .radar-calendar .radar-calendar-desk { display:flex; flex-direction:column; }
+  .radar-calendar .radar-calendar-desk>section,.radar-calendar #calendar-selected-preview { width:100%; }
+  .radar-calendar #calendar-selected-preview { order:-1; }
+  .radar-calendar .calendar-detail { padding-bottom:10px; }
+}
+@container (max-width:500px) {
+  .radar-calendar .calendar-toolbar>label:not(.check-label) { display:grid; width:100%; }
+  .radar-calendar .calendar-toolbar select { width:100%; }
+  .radar-calendar thead th:first-child { width:58px; }
+  .radar-calendar thead th:last-child { width:80px; }
+  .radar-calendar .calendar-event td,.radar-calendar .calendar-event th { padding:10px 4px; }
+  .radar-calendar .calendar-event td:first-child { font-size:10px; }
+  .radar-calendar .calendar-event th .link-button { font-size:12px; }
+  .radar-calendar .detail-title { font-size:19px; }
+  .radar-explore .catalog-frequency { display:none; }
+  .radar-explore .catalog-table thead th:nth-child(2) { width:50%; }
+  .radar-explore .catalog-table thead th:nth-child(3) { width:38%; }
+  .radar-explore .catalog-table tbody th,.radar-explore .catalog-table tbody td { padding:12px 4px; }
+  .radar-explore .catalog-reading strong { font-size:17px; }
+  .radar-explore .catalog-reading .table-code { font-size:10px; }
+  .radar-explore .catalog-filters,.radar-explore .catalog-filters .filter-body { width:100%; }
+  .radar-explore .catalog-filters .filter-body { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .radar-explore .catalog-filters select { width:100%; }
+  .radar-explore .comparison-reading-notes,.radar-explore .builder-list { grid-template-columns:minmax(0,1fr); }
+  .radar-explore .radar-selection-tray>.action { width:100%; justify-content:center; }
+}
+@media (max-width:600px) {
+  .radar-calendar .calendar-preview-jump { min-height:44px; }
+  .radar-explore .series-chip .link-button { min-width:44px; min-height:44px; }
+  .radar-explore .catalog-table input[type="checkbox"] { margin:12px 0; }
+}

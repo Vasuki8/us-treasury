@@ -299,6 +299,13 @@ function stored(result,label){
   if(!result.ok)throw new Error(result.reason==='duplicate-id'?'This package ID already identifies different frozen evidence.':`Research library ${result.reason??'save failed'}.`);
   announce(`${label}${result.persisted?' saved in this browser.':' retained for this session; download pinned JSON for durable storage.'}`);
 }
+function showCalendarPreview(force=false){
+  if(!force&&!window.matchMedia('(max-width:736px)').matches)return;
+  const preview=document.getElementById('calendar-selected-preview');
+  if(!preview)return;
+  preview.focus({preventScroll:true});
+  preview.scrollIntoView({block:'nearest'});
+}
 async function handleResearchAction(d){
   state.researchError='';
   if('saveWorkspace' in d){
@@ -396,9 +403,13 @@ root.addEventListener('click',async event=>{
   else if('compare' in d)navigate({page:'explore',selected:[...new Set(d.compare.split(',').filter(id=>getSeries(id)))].slice(0,4),exploreMode:'compare',comparison:'native',returnTo:['macroCoverage','labor'].includes(state.page)?routeFor(state):state.returnTo});
   else if('laborGroup' in d&&['all','jobs','people','pay','claims'].includes(d.laborGroup))navigate({laborGroup:d.laborGroup},{replace:true});
   else if('laborSection' in d&&['labor-analysis','labor-weekly','labor-trends','labor-readings','labor-notes'].includes(d.laborSection))document.getElementById(d.laborSection)?.scrollIntoView({block:'start'});
+  else if('calendarPreview' in d)showCalendarPreview(true);
   else if('event' in d){
     const selected=releases.find(release=>release.id===d.event);
-    if(selected)navigate(state.page==='calendar'?{eventId:selected.id}:{page:'calendar',eventId:selected.id,calendarMonth:selected.date.slice(0,7),day:'all',calendarTopic:'All topics',watchOnly:false});
+    if(selected){
+      navigate(state.page==='calendar'?{eventId:selected.id}:{page:'calendar',eventId:selected.id,calendarMonth:selected.date.slice(0,7),day:'all',calendarTopic:'All topics',watchOnly:false});
+      showCalendarPreview();
+    }
   }
   else if('range' in d)navigate({range:Number(d.range),window:'observations',startDate:'',endDate:''});
   else if('window' in d)navigate({window:d.window,startDate:'',endDate:''});
