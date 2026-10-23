@@ -30,8 +30,8 @@ Common scales must not clip data or include unrelated/full-history values. Both 
 - [x] Add `src/current-account-gdp-all-component-effects-view.js` and tests: common selected-window bounds across all eight charts; four labeled component rows with two horizon charts; same-endpoint effect/combined readings; missing/error/empty states; evidence and limitations. Reuse component catalog and all-component CSV bytes.
 - [x] Integrate live and frozen views/actions in the existing macro page, app, research context/page and strict package validator. Test independent optional context, legacy behavior, no live-source fallback, attachment equality and unchanged durable storage limit.
 - [x] Add responsive Graphite layout; validate 1024/736/390/320px layouts, exact-date keyboard linkage, chart loading/error states, range filtering and CSV exports. Browser evidence and limitations are recorded below.
-- [ ] Run focused tests, full bounded-concurrency suite, production build/smoke checks and independent review. Fix findings, commit and push to `Vasuki8/us-treasury`.
-- [ ] Verify Actions deployment, clean-build live asset equality and representative live page. Record measured results and remaining limitations here.
+- [x] Run focused tests, full bounded-concurrency suite, production build/smoke checks and independent review. Fix findings, commit and push to `Vasuki8/us-treasury`.
+- [x] Verify Actions deployment, clean-build live asset equality and representative live page. Record measured results and remaining limitations here.
 
 ## Local verification
 
@@ -43,3 +43,12 @@ Common scales must not clip data or include unrelated/full-history values. Both 
 - Browser keyboard: Tab reaches the first chart, Home synchronizes all eight readouts to 2025Q2 and End to 2026Q2. Focused chart announces exact signed effects and captured BEA evidence.
 - Browser screenshot capture timed out, including after reconnecting the same browser; no pixel-level screenshot proof is claimed. CSV content and live/frozen action branches are tested; a browser-downloaded file was not independently inspected. Narrow checks are real panel previews, not full-device emulation. Browser console capture was unavailable through the same transport, so no broad console-error claim is made.
 - All-history frozen comparison package measured **3,088,520 bytes**, within the unchanged 3,145,728-byte durable limit; five original attachment contents remain equal. No snapshot or publication archive files changed.
+- Existing default contribution and all-component effect CSVs rechecked byte-for-byte against `ef013d8` for all-history, one-year, one-observation and custom windows. All four selected-component CSVs also match their exact both-horizon calculations and unique supporting inputs.
+
+## Deployment verification
+
+- Runtime commit **d2dfe53d43b23b3780b34cd39af686792705d011** pushed to `Vasuki8/us-treasury` main.
+- [GitHub Actions run 39997760955](https://github.com/Vasuki8/us-treasury/actions/runs/39997760955) succeeded: Node 22 and Node 24 tests/build/smoke jobs and GitHub Pages deployment. No official-source refresh was required; Cloudflare remains deferred under the existing deployment settings.
+- Built the exact runtime commit in the existing clean verification clone. `node scripts/check-live.mjs https://vasuki8.github.io/us-treasury/` confirmed all **144 deployed assets** equal that clean build.
+- Fresh live browser check at `https://vasuki8.github.io/us-treasury/?_verify=d2dfe53#/economy?family=external&window=1y` showed the comparison heading/action, shared-scale explanation and all eight rendered chart accessibility groups with captured-BEA evidence labels. Existing total and selected-component views remain present.
+- Browser manual download attempt failed before command dispatch; it does not establish a downloaded-file check. Screenshot and console-capture limitations above remain. No broader visual or full-device QA claim is made.
