@@ -370,3 +370,117 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
  .catalog-filters select { font-size:16px; min-height:44px; max-width:100%; }
  .watchlist-workspace .actions button { min-width:44px; }
 }
+
+/* Radar stays local to Labor; the shared application shell keeps its theme. */
+#app[data-page="labor"] { --bg:#19151f; --panel:#24202b; --raised:#302936; --head:#24202b; --border:#494050; --field-border:#65576d; --text:#f1edda; --muted:#bcb1c4; --accent:#dfea88; --on-accent:#19151f; --cyan:#d9a67f; --hover:#302936; --field:#211b28; --rail:#211b28; --selected:#34372b; --stripe:#211b28; --divider:#352e3d; --grid:#352e3d; --link:#f1edda; }
+#app[data-page="labor"][data-theme="Light"] { --bg:#f7f5ec; --panel:#fdfbf4; --raised:#eee8ef; --head:#fdfbf4; --border:#d9d1d8; --field-border:#a497a9; --text:#342b41; --muted:#6b6173; --accent:#745092; --on-accent:#fff; --cyan:#9e503a; --hover:#eee8ef; --field:#fffcf7; --rail:#fdfbf4; --selected:#eae2ee; --stripe:#f8f5ef; --divider:#e9e1e7; --grid:#e9e1e7; --link:#342b41; }
+.labor-radar { --bg:#19151f; --panel:#24202b; --text:#f1edda; --muted:#bcb1c4; --border:#494050; --divider:#352e3d; --grid:#352e3d; --accent:#dfea88; --cyan:#d9a67f; --link:#f1edda; --field:#211b28; --field-border:#65576d; --hover:#302936; --selected:#34372b; --labor-warning:#e0b887; background:var(--bg); color:var(--text); padding:23px; border:1px solid var(--border); min-width:0; container-type:inline-size; font:13px/1.45 'Segoe UI',Arial,sans-serif; }
+#app[data-theme="Light"] .labor-radar { --bg:#f7f5ec; --panel:#fdfbf4; --text:#342b41; --muted:#6b6173; --border:#d9d1d8; --divider:#e9e1e7; --grid:#e9e1e7; --accent:#745092; --cyan:#9e503a; --link:#342b41; --field:#fffcf7; --field-border:#a497a9; --hover:#eee8ef; --selected:#eae2ee; --labor-warning:#83542a; }
+.labor-radar * { min-width:0; }
+.labor-radar a { color:var(--link); }
+.labor-radar a:hover { text-decoration:underline; }
+.labor-radar h1 { font-size:33px; line-height:1.1; letter-spacing:-1.3px; font-weight:500; }
+.labor-radar h2 { font-size:15px; line-height:1.3; letter-spacing:-.15px; font-weight:500; }
+.labor-radar h3 { font-size:13px; font-weight:500; letter-spacing:0; }
+.labor-radar .page-heading { align-items:flex-start; margin-bottom:18px; }
+.labor-radar .page-heading .subtitle { margin-top:8px; font-size:12px; color:var(--muted); }
+.labor-radar .action { background:var(--panel); border-color:var(--border); border-radius:3px; font-size:11px; padding:7px 10px; color:var(--text); }
+.labor-radar .link-button { color:var(--text); font-size:11px; }
+.labor-radar input,.labor-radar select { background:var(--field); border-color:var(--field-border); border-radius:3px; padding:7px 9px; max-width:100%; }
+.labor-radar .labor-small,.labor-radar .labor-note { font-size:11px; color:var(--muted); overflow-wrap:anywhere; }
+.labor-radar .labor-note { margin-top:8px; }
+.labor-radar .labor-warning { color:var(--labor-warning); }
+.labor-section-nav { display:flex; flex-wrap:wrap; gap:6px 18px; border-bottom:1px solid var(--border); margin-bottom:12px; padding-bottom:9px; }
+.labor-section-link { color:var(--muted); font-size:11px; padding:5px 0; }
+.labor-latest-note { color:var(--muted); font-size:11px; margin-bottom:13px; }
+.labor-headlines { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); border-top:2px solid var(--text); border-bottom:1px solid var(--border); margin-bottom:23px; }
+.labor-metric { padding:15px 15px 14px 0; }
+.labor-metric+.labor-metric { padding-left:18px; border-left:1px solid var(--border); }
+.labor-metric-name { font-size:12px; color:var(--muted)!important; display:block; margin-bottom:6px; }
+.labor-metric>strong { display:block; font-size:36px; font-weight:500; font-variant-numeric:tabular-nums; line-height:1.1; margin-bottom:7px; letter-spacing:-.7px; }
+.labor-metric>p { font-size:11px; margin-top:9px; min-height:48px; overflow-wrap:anywhere; }
+.labor-spark { display:block; width:100%; height:29px; margin-top:9px; }
+.labor-spark path { fill:none; stroke:var(--accent); stroke-width:1.5; vector-effect:non-scaling-stroke; }
+.labor-desk { display:grid; grid-template-columns:minmax(0,1fr) 252px; gap:26px; margin-bottom:25px; }
+.labor-section-head { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px; }
+.labor-section-head h2>span { font-size:11px; font-family:Consolas,monospace; color:var(--accent); margin-right:8px; }
+.labor-section-head h2>span:empty { margin:0; }
+.labor-picker { display:grid; gap:6px; width:100%; font-size:11px; color:var(--muted); margin-bottom:12px; }
+.labor-radar .date-window-controls { border:0; padding:0; margin:0; background:transparent; }
+.labor-radar .date-window-controls .actions { gap:3px; }
+.labor-radar .date-window-controls .action { padding:6px 8px; border:0; border-bottom:2px solid transparent; border-radius:0; background:transparent; color:var(--muted); }
+.labor-radar .date-window-controls .action[aria-pressed="true"] { border-bottom-color:var(--accent); color:var(--text); }
+.labor-radar .date-window-inputs { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:10px 0; }
+.labor-radar .date-window-inputs label { font-size:11px; }
+.labor-radar .date-window-inputs input { width:100%; }
+.labor-axis-unit { font-size:11px; color:var(--muted); margin:13px 0 3px; overflow-wrap:anywhere; }
+.labor-radar .chart { background:transparent; padding:0; border:0; }
+.labor-radar .chart svg { min-width:0; }
+.labor-radar .chart text { font:11px 'Segoe UI',Arial,sans-serif; }
+.labor-radar .chart .bar { opacity:.8; }
+.labor-radar .chart .series-line { stroke-width:1.8; }
+.labor-radar .chart-readout { font:11px/1.45 'Segoe UI',Arial,sans-serif; padding:5px 0; gap:8px 16px; }
+.labor-what-changed { margin-top:10px; }
+.labor-kicker { font-size:10px; color:var(--muted); letter-spacing:1.3px; text-transform:uppercase; }
+.labor-what-changed p { margin-top:5px; }
+.labor-radar .coverage-summary { font-size:11px; border-top:1px solid var(--border); padding:10px 0 0; margin-top:10px; }
+.labor-history-actions { margin-top:12px; }
+.labor-aside { border-left:1px solid var(--border); padding-left:22px; }
+.labor-event { padding:10px 0 13px; border-bottom:1px solid var(--border); display:grid; grid-template-columns:34px minmax(0,1fr); gap:10px; }
+.labor-event>div:first-child strong { font:24px/1.1 Consolas,monospace; letter-spacing:-1px; }
+.labor-event>div:first-child span { display:block; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-top:4px; }
+.labor-event-name { display:block; font-size:12px; font-weight:500; margin-bottom:4px; }
+.labor-event p { font-size:11px; color:var(--muted); }
+.labor-schedule-state { display:block; margin-top:5px; color:var(--labor-warning); font-size:10px; text-transform:uppercase; letter-spacing:.3px; }
+.labor-text-link { display:inline-block; margin-top:12px; font-size:11px; }
+.labor-details { margin-top:12px; padding-top:12px; border-top:1px solid var(--divider); }
+.labor-details summary { font-size:12px; cursor:pointer; }
+.labor-details p { font-size:12px; margin:10px 0; overflow-wrap:anywhere; }
+.labor-details .actions { margin-top:10px; }
+.labor-weekly { border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:17px 0; margin:22px 0; scroll-margin-top:12px; }
+.labor-claims-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:28px; margin:15px 0 11px; }
+.labor-row-name { display:block; font-weight:500; font-size:12px; }
+.labor-claim-reading { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:7px 0; }
+.labor-claim-reading>strong { font-size:33px; font-weight:500; line-height:1.1; font-variant-numeric:tabular-nums; }
+.labor-claim-priors { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding-top:10px; margin:9px 0 12px; border-top:1px solid var(--divider); color:var(--muted); font-size:11px; }
+.labor-claim-priors strong { display:block; color:var(--text); font-size:16px; font-weight:500; margin-top:3px; }
+.labor-claim-priors span { display:block; margin-top:3px; }
+.labor-claims-grid .actions { margin-top:10px; }
+.labor-dual { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; margin:20px 0; }
+.labor-chart-title { display:flex; justify-content:space-between; gap:12px; align-items:baseline; }
+.labor-readings { border-top:2px solid var(--text); padding-top:20px; margin-top:24px; scroll-margin-top:12px; }
+.labor-presets { margin:12px 0; }
+.labor-table-controls { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; margin:12px 0; }
+.labor-filter-set { display:flex; gap:4px; flex-wrap:wrap; }
+.labor-filter { border:0; border-bottom:2px solid transparent; padding:6px; font-size:11px; color:var(--muted); border-radius:0; }
+.labor-filter[aria-pressed="true"] { border-bottom-color:var(--accent); color:var(--text); }
+.labor-table-controls>label { display:grid; gap:6px; color:var(--muted); font-size:11px; }
+.labor-table-controls input { width:230px; }
+.labor-table-wrap { width:100%; overflow-x:auto; }
+.labor-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:12px; }
+.labor-table .labor-name-col { width:37%; }.labor-table .labor-value-col { width:15%; }.labor-table .labor-period-col { width:19%; }.labor-table .labor-spark-col { width:15%; }.labor-table .labor-tools-col { width:14%; }
+.labor-table thead th { color:var(--muted); font-size:10px; font-weight:500; letter-spacing:.4px; text-transform:uppercase; padding:10px 8px; border-bottom:1px solid var(--border); text-align:left; white-space:normal; }
+.labor-table tbody th,.labor-table tbody td { padding:11px 8px; border-bottom:1px solid var(--divider); background:transparent; vertical-align:middle; text-align:left; overflow-wrap:anywhere; font-weight:400; white-space:normal; }
+.labor-table tbody tr:nth-child(even) { background:transparent; }
+.labor-table .labor-group-heading th { color:var(--muted); background:var(--panel); font-size:10px; font-weight:500; letter-spacing:1px; text-transform:uppercase; padding:14px 8px 9px; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+.labor-table tbody th { padding-left:0; }
+.labor-table tr[data-selected="true"] { background:var(--selected); }
+.labor-row-meta,.labor-row-change { display:block; font-size:11px; color:var(--muted); margin-top:4px; }
+.labor-period-mobile { display:none; }
+.labor-row-value { font-size:17px; font-weight:500; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.labor-row-actions { display:flex; justify-content:flex-end; align-items:center; gap:7px; }
+.labor-compare-control { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; }
+.labor-follow { padding:7px; font-size:18px; color:var(--muted); line-height:1; }
+.labor-follow[aria-pressed="true"] { color:var(--accent); }
+.labor-tray { display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; align-items:center; padding:12px 0; }
+.labor-tray>div { display:flex; gap:6px 12px; flex-wrap:wrap; color:var(--muted); font-size:11px; }
+.labor-bottom { display:grid; grid-template-columns:1.4fr 1fr; gap:25px; margin-top:26px; border-top:1px solid var(--border); padding-top:18px; scroll-margin-top:12px; }
+.labor-source-row { padding:10px 0; border-bottom:1px solid var(--divider); font-size:11px; }
+#app[data-density="comfortable"] .labor-table tbody th,#app[data-density="comfortable"] .labor-table tbody td { padding-top:15px; padding-bottom:15px; }
+@container (max-width:850px) { .labor-desk { grid-template-columns:minmax(0,1fr) 220px; gap:20px; }.labor-aside { padding-left:16px; }.labor-metric>strong { font-size:30px; }.labor-table .labor-spark-col { display:none; }.labor-table .labor-name-col { width:43%; }.labor-table .labor-value-col { width:19%; }.labor-table .labor-period-col { width:22%; }.labor-table .labor-tools-col { width:16%; } }
+@container (max-width:650px) { .labor-headlines { grid-template-columns:repeat(2,minmax(0,1fr)); }.labor-metric { padding:14px 12px 14px 0; }.labor-metric+.labor-metric { padding-left:14px; }.labor-metric:nth-child(3) { padding-left:0; border-left:0; }.labor-metric:nth-child(n+3) { border-top:1px solid var(--border); }.labor-metric>p { min-height:0; }.labor-desk { grid-template-columns:minmax(0,1fr); gap:22px; }.labor-aside { padding:17px 0 0; border-left:0; border-top:1px solid var(--border); }.labor-event-list { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }.labor-event { display:block; padding:0 0 10px; }.labor-event>div:first-child { display:none; }.labor-event-name { min-height:34px; }.labor-dual,.labor-bottom { grid-template-columns:minmax(0,1fr); }.labor-table .labor-period-col { display:none; }.labor-period-mobile { display:block; font-size:11px; color:var(--muted); margin-top:4px; }.labor-table .labor-name-col { width:52%; }.labor-table .labor-value-col { width:27%; }.labor-table .labor-tools-col { width:21%; }.labor-row-actions { gap:0; }.labor-table thead th { padding-inline:4px; font-size:9px; }.labor-table tbody th,.labor-table tbody td { padding-inline:4px; }.labor-table tbody th { padding-left:0; } }
+@container (max-width:430px) { .labor-radar h1 { font-size:29px; }.labor-radar .page-heading { flex-direction:column; gap:12px; }.labor-claims-grid { grid-template-columns:minmax(0,1fr); gap:24px; }.labor-claims-grid article+article { border-top:1px solid var(--divider); padding-top:17px; }.labor-event-list { grid-template-columns:minmax(0,1fr); gap:0; }.labor-event { display:grid; grid-template-columns:30px minmax(0,1fr); padding:10px 0; }.labor-event>div:first-child { display:block; }.labor-event-name { min-height:0; }.labor-table-controls>label,.labor-table-controls input { width:100%; }.labor-follow { padding:7px 4px; }.labor-row-value { font-size:15px; }.labor-table .labor-name-col { width:49%; }.labor-table .labor-value-col { width:27%; }.labor-table .labor-tools-col { width:24%; } }
+@media(max-width:600px) { .labor-radar { padding:16px 12px; }.labor-radar .action,.labor-radar .link-button,.labor-section-link,.labor-filter { min-height:44px; display:inline-flex; align-items:center; }.labor-radar .labor-follow { min-width:34px; min-height:44px; }.labor-radar input,.labor-radar select { font-size:16px; min-height:44px; }.labor-radar input[type="checkbox"] { width:18px; height:18px; min-height:18px; }.labor-radar .date-window-controls .action { padding-inline:6px; }.labor-section-nav { gap:0 14px; }.labor-table .labor-row-actions input { margin:6px; }.labor-radar .date-window-inputs { display:grid; } }
+@media(max-width:600px) { .labor-compare-control,.labor-radar .labor-follow { min-width:44px; min-height:44px; }.labor-row-actions { flex-direction:column; gap:0; } }
+@container (max-width:430px) { .labor-radar .date-window-inputs { grid-template-columns:minmax(0,1fr); } }
+@container (max-width:650px) { .labor-table thead th { font-size:11px; white-space:normal; overflow-wrap:anywhere; } }

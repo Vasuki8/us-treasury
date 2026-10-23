@@ -32,7 +32,7 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
       container.textContent='Chart configuration error: y-domain must be a finite ordered pair.';return;
     }
   }
-  const width = Math.max(300, Math.round(container.clientWidth));
+  const width = Math.max(210, Math.round(container.clientWidth));
   const h = Math.max(120,height), left = 54, right = 20, top = 28;
   const staggerCurveLabels = curve && (width-left-right) / Math.max(1,yieldCurve.length-1) < 32;
   const bottom = staggerCurveLabels ? 46 : 30;
@@ -78,7 +78,7 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const labelDates = curve ? orderedDates : window
     ? [window.startDate, new Date(minX+(maxX-minX)/2).toISOString().slice(0,10), window.endDate]
     : [orderedDates[0], orderedDates[Math.floor((orderedDates.length-1)/2)], orderedDates.at(-1)];
-  const uniqueLabelDates = [...new Set(labelDates)];
+  const uniqueLabelDates = [...new Set(!curve&&width<350?[labelDates[0],labelDates.at(-1)]:labelDates)];
   uniqueLabelDates.forEach((date,index) => {
     let label = curve ? date : window ? periodLabel({frequency:'Daily'},date) : chartDateLabel(panels,date);
     if (!curve && !window && panels[0].series.frequency === 'Weekly') label = label.replace('Week ending ','');

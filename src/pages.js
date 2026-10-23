@@ -17,6 +17,7 @@ import {rangeControls,coverageSummary,measureLabel,changeLabel} from './research
 import {relatedIndicators} from './related.js';
 import {watchlistPage} from './watchlist-page.js';
 import {macroCoveragePage} from './macro-coverage-page.js';
+import {laborPage} from './labor-page.js';
 import {researchPage} from './research-page.js';
 import {calendarScope} from './calendar-scope.js';
 import {calendarRelatedIds} from './macro-calendar.js';
@@ -84,19 +85,7 @@ function yieldTimingPanel() {
 }
 
 function labor(state={}) {
-  const definitions = ['payroll', 'unrate', 'claims'].map(id => `<div class="definition"><h3>${seriesLink(id, getSeries(id).short)}</h3><p>${esc(getSeries(id).definition)}</p>${getSeries(id).coverageNote ? `<p class="amber">${esc(getSeries(id).coverageNote)}</p>` : ''}</div>`).join('');
-  const now=new Date(),today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
-  const employment=releases.filter(event=>event.sourceId==='bls'&&event.program==='employment-situation'&&event.date>=today&&(!event.scheduledAt||Date.parse(event.scheduledAt)>=now.getTime())).sort((a,b)=>a.date.localeCompare(b.date))[0];
-  const employmentHref=employment?`#/calendar?month=${employment.date.slice(0,7)}&event=${encodeURIComponent(employment.id)}`:'#/calendar?topic=Labor';
-  return heading('LABOR MARKET', 'Employment, wages and participation · monthly + weekly', button('COMPARE SERIES', 'data-compare="unrate,claims"') + link('NEXT EMPLOYMENT RELEASE ↗', employmentHref))
-    + `<p class="panel-note">${employment?`Next captured Employment Situation schedule: ${esc(employment.date)} · ${esc(employment.time??'time not supplied')} Eastern · ${esc(employment.periodLabel??'reference period not supplied')}${dataStatus.calendar?.sources?.bls?.status!=='ok'?' · CACHED SCHEDULE':''}. Schedule only; publication is not confirmed.`:'Next Employment Situation schedule unavailable in retained coverage. Check the official BLS calendar.'}</p>`
-    + `<p class="panel-note">Claims revised history and latest release context are separate measurements. Open ${seriesLink('claimsAdvance','INITIAL CLAIMS · LATEST RELEASE ↗')} or ${seriesLink('continuedClaimsAdvance','CONTINUED CLAIMS · LATEST RELEASE ↗')} for the current advance and prior-week values from the same release; initial and continued claims can refer to different weeks.</p>`
-    + metrics(['payroll', 'unrate', 'participation', 'wages'])
-    + (state.page==='macroCoverage'?macroCoveragePage(state,{embedded:true}):'')
-    + panel('W','LATEST WEEKLY RELEASE CONTEXT',metrics(['claimsAdvance','continuedClaimsAdvance']),link('OFFICIAL PUBLICATIONS ↗','#/research?view=publications&publicationSeries=claimsAdvance'),'Advance and same-release prior-week estimates; initial and continued claims use their own reference weeks. This is separate from revised historical data.')
-    + panel('B','LABOR BREADTH',seriesTable(['payrollAverage3m','underemployment','employmentPopulation','primeAgeEmploymentPopulation','primeAgeParticipation','weeklyHours','openings','hiresRate','quitsRate','layoffsRate','eciCompensationQuarterly','laborProductivity','unitLaborCosts']),link('COMPARE BREADTH ↗','#/explore?mode=compare&selected=unrate,underemployment,participation'),'Jobs, people and insured claims have different scopes and reference periods.')
-    + `<div class="grid g11">${panel('01', 'NONFARM PAYROLL CHANGE', chart(['payroll'], { kind: 'bar', height: 190 }), seriesLink('payroll', 'DETAIL ↗', 'link-button'), `${getSeries('payroll').adjustment} · ${getSeries('payroll').unit}`)}${panel('02', 'UNEMPLOYMENT RATE', chart(['unrate'], { height: 190 }), seriesLink('unrate', 'UNRATE ↗', 'link-button'), `${getSeries('unrate').adjustment} · ${getSeries('unrate').unit}`)}</div>`
-    + `<div class="grid g21">${panel('03', 'LABOR DASHBOARD', seriesTable(['participation', 'wages', 'claims', 'openings', 'payroll', 'unrate']), link('EXPLORE ↗', '#/explore', 'link-button'), 'Monthly and weekly frequencies remain distinct.')}${panel('04', 'DEFINITIONS & COVERAGE', `<div class="definitions">${definitions}</div>`, '', 'Official national observations · establishment and household surveys measure different concepts.')}</div>`;
+  return laborPage(state);
 }
 
 function detailData(item, state) {

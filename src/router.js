@@ -14,18 +14,18 @@ export const defaults = {
   auctionType:'All',auctionId:'',
   vintageCutoff:null,vintageSeries:'gdp',
   window:'1y',startDate:'',endDate:'',returnTo:null,
-  macroFamily:'prices',macroMeasure:'cpiMonthly',
+  macroFamily:'prices',macroMeasure:'cpiMonthly',laborGroup:'all',
   researchView:'workspaces',packageId:'',changeSince:'',changePage:1,publicationCutoff:'',publicationPeriod:'',publicationSeries:'gdp',
 };
 
 /** Only local research workspaces can be offered as a return destination. */
 export function safeReturnTo(value) {
-  if(typeof value!=='string'||value.length>4000||/[\u0000-\u001f\u007f]/.test(value)||!/^#\/(?:explore|watchlist|economy)(?:\?|$)/.test(value))return null;
+  if(typeof value!=='string'||value.length>4000||/[\u0000-\u001f\u007f]/.test(value)||!/^#\/(?:explore|watchlist|economy(?:\/labor)?)(?:\?|$)/.test(value))return null;
   const [path,query='']=value.split('?'),params=new URLSearchParams(query);
   const origin=params.get('return');params.delete('return');
   // One terminal watchlist/family origin may accompany an explore return.
   // Terminal workspaces discard nested returns, preventing recursive chains.
-  if(path==='#/explore'&&/^#\/(?:watchlist|economy)(?:\?|$)/.test(origin??'')){
+  if(path==='#/explore'&&/^#\/(?:watchlist|economy(?:\/labor)?)(?:\?|$)/.test(origin??'')){
     const terminal=safeReturnTo(origin);if(terminal)params.set('return',terminal);
   }
   return path+(params.size?'?'+params.toString():'');
@@ -65,8 +65,9 @@ export function parseRoute(hash = '') {
     state.publicationPeriod=(p.get('period')??'').slice(0,16);
     state.publicationSeries=['claimsAdvance','continuedClaimsAdvance'].includes(p.get('publicationSeries'))?p.get('publicationSeries'):'gdp';
     state.vintageCutoff=p.has('cutoff')?p.get('cutoff').slice(0,64):null;
-    state.macroFamily=Object.hasOwn(coverageFamilies,p.get('family'))?p.get('family'):'prices';
+    state.macroFamily=state.page==='labor'?'labor':Object.hasOwn(coverageFamilies,p.get('family'))?p.get('family'):'prices';
     state.macroMeasure=coverageFamilies[state.macroFamily].ids.includes(p.get('measure'))?p.get('measure'):coverageFamilies[state.macroFamily].defaultMeasure;
+    state.laborGroup=['jobs','people','pay','claims'].includes(p.get('group'))?p.get('group'):'all';
     state.vintageSeries=Object.hasOwn(series,p.get('series'))?p.get('series'):'gdp';
     state.auctionType=['All','Bill','Note','Bond','FRN','TIPS'].includes(p.get('type'))?p.get('type'):'All';
     state.auctionId=(p.get('auction')??'').slice(0,200);
@@ -113,6 +114,11 @@ export function routeFor(input) {
   if(state.page==='macroCoverage'){
     p.set('family',state.macroFamily);p.set('measure',state.macroMeasure);
   }
+  if(state.page==='labor')p.set('measure',coverageFamilies.labor.ids.includes(state.macroMeasure)?state.macroMeasure:coverageFamilies.labor.defaultMeasure);
+  if(state.page==='labor'||state.page==='macroCoverage'&&state.macroFamily==='labor'){
+    if(['jobs','people','pay','claims'].includes(state.laborGroup))p.set('group',state.laborGroup);
+    if(state.query)p.set('q',state.query);
+  }
   if(state.page==='vintages'){
     if(state.vintageCutoff!==null)p.set('cutoff',state.vintageCutoff);
     if(state.vintageSeries!=='gdp')p.set('series',state.vintageSeries);
@@ -143,11 +149,11 @@ export function routeFor(input) {
     if (state.exploreMode === 'compare') p.set('mode', 'compare');
     if (['indexed','difference'].includes(state.comparison)) p.set('comparison', state.comparison);
   }
-  if(['watchlist','macroCoverage'].includes(state.page)){
+  if(['watchlist','macroCoverage','labor'].includes(state.page)){
     p.set('selected',validIds(state.selected||[]).join(','));
     if(['indexed','difference'].includes(state.comparison))p.set('comparison',state.comparison);
   }
-  if(['indicator','explore','watchlist','macroCoverage'].includes(state.page)){
+  if(['indicator','explore','watchlist','macroCoverage','labor'].includes(state.page)){
     if(state.window==='observations')p.set('range',String(state.range===6?6:12));
     else if(state.window!=='1y')p.set('window',state.window);
     if(state.window==='custom'){p.set('start',state.startDate);p.set('end',state.endDate);}

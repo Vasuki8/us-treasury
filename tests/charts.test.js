@@ -22,7 +22,7 @@ test('weekly chart readouts identify the week-ending date', () => {
 });
 
 // Exercise the real SVG renderer; only the browser's element boundary is replaced.
-function withRenderedCharts(range, comparison, run, {linked=false,transform='level',frozen=false}={}) {
+function withRenderedCharts(range, comparison, run, {linked=false,transform='level',frozen=false,width=374}={}) {
   class Element {
     constructor(tag) { this.tag = tag; this.attributes = {}; this.children = []; this.listeners = {}; }
     setAttribute(name, value) { this.attributes[name] = String(value); }
@@ -45,7 +45,7 @@ function withRenderedCharts(range, comparison, run, {linked=false,transform='lev
   try {
     const containers = (comparison === 'indexed' ? [null] : ids).map(panelId => {
       const container = new Element('div');
-      container.clientWidth = 374;
+      container.clientWidth = width;
       container.dataset = { series: ids.join(','), range: JSON.stringify(range), comparison,transform, ...(panelId ? { panelId } : {}),...(linked?{cursorGroup:'comparison'}:{}) };
       return container;
     });
@@ -64,6 +64,17 @@ function withRenderedCharts(range, comparison, run, {linked=false,transform='lev
     else globalThis.document = originalDocument;
   }
 }
+
+test('narrow chart panels use their actual width and only endpoint date labels without scaling text down',()=>{
+ withRenderedCharts({preset:'all'},'native',({containers,nodes})=>{
+  for(const container of containers){
+   const svg=nodes(container).find(node=>node.tag==='svg');
+   assert.equal(svg.attributes.viewBox,'0 0 232 180');
+   const dates=nodes(container).filter(node=>node.tag==='text'&&Number(node.attributes.y)===172);
+   assert.equal(dates.length,2);assert.equal(dates[0].textContent,'1 Jan 2026');assert.equal(dates[1].textContent,'1 Apr 2026');
+  }
+ },{width:232});
+});
 
 test('calendar panels align exact shared dates and leave shorter source coverage inside the requested extent', () => {
   for (const [range, fractions, firstLabel] of [

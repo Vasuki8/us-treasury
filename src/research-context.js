@@ -53,7 +53,7 @@ function capturedMeasurement(current,source,item,id,agency){
 
 /** Build explicitly scoped frozen inputs; never promise a mutable URL is a saved result. */
 export function buildPinContext(state,{historyState,catalog=series,sources=dataStatus.sources,snapshot=dataStatus,events=releases,now=new Date(),changes={},checkpoint={},failures=[]}={}){
- let selected=state.page==='indicator'?[state.seriesId]:state.page==='macroCoverage'?[state.macroMeasure]:state.page==='watchlist'?state.saved:moduleIds[state.page]??state.selected;
+ let selected=state.page==='indicator'?[state.seriesId]:['macroCoverage','labor'].includes(state.page)?[state.macroMeasure]:state.page==='watchlist'?state.saved:moduleIds[state.page]??state.selected;
  let capturedCatalog=catalog,capturedSources=sources;
  const context={page:state.page,route:routeFor(state),moduleSources:Object.fromEntries((sourceIds[state.page]??[]).filter(id=>sources[id]).map(id=>[id,sources[id]])),attachments:[],scope:'Selected registered measurements; explicitly retained supplementary inputs and CSVs when present.'};
  const assumptions={comparison:state.page==='explore'&&state.exploreMode==='compare'?state.comparison:'native',transform:state.page==='indicator'?state.transform:'level',missingDates:'No interpolation or frequency aggregation; unmatched dates remain unavailable.'};
@@ -66,7 +66,7 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
   context.nextCatalysts=nextCatalysts(events,{now});context.calendarStatus=snapshot.calendar;
   context.scope='Four primary chart measurements plus frozen topic readings, chart inputs, factual update brief and selected upcoming schedule context. All values and clocks are retained; no current data is substituted on reopening.';
  }
- if(state.page==='macroCoverage')context.familyReadings=coverageFamilies[state.macroFamily].ids.map(id=>({id,name:catalog[id].name,unit:catalog[id].unit,definition:catalog[id].definition,latest:catalog[id].observations.at(-1)??null,fetchedAt:catalog[id].fetchedAt,source:catalog[id].source}));
+ if(['macroCoverage','labor'].includes(state.page))context.familyReadings=coverageFamilies[state.page==='labor'?'labor':state.macroFamily].ids.map(id=>({id,name:catalog[id].name,unit:catalog[id].unit,frequency:catalog[id].frequency,adjustment:catalog[id].adjustment,definition:catalog[id].definition,observationType:catalog[id].observationType,dataStatus:catalog[id].dataStatus,latest:catalog[id].observations.at(-1)??null,prior:catalog[id].observations.at(-2)??null,fetchedAt:catalog[id].fetchedAt,source:catalog[id].source}));
  if(state.page==='macroCoverage'&&state.macroFamily==='external'){
   const source=sources.beaIta??{},result=currentAccountContext(source),dates=[result.previousDate,result.date].filter(Boolean);
   context.currentAccountInputs={...source,series:Object.fromEntries(Object.entries(source.series??{}).map(([id,item])=>[id,{...item,observations:item.observations.filter(row=>dates.includes(row.date))}]))};

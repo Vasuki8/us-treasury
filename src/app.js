@@ -211,6 +211,7 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   syncPublications();
   syncPublicationExplanations();
   applyAppearance();
+  root.dataset.page=state.page==='labor'||state.page==='macroCoverage'&&state.macroFamily==='labor'?'labor':state.page;
   const failures=trackedFailures();
   main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${renderPage(state,{...historyController.context(state),library:researchLibrary.getState(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationArchive,publicationState,publicationExplanations,explanationState})}`;
   main.querySelector('.page-heading .actions')?.insertAdjacentHTML('beforeend',researchActions());
@@ -248,6 +249,7 @@ function navigate(patch,{replace=false,preserveFocus=true}={}) {
   const previous={page:state.page,seriesId:state.seriesId};
   if(patch.page&&patch.page!==state.page)rememberWorkspace();
   state={...state,...patch};
+  if(state.page==='labor')Object.assign(state,{macroFamily:'labor',macroMeasure:parseRoute(routeFor(state)).macroMeasure});
   if(patch.selected&&state.returnTo)state.returnTo=updateWorkspaceSelection(state.returnTo,state.selected);
   const route=routeFor(state);
   if(location.hash!==route)history[replace?'replaceState':'pushState'](null,'',route);
@@ -284,7 +286,7 @@ function exportCsv(selection=null) {
   if(!ids.length){announce('Select at least one series to export.');return;}
   try {
     const comparison=state.page==='explore' && state.exploreMode==='compare'?state.comparison:'native';
-    const content=toCsv(ids,{transform:state.page==='indicator'?state.transform:'level',range:['indicator','explore','watchlist','macroCoverage'].includes(state.page)?viewRange(state):state.range,comparison});
+    const content=toCsv(ids,{transform:state.page==='indicator'?state.transform:'level',range:['indicator','explore','watchlist','macroCoverage','labor'].includes(state.page)?viewRange(state):state.range,comparison});
     downloadCsv(content,`meridian-${ids.join('-')}.csv`,'CSV downloaded with displayed observations, units, official source identifiers, retrieval times and per-series data status. Unknown publication dates remain empty.');
   } catch(error) {announce(`Export unavailable: ${error.message}`);}
 }
@@ -391,7 +393,9 @@ root.addEventListener('click',async event=>{
     navigate({page:'explore',exploreMode:'compare',selected,returnTo});
   }
   else if('page' in d && pageNames[d.page])navigate({page:d.page});
-  else if('compare' in d)navigate({page:'explore',selected:[...new Set(d.compare.split(',').filter(id=>getSeries(id)))].slice(0,4),exploreMode:'compare',comparison:'native',returnTo:state.page==='macroCoverage'?routeFor(state):state.returnTo});
+  else if('compare' in d)navigate({page:'explore',selected:[...new Set(d.compare.split(',').filter(id=>getSeries(id)))].slice(0,4),exploreMode:'compare',comparison:'native',returnTo:['macroCoverage','labor'].includes(state.page)?routeFor(state):state.returnTo});
+  else if('laborGroup' in d&&['all','jobs','people','pay','claims'].includes(d.laborGroup))navigate({laborGroup:d.laborGroup},{replace:true});
+  else if('laborSection' in d&&['labor-analysis','labor-weekly','labor-trends','labor-readings','labor-notes'].includes(d.laborSection))document.getElementById(d.laborSection)?.scrollIntoView({block:'start'});
   else if('event' in d){
     const selected=releases.find(release=>release.id===d.event);
     if(selected)navigate(state.page==='calendar'?{eventId:selected.id}:{page:'calendar',eventId:selected.id,calendarMonth:selected.date.slice(0,7),day:'all',calendarTopic:'All topics',watchOnly:false});
@@ -491,6 +495,7 @@ root.addEventListener('change',async event=>{
 root.addEventListener('input',event=>{
   if(event.target.id==='research-name')researchLabel=event.target.value;
   if(event.target.id==='catalog-search')navigate({query:event.target.value},{replace:true});
+  if(event.target.id==='labor-query')navigate({query:event.target.value},{replace:true});
 });
 
 document.getElementById('command-form').addEventListener('submit',event=>{
