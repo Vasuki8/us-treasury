@@ -37,7 +37,7 @@
 
 - [x] Capture genuine official data through the normal admission/writer pipeline; verify all original archives remain exact.
 - [x] Run the complete tests and production asset checks; validate desktop/mobile, keyboard, loading/error states and exports locally.
-- [ ] Review, commit/push to `Vasuki8/us-treasury`, verify Actions and representative live pages before claiming live.
+- [x] Review, commit/push to `Vasuki8/us-treasury`, verify Actions and representative live pages before claiming live.
 
 ## Local acceptance evidence
 
@@ -51,3 +51,9 @@
 ## Scope limits
 
 This is current revised ITA history, first captured on its actual retrieval date. Historical first-publication values and period-specific publication instants remain unavailable. No current-account/GDP ratio, country breakdown, financial-account stock estimate or inferred cause is added. ITA quarterly balances and NIPA SAAR trade remain separate measurements. The existing BLS calendar stays visibly cached.
+
+## Verified deployment
+
+Runtime commit `fcdc65271980c84454c39842484611d116eb0ecf` was pushed to `main`. [Actions run 39900808740](https://github.com/Vasuki8/us-treasury/actions/runs/39900808740) completed successfully, including complete Node 22 and Node 24 verification and GitHub Pages deployment. The daily refresh objective was already satisfied, so no redundant all-source refresh ran. Cloudflare configuration remains deferred.
+
+A clean LF checkout of this exact commit built successfully; all 128 published assets matched its build byte-for-byte. The live Trade & current account family showed the genuine capture and quarter/component arithmetic. Full-history indicator detail and keyboard CSV export worked, and the source-scoped retrieval-history page loaded captured ITA definitions/terms. No browser errors were recorded. Graphite screenshot: `test-results/current-account-live.png` (local acceptance artifact, not committed). This documentation-only completion record does not alter deployed runtime assets.
