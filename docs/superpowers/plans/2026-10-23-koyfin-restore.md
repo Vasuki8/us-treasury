@@ -28,7 +28,7 @@
 
 - [x] Obtain a fresh review of the final diff and address material findings.
 - [x] Run the full existing suite, build and build smoke checks.
-- [ ] Publish through the existing GitHub Pages workflow and verify the live assets and visible layouts.
+- [x] Publish through the existing GitHub Pages workflow and verify the live assets and visible layouts.
 
 ## Evidence
 
@@ -38,4 +38,7 @@
 - Compact/Comfortable row height: Labor53.85/61.85px, Calendar51.73/57.73px, catalog100.13/108.13px. Visible spacing preference preserved.
 - Static build and smoke checks pass:149 assets, including all source history bundles.
 - Full existing suite passes:1,348 tests, zero failures/cancellations/skips (190243.6449ms, Node bounded concurrency2).
-- Public deployment verification pending.
+- Additional Comfortable checks:12 views at736/390/320px with no overflow or clipped chart/date controls. Save menu fits at320px (left8/right296.67).
+- Published runtime commit:`833c89ddd02ba9933a3c1867266ecb1e8fe47428`. GitHub Actions run[40033264476](https://github.com/Vasuki8/us-treasury/actions/runs/40033264476) passed Node22, Node24 and GitHub Pages deployment; source refresh was not due and was skipped.
+- `scripts/check-live.mjs https://vasuki8.github.io/us-treasury/` passed:all149 live assets match the tested build byte for byte.
+- Public browser check:all five pages in both themes at390/1280px (20 views), no page overflow or captured console warnings/errors. Returned to Overview and restored the initial Light preference.
