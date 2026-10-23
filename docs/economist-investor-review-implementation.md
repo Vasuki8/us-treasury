@@ -86,3 +86,7 @@ Immutable audit: all **36** baseline history blobs and every original storage-in
 Final full-suite/build/deployment evidence is recorded below once confirmed; unchecked items above are not completion claims.
 
 Final local evidence: **1,015 / 1,015 tests passed**; the production smoke check verified **124 assets**, including source-split histories. The subsequent schedule-label clarification passed the release-focused suite. Rebuilt final assets are verified again before publication.
+
+Cross-runtime follow-up: the first CI attempt passed Node 24 but failed Node 22's exact annualization recomputation. Reproduced with checksum-verified Node 22.23.3: 20 derived rows differed by at most `2.3092638912203256e-14` percentage points. Annualization admission now permits at most `1e-12` pp numerical error in the derived value only. Input dates/values, source strings, metadata, nulls and payroll averages remain exact; admission does not mutate stored values. Regression tests reject meaningful changes and any changed input, and pass on both runtimes. Formulas, current snapshots and all immutable captures remain unchanged.
+
+The corrected full Node 22 suite passed **1,017 / 1,017**, followed by a successful build, **124-asset** smoke check and complete immutable-history/source-admission audit. The six momentum regressions also pass on Node 24. Deployment remains gated on both GitHub runtime checks.
