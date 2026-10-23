@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {overviewPage} from '../src/overview-page.js';
 import {indicatorPage} from '../src/indicator-page.js';
-import {getSeries} from '../src/model.js';
+import {getSeries,toCsv} from '../src/model.js';
+import {parseCsv} from '../scripts/sources/http.mjs';
 import {defaults,parseRoute} from '../src/router.js';
 
 const state = overrides => ({...defaults, saved:[], selected:[], ...overrides});
@@ -98,6 +99,30 @@ test('Indicator separates calculated or modeled measurement kind from captured o
       }
     }
   } finally {Object.assign(current,saved);}
+});
+
+test('Indicator exports retained missing changes and suppressed rows with exact-window provenance', () => {
+  const current=getSeries('unrate'), saved=current.observations;
+  const range={preset:'custom',startDate:'2017-01-01',endDate:'2017-01-01'};
+  try {
+    for(const [transform,observation] of [
+      ['change',{date:'2017-01-01',value:4.8,publishedAt:'2017-02-03',footnotes:['First retained observation']}],
+      ['level',{date:'2017-01-01',value:null,publishedAt:'2017-02-03',suppressed:true,footnotes:['Withheld by source']}],
+    ]) {
+      current.observations=[observation];
+      const html=indicator({seriesId:'unrate',transform,window:'custom',startDate:range.startDate,endDate:range.endDate});
+      assert.match(html,/time datetime="2017-01-01"/);
+      assert.doesNotMatch(html,/data-export disabled/,'retained missing rows remain exportable');
+      const [headers,...rows]=parseCsv(toCsv(['unrate'],{transform,range}));
+      assert.equal(rows.length,1);
+      const exported=Object.fromEntries(headers.map((key,index)=>[key,rows[0][index]]));
+      assert.equal(exported.date,'2017-01-01');
+      assert.equal(exported.value,'');
+      assert.equal(exported.publication_date,'2017-02-03');
+      assert.equal(exported.source_notes,observation.footnotes[0]);
+      if(observation.suppressed) assert.equal(exported.suppressed,'true');
+    }
+  } finally {current.observations=saved;}
 });
 
 test('Indicator keeps claims and GDP publication evidence prominent and workspace returns bounded', async () => {

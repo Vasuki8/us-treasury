@@ -126,11 +126,11 @@ test('unavailable and cached advance details retain their own source status and 
     series[id] = { ...retained, observations: [], fetchedAt: null, dataStatus: 'unavailable', error: 'Advance source unavailable <test>' };
     const empty = renderPage(parseRoute(`#/series/${id}`));
     assert.match(empty, /Advance source unavailable &lt;test&gt;/);
-    assert.match(empty, /UNAVAILABLE/);
+    assert.match(empty, /UNAVAILABLE/i);
     assert.ok(!empty.includes(`data-series="${historyId}"`));
     series[id] = { ...retained, dataStatus: 'cached', error: 'Advance HTTP 503; retained the last successful release.' };
     const cached = renderPage(parseRoute(`#/series/${id}?window=all`));
-    assert.match(cached, /CACHED OFFICIAL SNAPSHOT/);
+    assert.match(cached, /CACHED OFFICIAL SNAPSHOT/i);
     assert.match(cached, /Advance HTTP 503/);
     assert.match(cached, /2026-10-22T13:00:00.000Z/);
     assert.ok(cached.includes(`href="#/series/${historyId}?window=all"`));

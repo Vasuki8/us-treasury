@@ -51,7 +51,7 @@ export function indicatorPage(state,historyContext={}) {
   const current=getSeries(state.seriesId)??getSeries('unrate');
   const observation=latest(current),previous=current.observations.at(-2);
   const transformed=transformSeries(current,state.transform,viewRange(state));
-  const available=transformed.observations.some(row=>Number.isFinite(row.value));
+  const available=transformed.observations.length>0;
   const related=relatedIndicators(current.id),back=workspaceReturn(state);
   const tabs=[['data','DATA TABLE'],['methodology','METHODOLOGY'],['revisions','RETRIEVAL HISTORY']];
   const activeTab=tabs.some(([id])=>state.tab===id)?state.tab:'data';

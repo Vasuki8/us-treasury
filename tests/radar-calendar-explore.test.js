@@ -4,6 +4,7 @@ import {calendarPage} from '../src/calendar-page.js';
 import {explorePage} from '../src/explore-page.js';
 import {defaults} from '../src/router.js';
 import {releases,dataStatus} from '../src/data.js';
+import {getSeries} from '../src/model.js';
 const render = (state={}) => (state.page==='calendar'?calendarPage:explorePage)({...defaults,saved:[],density:'compact',...state});
 const fixture = run => {
   const original=[...releases],status=dataStatus.calendar;
@@ -30,6 +31,23 @@ test('Calendar unmatched Watchlist preserves recovery and schedule-source contex
   assert.doesNotMatch(html,/data-event=/);
 }));
 
+test('Calendar preview shows basis once for captured schedules and separately from cached state',()=>fixture(()=>{
+  const event=releases.find(item=>item.id==='radar-claims');
+  for(const [sourceId,scheduleBasis,label] of [['dol','recurring-rule','AGENCY RULE'],['treasury','calendar-estimate','ESTIMATED']]) {
+    Object.assign(event,{sourceId,scheduleBasis});
+    dataStatus.calendar.sources[sourceId]={status:'ok',fetchedAt:'2026-10-20T12:00:00Z'};
+    let preview=render({page:'calendar',calendarMonth:'2026-11',eventId:'radar-claims'}).split('id="calendar-selected-preview"')[1];
+    const status=preview.match(/<p class="panel-note">([^]*?)<\/p>/)?.[1]??'';
+    assert.ok(status.includes(label));
+    assert.doesNotMatch(status,/class="calendar-basis"/,'the primary state already identifies the basis');
+    assert.match(preview,/Schedule basis and retrieval/);
+    dataStatus.calendar.sources[sourceId].status='error';
+    preview=render({page:'calendar',calendarMonth:'2026-11',eventId:'radar-claims'}).split('id="calendar-selected-preview"')[1];
+    assert.match(preview,/CACHED SCHEDULE/);
+    assert.ok(preview.includes(`<span class="calendar-basis">${label}</span>`),'cache state does not replace the basis');
+  }
+}));
+
 test('Catalog keeps native unit and reference period with the latest reading and preserves discovery actions',()=>{
   const html=render({page:'explore',query:'UNRATE',selected:['unrate']});
   const reading=html.match(/<td class="num catalog-reading">([^]*?)<\/td>/)?.[1]??'';
@@ -37,6 +55,37 @@ test('Catalog keeps native unit and reference period with the latest reading and
   assert.match(reading,/Reference period/);
   assert.match(reading,/<time datetime="\d{4}-\d{2}-\d{2}">/);
   for(const text of ['id="catalog-search"','id="topic-filter"','id="frequency-filter"','id="catalog-result-count"','data-select="unrate"','data-remove="unrate"','SELECTED 1/4','SERIES CATALOG','Inflation momentum','Labor breadth','Policy versus funding','Real income versus spending'])assert.ok(html.includes(text),text);
+});
+
+test('Catalog search and selection precede secondary starter questions without losing starter links',()=>{
+  const html=render({page:'explore',query:'UNRATE'});
+  const starters=html.match(/<details class="supporting-details catalog-starters">([^]*?)<\/details>/);
+  assert.ok(starters,'starter questions remain available in a native closed disclosure');
+  assert.ok(html.indexOf('id="catalog-search"')<starters.index);
+  assert.ok(html.indexOf('class="catalog-table"')<starters.index);
+  for(const text of ['Inflation momentum','Labor breadth','Policy versus funding','Real income versus spending']) assert.ok(starters[1].includes(text));
+});
+
+test('Catalog discloses ordinary coverage but keeps errors and critical history limitations inline',()=>{
+  const current=getSeries('unrate'),claims=getSeries('claims');
+  const original={coverageNote:current.coverageNote,error:current.error},claimsNote=claims.coverageNote;
+  try {
+    current.coverageNote='Historical observations retain their own <capture> dates.';
+    current.error='HTTP 503 <retry>';
+    let html=render({page:'explore',query:'UNRATE'});
+    const disclosure=html.match(/<details class="catalog-coverage-details">([^]*?)<\/details>/);
+    assert.ok(disclosure,'ordinary coverage remains available through a native closed disclosure');
+    assert.match(disclosure[1],/<summary>Historical feed coverage<\/summary>/);
+    assert.match(disclosure[1],/Historical observations retain their own &lt;capture&gt; dates/);
+    assert.match(html.replace(disclosure[0],''),/HTTP 503 &lt;retry&gt;/);
+    claims.coverageNote='Historical feed may lag the latest advance release.';
+    html=render({page:'explore',query:claims.code});
+    const withoutDetails=html.replace(/<details[^>]*>[^]*?<\/details>/g,'');
+    assert.match(withoutDetails,/Historical feed may lag the latest advance release/);
+    current.coverageNote='Partial results are not comparable with complete reporting.';
+    html=render({page:'explore',query:'UNRATE'});
+    assert.match(html.replace(/<details[^>]*>[^]*?<\/details>/g,''),/Partial results are not comparable/);
+  } finally {Object.assign(current,original);claims.coverageNote=claimsNote;}
 });
 
 test('Comparison keeps native panels, exact-window controls, errors and export eligibility',()=>{
