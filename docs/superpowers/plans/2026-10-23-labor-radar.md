@@ -33,13 +33,13 @@
 
 **Interfaces:** laborPage(state, options) returns HTML using the existing `macro-measure`, date-window, data-save, data-compare and data-export-macro-measure contracts. Canonical Labor state has page=labor, macroFamily=labor, a valid labor macroMeasure (default underemployment), and viewRange(state). Group/query controls use the existing query/topic state or a bounded Labor-specific group state that round-trips through routes/saves if needed; root/UI agree exact integration before edits. Indicator/Explore links use existing bounded return context. Production CSV/download, save and freeze remain existing application actions.
 
-- [ ] Establish a clean baseline and an isolated codex/labor-radar branch.
-- [ ] Write meaningful route, custom-window, return-context and focused frozen-result tests; verify the new expectations fail before integration.
-- [ ] Integrate Labor normalization, URL/window/query/group persistence, matching CSV, saved views and scoped pins using existing model/research functions.
-- [ ] Implement approved information order, full grouped table, presets and compact/mobile layouts; adapt current source evidence and error states.
-- [ ] Run focused tests. Resolve renderer and integration mismatches without changing source data or weakening existing behavior.
-- [ ] Run full tests, build and static smoke check; review the task diff and address material findings.
-- [ ] Commit the reviewed implementation.
+- [x] Establish a clean baseline and an isolated codex/labor-radar branch.
+- [x] Write meaningful route, custom-window, return-context and focused frozen-result tests; verify the new expectations fail before integration.
+- [x] Integrate Labor normalization, URL/window/query/group persistence, matching CSV, saved views and scoped pins using existing model/research functions.
+- [x] Implement approved information order, full grouped table, presets and compact/mobile layouts; adapt current source evidence and error states.
+- [x] Run focused tests. Resolve renderer and integration mismatches without changing source data or weakening existing behavior.
+- [x] Run full tests, build and static smoke check; review the task diff and address material findings.
+- [x] Commit the reviewed implementation.
 
 ## Task 2: Responsive acceptance and delivery
 
@@ -47,8 +47,18 @@
 
 **Interfaces:** Serves Task 1 application through existing server.mjs; existing workflow publishes main after verification.
 
-- [ ] Browser-check 320/390/736/1024/wide desktop and both themes. Check the empty/custom windows, full 23 rows, menu/date-field bounds and keyboard use.
-- [ ] Exercise focused-history change, CSV scope, Follow, comparison presets, detail/back navigation, Save view and Freeze result against real application state.
-- [ ] Economist and investor reviewers check the implemented order and visible semantics; fresh code reviewer checks the final diff.
-- [ ] Fix any material findings; rerun only the affected checks and required build/full suite after code changes.
+- [x] Browser-check 320/390/736/1024/wide desktop and both themes. Check the empty/custom windows, full 23 rows, menu/date-field bounds and keyboard use.
+- [x] Exercise focused-history change, CSV scope, Follow, comparison presets, detail/back navigation, Save view and Freeze result against real application state.
+- [x] Economist and investor reviewers check the implemented order and visible semantics; fresh code reviewer checks the final diff.
+- [x] Fix any material findings; rerun only the affected checks and required build/full suite after code changes.
 - [ ] Integrate and publish through the existing workflow only after checks pass, then verify deployed content. Preserve the exact published revision in delivery evidence.
+
+## Verification before deployment
+
+- Unchanged baseline `33743f8`: 1320/1320 tests passed. Initial renderer and integration regressions failed for their intended reasons before implementation.
+- Runtime implementation `5b0133a`, final reviewed fix `c96c8de95cb5ee82fbaa2b3d27c945744fa08a35`. Economist and investor agents consulted the UI implementer directly and approved the implemented hierarchy, default U-6 focus, grouped measure order, native comparison starters and weekly release distinctions.
+- Independent whole-change review found a mismatched core-chart preset window and a methodology destination label mismatch. One fix wave addressed both; scoped re-review approved all findings, with no new material breakage. A separate actual-data probe passed 10 quarterly/weekly window and navigation cases.
+- Final `node --test --test-concurrency=2 --test-reporter=spec tests/*.test.js`: **1333/1333 passed**, no failures, skips or cancellations (162991.7891 ms). `node scripts/build.mjs` and `node scripts/check-build.mjs`: passed, **145 assets** including source history bundles.
+- Browser checks at outer widths 320/390/736/1024/1440 in Light and Graphite retained all 23 rows without page-level horizontal overflow. Native mobile date controls fit; open Save menu fits at 320. Theme preference survives reload. Screenshots inspected at mobile and desktop widths; these are browser viewport checks, not physical-device testing.
+- Actual UI workflows verified: group/search, focused measure, exact custom windows, detail/back and comparison/back, comparison starters, Follow, downloaded CSV, Save view and Freeze result. The wages CSV and frozen result both retained exactly the two Aug/Sep 2026 observations in the selected Aug 1–Sep 30 interval. Frozen result retained provenance. Keyboard Home/End reached exact first/last ECI readings. Methodology now opens its selected tab; all three calendar charts share the ECI focus's April-to-April bounds.
+- Future empty windows disable export and show no out-of-window change; invalid reversed dates show an alert. Browser console warning/error capture was empty. Source snapshots, observations and publication archives are unchanged.
