@@ -38,34 +38,34 @@ BEA's [public-domain policy](https://www.bea.gov/help/faq/147) and [citation gui
 
 Files: `src/current-account-gdp.js`, new `src/current-account-gdp-breakdown.js`, `tests/current-account-gdp-breakdown.test.js`.
 
-- [ ] Write and run failing tests for exact quarterly arithmetic, positive/negative/zero values, rounding residual, missing components/GDP, incompatible identities/metadata, duplicates, quarter gaps, windows and bounds.
-- [ ] Reuse guarded ratio input validation; expose four synthetic percent series and selected rows with component points, published total, sum and residual in percent/quarterly dollars.
-- [ ] Verify original inputs are unchanged and existing total tests pass.
+- [x] Write and run failing tests for exact quarterly arithmetic, positive/negative/zero values, rounding residual, missing components/GDP, incompatible identities/metadata, duplicates, quarter gaps, windows and bounds.
+- [x] Reuse guarded ratio input validation; expose four synthetic percent series and selected rows with component points, published total, sum and residual in percent/quarterly dollars.
+- [x] Verify original inputs are unchanged and existing total tests pass.
 
 ### 2. Graphite view, CSV and live integration
 
 Files: new `src/current-account-gdp-breakdown-view.js`; `src/macro-coverage-page.js`, `src/app.js`; new view/integration tests.
 
-- [ ] Write and run failing tests for four-series scoped catalog, window consistency, reconciliation/readout copy, partial/error states, escaped text and source-rich CSV.
-- [ ] Add four labeled lines using existing chart colors and the page's single date-control set; no stacking or extra comparison transformation.
-- [ ] Show latest selected quarter and exact-prior changes, historical reconciliation table, formula, source status, commercial attribution and limitations. Export every selected quarter with original input values, provenance and missing reasons.
-- [ ] Wire live chart catalogs and CSV action without altering generic registered series or comparisons.
+- [x] Write and run failing tests for four-series scoped catalog, window consistency, reconciliation/readout copy, partial/error states, escaped text and source-rich CSV.
+- [x] Add four labeled lines using existing chart colors and the page's single date-control set; no stacking or extra comparison transformation.
+- [x] Show latest selected quarter and exact-prior changes, historical reconciliation table, formula, source status, commercial attribution and limitations. Export every selected quarter with original input values, provenance and missing reasons.
+- [x] Wire live chart catalogs and CSV action without altering generic registered series or comparisons.
 
 ### 3. Frozen evidence and compatibility
 
 Files: `src/research-context.js`, `src/research-packages.js`, `src/research-page.js`, new package tests.
 
-- [ ] Write and run failing tests for new optional `currentAccountGdpBreakdown: {version:1, range, sources}` context, import limits and legacy compatibility.
-- [ ] Retain only the five relevant ITA histories and nominal GDP history, exact metadata and scoped CSV. Validate raw and expanded quarter spans and keep existing package byte limits.
-- [ ] Render frozen breakdown with its own explicitly supplied catalog. Legacy packages never acquire this panel from live data.
+- [x] Write and run failing tests for new optional `currentAccountGdpBreakdown: {version:1, range, sources}` context, import limits and legacy compatibility.
+- [x] Retain only the five relevant ITA histories and nominal GDP history, exact metadata and scoped CSV. Validate raw and expanded quarter spans and keep existing package byte limits.
+- [x] Render frozen breakdown with its own explicitly supplied catalog. Legacy packages never acquire this panel from live data.
 
 ### 4. Verification and delivery
 
-- [ ] Independently review formulas, component definitions, missing data and frozen input isolation.
-- [ ] Run focused tests, full test suite, production build and asset checks; verify immutable data/archives unchanged.
-- [ ] Check desktop, 390px and 320px layouts, chart keyboard navigation, date windows, exports, frozen results and browser errors locally.
-- [ ] Commit and push intended files to `Vasuki8/us-treasury`; verify Actions deployment, live assets and representative pages before claiming live.
-- [ ] Record actual results, limitations and commit/deployment evidence below.
+- [x] Independently review formulas, component definitions, missing data and frozen input isolation.
+- [x] Run focused tests, full test suite, production build and asset checks; verify immutable data/archives unchanged.
+- [x] Check desktop, 390px and 320px layouts, chart keyboard navigation, date windows, exports, frozen results and browser errors locally.
+- [x] Commit and push intended files to `Vasuki8/us-treasury`; verify Actions deployment, live assets and representative pages before claiming live.
+- [x] Record actual results, limitations and commit/deployment evidence below.
 
 ## Results
 
@@ -75,4 +75,4 @@ Local browser checks passed at 1440×1000, 390×844 and 320×740: no page overfl
 
 The four components cover all 266 retained quarters (1960Q1–2026Q2). Latest ratios: goods −3.5783%, services +1.1238%, primary income −0.1401%, secondary income −0.4275%; published total −3.0221%. The +$1 million rounding residual remains separate. Current revised inputs are not original publication vintages. Snapshot/history/publication files remain unchanged.
 
-Push and deployment verification pending.
+Runtime commit `632a0e088a6d50cd9372278da0bb3500e7fcdff2` was pushed to main. [Actions run 39908581009](https://github.com/Vasuki8/us-treasury/actions/runs/39908581009) passed full Node 22/24 checks and GitHub Pages deployment. A clean checkout build and live verifier confirmed all 133 deployed assets match. Live overview and external economy pages rendered; component Home/End readouts reached 1960Q1 and 2026Q2, CSV export succeeded, and the browser reported no console errors. Screenshot: `test-results/current-account-gdp-breakdown-live.png`. All milestone checks are complete; this does not claim completion of the wider fiscal/macro roadmap.
