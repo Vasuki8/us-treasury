@@ -1,6 +1,7 @@
 import { measurementChange } from './measurement-change.js';
 import {currentAccountPanel} from './current-account-view.js';
 import {currentAccountGdpPanel} from './current-account-gdp-view.js';
+import {currentAccountGdpHistoryPanel} from './current-account-gdp-history-view.js';
 import {dataStatus} from './data.js';
 import {coverageFamilies} from './macro-registry.js';
 import {getSeries,latest,formatValue,formatChange,periodLabel,transformSeries} from './model.js';
@@ -14,7 +15,7 @@ export function macroCoveragePage(state={}, {embedded=false}={}){
  const focused={...state,page:'macroCoverage',macroFamily:familyId,macroMeasure:id},shown=transformSeries(current,'level',range),last=shown.observations.at(-1);
  const previous=getSeries(id).observations.filter(o=>!shown.window.endDate||o.date<=shown.window.endDate);
  const changed=last?`${formatValue(current,last.value)} at ${periodLabel(current,last.date)}. ${measurementChange({...current,observations:previous}).text}`:'No source observation falls in this date window.';
- const controls=`<div class="toolbar macro-family-controls"><label for="macro-family">Measurement family<select id="macro-family" aria-label="Measurement family">${Object.entries(coverageFamilies).map(([key,value])=>`<option value="${key}"${key===familyId?' selected':''}>${esc(value.label)}</option>`).join('')}</select></label><label for="macro-measure">History measure<select id="macro-measure" aria-label="History measure">${family.ids.map(key=>`<option value="${key}"${key===id?' selected':''}>${esc(getSeries(key).name)}</option>`).join('')}</select></label>${rangeControls(focused,[id])}${embedded?button('CSV MEASURE',`data-export-macro-measure${shown.error||!last?' disabled':''}`):''}</div>`;
+ const controls=`<div class="toolbar macro-family-controls"><label for="macro-family">Measurement family<select id="macro-family" aria-label="Measurement family">${Object.entries(coverageFamilies).map(([key,value])=>`<option value="${key}"${key===familyId?' selected':''}>${esc(value.label)}</option>`).join('')}</select></label><label for="macro-measure">History measure<select id="macro-measure" aria-label="History measure">${family.ids.map(key=>`<option value="${key}"${key===id?' selected':''}>${esc(getSeries(key).name)}</option>`).join('')}</select></label>${familyId==='external'?'':rangeControls(focused,[id])}${embedded?button('CSV MEASURE',`data-export-macro-measure${shown.error||!last?' disabled':''}`):''}</div>`;
  const errors=current.error?`<p class="panel-note amber">${esc(current.error)}</p>`:'';
  const history=shown.observations.length?chart([id],{range,height:250}):emptyState('History unavailable.',shown.error??current.error??'No retained observations are available in the selected date window.');
  const detail=indicatorHref(id,focused);
@@ -28,6 +29,7 @@ export function macroCoveragePage(state={}, {embedded=false}={}){
  return (embedded?'':heading('ECONOMY',`${family.label} / ${family.question}`,button('COMPARE FAMILY',`data-compare="${esc(family.compare.join(','))}"`)+button('CSV MEASURE',`data-export-macro-measure${shown.error||!available?' disabled title="A valid window with retained observations is required."':''}`)))
   + (familyId==='external'?currentAccountPanel(dataStatus.sources.beaIta):'')
   + (familyId==='external'?currentAccountGdpPanel(dataStatus.sources):'')
+  + (familyId==='external'?currentAccountGdpHistoryPanel(dataStatus.sources,range,{state:focused}):'')
   + (embedded?'':panel('00','LATEST TOPIC READINGS',table(['MEASUREMENT / DEFINITION','LATEST','REFERENCE PERIOD','SOURCE STATUS / FULL COVERAGE'],rows,'Current topic readings and explicit source periods')))
   + `<div class="grid g21">${panel('01','FOCUSED HISTORY',controls+errors+history+coverageSummary(shown),`<a class="action" href="${esc(detail)}">DETAILS & DATA TABLE ↗</a>`,`${current.frequency} · ${current.unit} · ${current.adjustment}`)}${panel('02','RESEARCH QUESTION',`<div class="explain"><p><strong>WHAT CHANGED.</strong> ${esc(changed)}</p><p><strong>CONTEXT.</strong> ${esc(family.context)}</p><p><strong>WHY IT MATTERS.</strong> ${esc(family.question)} ${contributionContext}</p><p><strong>LIMITATIONS.</strong> ${esc(family.limitations)}</p><p>${esc(current.definition)}</p><p>Source: ${sourceLink(current)}. Retrieval: <span class="mono">${esc(current.fetchedAt??'Unavailable')}</span>. Reference dates are not verified publication timestamps.</p><p><a href="${esc(family.schedule)}" target="_blank" rel="noopener noreferrer">External official schedule ↗</a>. BLS, BEA, DOL and Census program associations appear in the <a href="#/calendar">captured calendar</a> where available. Dated FOMC events and official material references are available in the calendar and Credit & banking; linked documents are separate from captured numeric projections.</p></div>`)}</div>`
 

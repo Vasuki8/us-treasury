@@ -3,6 +3,7 @@ import {compareSeries,transformSeries,toCsv,comparisonClassification,BLS_DATA_NO
 import {isIsoDate}from'./date-window.js';
 import {defaults}from'./router.js';
 import {viewRange}from'./workspace-context.js';
+import {MAX_CURRENT_ACCOUNT_GDP_HISTORY_QUARTERS,currentAccountGdpQuarterSpan}from'./current-account-gdp.js';
 import {canonicalJson,deepFreeze,researchJsonCopy,researchByteLength,researchId,researchName,researchTimestamp,MAX_RESEARCH_JSON_BYTES}from'./research-workspaces.js';
 
 const verified=new WeakSet(),classes=new Set(['level','count','amount','rate','growth','contribution','balance','change','unknown']);
@@ -109,6 +110,16 @@ function validateContext(context){
  if(!object(context))fail('context must be data');
  if(context.currentAccountInputs!==undefined)validateCurrentAccountInputs(context.currentAccountInputs);
  if(context.currentAccountGdpDenominator!==undefined)validateCurrentAccountInputs(context.currentAccountGdpDenominator,{label:'current-account GDP denominator',seriesIds:['nominalGdp'],maxObservations:2,extraMetadata:['dataStatus']});
+ if(context.currentAccountGdpHistory!==undefined){
+  const history=context.currentAccountGdpHistory;
+  if(!object(history)||Object.keys(history).length!==3||['version','range','sources'].some(key=>!Object.hasOwn(history,key))||history.version!==1)fail('current-account GDP history envelope');
+  validateRange(history.range);
+  if(!object(history.sources)||Object.keys(history.sources).length!==2||['beaIta','bea'].some(key=>!Object.hasOwn(history.sources,key)))fail('current-account GDP history sources');
+  validateCurrentAccountInputs(history.sources.beaIta,{label:'current-account GDP history ITA inputs',seriesIds:['currentAccountBalance'],maxObservations:MAX_CURRENT_ACCOUNT_GDP_HISTORY_QUARTERS});
+  validateCurrentAccountInputs(history.sources.bea,{label:'current-account GDP history GDP inputs',seriesIds:['nominalGdp'],maxObservations:MAX_CURRENT_ACCOUNT_GDP_HISTORY_QUARTERS,extraMetadata:['dataStatus']});
+  const observations=history.sources.beaIta.series?.currentAccountBalance?.observations??[];
+  if(currentAccountGdpQuarterSpan(observations[0]?.date,observations.at(-1)?.date)>MAX_CURRENT_ACCOUNT_GDP_HISTORY_QUARTERS)fail('current-account GDP history calendar-quarter span limit');
+ }
  if(context.attachments!==undefined){
   if(!Array.isArray(context.attachments)||context.attachments.length>20)fail('attachment count');
   const names=new Set();

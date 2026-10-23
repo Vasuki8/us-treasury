@@ -1,4 +1,4 @@
-import {currentAccountGdpContext} from './current-account-gdp.js';
+import {currentAccountGdpContext,currentAccountGdpHistory} from './current-account-gdp.js';
 import {BEA_ITA_URL,BEA_ITA_LICENSE} from './current-account-registry.js';
 import {csvCell,tabularCsv} from './model.js';
 import {panel,table,button,escapeHtml as esc} from './ui.js';
@@ -27,6 +27,10 @@ function sourceStatus(details,label,frozen){
  const status=details.status==='official'?'Official capture':details.status==='cached'?'Cached input':'Unavailable';
  return `<p class="panel-note"><strong>${esc(label)} · ${esc(frozen?'Recorded '+status:status)}</strong> · Retrieved ${esc(details.retrievedAt??'not recorded')}.${details.source?.error?` <span class="amber">${esc(details.source.error)}</span>`:''} <a href="${esc(safeUrl(details.url,label==='Nominal GDP'?GDP_URL:BEA_ITA_URL))}" target="_blank" rel="noopener noreferrer">${esc(details.title)} ↗</a></p>`;
 }
+export function currentAccountGdpSourceStatus(sources={}, {frozen=false}={}){
+ const {numerator,denominator}=inputs(sources);
+ return sourceStatus(numerator,'Current account',frozen)+sourceStatus(denominator,'Nominal GDP',frozen);
+}
 
 /** Calculated current/prior context; callers must supply live or frozen sources explicitly. */
 export function currentAccountGdpPanel(sources={}, {frozen=false}={}){
@@ -44,15 +48,26 @@ export function currentAccountGdpPanel(sources={}, {frozen=false}={}){
 
 /** Two displayed quarters, original strings, independent receipts and full formula. */
 export function currentAccountGdpCsv(sources={}){
- const result=currentAccountGdpContext(sources),{numerator:n,denominator:d}=inputs(sources);
+ const result=currentAccountGdpContext(sources);
+ return ratioCsv(sources,result.date?[result.previous,result.current]:[],result.formula,result.notice);
+}
+export function currentAccountGdpHistoryCsv(sources={},range={preset:'all'}){
+ const result=currentAccountGdpHistory(sources,range);
+ return ratioCsv(sources,result.error?[]:result.observations,result.formula,result.notice);
+}
+function ratioCsv(sources,points,formula,notice){
+ const {numerator:n,denominator:d}=inputs(sources);
  const headers=['ratio_id','reference_quarter','date_convention','value_percent','unit','observation_type','missing','unavailable_reason','change_percentage_points','numerator_value','numerator_unit','numerator_source_value','numerator_source_unit','numerator_source_period_label','numerator_source_ids','numerator_source_url','numerator_source_title','numerator_retrieved_at','numerator_source_captured_at','numerator_capture_status','numerator_publication_date','numerator_table_release_date','numerator_footnotes_json','numerator_provenance_json','denominator_saar_value','denominator_saar_unit','denominator_quarter_value','denominator_quarter_unit','denominator_saar_divisor','denominator_source_value','denominator_source_unit','denominator_source_period_label','denominator_source_ids','denominator_source_url','denominator_source_title','denominator_retrieved_at','denominator_source_captured_at','denominator_capture_status','denominator_publication_date','denominator_footnotes_json','denominator_provenance_json','calculation','limitations','attribution','license_url','numerator_license_url','denominator_license_url'];
- const rows=result.date?[result.previous,result.current].map(point=>{
+ const rows=points.map((point,index)=>{
   const ca=point.numeratorObservation,gdp=point.denominatorObservation;
-  return ['currentAccountToGdp',point.date,'quarter-start',point.value,'Percent of nominal GDP','calculated',!finite(point.value),point.reason,point===result.current?result.change:null,
+  const prior=points[index-1],month=Number(point.date?.slice(5,7)),year=Number(point.date?.slice(0,4));
+  const priorDate=month===1?`${year-1}-10-01`:`${year}-${String(month-3).padStart(2,'0')}-01`;
+  const change=prior?.date===priorDate&&finite(prior.value)&&finite(point.value)?point.value-prior.value:null;
+  return ['currentAccountToGdp',point.date,'quarter-start',point.value,'Percent of nominal GDP','calculated',!finite(point.value),point.reason,change,
    point.currentAccountBalance,'USD billions per quarter (not annualized)',ca?.sourceValue??null,'USD millions per quarter (not annualized)',ca?.sourcePeriodLabel??null,(n.item.sourceIds??[]).join('; '),n.url,n.title,n.retrievedAt,n.capturedAt,n.status,ca?.publishedAt??null,sources?.beaIta?.tableReleaseDate??null,JSON.stringify(ca?.footnotes??[]),JSON.stringify(n.provenance),
    point.nominalGdpSaar,'USD billions (SAAR)',point.nominalGdpQuarter,'USD billions per quarter',4,gdp?.sourceValue??null,'USD millions (SAAR)',gdp?.sourcePeriodLabel??null,(d.item.sourceIds??[]).join('; '),d.url,d.title,d.retrievedAt,d.capturedAt,d.status,gdp?.publishedAt??null,JSON.stringify(gdp?.footnotes??[]),JSON.stringify(d.provenance),
-   result.formula,result.notice,CREDIT,BEA_ITA_LICENSE,n.license,d.license];
- }):[];
+   formula,notice+' CSV percentage-point changes require the exact preceding quarter also in this export; the first selected row has no exported change.',CREDIT,BEA_ITA_LICENSE,n.license,d.license];
+ });
  const raw=new Set(['numerator_source_value','denominator_source_value'].map(key=>headers.indexOf(key)));
  return tabularCsv(headers,[])+rows.map(row=>row.map((value,index)=>csvCell(value,raw.has(index))).join(',')+'\r\n').join('');
 }

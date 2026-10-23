@@ -1,7 +1,8 @@
 import { fiscalGdpCsv } from './fiscal-gdp-view.js';
 import { creditContextCsv,fomcDocumentsCsv } from './credit-context-page.js';
 import {currentAccountCsv} from './current-account-view.js';
-import {currentAccountGdpCsv} from './current-account-gdp-view.js';
+import {currentAccountGdpCsv,currentAccountGdpHistoryCsv} from './current-account-gdp-view.js';
+import {currentAccountGdpHistoryChartCatalog} from './current-account-gdp-history-view.js';
 import { moveFollowed } from './watchlist-monitor.js';
 import { relevantRefreshIds } from './research-status.js';
 import { releases, dataStatus,series } from './data.js';
@@ -171,7 +172,11 @@ function changesContext(){
   catch(error){return {...changeState,status:'error',error:error.message};}
 }
 function currentPackage(){return state.page==='research'&&state.researchView==='packages'?researchLibrary.getPackage(state.packageId):null;}
-function renderCurrentCharts(){const pkg=currentPackage();renderCharts(main,pkg?{catalog:pkg.catalog}:{});}
+function renderCurrentCharts(){
+ const pkg=currentPackage(),history=pkg?.context.currentAccountGdpHistory;
+ const chartCatalogs=pkg?(history?currentAccountGdpHistoryChartCatalog(history.sources,{frozen:true}):{}):state.page==='macroCoverage'&&state.macroFamily==='external'?currentAccountGdpHistoryChartCatalog(dataStatus.sources):{};
+ renderCharts(main,{...(pkg?{catalog:pkg.catalog}:{}),chartCatalogs});
+}
 function researchActions(){
   const alert=changeCheckpoint.enabled&&dataStatus.generatedAt>changeCheckpoint.snapshotAt?'<p class="panel-note amber" role="status">A newer snapshot is available since your local change checkpoint. <a href="#/research?view=changes">Review captured changes and collector failures</a>. A new snapshot does not itself establish a new economic release.</p>':'';
   if(state.page==='research')return alert;
@@ -381,6 +386,7 @@ root.addEventListener('click',async event=>{
   else if('exportMacroMeasure' in d)exportCsv([state.macroMeasure]);
   else if('exportCurrentAccount' in d)downloadCsv(currentAccountCsv(dataStatus.sources.beaIta),'meridian-current-account-current-prior.csv','Official current-account and component balances downloaded for the exact current and preceding quarters, with nonannualized units and BEA provenance.');
   else if('exportCurrentAccountGdp' in d)downloadCsv(currentAccountGdpCsv(dataStatus.sources),'meridian-current-account-gdp.csv','Calculated current-account-to-GDP ratios downloaded with exact quarterly inputs, GDP SAAR divided by four, percentage-point change and separate BEA retrieval evidence.');
+  else if('exportCurrentAccountGdpHistory' in d)downloadCsv(currentAccountGdpHistoryCsv(dataStatus.sources,viewRange(state)),'meridian-current-account-gdp-history.csv','Historical current-account-to-GDP ratios downloaded for the chart window, with exact quarterly inputs, missing values, calculation and separate BEA retrieval evidence.');
   else if('exportFiscal' in d)exportCsv(['receipts','outlays','netInterest','budgetDeficit','primaryDeficit','receiptsTtm','outlaysTtm','netInterestTtm','primaryDeficitTtm','interestRevenueRatio','publicDebt']);
   else if('exportFiscalFinancing' in d){
     downloadCsv(fiscalFinancingCsv(dataStatus.sources.fiscal),'meridian-fiscal-financing.csv','MTS financing CSV downloaded with reported amounts and calculated residuals; release dates remain unknown.');

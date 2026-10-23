@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {snapshot} from '../src/official-snapshot.js';
+import {currentAccountGdpFixture} from './helpers/current-account-gdp-fixture.js';
 import {parseCsv} from '../scripts/sources/http.mjs';
 const view=await import('../src/current-account-gdp-view.js').catch(()=>({}));
-const copy=()=>structuredClone(snapshot.sources);
+const copy=currentAccountGdpFixture;
 
 test('Graphite ratio panel labels the calculation, matching quarter, SAAR conversion and percentage-point change',()=>{
  assert.equal(typeof view.currentAccountGdpPanel,'function');

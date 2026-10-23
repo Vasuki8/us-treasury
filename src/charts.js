@@ -145,11 +145,21 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
 }
 
 /** Responsive view boxes avoid layout mutations inside ResizeObserver callbacks. */
-export function renderCharts(root,{catalog}={}) {
-  const cursors=new Map(),lookup=id=>catalog?catalog[id]:getSeries(id);
+export function renderCharts(root,{catalog,chartCatalogs={}}={}) {
+  const cursorCatalogs=new Map();
   root.querySelectorAll('[data-chart]').forEach(container => {
+    const scoped=Object.hasOwn(container.dataset,'chartCatalog');
+    const binding=scoped&&chartCatalogs&&Object.hasOwn(chartCatalogs,container.dataset.chartCatalog)?chartCatalogs[container.dataset.chartCatalog]:null;
+    if(scoped&&(!binding||!binding.catalog||typeof binding.catalog!=='object'||Array.isArray(binding.catalog)||typeof binding.evidenceLabel!=='string'||!binding.evidenceLabel.trim())){
+      container.textContent='Chart data unavailable: the requested chart catalog is not bound.';return;
+    }
+    const selectedCatalog=scoped?binding.catalog:catalog;
+    const lookup=id=>scoped?(Object.hasOwn(selectedCatalog,id)?selectedCatalog[id]:undefined):catalog?catalog[id]:getSeries(id);
+    const evidenceLabel=scoped?binding.evidenceLabel.trim():catalog?'Frozen research snapshot':'Official snapshot';
     const {kind,transform='level',comparison='native'} = container.dataset;
     const range=readChartRange(container.dataset.range), height=Number(container.dataset.height)||180;
+    // Curve charts use the live yield feed; a scoped chart must never borrow it.
+    if(scoped&&(kind==='history-curve'||kind==='curve')){container.textContent='Chart data unavailable: yield curves are not supplied by this chart catalog.';return;}
     if(kind==='history-curve'){
       const curves=selectCurveOverlays(dataStatus.sources.yields,container.dataset.dates.split(',').filter(Boolean));
       draw(container,curves.map(curve=>({series:getSeries('yield'),label:curve.date+(curve.available?'':' — unavailable'),unit:'Yield · %',observations:NOMINAL_YIELD_TENORS.map(tenor=>({date:tenor,value:curve.nominal[tenor]??null}))})),{height,curve:true});
@@ -163,15 +173,20 @@ export function renderCharts(root,{catalog}={}) {
       ],{height,curve:true});
       return;
     }
-    const ids=container.dataset.series.split(',').filter(Boolean);
-    const result=comparison!=='native'||container.dataset.panelId?compareSeries(ids,comparison,range,catalog):{panels:ids.map(id=>transformSeries(lookup(id),transform,range))};
+    const ids=(scoped?container.dataset.series??'':container.dataset.series).split(',').filter(Boolean);
+    if(scoped&&(!ids.length||ids.some(id=>!lookup(id)))){container.textContent='Chart data unavailable: one or more selected series are unavailable in the requested chart catalog.';return;}
+    const result=comparison!=='native'||container.dataset.panelId?compareSeries(ids,comparison,range,selectedCatalog):{panels:ids.map(id=>transformSeries(lookup(id),transform,range))};
     if(comparison==='native'&&container.dataset.panelId&&transform!=='level'&&!result.error)result.panels=result.panels.map(panel=>transformSeries(panel.series,transform,range,result.window));
     result.error??=result.panels?.find(panel=>panel.error)?.error;
     if (result.error) {container.textContent=result.error;return;}
     const panels=container.dataset.panelId?result.panels.filter(panel=>panel.series.id===container.dataset.panelId):result.panels;
     if(!panels.length){container.textContent='No observations available for this chart.';return;}
     const group=container.dataset.cursorGroup;
+    // A matching group name cannot link dates across independent evidence catalogs.
+    const cursorScope=scoped?binding:selectedCatalog;
+    if(!cursorCatalogs.has(cursorScope))cursorCatalogs.set(cursorScope,new Map());
+    const cursors=cursorCatalogs.get(cursorScope);
     if(group&&!cursors.has(group))cursors.set(group,createLinkedCursor(result.panels));
-    draw(container,panels,{height,bars:kind==='bar',transformed:transform==='change'||comparison==='difference',cursor:group?cursors.get(group):null,evidenceLabel:catalog?'Frozen research snapshot':'Official snapshot'});
+    draw(container,panels,{height,bars:kind==='bar',transformed:transform==='change'||comparison==='difference',cursor:group?cursors.get(group):null,evidenceLabel});
   });
 }

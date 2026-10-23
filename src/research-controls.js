@@ -3,8 +3,8 @@ import {resolveDateWindow} from './date-window.js';
 import {viewRange} from './workspace-context.js';
 import {button,escapeHtml as esc} from './ui.js';
 
-export function rangeControls(state,ids) {
-  const sources=ids.map(getSeries).filter(Boolean),range=viewRange(state),resolved=resolveDateWindow(range,sources);
+export function rangeControls(state,ids,{catalog}={}) {
+  const sources=ids.map(id=>catalog?catalog[id]:getSeries(id)).filter(Boolean),range=viewRange(state),resolved=resolveDateWindow(range,sources);
   const shown=resolved.mode==='observations'?sources.flatMap(s=>transformSeries(s,'level',range).observations.map(o=>o.date)).sort():[];
   const custom=state.window==='custom';
   const start=custom?state.startDate:shown[0]??resolved.startDate??'',end=custom?state.endDate:shown.at(-1)??resolved.endDate??'';
