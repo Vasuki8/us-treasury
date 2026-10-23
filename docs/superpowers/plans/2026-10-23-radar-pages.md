@@ -34,10 +34,10 @@
 
 **Interfaces:** export indicatorPage(state, historyContext={}) returns HTML; normalized state comes from renderPage. Import yieldTimingPanel from ./calendar-presentation.js. Existing overviewPage(state, context={}) contract remains. Wrap pages with radar-page radar-overview / radar-indicator classes. Shared root CSS supplies typography/palette/forms/panels; fragment supplies only page-specific layout. Preserve original IDs/data actions verbatim. Read domain reports in original checkout output/radar-{economist,investor}-verdict-2026-10-23.md and consult both domain agents directly.
 
-- [ ] Read current renderer/helpers and domain verdicts; resolve placement directly with the economist/investor agents.
-- [ ] Add meaningful assertions for all 12 Overview readings and complete hierarchy/actions; latest-vs-window indicator labels, native units, empty/invalid history, tabs/claims/GDP evidence and safe return. Observe intended new failures, without CSS-mirroring tests.
-- [ ] Implement the approved page-specific layouts and isolated CSS fragment using existing helpers/models. Preserve headings needed by existing tests unless changing text is essential to the user-visible design.
-- [ ] Run focused new and existing overview/indicator/pages/history tests. Report exact commands/results, remaining concerns and files; root stages/commits only owned paths when ready.
+- [x] Read current renderer/helpers and domain verdicts; resolve placement directly with the economist/investor agents.
+- [x] Add meaningful assertions for all 12 Overview readings and complete hierarchy/actions; latest-vs-window indicator labels, native units, empty/invalid history, tabs/claims/GDP evidence and safe return. Observe intended new failures, without CSS-mirroring tests.
+- [x] Implement the approved page-specific layouts and isolated CSS fragment using existing helpers/models. Preserve headings needed by existing tests unless changing text is essential to the user-visible design.
+- [x] Run focused new and existing overview/indicator/pages/history tests. Report exact commands/results, remaining concerns and files; root stages/commits only owned paths when ready.
 
 ## Task 2: Calendar and Explore workspaces
 
@@ -45,10 +45,10 @@
 
 **Interfaces:** export calendarPage(state) and explorePage(state), both normalized route-state HTML renderers. calendar-presentation.js exports releaseDate, scheduleLinks, calendarSourceNames, relatedSeries, scheduledPeriod, scheduleSource, scheduleState, scheduleBasisPrefix, scheduledTime, scheduleBasisNote, yieldTimingPanel. Import rather than duplicating these helpers. Wrap pages radar-page radar-calendar / radar-explore. Existing IDs/actions and tab/tabpanel relationships remain. Consult the economist/investor agents directly after reading their original output reports.
 
-- [ ] Read original renderer/contracts and consult domain agents about placement, mobile preview and comparison safeguards.
-- [ ] Add failing meaningful assertions for chronological schedule/full preview/filter recovery and source basis; catalog units/reference periods and comparison modes/errors/exact-date controls/actions. Preserve all source health and timing guidance.
-- [ ] Implement Calendar schedule/preview and Explore catalog/comparison recipes, with an isolated CSS fragment. Mobile rows retain units and reference periods even if desktop-only columns collapse.
-- [ ] Run new and existing pages/calendar/compare tests; report exact commands/results and concerns. Root integrates and commits only owned paths.
+- [x] Read original renderer/contracts and consult domain agents about placement, mobile preview and comparison safeguards.
+- [x] Add failing meaningful assertions for chronological schedule/full preview/filter recovery and source basis; catalog units/reference periods and comparison modes/errors/exact-date controls/actions. Preserve all source health and timing guidance.
+- [x] Implement Calendar schedule/preview and Explore catalog/comparison recipes, with an isolated CSS fragment. Mobile rows retain units and reference periods even if desktop-only columns collapse.
+- [x] Run new and existing pages/calendar/compare tests; report exact commands/results and concerns. Root integrates and commits only owned paths.
 
 ## Task 3: Shared integration, responsive acceptance and delivery
 
@@ -56,9 +56,19 @@
 
 **Interfaces:** renderPage keeps its normalization/researchNavigation and delegates indicator/calendar/explore to new renderers. Root extracts existing shared presentation without changing semantics. Root expands existing Radar palette selectors from Labor to overview/indicator/calendar/explore. Shared .radar-page controls provide the established Labor visual language without copying its data-specific layout.
 
-- [ ] Confirm clean existing isolated checkout and baseline evidence. Current source baseline b5d94aa is byte-identical to the just-verified 1333-test Labor runtime; targeted current-page checks supplement it.
-- [ ] Extract shared presentation and wire finished renderers; remove obsolete duplicated local renderer code/imports only after replacement modules are ready.
-- [ ] Integrate common Radar CSS and isolated page CSS fragments. Verify existing IDs/actions, precise bounds and all source-data files unchanged.
-- [ ] Run focused integration and complete full suite, production build and smoke checks. Review the whole change independently for specification and quality; fix material findings with scoped re-review.
-- [ ] Browser-check four new pages plus Labor, both themes and all specified widths. Exercise calendar filters/preview, Catalog selection/search, comparison modes/window/export, indicator tabs/return and Save/Freeze continuity.
+- [x] Confirm clean existing isolated checkout and baseline evidence. Current source baseline b5d94aa is byte-identical to the just-verified 1333-test Labor runtime; targeted current-page checks supplement it.
+- [x] Extract shared presentation and wire finished renderers; remove obsolete duplicated local renderer code/imports only after replacement modules are ready.
+- [x] Integrate common Radar CSS and isolated page CSS fragments. Verify existing IDs/actions, precise bounds and all source-data files unchanged.
+- [x] Run focused integration and complete full suite, production build and smoke checks. Review the whole change independently for specification and quality; fix material findings with scoped re-review.
+- [x] Browser-check four new pages plus Labor, both themes and all specified widths. Exercise calendar filters/preview, Catalog selection/search, comparison modes/window/export, indicator tabs/return and Save/Freeze continuity.
 - [ ] Obtain economist and investor acceptance of the implemented placement; integrate/publish through existing workflow, verify exact live build and representative live routes, preserve deployment evidence.
+
+## Final local verification
+
+- Both UI agents directly consulted economist and investor agents before implementation. Both domain reviewers accepted the implemented source and approved the bounded Catalog disclosures; source errors and critical claims/partial/suppression distinctions stay inline.
+- Current source baseline b5d94aa retains all production observations and research actions. Implementation30942fa and final fix d7e7561 were independently reviewed. Task1/Task2/Task3 specification and quality all pass after the single fix wave. Missing/suppressed-only rows remain exportable, density changes are effective, and no material finding remains. Final cleanup only removed redundant terminal blank lines.
+- Final node --test --test-concurrency=2 --test-reporter=spec tests/*.test.js: **1348/1348 passed**, no failures/skips/cancellations,178079.8858ms. Production build and static smoke passed: **149 assets** including source-history bundles.
+- Final browser matrix: Overview, Indicator, Calendar, Catalog, Compare and Labor at320/390/736/1024/1440px in Light and Graphite (60 combinations); no page overflow, clipped SVG labels or overflowing date fields. Comfortable Calendar/Catalog also fit320/390. Native Save menu fits320; preference survives reload. Screenshots inspected on desktop and mobile viewports; physical devices were not tested.
+- Actual workflows: Calendar selection/reveal/focus and filter recovery; Catalog search and4-series selection; native/indexed-eligibility-error/difference comparisons; custom-window export; detail/back preserves selection/query/mode/window; source data/methodology/retrieval tabs; Overview/Labor/Explore navigation; Save view and Freeze result. Comparison CSV downloaded8 observations across four measures and Aug/Sep2026 dates; frozen result retains same two-observation panels with units/baselines/provenance.
+- Missing-value export downloaded1 UNRATE period-change row for2017-01-01 with blank numeric value, Percentage points, original BLS source URL and retrieval timestamp. Invalid and genuinely empty histories remain disabled.
+- Browser density measurements at1440: Catalog compact124.24px row/padding10 vs comfortable136.24px/padding16; Calendar79.61px/padding12 vs89.61px/padding17. Scope leaves Labor/specialist styling intact. Source snapshots and publication archives unchanged; captured browser warn/error logs empty.

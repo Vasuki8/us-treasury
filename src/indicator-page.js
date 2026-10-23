@@ -74,4 +74,3 @@ export function indicatorPage(state,historyContext={}) {
     +(current.id==='yield'?`<details class="supporting-details"><summary>Rates guidance · ongoing Treasury publication timing</summary>${yieldTimingPanel()}</details>`:'')
     +`<details class="supporting-details"><summary>Full source identifiers, retrieval, rights and methodology</summary>${panel('02','SERIES INFORMATION',metadata,button('COPY LINK','data-copy-link','link-button'))}</details></div>`;
 }
-
