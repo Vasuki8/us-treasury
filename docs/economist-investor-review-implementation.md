@@ -45,7 +45,7 @@ The report explicitly calls new datasets candidate admissions and Stage E condit
 - [x] Record conditional consensus/notifications/accounts/API/market-data work as approval-dependent, not implemented.
 - [x] Verify formulas, period/vintage matching, missing data, storage failures, immutable old records, exports and navigation contracts.
 - [x] Final full tests and rebuilt production asset checks. Desktop/mobile widths 1440/1024/736/390/320, keyboard, unmatched evidence and CSV announcements checked.
-- [ ] Push and verify Actions/deployment and representative live pages before claiming live. Independent review complete; findings fixed and regression-tested.
+- [x] Push and verify Actions/deployment and representative live pages before claiming live. Independent review complete; findings fixed and regression-tested.
 
 ## Source mapping
 
@@ -90,3 +90,11 @@ Final local evidence: **1,015 / 1,015 tests passed**; the production smoke check
 Cross-runtime follow-up: the first CI attempt passed Node 24 but failed Node 22's exact annualization recomputation. Reproduced with checksum-verified Node 22.23.3: 20 derived rows differed by at most `2.3092638912203256e-14` percentage points. Annualization admission now permits at most `1e-12` pp numerical error in the derived value only. Input dates/values, source strings, metadata, nulls and payroll averages remain exact; admission does not mutate stored values. Regression tests reject meaningful changes and any changed input, and pass on both runtimes. Formulas, current snapshots and all immutable captures remain unchanged.
 
 The corrected full Node 22 suite passed **1,017 / 1,017**, followed by a successful build, **124-asset** smoke check and complete immutable-history/source-admission audit. The six momentum regressions also pass on Node 24. Deployment remains gated on both GitHub runtime checks.
+
+### Verified rollout
+
+Code commit `87d7207ea59f03c1a0fd7fc5a259befc7bee6708` passed Node 22 and Node 24 verification and GitHub Pages deployment in [Actions run 39896999412](https://github.com/Vasuki8/us-treasury/actions/runs/39896999412). Cloudflare remained deferred/skipped. The deployed [Meridian site](https://vasuki8.github.io/us-treasury/#/overview) matched the clean local production build across all **124 assets**.
+
+Live UI checks confirmed the six Graphite Overview cards and current snapshot, exact claims actual/prior/earlier-prior evidence, fiscal GDP-ratio section, reviewed credit context, published GDP subcomponents and Labor's next captured employment schedule. Each checked mobile page fit without page overflow; browser warning/error logs were empty. The original immutable archive audit remained unchanged after the numeric-portability fix.
+
+This rollout record is documentation only. The unadmitted data and conditional service work listed above remain unfinished; the roadmap is not described as wholly complete.
