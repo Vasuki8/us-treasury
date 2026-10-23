@@ -43,7 +43,7 @@ Files: historical ratio view, existing CSV serializer, Economy page, app chart/a
 
 - [x] Verify original snapshots, 73 capture files and publication/explanation modules remain unchanged.
 - [x] Run full tests and build/asset checks. Inspect desktop/mobile, date controls, keyboard chart values, exports and frozen replay in Graphite.
-- [ ] Push the tested changes; verify Actions and all deployed assets from a clean build, and inspect representative live pages before claiming live.
+- [x] Push the tested changes; verify Actions and all deployed assets from a clean build, and inspect representative live pages before claiming live.
 
 ## Local acceptance evidence
 
@@ -56,3 +56,9 @@ Files: historical ratio view, existing CSV serializer, Economy page, app chart/a
 ## Limits
 
 This is revised-input history, not an original-publication or historical as-known-on-date ratio series. Both source vintages remain explicit. Missing quarters retain null values/reasons; the line never interpolates them. New history pins retain the two relevant complete input histories to reconstruct even empty date windows; CSV and displayed chart remain limited to the selected range.
+
+## Verified deployment
+
+Runtime commit `bb12a63d0d8607ee6327b3f697b3481fe16250eb` was pushed to `main`. [Actions run 39906119018](https://github.com/Vasuki8/us-treasury/actions/runs/39906119018) completed successfully, including full Node 22/24 verification and GitHub Pages deployment. Existing refresh objectives were already satisfied; no unnecessary new data capture ran.
+
+A clean LF checkout of the exact runtime commit built and served all 131 assets; the deployed site matched those assets byte-for-byte. Live all-history coverage showed all 266 quarters. Keyboard Home/End readouts showed 1960Q1 +0.26% and 2026Q2 −3.02%; historical CSV download completed. The existing current-account indicator chart retained its official-snapshot label and working chart. Browser error log empty. Graphite proof screenshot: `test-results/current-account-gdp-history-live.png` (local artifact, not committed). This completion record changes documentation only.
