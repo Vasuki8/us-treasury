@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {renderPage} from '../src/pages.js';
-import {parseRoute} from '../src/router.js';
+import {parseRoute,routeFor} from '../src/router.js';
 import {series} from '../src/data.js';
-import {formatValue,latest,periodLabel} from '../src/model.js';
+import {formatValue,latest,periodLabel,transformSeries} from '../src/model.js';
+import {rangeControls} from '../src/research-controls.js';
 
 const render=(query='',overrides={})=>renderPage({...parseRoute('#/economy?family=labor'+query),saved:[],laborGroup:'all',...overrides});
 const rowIds=html=>[...html.matchAll(/data-series-row="([^"]+)"/g)].map(match=>match[1]);
@@ -61,4 +62,41 @@ test('measurement kind, cached freshness, unavailable values and growth horizons
  const missing=series.underemployment;series.underemployment={...missing,observations:[],dataStatus:'unavailable',error:'Unavailable <source>'};
  try{const html=render();assert.match(html,/Unavailable &lt;source&gt;/);assert.match(html,/History unavailable/);}
  finally{series.underemployment=missing;}
+});
+
+test('core charts share quarterly and weekly focus dates for calendar presets and observation counts',()=>{
+ const ids=['eciCompensation','claimsAdvance','payroll','unrate'],priors=Object.fromEntries(ids.map(id=>[id,series[id]]));
+ series.eciCompensation={...series.eciCompensation,observations:[{date:'2025-04-01',value:168},{date:'2026-04-01',value:175}]};
+ series.claimsAdvance={...series.claimsAdvance,observations:[{date:'2026-10-10',value:200},{date:'2026-10-17',value:194}]};
+ for(const id of ['payroll','unrate'])series[id]={...series[id],observations:[{date:'2025-04-01',value:1},{date:'2026-04-01',value:2},{date:'2026-09-01',value:3}]};
+ try{
+  for(const [focus,windowQuery,start,end] of [
+   ['eciCompensation','&window=1y','2025-04-01','2026-04-01'],
+   ['eciCompensation','&window=all','2025-04-01','2026-04-01'],
+   ['eciCompensation','&range=6','2025-04-01','2026-04-01'],
+   ['claimsAdvance','&window=1y','2025-10-17','2026-10-17'],
+   ['claimsAdvance','&range=6','2026-10-10','2026-10-17'],
+  ]){
+  const html=render('&measure='+focus+windowQuery);
+  const windows=[...html.matchAll(/data-chart data-series="([^"]+)"[^>]*data-range="([^"]+)"/g)].map(([,id,encoded])=>({id,...transformSeries(series[id],'level',JSON.parse(encoded.replaceAll('&quot;','"')))}));
+  assert.deepEqual(windows.map(({id,window,observations})=>[id,window.mode==='calendar'?window.startDate:observations[0]?.date,window.mode==='calendar'?window.endDate:observations.at(-1)?.date]),[
+   [focus,start,end],['payroll',start,end],['unrate',start,end],
+  ]);
+  }
+ }finally{for(const id of ids)series[id]=priors[id];}
+});
+
+test('focused methodology link opens methodology and preserves the exact Labor return context',()=>{
+ const state={...parseRoute('#/economy/labor?measure=eciCompensation&window=custom&start=2025-04-01&end=2026-04-01'),saved:[]};
+ const html=renderPage(state),href=html.match(/href="([^"]+)">Methodology &amp; source notes ↗<\/a>/)?.[1];
+ assert.ok(href);const target=parseRoute(href.replaceAll('&amp;','&'));
+ assert.equal(target.page,'indicator');assert.equal(target.seriesId,'eciCompensation');assert.equal(target.tab,'methodology');
+ assert.equal(target.returnTo,routeFor(state));assert.equal(target.window,'custom');assert.equal(target.startDate,'2025-04-01');assert.equal(target.endDate,'2026-04-01');
+});
+
+test('Labor observation-count controls explain the shared focused dates while other workspaces keep independent counts',()=>{
+ const html=render('&range=6');
+ assert.match(html,/Observation count applies to the focused measure; core trends share its displayed start and end dates\./);
+ assert.doesNotMatch(html,/Each series uses its own observation count/);
+ assert.match(rangeControls({window:'observations',range:6},['payroll','unrate']),/Each series uses its own observation count/);
 });
