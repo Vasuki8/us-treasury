@@ -1,0 +1,54 @@
+# Labor Radar Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Ship the approved full Labor Radar layout using economist/investor information placement and the existing research infrastructure.
+
+**Architecture:** A dedicated Labor renderer composes existing data/model/chart/range components. Router/application/research integration makes Labor a first-class scoped workspace; specialist indicator and Explore destinations retain their complete workflows. Existing Light/Graphite controls and application navigation remain shared.
+
+**Tech Stack:** Browser ES modules, semantic HTML, CSS, Node 24 test runner and existing static build/GitHub Pages workflow.
+
+**Spec:** docs/superpowers/specs/2026-10-23-labor-radar-design.md
+
+## Global Constraints
+
+- Preserve all 23 Labor measures and original observations; no data refresh, inferred observations, scores, surprise measures or forecasts.
+- Retain exact dates, native units, source status, missing gaps and source footnotes. Measurement kind and cached freshness are separate.
+- Two-observation advance claims pairs remain separate from revised history. Never present them as long-history trend sparklines or splice them.
+- Support 320, 390, 736, 1024 and wide desktop widths in both Light and Graphite, with no page-level horizontal overflow.
+- Do not carry prototype-only persistence, host widgets, illustrative data, export preview or viewport toggles into production.
+- Use the existing verified build/deployment workflow. Preserve other specialist workspaces.
+
+## Review Focus
+
+- Labor canonical and legacy routes can accidentally use a Prices measure or discard custom windows.
+- Saved/returned views and frozen results must agree with the focused Labor measure, window and exported observations.
+- Claims publication, reference week, revised history and retrieval are different clocks.
+- Empty windows/null endpoints must not borrow out-of-window change commentary or create false zero observations.
+- Mobile rows, disclosure menus and native date controls must fit without hiding dates or actions.
+
+## Task 1: Labor workspace and renderer integration
+
+**Files:** root owns src/router.js, src/workspace-context.js, src/app.js, src/research-context.js and related integration tests. UI implementer owns src/labor-page.js, src/pages.js, Labor-scoped additions in styles.css and tests/labor-page.test.js plus necessary obsolete renderer assertions.
+
+**Interfaces:** laborPage(state, options) returns HTML using the existing `macro-measure`, date-window, data-save, data-compare and data-export-macro-measure contracts. Canonical Labor state has page=labor, macroFamily=labor, a valid labor macroMeasure (default underemployment), and viewRange(state). Group/query controls use the existing query/topic state or a bounded Labor-specific group state that round-trips through routes/saves if needed; root/UI agree exact integration before edits. Indicator/Explore links use existing bounded return context. Production CSV/download, save and freeze remain existing application actions.
+
+- [ ] Establish a clean baseline and an isolated codex/labor-radar branch.
+- [ ] Write meaningful route, custom-window, return-context and focused frozen-result tests; verify the new expectations fail before integration.
+- [ ] Integrate Labor normalization, URL/window/query/group persistence, matching CSV, saved views and scoped pins using existing model/research functions.
+- [ ] Implement approved information order, full grouped table, presets and compact/mobile layouts; adapt current source evidence and error states.
+- [ ] Run focused tests. Resolve renderer and integration mismatches without changing source data or weakening existing behavior.
+- [ ] Run full tests, build and static smoke check; review the task diff and address material findings.
+- [ ] Commit the reviewed implementation.
+
+## Task 2: Responsive acceptance and delivery
+
+**Files:** deployment verification evidence/ledger and any fixes to Task 1 files. No new unrelated features.
+
+**Interfaces:** Serves Task 1 application through existing server.mjs; existing workflow publishes main after verification.
+
+- [ ] Browser-check 320/390/736/1024/wide desktop and both themes. Check the empty/custom windows, full 23 rows, menu/date-field bounds and keyboard use.
+- [ ] Exercise focused-history change, CSV scope, Follow, comparison presets, detail/back navigation, Save view and Freeze result against real application state.
+- [ ] Economist and investor reviewers check the implemented order and visible semantics; fresh code reviewer checks the final diff.
+- [ ] Fix any material findings; rerun only the affected checks and required build/full suite after code changes.
+- [ ] Integrate and publish through the existing workflow only after checks pass, then verify deployed content. Preserve the exact published revision in delivery evidence.
