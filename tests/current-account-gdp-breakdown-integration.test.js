@@ -8,6 +8,7 @@ import {buildPinContext} from '../src/research-context.js';
 import {currentAccountGdpHistoryChartCatalog} from '../src/current-account-gdp-history-view.js';
 import {currentAccountGdpTrailingChartCatalog} from '../src/current-account-gdp-trailing-view.js';
 import {currentAccountGdpComparisonChartCatalog} from '../src/current-account-gdp-comparison-view.js';
+import {currentAccountGdpContributionsChartCatalog} from '../src/current-account-gdp-contributions-view.js';
 import {currentAccountGdpBreakdownChartCatalog,currentAccountGdpBreakdownCsv} from '../src/current-account-gdp-breakdown-view.js';
 import {currentAccountGdpBreakdown} from '../src/current-account-gdp-breakdown.js';
 import {parseCsv} from '../scripts/sources/http.mjs';
@@ -36,7 +37,7 @@ test('production chart and CSV select the same exact retained quarters without h
 test('app binds live and frozen component histories independently and never adds one to a legacy pin',async()=>{
  const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8'),start=source.indexOf('function renderCurrentCharts()'),end=source.indexOf('function researchActions()',start);
  let pkg=null;const calls=[],state=parseRoute('#/economy?family=external'),main={};
- const run=new Function('currentPackage','renderCharts','main','dataStatus','state','currentAccountGdpHistoryChartCatalog','currentAccountGdpBreakdownChartCatalog','currentAccountGdpTrailingChartCatalog','currentAccountGdpComparisonChartCatalog',source.slice(start,end)+';return renderCurrentCharts;')(()=>pkg,(...args)=>calls.push(args),main,snapshot,state,currentAccountGdpHistoryChartCatalog,currentAccountGdpBreakdownChartCatalog,currentAccountGdpTrailingChartCatalog,currentAccountGdpComparisonChartCatalog);
+ const run=new Function('currentPackage','renderCharts','main','dataStatus','state','currentAccountGdpHistoryChartCatalog','currentAccountGdpBreakdownChartCatalog','currentAccountGdpTrailingChartCatalog','currentAccountGdpComparisonChartCatalog','currentAccountGdpContributionsChartCatalog',source.slice(start,end)+';return renderCurrentCharts;')(()=>pkg,(...args)=>calls.push(args),main,snapshot,state,currentAccountGdpHistoryChartCatalog,currentAccountGdpBreakdownChartCatalog,currentAccountGdpTrailingChartCatalog,currentAccountGdpComparisonChartCatalog,currentAccountGdpContributionsChartCatalog);
  run();assert.equal(Object.keys(calls.at(-1)[1].chartCatalogs['current-account-gdp-breakdown'].catalog).length,4);
  pkg={catalog:{},context:{}};run();assert.deepEqual(calls.at(-1)[1].chartCatalogs,{});
  const args=buildPinContext(state);pkg={catalog:{},context:args.context};run();

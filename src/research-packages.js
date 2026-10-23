@@ -149,6 +149,12 @@ function validateContext(context){
   if(!['currentAccountBalance','itaGoodsBalance','itaServicesBalance','itaPrimaryIncomeBalance','itaSecondaryIncomeBalance'].includes(comparison.measure))fail('current-account GDP comparison measurement');
   if(comparison.inputContext!=='currentAccountGdpBreakdown'||context.currentAccountGdpBreakdown===undefined)fail('current-account GDP comparison retained input context');
  }
+ if(context.currentAccountGdpContributions!==undefined){
+  const contributions=context.currentAccountGdpContributions;
+  if(!object(contributions)||Object.keys(contributions).length!==3||['version','range','inputContext'].some(key=>!Object.hasOwn(contributions,key))||contributions.version!==1)fail('current-account GDP contributions envelope');
+  validateRange(contributions.range);
+  if(contributions.inputContext!=='currentAccountGdpBreakdown'||context.currentAccountGdpBreakdown===undefined)fail('current-account GDP contributions retained input context');
+ }
  if(context.attachments!==undefined){
   if(!Array.isArray(context.attachments)||context.attachments.length>20)fail('attachment count');
   const names=new Set();

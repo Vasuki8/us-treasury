@@ -9,6 +9,7 @@ import {currentAccountGdpHistoryChartCatalog} from '../src/current-account-gdp-h
 import {currentAccountGdpBreakdownChartCatalog} from '../src/current-account-gdp-breakdown-view.js';
 import {currentAccountGdpTrailingChartCatalog} from '../src/current-account-gdp-trailing-view.js';
 import {currentAccountGdpComparisonChartCatalog,currentAccountGdpComparisonCsv} from '../src/current-account-gdp-comparison-view.js';
+import {currentAccountGdpContributionsChartCatalog} from '../src/current-account-gdp-contributions-view.js';
 import {CURRENT_ACCOUNT_GDP_COMPARISON_MEASURES,currentAccountGdpComparison} from '../src/current-account-gdp-comparison.js';
 import {parseCsv} from '../scripts/sources/http.mjs';
 
@@ -33,7 +34,7 @@ test('comparison export pairs match the selected chart for all five measures and
 test('comparison app catalogs use frozen sources only with the new context and export the selected balance',async()=>{
  const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8'),start=source.indexOf('function renderCurrentCharts()'),end=source.indexOf('function researchActions()',start);
  let pkg=null;const calls=[],state=parseRoute('#/economy?family=external'),main={};
- const run=new Function('currentPackage','renderCharts','main','dataStatus','state','currentAccountGdpHistoryChartCatalog','currentAccountGdpBreakdownChartCatalog','currentAccountGdpTrailingChartCatalog','currentAccountGdpComparisonChartCatalog',source.slice(start,end)+';return renderCurrentCharts;')(()=>pkg,(...args)=>calls.push(args),main,snapshot,state,currentAccountGdpHistoryChartCatalog,currentAccountGdpBreakdownChartCatalog,currentAccountGdpTrailingChartCatalog,currentAccountGdpComparisonChartCatalog);
+ const run=new Function('currentPackage','renderCharts','main','dataStatus','state','currentAccountGdpHistoryChartCatalog','currentAccountGdpBreakdownChartCatalog','currentAccountGdpTrailingChartCatalog','currentAccountGdpComparisonChartCatalog','currentAccountGdpContributionsChartCatalog',source.slice(start,end)+';return renderCurrentCharts;')(()=>pkg,(...args)=>calls.push(args),main,snapshot,state,currentAccountGdpHistoryChartCatalog,currentAccountGdpBreakdownChartCatalog,currentAccountGdpTrailingChartCatalog,currentAccountGdpComparisonChartCatalog,currentAccountGdpContributionsChartCatalog);
  run();assert.equal(Object.keys(calls.at(-1)[1].chartCatalogs['current-account-gdp-comparison'].catalog).length,10);
  const args=buildPinContext(state);pkg={catalog:{},context:args.context};run();assert.match(calls.at(-1)[1].chartCatalogs['current-account-gdp-comparison'].evidenceLabel,/Frozen/);
  delete pkg.context.currentAccountGdpComparison;run();assert.equal(calls.at(-1)[1].chartCatalogs['current-account-gdp-comparison'],undefined);

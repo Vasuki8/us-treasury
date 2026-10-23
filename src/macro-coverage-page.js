@@ -5,6 +5,7 @@ import {currentAccountGdpHistoryPanel} from './current-account-gdp-history-view.
 import {currentAccountGdpBreakdownPanel} from './current-account-gdp-breakdown-view.js';
 import {currentAccountGdpTrailingPanel} from './current-account-gdp-trailing-view.js';
 import {currentAccountGdpComparisonPanel} from './current-account-gdp-comparison-view.js';
+import {currentAccountGdpContributionsPanel} from './current-account-gdp-contributions-view.js';
 import {dataStatus} from './data.js';
 import {coverageFamilies} from './macro-registry.js';
 import {getSeries,latest,formatValue,formatChange,periodLabel,transformSeries} from './model.js';
@@ -34,6 +35,7 @@ export function macroCoveragePage(state={}, {embedded=false}={}){
   + (familyId==='external'?currentAccountGdpPanel(dataStatus.sources):'')
   + (familyId==='external'?currentAccountGdpHistoryPanel(dataStatus.sources,range,{state:focused}):'')
   + (familyId==='external'?currentAccountGdpComparisonPanel(dataStatus.sources,range,{measure:id}):'')
+  + (familyId==='external'?currentAccountGdpContributionsPanel(dataStatus.sources,range):'')
   + (familyId==='external'?currentAccountGdpBreakdownPanel(dataStatus.sources,range):'')
   + (familyId==='external'?currentAccountGdpTrailingPanel(dataStatus.sources,range):'')
   + (embedded?'':panel('00','LATEST TOPIC READINGS',table(['MEASUREMENT / DEFINITION','LATEST','REFERENCE PERIOD','SOURCE STATUS / FULL COVERAGE'],rows,'Current topic readings and explicit source periods')))
