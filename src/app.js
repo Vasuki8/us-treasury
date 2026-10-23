@@ -7,6 +7,7 @@ import {currentAccountGdpBreakdownCsv,currentAccountGdpBreakdownChartCatalog} fr
 import {currentAccountGdpTrailingCsv,currentAccountGdpTrailingChartCatalog} from './current-account-gdp-trailing-view.js';
 import {currentAccountGdpComparisonCsv,currentAccountGdpComparisonChartCatalog} from './current-account-gdp-comparison-view.js';
 import {currentAccountGdpContributionsCsv,currentAccountGdpContributionsChartCatalog} from './current-account-gdp-contributions-view.js';
+import {currentAccountGdpBalanceEffectsCsv} from './current-account-gdp-balance-effects-view.js';
 import {CURRENT_ACCOUNT_GDP_COMPARISON_MEASURES} from './current-account-gdp-comparison.js';
 import { moveFollowed } from './watchlist-monitor.js';
 import { relevantRefreshIds } from './research-status.js';
@@ -178,18 +179,18 @@ function changesContext(){
 }
 function currentPackage(){return state.page==='research'&&state.researchView==='packages'?researchLibrary.getPackage(state.packageId):null;}
 function renderCurrentCharts(){
- const pkg=currentPackage(),history=pkg?.context.currentAccountGdpHistory,breakdown=pkg?.context.currentAccountGdpBreakdown,trailing=pkg?.context.currentAccountGdpTrailing,comparison=pkg?.context.currentAccountGdpComparison,contributions=pkg?.context.currentAccountGdpContributions;
+ const pkg=currentPackage(),history=pkg?.context.currentAccountGdpHistory,breakdown=pkg?.context.currentAccountGdpBreakdown,trailing=pkg?.context.currentAccountGdpTrailing,comparison=pkg?.context.currentAccountGdpComparison,contributions=pkg?.context.currentAccountGdpContributions,balanceEffects=pkg?.context.currentAccountGdpBalanceEffects;
  const chartCatalogs=pkg?{
   ...(history?currentAccountGdpHistoryChartCatalog(history.sources,{frozen:true}):{}),
   ...(breakdown?currentAccountGdpBreakdownChartCatalog(breakdown.sources,{frozen:true}):{}),
   ...(trailing&&breakdown?currentAccountGdpTrailingChartCatalog(breakdown.sources,{frozen:true}):{}),
   ...(comparison&&breakdown?currentAccountGdpComparisonChartCatalog(breakdown.sources,{frozen:true}):{}),
-  ...(contributions&&breakdown?currentAccountGdpContributionsChartCatalog(breakdown.sources,{frozen:true}):{}),
+  ...((contributions||balanceEffects)&&breakdown?currentAccountGdpContributionsChartCatalog(breakdown.sources,{frozen:true,effects:Boolean(balanceEffects),includeContributions:Boolean(contributions)}):{}),
  }:state.page==='macroCoverage'&&state.macroFamily==='external'?{
   ...currentAccountGdpHistoryChartCatalog(dataStatus.sources),...currentAccountGdpBreakdownChartCatalog(dataStatus.sources),
   ...currentAccountGdpTrailingChartCatalog(dataStatus.sources),
   ...currentAccountGdpComparisonChartCatalog(dataStatus.sources),
-  ...currentAccountGdpContributionsChartCatalog(dataStatus.sources),
+  ...currentAccountGdpContributionsChartCatalog(dataStatus.sources,{effects:true}),
  }:{};
  renderCharts(main,{...(pkg?{catalog:pkg.catalog}:{}),chartCatalogs});
 }
@@ -325,6 +326,7 @@ async function handleResearchAction(d){
   else if('packageJson' in d){const pkg=researchLibrary.getPackage(d.packageJson);if(!pkg)throw new Error('Package unavailable.');downloadJson(pkg);}
   else if('packageCsv' in d){const pkg=researchLibrary.getPackage(d.packageCsv);if(!pkg)throw new Error('Package unavailable.');downloadCsv(researchPackageCsv(pkg),`meridian-frozen-${pkg.id}.csv`,'Original frozen CSV downloaded; current data were not substituted.');}
   else if('exportFrozenCurrentAccountGdpContributions' in d){const pkg=researchLibrary.getPackage(d.exportFrozenCurrentAccountGdpContributions),context=pkg?.context.currentAccountGdpContributions,inputs=context&&pkg.context[context.inputContext];if(!context||!inputs)throw new Error('Frozen contribution inputs unavailable.');downloadCsv(currentAccountGdpContributionsCsv(inputs.sources,context.range),`meridian-frozen-${pkg.id}-contributions.csv`,'Contribution CSV reconstructed from recorded BEA inputs, method and window; current data were not substituted.');}
+  else if('exportFrozenCurrentAccountGdpBalanceEffects' in d){const pkg=researchLibrary.getPackage(d.exportFrozenCurrentAccountGdpBalanceEffects),context=pkg?.context.currentAccountGdpBalanceEffects,inputs=context&&pkg.context[context.inputContext];if(!context||!inputs)throw new Error('Frozen balance/GDP effect inputs unavailable.');downloadCsv(currentAccountGdpBalanceEffectsCsv(inputs.sources,context.range),`meridian-frozen-${pkg.id}-balance-gdp-effects.csv`,'Balance/GDP effect CSV reconstructed from recorded BEA inputs, symmetric method and window; current data were not substituted.');}
   else if('packageAttachment' in d){const pkg=currentPackage(),file=pkg?.context.attachments?.[Number(d.packageAttachment)];if(!file)throw new Error('Frozen attachment unavailable.');downloadCsv(file.content,file.name,'Original frozen specialist export downloaded with its captured inputs and assumptions.');}
   else if('enableChanges' in d||'disableChanges' in d||'markChanges' in d){
     changeCheckpoint={...changeCheckpoint,enabled:'enableChanges' in d?true:'disableChanges' in d?false:changeCheckpoint.enabled,...('disableChanges' in d?{}:{since:dataStatus.generatedAt,snapshotAt:dataStatus.generatedAt})};
@@ -359,7 +361,7 @@ root.addEventListener('click',async event=>{
   const d=button.dataset;
   if(button.disabled)return;
   if(button.id==='theme-toggle'){toggleTheme();return;}
-  const researchKeys=['saveWorkspace','clearWorkspace','pinResult','pinPublication','openWorkspace','renameWorkspace','removeWorkspace','openPackage','removePackage','packageJson','packageCsv','packageAttachment','exportFrozenCurrentAccountGdpContributions','enableChanges','disableChanges','markChanges','reviewAllChanges','retryChanges','changePage','exportChanges','exportPublications','retryPublications','exportPublicationExplanations','retryPublicationExplanations'];
+  const researchKeys=['saveWorkspace','clearWorkspace','pinResult','pinPublication','openWorkspace','renameWorkspace','removeWorkspace','openPackage','removePackage','packageJson','packageCsv','packageAttachment','exportFrozenCurrentAccountGdpContributions','exportFrozenCurrentAccountGdpBalanceEffects','enableChanges','disableChanges','markChanges','reviewAllChanges','retryChanges','changePage','exportChanges','exportPublications','retryPublications','exportPublicationExplanations','retryPublicationExplanations'];
   if(researchKeys.some(key=>key in d)){
     const before=location.hash;
     try{await handleResearchAction(d);}catch(error){state.researchError=error.message;announce(`Research action unavailable: ${error.message}`);}
@@ -408,6 +410,7 @@ root.addEventListener('click',async event=>{
   else if('exportCurrentAccountGdpTrailing' in d)downloadCsv(currentAccountGdpTrailingCsv(dataStatus.sources,viewRange(state)),'meridian-current-account-gdp-trailing.csv','Trailing-four-quarter ratios downloaded for the shared window, with supporting quarterly inputs, source evidence and rounding reconciliation.');
   else if('exportCurrentAccountGdpComparison' in d)downloadCsv(currentAccountGdpComparisonCsv(dataStatus.sources,viewRange(state),state.macroMeasure),'meridian-current-account-gdp-comparison.csv','Quarterly and trailing-four-quarter ratios downloaded with the selected balance, horizon gaps and original BEA inputs.');
   else if('exportCurrentAccountGdpContributions' in d)downloadCsv(currentAccountGdpContributionsCsv(dataStatus.sources,viewRange(state)),'meridian-current-account-gdp-contributions.csv','Calculated quarterly and trailing contribution changes downloaded with exact predecessor inputs, percentage-point reconciliation and BEA evidence.');
+  else if('exportCurrentAccountGdpBalanceEffects' in d)downloadCsv(currentAccountGdpBalanceEffectsCsv(dataStatus.sources,viewRange(state)),'meridian-current-account-gdp-balance-gdp-effects.csv','Symmetric balance and GDP-denominator effects downloaded with combined changes, exact predecessor inputs and BEA source evidence.');
   else if('exportFiscal' in d)exportCsv(['receipts','outlays','netInterest','budgetDeficit','primaryDeficit','receiptsTtm','outlaysTtm','netInterestTtm','primaryDeficitTtm','interestRevenueRatio','publicDebt']);
   else if('exportFiscalFinancing' in d){
     downloadCsv(fiscalFinancingCsv(dataStatus.sources.fiscal),'meridian-fiscal-financing.csv','MTS financing CSV downloaded with reported amounts and calculated residuals; release dates remain unknown.');

@@ -155,6 +155,13 @@ function validateContext(context){
   validateRange(contributions.range);
   if(contributions.inputContext!=='currentAccountGdpBreakdown'||context.currentAccountGdpBreakdown===undefined)fail('current-account GDP contributions retained input context');
  }
+ if(context.currentAccountGdpBalanceEffects!==undefined){
+  const effects=context.currentAccountGdpBalanceEffects;
+  if(!object(effects)||Object.keys(effects).length!==4||['version','method','range','inputContext'].some(key=>!Object.hasOwn(effects,key))||effects.version!==1)fail('current-account GDP balance effects envelope');
+  if(effects.method!=='symmetric-two-order-v1')fail('current-account GDP balance effects method');
+  validateRange(effects.range);
+  if(effects.inputContext!=='currentAccountGdpBreakdown'||context.currentAccountGdpBreakdown===undefined)fail('current-account GDP balance effects retained input context');
+ }
  if(context.attachments!==undefined){
   if(!Array.isArray(context.attachments)||context.attachments.length>20)fail('attachment count');
   const names=new Set();
