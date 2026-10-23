@@ -136,6 +136,12 @@ function validateContext(context){
   }
   if(currentAccountGdpQuarterSpan(firstIta,lastIta)>MAX_CURRENT_ACCOUNT_GDP_HISTORY_QUARTERS)fail('current-account GDP breakdown combined ITA calendar-quarter span limit');
  }
+ if(context.currentAccountGdpTrailing!==undefined){
+  const trailing=context.currentAccountGdpTrailing;
+  if(!object(trailing)||Object.keys(trailing).length!==3||['version','range','inputContext'].some(key=>!Object.hasOwn(trailing,key))||trailing.version!==1)fail('current-account GDP trailing envelope');
+  validateRange(trailing.range);
+  if(trailing.inputContext!=='currentAccountGdpBreakdown'||context.currentAccountGdpBreakdown===undefined)fail('current-account GDP trailing retained input context');
+ }
  if(context.attachments!==undefined){
   if(!Array.isArray(context.attachments)||context.attachments.length>20)fail('attachment count');
   const names=new Set();

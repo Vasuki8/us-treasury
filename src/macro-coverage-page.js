@@ -3,6 +3,7 @@ import {currentAccountPanel} from './current-account-view.js';
 import {currentAccountGdpPanel} from './current-account-gdp-view.js';
 import {currentAccountGdpHistoryPanel} from './current-account-gdp-history-view.js';
 import {currentAccountGdpBreakdownPanel} from './current-account-gdp-breakdown-view.js';
+import {currentAccountGdpTrailingPanel} from './current-account-gdp-trailing-view.js';
 import {dataStatus} from './data.js';
 import {coverageFamilies} from './macro-registry.js';
 import {getSeries,latest,formatValue,formatChange,periodLabel,transformSeries} from './model.js';
@@ -32,6 +33,7 @@ export function macroCoveragePage(state={}, {embedded=false}={}){
   + (familyId==='external'?currentAccountGdpPanel(dataStatus.sources):'')
   + (familyId==='external'?currentAccountGdpHistoryPanel(dataStatus.sources,range,{state:focused}):'')
   + (familyId==='external'?currentAccountGdpBreakdownPanel(dataStatus.sources,range):'')
+  + (familyId==='external'?currentAccountGdpTrailingPanel(dataStatus.sources,range):'')
   + (embedded?'':panel('00','LATEST TOPIC READINGS',table(['MEASUREMENT / DEFINITION','LATEST','REFERENCE PERIOD','SOURCE STATUS / FULL COVERAGE'],rows,'Current topic readings and explicit source periods')))
   + `<div class="grid g21">${panel('01','FOCUSED HISTORY',controls+errors+history+coverageSummary(shown),`<a class="action" href="${esc(detail)}">DETAILS & DATA TABLE ↗</a>`,`${current.frequency} · ${current.unit} · ${current.adjustment}`)}${panel('02','RESEARCH QUESTION',`<div class="explain"><p><strong>WHAT CHANGED.</strong> ${esc(changed)}</p><p><strong>CONTEXT.</strong> ${esc(family.context)}</p><p><strong>WHY IT MATTERS.</strong> ${esc(family.question)} ${contributionContext}</p><p><strong>LIMITATIONS.</strong> ${esc(family.limitations)}</p><p>${esc(current.definition)}</p><p>Source: ${sourceLink(current)}. Retrieval: <span class="mono">${esc(current.fetchedAt??'Unavailable')}</span>. Reference dates are not verified publication timestamps.</p><p><a href="${esc(family.schedule)}" target="_blank" rel="noopener noreferrer">External official schedule ↗</a>. BLS, BEA, DOL and Census program associations appear in the <a href="#/calendar">captured calendar</a> where available. Dated FOMC events and official material references are available in the calendar and Credit & banking; linked documents are separate from captured numeric projections.</p></div>`)}</div>`
 
