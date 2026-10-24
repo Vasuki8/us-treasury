@@ -53,4 +53,4 @@ Owner: root. Files: `src/app.js`, `src/router.js`, `src/workspace-context.js`, `
 - [x] Independent economist/investor and code review; resolve material findings.
 - [x] Complete regression suite, build and asset smoke check (1,397 tests; 152 built assets).
 - [x] Browser checks at desktop, 390px and 320px; both themes; links, disclosures, native chart resizing and freeze result.
-- [ ] Publish approved change, verify CI/deployment and compare exact live assets; record final runtime revision and evidence.
+- [x] Publish approved change, verify CI/deployment and compare exact live assets; record final runtime revision and evidence in `docs/superpowers/overview-hierarchy-verification-2026-10-23.md`.
