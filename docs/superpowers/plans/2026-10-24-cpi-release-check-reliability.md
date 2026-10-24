@@ -26,3 +26,5 @@ Use the existing honest project bot identity/contact, endpoint-specific Accept, 
 - Successful pipeline masking failed discovery, or maintenance failure blocking unrelated data publication.
 
 Local verification:1,499/1,499 full-suite checks passed (223 seconds); final focused30/30 checks passed; independent source/integration review found no remaining material issue. Build/smoke confirms163 unchanged website assets under b56c1a3eb5476c93. Identified-client official checks at04:21 and04:24 UTC still received403 on both fixedBLS endpoints. This patch is not yet proof of restored source access; hosted branch artifact verification is required before claiming resolution.
+
+Hosted verification complete: run40062327314 passed Node22/24 verification/build/smoke, but the actual CPI upkeep artifact confirms403forbothfixedofficialsources, oneattempt each. Source access is an external blocker; keep changes on the tested branch and do notmergeorclaimautomaticaccessrestored. Prepared owner-reviewable request docs/cpi-source-access-request.md. No external message sent. Publication task remains unfinished until approved source access is demonstrated.
