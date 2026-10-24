@@ -23,3 +23,18 @@ test('maintenance summary preserves review-needed and source-unavailable states 
  const report={checkedAt:'2026-10-23T00:00:00Z',status:'review-required',families:{cpi:{status:'review-required',retainedCount:54,approvedCount:54,missingApprovedIds:[],reviewQueue:[{}],discovery:{status:'checked'}},claims:{status:'discovery-unavailable',retainedCount:2,approvedCount:2,missingApprovedIds:[],reviewQueue:[],discovery:{status:'error'}}},interpretation:'Candidates <require> review | no auto-admission.'};
  const text=publicationUpkeepSummary(report);assert.match(text,/cpi \| review-required \| 54 \/ 54 \| 0 \| 1 \| checked/);assert.match(text,/claims \| discovery-unavailable/);assert.match(text,/does not admit new publications/);assert.doesNotMatch(text,/<require>/);
 });
+
+test('secondary CPI availability matches retained reference months without fabricating publication days or admitting values',async()=>{
+ const {publicationUpkeep}=await import('../src/publication-upkeep.js');
+ const known={id:'cpi-sep',period:'2026-09-01',publicationDate:'2026-10-14',sourceUrl:'https://www.bls.gov/news.release/archives/cpi_10142026.htm'};
+ const options={archives:{cpi:{version:1,releases:[known]}},approvedScopes:{cpi:[known]}};
+ const candidate=period=>({sourceUrl:'https://www.clevelandfed.org/indicators-and-data/median-cpi',matchBy:'referencePeriod',period,publicationDate:null,evidenceType:'secondary-data-availability'});
+ const same=publicationUpkeep({...options,discoveries:{cpi:{status:'checked',candidates:[candidate('2026-09-01')]}}});assert.equal(same.families.cpi.reviewQueue.length,0);
+ const next=publicationUpkeep({...options,discoveries:{cpi:{status:'checked',candidates:[candidate('2026-10-01')]}}});assert.equal(next.status,'review-required');assert.equal(next.families.cpi.reviewQueue.length,1);assert.equal(next.families.cpi.reviewQueue[0].publicationDate,null);assert.match(next.families.cpi.reviewQueue[0].reason,/secondary|reference month/i);assert.equal(options.archives.cpi.releases.length,1);
+});
+
+test('secondary source summary preserves attribution, license and the availability-only change notice',async()=>{
+ const {publicationUpkeepSummary}=await import('../scripts/report-publication-upkeep.mjs');
+ const report={status:'approved-complete',checkedAt:'2026-10-24T12:00:00Z',families:{cpi:{status:'approved-complete',retainedCount:54,approvedCount:54,missingApprovedIds:[],reviewQueue:[],discovery:{status:'checked',source:'cleveland-fed-cpi',coverage:{kind:'latest-reference-period'},candidates:[],sourceNotice:'BLS data made available by the Cleveland Fed.',attribution:'Federal Reserve Bank of Cleveland',license:{name:'CC BY-SA 4.0',url:'https://creativecommons.org/licenses/by-sa/4.0/'},changesNotice:'Only reference-month availability is derived; original publication dates are not verified.'}}},interpretation:'No publication is admitted automatically.'};
+ const text=publicationUpkeepSummary(report);for(const value of ['CC BY-SA 4.0','https://creativecommons.org/licenses/by-sa/4.0/','Federal Reserve Bank of Cleveland','Only reference-month availability','BLS data made available'])assert.ok(text.includes(value),value);
+});

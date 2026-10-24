@@ -9,6 +9,7 @@ import {cpiPublicationScope,assertCpiPublicationData} from './cpi-publication-po
 import {publicationUpkeep} from '../src/publication-upkeep.js';
 import {requestText} from './sources/http.mjs';
 import {isIsoDate} from '../src/date-window.js';
+import {collectClevelandCpiAvailability} from './sources/cleveland-cpi-availability.mjs';
 const CPI_INDEX='https://www.bls.gov/bls/news-release/cpi.htm';
 const GDP_INDEX='https://www.bea.gov/data/gdp/gross-domestic-product';
 const links=html=>[...html.matchAll(/\bhref\s*=\s*["']([^"']+)["']/gi)].map(match=>match[1]);
@@ -30,22 +31,26 @@ export function discoverGdpCandidates(html){
  if(!urls.length||urls.length>12)throw Error('Unrecognized GDP dated vintage workbook links; source review required.');
  return urls.map(sourceUrl=>({sourceUrl,publicationDate:null}));
 }
-/** Bounded official discovery: BLS archive links, BEA dated vintage link, DOL latest dated PDF identity. */
-export async function checkPublicationUpkeep({discover=false,fetchImpl=globalThis.fetch,now=new Date()}={}){
+/** CPI secondary availability plus independent reviewed GDP/claims publication discovery. */
+export async function checkPublicationUpkeep({discover=false,fetchImpl=globalThis.fetch,now=new Date(),pause}={}){
  assertPublicationData(publicationArchive);assertClaimsPublicationData(claimsPublicationArchive);assertCpiPublicationData(cpiPublicationArchive);
  const discoveries={};
  if(discover){
-  for(const [family,url,parse] of [['cpi',CPI_INDEX,text=>discoverCpiCandidates(text,{through:now.toISOString().slice(0,10)})],['gdp',GDP_INDEX,discoverGdpCandidates]]){
-   try{const {text,...provenance}=await requestText(url,{fetchImpl,maxBytes:2*1024*1024});if(provenance.url!==url)throw Error('Official discovery index redirected; review required.');const candidates=parse(text);if(!candidates.length)throw Error('Official discovery index returned no in-scope candidates; review required.');discoveries[family]={status:'checked',candidates,provenance:[provenance],note:family==='gdp'?'Checks dated vintage workbook links only; does not verify every GDP news release.':'Checks dated CPI archive links from the first approved publication through the check day.'};}catch(error){discoveries[family]={status:'error',error:error.message,candidates:[]};}
+  discoveries.cpi=await collectClevelandCpiAvailability({fetchImpl,now,pause});
+  for(const [family,url,parse] of [['gdp',GDP_INDEX,discoverGdpCandidates]]){
+   try{const {text,...provenance}=await requestText(url,{fetchImpl,maxBytes:2*1024*1024});if(provenance.url!==url)throw Error('Official discovery index redirected; review required.');const candidates=parse(text);if(!candidates.length)throw Error('Official discovery index returned no in-scope candidates; review required.');discoveries[family]={status:'checked',candidates,provenance:[provenance],source:'archive-index',coverage:{kind:'dated-vintage-links'},note:'Checks dated vintage workbook links only; does not verify every GDP news release.'};}catch(error){discoveries[family]={status:'error',error:error.message,candidates:[]};}
   }
   try{const {collectDolAdvance}=await import('./sources/dol-advance.mjs');const source=await collectDolAdvance({fetchImpl,now});discoveries.claims={status:'checked',candidates:[{sourceUrl:'https://www.dol.gov/ui/data.pdf',publicationDate:source.releaseDate,matchBy:'publicationDate'}],provenance:source.provenance,warnings:source.warnings,note:'Checks the latest official claims release day only; does not discover every missing intermediate historical edition.'};}catch(error){discoveries.claims={status:'error',error:error.message,candidates:[]};}
  }
  return publicationUpkeep({archives:{gdp:publicationArchive,claims:claimsPublicationArchive,cpi:cpiPublicationArchive},approvedScopes:{gdp:publicationScope,claims:claimsPublicationScope,cpi:cpiPublicationScope},discoveries,checkedAt:now.toISOString()});
 }
+export function publicationUpkeepExitCode(report){
+ return ['invalid-archive','missing-approved'].includes(report.status)||Object.values(report.families??{}).some(row=>row.discovery?.status==='error')?1:0;
+}
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const args=process.argv.slice(2);if(args.some(arg=>!['--discover','--json'].includes(arg)))throw Error('Usage: node scripts/check-publication-upkeep.mjs [--discover] [--json]. Checks never mutate archives.');
  const report=await checkPublicationUpkeep({discover:args.includes('--discover')});
  console.log(args.includes('--json')?JSON.stringify(report,null,2):Object.entries(report.families).map(([family,row])=>`${family}: ${row.status}; ${row.retainedCount}/${row.approvedCount} approved facts; ${row.missingApprovedIds.length} missing approved; ${row.reviewQueue.length} candidates awaiting review; discovery ${row.discovery.status}`).join('\n')+'\n'+report.interpretation);
- // Missing approved data is a failed invariant; review candidates alone do not block current-data publication.
- if(['invalid-archive','missing-approved'].includes(report.status))process.exitCode=1;
+ // Discovery failure is visible; new candidates remain review-only.
+ process.exitCode=publicationUpkeepExitCode(report);
 }

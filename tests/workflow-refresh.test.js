@@ -59,3 +59,11 @@ test('backup checks become cheap no-ops after completion and never deploy an unv
   assert.equal(eligible('deploy', context('schedule')), true);
   assert.equal(eligible('deploy-cloudflare', context('schedule', { target: 'cloudflare' })), true);
 });
+
+test('publication upkeep is manually verifiable on a branch and its failure cannot gate statistical deployment',()=>{
+ assert.equal(eligible('publication_upkeep',context('workflow_dispatch',{ref:'refs/heads/codex/cpi-release-check-reliability'})),true);
+ assert.equal(eligible('publication_upkeep',context('pull_request',{ref:'refs/pull/1/merge'})),false);
+ assert.equal(eligible('publication_upkeep',context('push',{ref:'refs/heads/codex/cpi-release-check-reliability'})),false);
+ for(const job of ['refresh_check','refresh','verify','deploy','deploy-cloudflare'])assert.doesNotMatch(jobs[job].match(/^    needs:\s*(.+)$/m)?.[1]??'',/publication_upkeep/);
+ assert.match(jobs.publication_upkeep,/if: always\(\)[\s\S]*publication-upkeep\.json/);
+});
