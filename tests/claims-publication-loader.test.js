@@ -13,7 +13,7 @@ test('claims loader is lazy and retries its native module URL with a fresh query
  const tooMany=api.createClaimsPublicationLoader({importModule:async()=>({claimsPublicationArchive:{version:1,releases:Array(769).fill({})}})});await assert.rejects(tooMany.load(),/structure/i);
 });
 test('publication synchronization loads only the selected family and stale completion cannot replace another view',async()=>{
- assert.ok(control,'Publication controller must exist');let route={page:'overview'},renders=0,finishGdp,finishClaims;const calls={gdp:0,claims:0};
+ assert.ok(control,'Publication controller must exist');let route={page:'explore'},renders=0,finishGdp,finishClaims;const calls={gdp:0,claims:0};
  const controller=control.createPublicationController({getRoute:()=>route,onChange:()=>renders++,gdpLoader:{load:()=>{calls.gdp++;return new Promise(resolve=>{finishGdp=resolve;});}},claimsLoader:{load:()=>{calls.claims++;return new Promise(resolve=>{finishClaims=resolve;});}}});
  controller.sync(route);assert.deepEqual(calls,{gdp:0,claims:0});route={page:'research',researchView:'publications',publicationSeries:'gdp'};controller.sync(route);controller.sync(route);assert.equal(calls.gdp,1);
  route={...route,publicationSeries:'claimsAdvance'};controller.sync(route);assert.equal(calls.claims,1);finishGdp({version:1,releases:[{id:'gdp'}]});await Promise.resolve();await Promise.resolve();assert.equal(controller.context('claimsAdvance').status,'loading');assert.equal(renders,0);

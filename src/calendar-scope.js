@@ -1,12 +1,25 @@
 import {releases,series} from './data.js';
 import {calendarRelatedIds} from './macro-calendar.js';
 
+/** Keep a revealed legacy link's visible scope when the next filter removes its event. */
+export function revealedCalendarState(state,options){
+ const scope=calendarScope(state,options);
+ return scope.revealed?{...state,calendarView:scope.view,calendarMonth:scope.month}:state;
+}
+
 /** Resolve the same current schedule window, filters and preview for UI and pinning. */
 export function calendarScope(state,{events=releases,catalog=series,now=new Date()}={}){
  if(!(now instanceof Date)||!Number.isFinite(now.getTime()))throw new Error('Invalid calendar scope date.');
  const ordered=[...events].sort((a,b)=>a.date.localeCompare(b.date)||String(a.time??'').localeCompare(String(b.time??''))||a.id.localeCompare(b.id));
  const months=[...new Set(events.map(event=>event.date.slice(0,7)))].sort();
- const month=months.includes(state.calendarMonth)?state.calendarMonth:'upcoming';
+ const related=event=>calendarRelatedIds(event).filter(id=>Object.hasOwn(catalog,id)),saved=state.saved??[];
+ const matchesFilters=event=>(state.day==='all'||!state.day||event.date===state.day)
+  &&(!state.calendarTopic||state.calendarTopic==='All topics'||event.topic===state.calendarTopic||related(event).some(id=>catalog[id].topic===state.calendarTopic))
+  &&(!state.watchOnly||related(event).some(id=>saved.includes(id)));
+ const explicit=ordered.find(event=>event.id===state.eventId&&matchesFilters(event)&&(!months.includes(state.calendarMonth)||event.date.startsWith(state.calendarMonth+'-')));
+ let view=['treasury','all'].includes(state.calendarView)?state.calendarView:'macro',revealed=false;
+ if(explicit&&view!=='all'&&(explicit.sourceId==='treasury')!==(view==='treasury')){view=explicit.sourceId==='treasury'?'treasury':'macro';revealed=true;}
+ let month=months.includes(state.calendarMonth)?state.calendarMonth:'upcoming';
  let startDate,endDate;
  if(month==='upcoming'){
   const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now).map(part=>[part.type,part.value]));
@@ -16,11 +29,14 @@ export function calendarScope(state,{events=releases,catalog=series,now=new Date
   startDate=`${month}-01`;
   const [year,number]=month.split('-').map(Number);endDate=new Date(Date.UTC(year,number,0)).toISOString().slice(0,10);
  }
- const windowEvents=ordered.filter(event=>event.date>=startDate&&event.date<=endDate),days=[...new Set(windowEvents.map(event=>event.date))];
- const related=event=>calendarRelatedIds(event).filter(id=>Object.hasOwn(catalog,id)),saved=state.saved??[];
- const filtered=windowEvents.filter(event=>(state.day==='all'||!state.day||event.date===state.day)
-  &&(!state.calendarTopic||state.calendarTopic==='All topics'||event.topic===state.calendarTopic||related(event).some(id=>catalog[id].topic===state.calendarTopic))
-  &&(!state.watchOnly||related(event).some(id=>saved.includes(id))));
+ if(explicit&&(explicit.date<startDate||explicit.date>endDate)){
+  month=explicit.date.slice(0,7);startDate=month+'-01';
+  const [year,number]=month.split('-').map(Number);endDate=new Date(Date.UTC(year,number,0)).toISOString().slice(0,10);revealed=true;
+ }
+ const windowEvents=ordered.filter(event=>event.date>=startDate&&event.date<=endDate);
+ const viewEvents=windowEvents.filter(event=>view==='all'||(event.sourceId==='treasury')===(view==='treasury'));
+ const days=[...new Set(viewEvents.map(event=>event.date))];
+ const filtered=viewEvents.filter(matchesFilters);
  const selected=filtered.find(event=>event.id===state.eventId)??filtered[0];
- return {months,month,days,windowEvents,filtered,selected,window:{startDate,endDate,timeZone:'America/New_York'}};
+ return {months,month,view,revealed,days,windowEvents,filtered,selected,window:{startDate,endDate,timeZone:'America/New_York'}};
 }

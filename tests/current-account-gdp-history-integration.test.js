@@ -15,7 +15,7 @@ import {createResearchPackage,exportResearchPackage,importResearchPackage} from 
 import {MAX_RESEARCH_JSON_BYTES} from '../src/research-workspaces.js';
 
 test('external history reuses one date-control set and binds a scoped calculated chart and CSV action',async()=>{
- const html=renderPage({...parseRoute('#/economy?family=external&window=all'),saved:[]});
+ const html=renderPage({...parseRoute('#/economy?family=external&section=trends&window=all'),saved:[]});
  assert.match(html,/HISTORICAL CURRENT ACCOUNT \/ GDP/);assert.equal((html.match(/id="window-start"/g)??[]).length,1);
  assert.match(html,/data-chart-catalog="current-account-gdp-history"/);assert.match(html,/data-export-current-account-gdp-history/);
  assert.doesNotMatch(renderPage({...parseRoute('#/economy?family=prices'),saved:[]}),/data-chart-catalog="current-account-gdp-history"/);

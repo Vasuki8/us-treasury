@@ -14,7 +14,7 @@ import {currentAccountGdpBreakdown} from '../src/current-account-gdp-breakdown.j
 import {parseCsv} from '../scripts/sources/http.mjs';
 
 test('external economy retains one shared date control and adds four-line historical breakdown',()=>{
- const html=macroCoveragePage(parseRoute('#/economy?family=external&window=all'));
+ const html=macroCoveragePage(parseRoute('#/economy?family=external&section=trends&window=all'));
  assert.match(html,/HISTORICAL CURRENT ACCOUNT \/ GDP · BREAKDOWN/);
  assert.match(html,/data-export-current-account-gdp-breakdown/);
  assert.equal((html.match(/id="window-start"/g)??[]).length,1);

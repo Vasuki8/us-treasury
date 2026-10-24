@@ -5,6 +5,7 @@ import {indicatorPage} from '../src/indicator-page.js';
 import {getSeries,toCsv} from '../src/model.js';
 import {parseCsv} from '../scripts/sources/http.mjs';
 import {defaults,parseRoute} from '../src/router.js';
+import {claimsFact} from './helpers/claims-publications-fixture.js';
 
 const state = overrides => ({...defaults, saved:[], selected:[], ...overrides});
 const indicator = (overrides={}, context={}) => indicatorPage(state(overrides),context);
@@ -17,7 +18,7 @@ const ordered = (html, labels) => {
   }
 };
 
-test('Overview puts every current reading with native units and period ahead of the evidence desk', () => {
+test('Overview keeps every current reading with native units after the daily evidence briefing', () => {
   const html = overviewPage(state());
   assert.match(html, /class="radar-page radar-overview"/);
   const pairs = [
@@ -27,11 +28,12 @@ test('Overview puts every current reading with native units and period ahead of 
     ['policyTargetUpper','Percent'], ['effr','Percent'], ['yield','Percent'],
     ['spread2s10s','Basis points'], ['publicDebt','USD trillions'], ['interestRevenueRatio','Percent of receipts'],
   ];
-  const evidence = html.indexOf('WHAT CHANGED');
+  const evidence = html.indexOf('VERIFIED RETAINED PUBLICATIONS');
+  assert.ok(evidence>=0,'a dedicated reviewed-publication section starts the briefing');
   for (const [id, unit] of pairs) {
     const reading = html.match(new RegExp(`<a class="topic-reading" href="#/series/${id}">([^]*?)</a>`));
     assert.ok(reading, `${id} remains individually inspectable`);
-    assert.ok(reading.index < evidence, `${id} belongs to the current snapshot`);
+    assert.ok(reading.index > evidence, `${id} belongs to the current snapshot after the briefing`);
     assert.ok(reading[1].includes(unit), `${id} keeps its native unit`);
     assert.match(reading[1], /<strong>[^<]+<\/strong>/);
     assert.match(reading[1], /<small>[^<]+ · [^<]+<\/small>/);
@@ -43,14 +45,29 @@ test('Overview puts every current reading with native units and period ahead of 
   assert.match(html,/Target range:[^]*?Bounds and effective rates can refer to different days/);
 });
 
-test('Overview keeps changes and catalysts together before followed exceptions and analytical context', () => {
+test('Overview leads with publications and catalysts, then readings and momentum, then followed and capture exceptions', () => {
   const html=overviewPage(state({saved:['unrate']}), {checkpoint:{enabled:true,since:'2026-10-20'},changes:{status:'ready',rows:[{seriesId:'unrate',kind:'value-change',period:'2026-09-01',capturedAt:'2026-10-22T12:00:00Z'}]}});
-  ordered(html,['Economy at a glance','WHAT CHANGED','NEXT CATALYSTS','FOLLOWING · EXCEPTIONS &amp; UPDATES','INFLATION MOMENTUM','LABOR MOMENTUM','ACTIVITY &amp; INCOME','Source health, coverage and methodology']);
+  ordered(html,['VERIFIED RETAINED PUBLICATIONS','NEXT CATALYSTS','Economy at a glance','INFLATION MOMENTUM','LABOR MOMENTUM','FOLLOWING · EXCEPTIONS &amp; UPDATES','CAPTURED CHANGES','COLLECTION ATTENTION','ACTIVITY &amp; INCOME','Source health, coverage and methodology']);
   assert.match(html,/retrieval update is not itself an official publication or market surprise/);
   assert.match(html,/Routine debt dates remain in the full calendar; schedules do not confirm results/);
   assert.match(html,/Observed value change between retrievals/);
   for(const href of ['#/watchlist','#/research?view=changes','#/explore?mode=compare&amp;selected=pceMonthly,pceCoreMonthly','#/explore?mode=compare&amp;selected=unrate,underemployment,participation']) assert.ok(html.includes(href));
   assert.match(overviewPage(state()),/Follow measurements from their detail pages/);
+  assert.match(overviewPage(state()),/Publication evidence not loaded/);
+  assert.match(overviewPage(state()),/Historical publications captured recently are not new releases today/);
+  assert.match(html,/DATA FRESHNESS &amp; RELEASE COVERAGE/);
+});
+
+test('Overview renders a retained historical publication through reviewed archive context with separate clocks',()=>{
+  const row=claimsFact({period:'2026-03-14',publicationDate:'2026-03-19'});
+  row.id=`dol-${row.seriesId}-${row.period}-${row.releaseStage}-${row.publicationDate}`;
+  const html=overviewPage(state(),{publicationContexts:{claims:{status:'ready',archive:{releases:[row]}},gdp:{status:'error',error:'Archive unavailable'}}});
+  const publications=html.slice(html.indexOf('VERIFIED RETAINED PUBLICATIONS'),html.indexOf('NEXT CATALYSTS'));
+  assert.match(publications,/Initial claims/);assert.match(publications,/Published 2026-03-19 \(day precision\)/);
+  assert.match(publications,/Captured 2026-10-22T22:00:00\.000Z/);assert.match(publications,/Reference 2026-03-14/);
+  assert.match(publications,/GDP: Publication evidence unavailable/);
+  assert.match(publications,/Historical publications captured recently are not new releases today/);
+  assert.doesNotMatch(publications,/new publication today|Released today/);
 });
 
 test('Indicator latest native snapshot stays separate from a transformed historical window', async () => {

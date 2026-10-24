@@ -19,6 +19,10 @@ import {researchPage} from './research-page.js';
 import {defaults as routeDefaults} from './router.js';
 import {getSeries} from './model.js';
 import {researchNavigation} from './research-navigation.js';
+import {indicatorHref} from './workspace-context.js';
+import {escapeHtml as esc} from './ui.js';
+import {series,releases,dataStatus} from './data.js';
+import {releaseCoverage,releaseCoveragePanel} from './release-coverage.js';
 const defaults={...routeDefaults,saved:[],density:'compact'};
 const seriesIds=values=>[...new Set(values)].filter(id=>getSeries(id));
 const labor=state=>laborPage(state);
@@ -29,7 +33,11 @@ export function renderPage(input = {}, historyContext = {}) {
   if(Object.hasOwn(input,'range')&&!Object.hasOwn(input,'window'))state.window='observations';
   state.selected = seriesIds(Array.isArray(state.selected) ? state.selected : []).slice(0, 4);
   state.saved = seriesIds(Array.isArray(state.saved) ? state.saved : []);
-  const content=({ research:()=>researchPage(state,historyContext),overview:()=>overviewPage(state,historyContext), labor, release:()=>releasePage(state,{archive:historyContext.publicationArchive,publicationState:historyContext.publicationState,explanations:historyContext.publicationExplanations,explanationState:historyContext.explanationState}), macroCoverage:()=>state.macroFamily==='labor'?labor(state):macroCoveragePage(state), credit:()=>creditContextPage(), indicator:()=>indicatorPage(state, historyContext), calendar:()=>calendarPage(state), explore:()=>explorePage(state),watchlist:()=>`<div class="watchlist-workspace">${watchlistPage(state,historyContext)}</div>`, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage(),macro:()=>macroPage(),vintages:()=>vintagesPage(state, historyContext.historyState?.history, historyContext.historyState),market:()=>marketFunctioningPage() }[state.page] ?? (()=>overviewPage(state,historyContext)))(state);
+  const content=({ research:()=>researchPage(state,historyContext),overview:()=>overviewPage(state,historyContext), labor, release:()=>releasePage(state,{archive:historyContext.publicationArchive,publicationState:historyContext.publicationState,explanations:historyContext.publicationExplanations,explanationState:historyContext.explanationState}), macroCoverage:()=>state.macroFamily==='labor'?labor(state):macroCoveragePage(state), credit:()=>creditContextPage(), indicator:()=>indicatorPage(state, historyContext), calendar:()=>calendarPage(state), explore:()=>explorePage(state,historyContext),watchlist:()=>`<div class="watchlist-workspace">${watchlistPage(state,historyContext)}</div>`, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage(),macro:()=>macroPage(),vintages:()=>vintagesPage(state, historyContext.historyState?.history, historyContext.historyState),market:()=>marketFunctioningPage() }[state.page] ?? (()=>overviewPage(state,historyContext)))(state);
   const styled=['overview','labor','indicator','calendar','explore'].includes(state.page)||(state.page==='macroCoverage'&&state.macroFamily==='labor');
-  return researchNavigation(state.page)+(styled?content:`<div class="koyfin-page">${content}</div>`);
+  const specialist=['fiscal','refinancing','yields','auctions','ownership','macro','vintages','market','credit'].includes(state.page);
+  const linked=specialist?content.replace(/href="#\/series\/([A-Za-z0-9]+)"/g,(_all,id)=>`href="${esc(indicatorHref(id,state))}"`):content;
+  const ids=state.page==='indicator'?[state.seriesId]:state.page==='labor'?['payroll','claimsAdvance','continuedClaimsAdvance']:state.page==='macroCoverage'?[state.macroMeasure]:[];
+  const freshness=releaseCoveragePanel(releaseCoverage(series,dataStatus,{seriesIds:ids,events:releases,publicationContexts:historyContext.publicationContexts}),{hrefFor:id=>indicatorHref(id,state)});
+  return researchNavigation(state)+(styled?linked:`<div class="koyfin-page">${linked}</div>`)+freshness;
 }

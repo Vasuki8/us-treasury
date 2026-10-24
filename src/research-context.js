@@ -52,7 +52,7 @@ function capturedMeasurement(current,source,item,id,agency){
 }
 
 /** Build explicitly scoped frozen inputs; never promise a mutable URL is a saved result. */
-export function buildPinContext(state,{historyState,catalog=series,sources=dataStatus.sources,snapshot=dataStatus,events=releases,now=new Date(),changes={},checkpoint={},failures=[]}={}){
+export function buildPinContext(state,{historyState,catalog=series,sources=dataStatus.sources,snapshot=dataStatus,events=releases,now=new Date(),changes={},checkpoint={},failures=[],publicationContexts={}}={}){
  let selected=state.page==='indicator'?[state.seriesId]:['macroCoverage','labor'].includes(state.page)?[state.macroMeasure]:state.page==='watchlist'?state.saved:moduleIds[state.page]??state.selected;
  let capturedCatalog=catalog,capturedSources=sources;
  const context={page:state.page,route:routeFor(state),moduleSources:Object.fromEntries((sourceIds[state.page]??[]).filter(id=>sources[id]).map(id=>[id,sources[id]])),attachments:[],scope:'Selected registered measurements; explicitly retained supplementary inputs and CSVs when present.'};
@@ -61,7 +61,7 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
   selected=['gdp','pceCoreMonthly','payroll','policyTargetUpper'];
   context.overviewTopicReadings=['gdp','realSpendingMonthly','pceCoreMonthly','pceCore','payroll','unrate','claimsAdvance','continuedClaimsAdvance','policyTargetLower','policyTargetUpper','effr','yield','spread2s10s','publicDebt','interestRevenueRatio'].filter(id=>catalog[id]).map(id=>{const item=catalog[id];return {id,name:item.name,unit:item.unit,frequency:item.frequency,adjustment:item.adjustment,definition:item.definition,observationType:item.observationType,calculation:item.calculation,latest:item.observations.at(-1)??null,prior:item.observations.at(-2)??null,fetchedAt:item.fetchedAt,source:item.source,provenance:item.provenance};});
   context.overviewChartInputs=['pceMonthly','pceCoreMonthly','payroll','realSpendingMonthly','realDisposableIncomeMonthly','industrialProduction'].filter(id=>catalog[id]).map(id=>{const item=catalog[id],shown=transformSeries(item,'level',12);return {id,name:item.name,unit:item.unit,frequency:item.frequency,adjustment:item.adjustment,calculation:item.calculation,fetchedAt:item.fetchedAt,source:item.source,provenance:item.provenance,observations:shown.observations};});
-  context.overviewBrief=evidenceBrief({catalog,sources,changes:changes.rows??[],failures});context.overviewCheckpoint=checkpoint;
+  context.overviewBrief=evidenceBrief({catalog,sources,changes:changes.rows??[],failures,publicationContexts});context.overviewCheckpoint=checkpoint;
   context.overviewFollowing=watchlistMonitor(state.saved??[],{catalog,events,now}).map(({id,current,nextEvent})=>({id,name:current.name,status:current.dataStatus,update:monitorUpdateLabel(id,changes,checkpoint),nextEvent}));
   context.nextCatalysts=nextCatalysts(events,{now});context.calendarStatus=snapshot.calendar;
   context.scope='Four primary chart measurements plus frozen topic readings, chart inputs, factual update brief and selected upcoming schedule context. All values and clocks are retained; no current data is substituted on reopening.';
@@ -104,7 +104,7 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
  if(state.page==='calendar'){
   const scope=calendarScope(state,{events,catalog,now}),event=scope.selected;
   if(!event)throw new Error('No calendar releases match the current filters. Choose another window or clear the filters before pinning.');
-  selected=calendarRelatedIds(event);Object.assign(context,{calendar:snapshot.calendar,releases:scope.filtered,selectedEvent:event,calendarScope:{month:scope.month,day:state.day??'all',topic:state.calendarTopic??'All topics',watchOnly:Boolean(state.watchOnly),saved:state.watchOnly?[...(state.saved??[])]:[],eventIds:scope.filtered.map(item=>item.id),window:scope.window},calendarReplay:'Frozen current context only; historical calendar replay is unavailable.'});
+  selected=calendarRelatedIds(event);Object.assign(context,{calendar:snapshot.calendar,releases:scope.filtered,selectedEvent:event,calendarScope:{view:scope.view,month:scope.month,day:state.day??'all',topic:state.calendarTopic??'All topics',watchOnly:Boolean(state.watchOnly),saved:state.watchOnly?[...(state.saved??[])]:[],eventIds:scope.filtered.map(item=>item.id),window:scope.window},calendarReplay:'Frozen current context only; historical calendar replay is unavailable.'});
  }
  let pinState={...state,comparison:assumptions.comparison,transform:assumptions.transform};
  if(state.page==='vintages'){

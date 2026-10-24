@@ -14,6 +14,7 @@ import {CURRENT_ACCOUNT_GDP_COMPARISON_MEASURES} from './current-account-gdp-com
 import { moveFollowed } from './watchlist-monitor.js';
 import { relevantRefreshIds } from './research-status.js';
 import { releases, dataStatus,series } from './data.js';
+import {revealedCalendarState} from './calendar-scope.js';
 import { filterSeries, getSeries, latest, formatValue, formatChange, toCsv,periodLabel } from './model.js';
 import {fiscalFinancingCsv} from './research-exports.js';
 import {refinancingCsv} from './refinancing-page.js';
@@ -34,6 +35,7 @@ import { createHistoryLoader } from './history-loader.js';
 import { createHistoryController, preserveHistoryView } from './history-controller.js';
 import {viewRange,indicatorHref,createWorkspaceMemory,updateWorkspaceSelection} from './workspace-context.js';
 import {coverageFamilies} from './macro-registry.js';
+import {exactIndicatorMatch} from './global-search.js';
 import {createWorkspace,openWorkspace,MAX_RESEARCH_JSON_BYTES} from './research-workspaces.js';
 import {createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv} from './research-packages.js';
 import {createResearchLibrary} from './research-library.js';
@@ -204,8 +206,13 @@ function researchActions(){
 }
 
 function render({focusHeading=false,preserveFocus=false}={}) {
+  if(state.page==='calendar'){
+    const normalized=revealedCalendarState(state);
+    if(normalized!==state){state=normalized;history.replaceState(null,'',routeFor(state));}
+  }
   const focus=preserveFocus?rememberFocus():null;
   const saveOpen=main.querySelector('.context-save')?.open??false;
+  const externalControlsOpen=main.querySelector('#external-history-controls')?.open??false;
   historyController.sync(state);
   syncChanges();
   syncPublications();
@@ -213,9 +220,11 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   applyAppearance();
   root.dataset.page=state.page==='labor'||state.page==='macroCoverage'&&state.macroFamily==='labor'?'labor':state.page;
   const failures=trackedFailures();
-  main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${renderPage(state,{...historyController.context(state),library:researchLibrary.getState(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationArchive,publicationState,publicationExplanations,explanationState})}`;
+  const publicationContexts={gdp:publicationController.context('gdp'),claims:publicationController.context('claimsAdvance')};
+  main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${renderPage(state,{...historyController.context(state),library:researchLibrary.getState(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationContexts,publicationArchive,publicationState,publicationExplanations,explanationState})}`;
   main.querySelector('.page-heading .actions')?.insertAdjacentHTML('beforeend',researchActions());
   if(saveOpen&&main.querySelector('.context-save'))main.querySelector('.context-save').open=true;
+  if(externalControlsOpen&&main.querySelector('#external-history-controls'))main.querySelector('#external-history-controls').open=true;
   document.getElementById('ticker').hidden=true;
   freshnessController.refresh();
   syncCompactNavigation(root,state);
@@ -325,7 +334,7 @@ async function handleResearchAction(d){
     if(pinBusy)return;
     if('pinPublication' in d&&publicationState.status!=='ready')throw new Error('Load the selected official publication archive before pinning.');
     const claims=claimsPublicationIds.includes(state.publicationSeries);
-    const args='pinPublication' in d?claims?buildClaimsPublicationPin(publicationArchive,state.publicationSeries,state.publicationCutoff,state.publicationPeriod):buildPublicationPin(publicationArchive,state.publicationCutoff,state.publicationPeriod,{explanationArchive:publicationExplanations,explanationStatus:explanationState.status}):state.page==='release'?buildReleasePin(state,{archive:publicationArchive,publicationState,explanationArchive:publicationExplanations,explanationStatus:explanationState.status}):buildPinContext(state,{...historyController.context(state),changes:changesContext(),checkpoint:changeCheckpoint,failures:trackedFailures()});
+    const args='pinPublication' in d?claims?buildClaimsPublicationPin(publicationArchive,state.publicationSeries,state.publicationCutoff,state.publicationPeriod):buildPublicationPin(publicationArchive,state.publicationCutoff,state.publicationPeriod,{explanationArchive:publicationExplanations,explanationStatus:explanationState.status}):state.page==='release'?buildReleasePin(state,{archive:publicationArchive,publicationState,explanationArchive:publicationExplanations,explanationStatus:explanationState.status}):buildPinContext(state,{...historyController.context(state),changes:changesContext(),checkpoint:changeCheckpoint,failures:trackedFailures(),publicationContexts:{gdp:publicationController.context('gdp'),claims:publicationController.context('claimsAdvance')}});
     const name='pinPublication' in d?claims?`${state.publicationSeries==='continuedClaimsAdvance'?'Continued':'Initial'} claims ${args.context.publicationPeriod} by ${args.context.publicationCutoff}`:`GDP ${periodLabel({frequency:'Quarterly'},args.context.publicationPeriod)} published by ${args.context.publicationCutoff}`:document.getElementById('research-name').value;
     pinBusy=true;render({preserveFocus:true});
     try{
@@ -374,6 +383,7 @@ root.addEventListener('click',async event=>{
   const d=button.dataset;
   if(button.disabled)return;
   if(button.id==='theme-toggle'){toggleTheme();return;}
+  if('sourceHealth' in d){const details=document.querySelector('#data-freshness .freshness-details');if(details){details.open=true;details.querySelector('summary')?.focus();details.scrollIntoView({block:'nearest'});}return;}
   const researchKeys=['saveWorkspace','clearWorkspace','pinResult','pinPublication','openWorkspace','renameWorkspace','removeWorkspace','openPackage','removePackage','packageJson','packageCsv','packageAttachment','exportFrozenCurrentAccountGdpContributions','exportFrozenCurrentAccountGdpBalanceEffects','exportFrozenCurrentAccountGdpComponentEffects','exportFrozenCurrentAccountGdpAllComponentEffects','enableChanges','disableChanges','markChanges','reviewAllChanges','retryChanges','changePage','exportChanges','exportPublications','retryPublications','exportPublicationExplanations','retryPublicationExplanations'];
   if(researchKeys.some(key=>key in d)){
     const before=location.hash;
@@ -392,7 +402,7 @@ root.addEventListener('click',async event=>{
     historyController.sync(state,{retry:true});
     preserveHistoryView(main,()=>render());
   }
-  else if('series' in d && getSeries(d.series))navigate({page:'indicator',seriesId:d.series,transform:'level',tab:'data'});
+  else if('series' in d && getSeries(d.series))navigate(parseRoute(indicatorHref(d.series,state)));
   else if('addCompare' in d&&getSeries(d.addCompare)){
     const selected=[...new Set([...state.selected,d.addCompare])];
     if(selected.length>4){announce('Compare up to four series. Remove a selected series first.');return;}
@@ -400,14 +410,14 @@ root.addEventListener('click',async event=>{
     navigate({page:'explore',exploreMode:'compare',selected,returnTo});
   }
   else if('page' in d && pageNames[d.page])navigate({page:d.page});
-  else if('compare' in d)navigate({page:'explore',selected:[...new Set(d.compare.split(',').filter(id=>getSeries(id)))].slice(0,4),exploreMode:'compare',comparison:'native',returnTo:['macroCoverage','labor'].includes(state.page)?routeFor(state):state.returnTo});
+  else if('compare' in d)navigate({page:'explore',selected:[...new Set(d.compare.split(',').filter(id=>getSeries(id)))].slice(0,4),exploreMode:'compare',comparison:'native',returnTo:['macroCoverage','labor','fiscal','refinancing','yields','auctions','ownership','macro','vintages','market','credit','calendar'].includes(state.page)?routeFor(state):state.returnTo});
   else if('laborGroup' in d&&['all','jobs','people','pay','claims'].includes(d.laborGroup))navigate({laborGroup:d.laborGroup},{replace:true});
   else if('laborSection' in d&&['labor-analysis','labor-weekly','labor-trends','labor-readings','labor-notes'].includes(d.laborSection))document.getElementById(d.laborSection)?.scrollIntoView({block:'start'});
   else if('calendarPreview' in d)showCalendarPreview(true);
   else if('event' in d){
     const selected=releases.find(release=>release.id===d.event);
     if(selected){
-      navigate(state.page==='calendar'?{eventId:selected.id}:{page:'calendar',eventId:selected.id,calendarMonth:selected.date.slice(0,7),day:'all',calendarTopic:'All topics',watchOnly:false});
+      navigate(state.page==='calendar'?{eventId:selected.id}:{page:'calendar',eventId:selected.id,calendarView:selected.sourceId==='treasury'?'treasury':'macro',calendarMonth:selected.date.slice(0,7),day:'all',calendarTopic:'All topics',watchOnly:false});
       showCalendarPreview();
     }
   }
@@ -419,7 +429,7 @@ root.addEventListener('click',async event=>{
   else if('remove' in d)navigate({selected:state.selected.filter(id=>id!==d.remove)});
   else if('day' in d)navigate({day:d.day});
   else if('resetFilters' in d)navigate({query:'',topic:'All topics',frequency:'All frequencies'});
-  else if('resetCalendar' in d)navigate({calendarMonth:'upcoming',day:'all',calendarTopic:'All topics',watchOnly:false});
+  else if('resetCalendar' in d)navigate({calendarView:'macro',calendarMonth:'upcoming',day:'all',calendarTopic:'All topics',watchOnly:false,eventId:''});
   else if('export' in d)exportCsv();
   else if('exportMacroMeasure' in d)exportCsv([state.macroMeasure]);
   else if('exportCurrentAccount' in d)downloadCsv(currentAccountCsv(dataStatus.sources.beaIta),'meridian-current-account-current-prior.csv','Official current-account and component balances downloaded for the exact current and preceding quarters, with nonannualized units and BEA provenance.');
@@ -492,10 +502,11 @@ root.addEventListener('change',async event=>{
   else if(target.id==='refinancing-horizon')navigate({refinancingHorizon:Number(target.value)});
   else if(['window-start','window-end'].includes(target.id))navigate({window:'custom',startDate:document.getElementById('window-start').value,endDate:document.getElementById('window-end').value});
   else if(target.id==='refinancing-shock')navigate({refinancingShock:Number(target.value)});
-  else if(target.id==='calendar-month')navigate({calendarMonth:target.value,day:'all'});
-  else if(target.id==='calendar-day')navigate({day:target.value});
-  else if(fields[target.id])navigate({[fields[target.id]]:target.value});
-  else if(target.id==='calendar-watch-only')navigate({watchOnly:target.checked});
+  else if(target.id==='calendar-scope')navigate({calendarView:target.value,day:'all',eventId:''});
+  else if(target.id==='calendar-month')navigate({calendarMonth:target.value,day:'all',eventId:''});
+  else if(target.id==='calendar-day')navigate({day:target.value,eventId:''});
+  else if(fields[target.id])navigate({[fields[target.id]]:target.value,...(target.id==='calendar-topic'?{eventId:''}:{})});
+  else if(target.id==='calendar-watch-only')navigate({watchOnly:target.checked,eventId:''});
   else if(target.matches('[data-select]')) {
     const id=target.dataset.select;
     if(target.checked && state.selected.length>=4){target.checked=false;announce('Compare up to four series. Remove a selected series first.');return;}
@@ -517,9 +528,10 @@ document.getElementById('command-form').addEventListener('submit',event=>{
   if(pages[command])navigate({page:pages[command],returnTo:null});
   else {
     const matches=filterSeries({query});
-    if(query && matches.length===1)navigate({page:'indicator',seriesId:matches[0].id,transform:'level',tab:'data',returnTo:routeFor({...state,page:'explore',query,topic:'All topics',frequency:'All frequencies',exploreMode:'catalog',returnTo:null})});
+    const exact=exactIndicatorMatch(query,Object.values(series));
+    if(exact)navigate({page:'indicator',seriesId:exact.id,transform:'level',tab:'data',returnTo:routeFor({...state,page:'explore',query,topic:'All topics',frequency:'All frequencies',exploreMode:'catalog',returnTo:null})});
     else navigate({page:'explore',query,topic:'All topics',frequency:'All frequencies',exploreMode:'catalog',returnTo:null});
-    announce(matches.length?`${matches.length} matching series.`:'No matching series. Try jobs, GDP, CPI or Treasury.');
+    announce(exact?`${exact.name} opened.`:`Search results for ${query||'all indicators'}: pages, indicators, scheduled events and saved research. ${matches.length} matching indicators.`);
   }
   input.value='';
 });
@@ -530,7 +542,7 @@ document.addEventListener('keydown',event=>{
   }
   const editable=event.target.matches('input,select,textarea,[contenteditable]');
   const key=['F1','F2','F3','F4','F5'].indexOf(event.key);
-  if(key>=0 && !editable){event.preventDefault();navigate({page:['overview','labor','indicator','calendar','explore'][key]});}
+  if(key>=0 && !editable){event.preventDefault();navigate({page:['overview','macroCoverage','indicator','calendar','explore'][key]});}
   const tab=event.target.closest('[role="tab"]');
   if(tab && ['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){
     event.preventDefault();

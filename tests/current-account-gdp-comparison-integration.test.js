@@ -14,7 +14,7 @@ import {CURRENT_ACCOUNT_GDP_COMPARISON_MEASURES,currentAccountGdpComparison} fro
 import {parseCsv} from '../scripts/sources/http.mjs';
 
 test('external comparison shares existing date controls and persists its chosen balance through the measure route',async()=>{
- const html=macroCoveragePage(parseRoute('#/economy?family=external&measure=itaServicesBalance&window=all'));
+ const html=macroCoveragePage(parseRoute('#/economy?family=external&section=trends&measure=itaServicesBalance&window=all'));
  assert.match(html,/QUARTERLY VS TRAILING FOUR QUARTERS/);assert.match(html,/value="itaServicesBalance" selected/);
  assert.match(html,/itaServicesBalanceQuarterlyComparison,itaServicesBalanceTrailingComparison/);
  assert.equal((html.match(/id="window-start"/g)??[]).length,1);assert.equal((html.match(/id="current-account-comparison-measure"/g)??[]).length,1);

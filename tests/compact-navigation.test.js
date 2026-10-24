@@ -200,3 +200,24 @@ test('Saved research and Indicator detail each activate their exact More destina
   assert.equal(indicator.getAttribute('aria-current'), 'page');
   assert.equal(summary.dataset.active, 'true');
 });
+
+test('family navigation distinguishes policy from Economy and marks only the selected topic',()=>{
+ const {root,nav,details}=fixture();
+ const economy=new Element('a',{'data-nav-group':'economy',href:'#/economy'});
+ const fed=new Element('a',{'data-nav-group':'fed',href:'#/economy?family=policy'});
+ const policy=new Element('a',{'data-nav':'macroCoverage','data-nav-family':'policy'});
+ const external=new Element('a',{'data-nav':'macroCoverage','data-nav-family':'external'});
+ nav.children.push(economy,fed);details.children.push(policy,external);
+ syncCompactNavigation(root,{page:'macroCoverage',macroFamily:'policy',seriesId:'effr'});
+ assert.equal(economy.dataset.active,'false');assert.equal(fed.dataset.active,'true');
+ assert.equal(policy.getAttribute('aria-current'),'page');assert.equal(external.hasAttribute('aria-current'),false);
+ syncCompactNavigation(root,{page:'macroCoverage',macroFamily:'external',seriesId:'currentAccount'});
+ assert.equal(economy.dataset.active,'true');assert.equal(fed.dataset.active,'false');
+ assert.equal(policy.hasAttribute('aria-current'),false);assert.equal(external.getAttribute('aria-current'),'page');
+});
+
+test('navigation synchronization tolerates removed recent-indicator primary links',()=>{
+ const {root}=fixture();
+ root.children=root.children.filter(node=>!['indicator-nav','indicator-rail'].includes(node.getAttribute('id')));
+ assert.doesNotThrow(()=>syncCompactNavigation(root,{page:'labor',seriesId:'unrate'}));
+});

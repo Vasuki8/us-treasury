@@ -8,7 +8,7 @@ export const defaults = {
   page: 'overview', seriesId: 'unrate', range: 12, transform: 'level', tab: 'data',
   query: '', topic: 'All topics', frequency: 'All frequencies', selected: ['unrate', 'cpi'],
   exploreMode: 'catalog', comparison: 'native', calendarMonth: 'upcoming', day: 'all', calendarTopic: 'All topics',
-  watchOnly: false, eventId: '',
+  watchOnly: false, eventId: '',calendarView:'macro',externalView:'summary',
   refinancingHorizon:12,refinancingShock:100,
   yieldDateA:'',yieldDateB:'',
   auctionType:'All',auctionId:'',
@@ -18,14 +18,16 @@ export const defaults = {
   researchView:'workspaces',packageId:'',changeSince:'',changePage:1,publicationCutoff:'',publicationPeriod:'',publicationSeries:'gdp',
 };
 
-/** Only local research workspaces can be offered as a return destination. */
+export const returnPages=['explore','watchlist','macroCoverage','labor','fiscal','refinancing','yields','auctions','ownership','macro','vintages','market','credit','calendar'];
+const returnPath=/^#\/(?:explore|watchlist|economy(?:\/labor)?|fiscal|refinancing|yields|auctions|ownership|macro|vintages|market|credit|calendar)(?:\?|$)/;
+/** Only bounded local research workspaces can be offered as a return destination. */
 export function safeReturnTo(value) {
-  if(typeof value!=='string'||value.length>4000||/[\u0000-\u001f\u007f]/.test(value)||!/^#\/(?:explore|watchlist|economy(?:\/labor)?)(?:\?|$)/.test(value))return null;
+  if(typeof value!=='string'||value.length>4000||/[\u0000-\u001f\u007f]/.test(value)||!returnPath.test(value))return null;
   const [path,query='']=value.split('?'),params=new URLSearchParams(query);
   const origin=params.get('return');params.delete('return');
   // One terminal watchlist/family origin may accompany an explore return.
   // Terminal workspaces discard nested returns, preventing recursive chains.
-  if(path==='#/explore'&&/^#\/(?:watchlist|economy(?:\/labor)?)(?:\?|$)/.test(origin??'')){
+  if(path==='#/explore'&&origin?.split('?')[0]!=='#/explore'&&returnPath.test(origin??'')){
     const terminal=safeReturnTo(origin);if(terminal)params.set('return',terminal);
   }
   return path+(params.size?'?'+params.toString():'');
@@ -68,6 +70,7 @@ export function parseRoute(hash = '') {
     state.macroFamily=state.page==='labor'?'labor':Object.hasOwn(coverageFamilies,p.get('family'))?p.get('family'):'prices';
     state.macroMeasure=coverageFamilies[state.macroFamily].ids.includes(p.get('measure'))?p.get('measure'):coverageFamilies[state.macroFamily].defaultMeasure;
     state.laborGroup=['jobs','people','pay','claims'].includes(p.get('group'))?p.get('group'):'all';
+    state.externalView=['trends','decomposition','methods'].includes(p.get('section'))?p.get('section'):'summary';
     state.vintageSeries=Object.hasOwn(series,p.get('series'))?p.get('series'):'gdp';
     state.auctionType=['All','Bill','Note','Bond','FRN','TIPS'].includes(p.get('type'))?p.get('type'):'All';
     state.auctionId=(p.get('auction')??'').slice(0,200);
@@ -93,6 +96,7 @@ export function parseRoute(hash = '') {
     if (state.calendarMonth !== 'upcoming' && state.day !== 'all' && !state.day.startsWith(state.calendarMonth + '-')) state.day = 'all';
     state.calendarTopic = topics.includes(p.get('calendarTopic')) ? p.get('calendarTopic') : 'All topics';
     state.watchOnly = p.get('watch') === '1';
+    state.calendarView=['treasury','all'].includes(p.get('scope'))?p.get('scope'):'macro';
     state.eventId = state.page==='release'?(p.get('event')??'').slice(0,200):releases.some(event => event.id === p.get('event')) ? p.get('event') : defaults.eventId;
   } catch {
     // A malformed externally supplied URL should leave the workspace usable.
@@ -113,6 +117,7 @@ export function routeFor(input) {
   }
   if(state.page==='macroCoverage'){
     p.set('family',state.macroFamily);p.set('measure',state.macroMeasure);
+    if(state.macroFamily==='external'&&['trends','decomposition','methods'].includes(state.externalView))p.set('section',state.externalView);
   }
   if(state.page==='labor')p.set('measure',coverageFamilies.labor.ids.includes(state.macroMeasure)?state.macroMeasure:coverageFamilies.labor.defaultMeasure);
   if(state.page==='labor'||state.page==='macroCoverage'&&state.macroFamily==='labor'){
@@ -153,13 +158,14 @@ export function routeFor(input) {
     p.set('selected',validIds(state.selected||[]).join(','));
     if(['indexed','difference'].includes(state.comparison))p.set('comparison',state.comparison);
   }
-  if(['indicator','explore','watchlist','macroCoverage','labor'].includes(state.page)){
+  if(state.page==='indicator'||returnPages.includes(state.page)){
     if(state.window==='observations')p.set('range',String(state.range===6?6:12));
     else if(state.window!=='1y')p.set('window',state.window);
     if(state.window==='custom'){p.set('start',state.startDate);p.set('end',state.endDate);}
     const returnTo=safeReturnTo(state.returnTo);if(returnTo&&state.page!=='watchlist')p.set('return',returnTo);
   }
   if (state.page === 'calendar'||state.page==='release') {
+    if(['treasury','all'].includes(state.calendarView))p.set('scope',state.calendarView);
     if (state.calendarMonth !== 'upcoming') p.set('month', state.calendarMonth);
     if (state.day !== 'all') p.set('day', state.day);
     if (state.calendarTopic !== 'All topics') p.set('calendarTopic', state.calendarTopic);

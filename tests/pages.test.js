@@ -61,8 +61,8 @@ const timingPanel = html => html.match(/<section class="panel yield-timing">[^]*
 test('Treasury yield guidance stays ongoing without adding dated releases or inheriting month and day filters', () => {
   const events = [calendarEvent(), calendarEvent({ id: 'another-day', date: '2026-12-04', scheduledAt: '2026-12-04T13:30:00Z' })];
   withCalendar(events, { status: 'ok', sources: { 'treasury-yield-timing': yieldTimingSource() } }, () => {
-    const november = render({ page: 'calendar', calendarMonth: '2026-11', day: '2026-11-06' });
-    const december = render({ page: 'calendar', calendarMonth: '2026-12', day: '2026-12-04' });
+    const november = render({ page: 'calendar', calendarView:'all', calendarMonth: '2026-11', day: '2026-11-06' });
+    const december = render({ page: 'calendar', calendarView:'all', calendarMonth: '2026-12', day: '2026-12-04' });
     const panel = timingPanel(november);
     assert.ok(panel, 'ongoing timing has its own visible panel');
     assert.equal(timingPanel(december), panel, 'dated filters must not turn general guidance into a dated promise');
@@ -75,7 +75,7 @@ test('Treasury yield guidance stays ongoing without adding dated releases or inh
     assert.match(panel, /href="#\/series\/yield"/);
     assert.doesNotMatch(panel, /SCHEDULED|RELEASED|2026-11-06|2026-12-04|data-event=|15:30/);
     assert.equal((november.match(/class="calendar-event/g) || []).length, 1);
-    assert.match(november, /1 RELEASES/);
+    assert.match(november, /1 EVENTS/);
     assert.match(november, /<dt>Captured events<\/dt><dd>2<\/dd>/);
   });
 });
@@ -83,16 +83,16 @@ test('Treasury yield guidance stays ongoing without adding dated releases or inh
 test('Treasury ongoing timing follows Rates and yield watchlist filters even when no dated Rates events exist', () => {
   withCalendar([calendarEvent()], { status: 'ok', sources: { 'treasury-yield-timing': yieldTimingSource() } }, () => {
     for (const filters of [{ calendarTopic: 'All topics' }, { calendarTopic: 'Rates' }, { calendarTopic: 'Rates', watchOnly: true, saved: ['yield'] }]) {
-      const html = render({ page: 'calendar', calendarMonth: '2026-11', ...filters });
+      const html = render({ page: 'calendar', calendarView:'all', calendarMonth: '2026-11', ...filters });
       assert.ok(timingPanel(html));
       assert.match(html, /<option value="Rates"/);
       if (filters.calendarTopic === 'Rates') {
-        assert.match(html, /0 RELEASES/);
+        assert.match(html, /0 EVENTS/);
         assert.doesNotMatch(html, /class="calendar-event/);
       }
     }
     for (const filters of [{ calendarTopic: 'Labor' }, { calendarTopic: 'Fiscal' }, { watchOnly: true, saved: ['debt'] }, { watchOnly: true, saved: [] }]) {
-      assert.equal(timingPanel(render({ page: 'calendar', calendarMonth: '2026-11', ...filters })), '');
+      assert.equal(timingPanel(render({ page: 'calendar', calendarView:'all', calendarMonth: '2026-11', ...filters })), '');
     }
   });
 });
@@ -122,7 +122,7 @@ test('initial timing failure stays unavailable without presenting an uncaptured 
   const failed = await refreshSnapshot({ calendarCollectors: { 'treasury-yield-timing': async () => { throw Error('Methodology unavailable'); } } });
   for (const calendar of [{ status: 'unavailable', sources: { 'treasury-yield-timing': source } }, { status: 'unavailable', sources: {} }, failed.calendar]) {
     withCalendar([], calendar, () => {
-      for (const state of [{ page: 'calendar' }, { page: 'indicator', seriesId: 'yield' }]) {
+      for (const state of [{ page: 'calendar',calendarView:'treasury' }, { page: 'indicator', seriesId: 'yield' }]) {
         const html = render(state), panel = timingPanel(html);
         assert.ok(panel);
         assert.match(panel, /TIMING UNAVAILABLE/);
@@ -140,14 +140,15 @@ test('HTML helpers escape untrusted values and expose declarative chart controls
   assert.match(chart(['unrate'], { range: 6, transform: 'change' }), /data-transform="change"/);
 });
 
-test('overview leads with six dated topics and separate inflation and labor trend panels', () => {
+test('overview retains six dated topics and trend panels after the publication briefing', () => {
  const html=render(),current=getSeries('unrate');
  assert.equal((html.match(/class="topic-card"/g)||[]).length,6);
  assert.ok(html.includes(formatValue(current,latest(current)?.value)));
  assert.match(html,/data-series="pceMonthly,pceCoreMonthly"/);
  assert.match(html,/data-series="payroll"/);
  assert.doesNotMatch(html,/data-chart[^>]*data-series="(?:pceMonthly|payroll),unrate"/);
- assert.match(html,/WHAT CHANGED/);assert.match(html,/NEXT CATALYSTS/);
+ assert.match(html,/VERIFIED RETAINED PUBLICATIONS/);assert.match(html,/NEXT CATALYSTS/);
+ assert.ok(html.indexOf('VERIFIED RETAINED PUBLICATIONS')<html.indexOf('class="topic-cards"'));
  assert.match(html,/Source health, coverage and methodology/);
  assert.doesNotMatch(html,/synthetic|sample week|sample observations/i);
 });
@@ -183,7 +184,7 @@ test('one employment release matches every related watchlist series and links th
       assert.equal((html.match(/class="calendar-event/g) || []).length, 1);
       assert.match(html, /Observation period not supplied/i);
       assert.match(html, /08:30 EST/);
-      for (const related of ['unrate', 'payroll', 'participation', 'wages']) assert.ok(html.includes(`href="#/series/${related}"`));
+      for (const related of ['unrate', 'payroll', 'participation', 'wages']) assert.ok(html.includes(`href="#/series/${related}?`));
       assert.match(html, /href="https:\/\/www\.bls\.gov\/schedule\/news_release\/bls\.ics"/);
     }
   });
@@ -249,7 +250,7 @@ test('Census retail schedule events match the retail watchlist and retain the or
   withCalendar([event], { status: 'ok', sources: { census: { status: 'ok', fetchedAt: '2026-10-21T12:00:00Z', warnings: [] } } }, () => {
     const html = render({ page: 'calendar', calendarMonth: '2026-11', watchOnly: true, saved: ['retail'], calendarTopic: 'Growth' });
     assert.equal((html.match(/class="calendar-event/g) || []).length, 1);
-    assert.match(html, /href="#\/series\/retail"/);
+    assert.match(html, /href="#\/series\/retail\?[^"]*return=/);
     assert.match(html, /U\.S\. Census Bureau, Advance Monthly Retail Trade Survey/);
     assert.match(html, /Individually listed date on the official agency schedule/);
     assert.match(html, /October 2026/);
@@ -273,7 +274,7 @@ test('DOL agency-rule dates match claims watchlists and explain their basis with
       assert.match(html, new RegExp(`08:30 ${timezone}`));
       assert.match(html, /Observation period not supplied/);
       assert.match(html, /Department of Labor, Employment and Training Administration/);
-      assert.match(html, /href="#\/series\/claims"/);
+      assert.match(html, /href="#\/series\/claims\?[^"]*return=/);
       assert.match(html, /agency &lt;rule&gt;/);
       assert.doesNotMatch(html, /Week ending|<rule>/);
     }
@@ -315,20 +316,20 @@ test('Treasury calendar estimates disclose their basis on debt watchlists with E
   const calendar = { status: 'ok', sources: { treasury: { status: 'ok', fetchedAt: '2026-10-21T12:00:00Z', coverageNote: 'Treasury dates are <estimates>.', warnings: [] } } };
   withCalendar(events, calendar, () => {
     for (const [month, time] of [['2026-10', '16:00 EDT'], ['2026-11', '15:00 EST']]) {
-      const html = render({ page: 'calendar', calendarMonth: month, watchOnly: true, saved: ['debt'], calendarTopic: 'Fiscal' });
+      const html = render({ page: 'calendar', calendarView:'treasury', calendarMonth: month, watchOnly: true, saved: ['debt'], calendarTopic: 'Fiscal' });
       assert.equal((html.match(/class="calendar-event/g) || []).length, 1);
       assert.match(html, /<span class="table-code muted">ESTIMATED · Observation period not supplied · Treasury Fiscal Data<\/span>/);
       assert.match(html, /<span class="pill">ESTIMATED<\/span>/);
       assert.ok(html.includes(time));
       assert.match(html, /U\.S\. Department of the Treasury, Bureau of the Fiscal Service/);
-      assert.match(html, /href="#\/series\/debt"/);
+      assert.match(html, /href="#\/series\/debt\?[^"]*return=/);
       assert.match(html, /Individually listed estimate on the official Fiscal Data calendar/);
       assert.match(html, /date and time may change/i);
       assert.match(html, /Treasury dates are &lt;estimates&gt;/);
       assert.doesNotMatch(html, /<estimates>|Observation period:|Period ending/);
     }
     for (const filters of [{ saved: ['cpi'], calendarTopic: 'Fiscal' }, { saved: ['debt'], calendarTopic: 'Labor' }]) {
-      const html = render({ page: 'calendar', calendarMonth: '2026-10', watchOnly: true, ...filters });
+      const html = render({ page: 'calendar', calendarView:'treasury', calendarMonth: '2026-10', watchOnly: true, ...filters });
       assert.match(html, /No releases match these filters/);
       assert.doesNotMatch(html, /class="calendar-event|class="detail-title"/);
     }
@@ -355,7 +356,7 @@ test('Treasury estimate deep links select the captured event and cached schedule
 test('Treasury estimates remain estimated after scheduled time has elapsed', () => {
   const event = calendarEvent({ id: 'treasury-debt-elapsed', sourceId: 'treasury', program: 'debt-to-the-penny', name: 'Debt to the Penny', agency: 'Treasury Fiscal Data', seriesId: 'debt', seriesIds: ['debt'], topic: 'Fiscal', scheduleBasis: 'calendar-estimate', date: '2000-01-03', time: '15:00', scheduledAt: '2000-01-03T20:00:00Z', sourceUrl: 'https://api.fiscaldata.treasury.gov/services/calendar/release' });
   withCalendar([event], { status: 'ok', sources: { treasury: { status: 'ok', fetchedAt: '2026-10-21T12:00:00Z' } } }, () => {
-    const html = render({ page: 'calendar', calendarMonth: '2000-01' });
+    const html = render({ page: 'calendar', calendarView:'treasury', calendarMonth: '2000-01' });
     assert.match(html, /<span class="pill">ESTIMATED<\/span>/);
     assert.match(html, /past scheduled time does not establish that a result was published/);
     assert.doesNotMatch(html, />RELEASED<|>PUBLISHED<|>ACTUAL<|>OUT<|>NEXT</i);
@@ -367,7 +368,8 @@ test('Overview leaves routine debt estimates in the full chronological calendar'
  const event=calendarEvent({id:'treasury-debt-upcoming',sourceId:'treasury',program:'debt-to-the-penny',name:'Debt to the Penny',agency:'Treasury Fiscal Data',seriesId:'debt',seriesIds:['debt'],topic:'Fiscal',scheduleBasis:'calendar-estimate',date,time:'16:00',scheduledAt:`${date}T20:00:00Z`,sourceUrl:'https://api.fiscaldata.treasury.gov/services/calendar/release'});
  withCalendar([event],{status:'ok',sources:{treasury:{status:'ok',fetchedAt:'2026-10-21T12:00:00Z'}}},()=>{
   assert.doesNotMatch(render(),/data-event="treasury-debt-upcoming"/);
-  const html=render({page:'calendar',calendarMonth:date.slice(0,7)});assert.match(html,/data-event="treasury-debt-upcoming"/);assert.match(html,/ESTIMATED/);
+  assert.doesNotMatch(render({page:'calendar',calendarMonth:date.slice(0,7)}),/data-event="treasury-debt-upcoming"/);
+  const html=render({page:'calendar',calendarView:'all',calendarMonth:date.slice(0,7)});assert.match(html,/data-event="treasury-debt-upcoming"/);assert.match(html,/ESTIMATED/);
  });
 });
 

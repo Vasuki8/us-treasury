@@ -22,7 +22,10 @@ test('Overview freeze retains new topic readings, actual brief evidence and next
  const args=buildPinContext(parseRoute('#/overview'));
  assert.deepEqual(args.state.selected,['gdp','pceCoreMonthly','payroll','policyTargetUpper']);
  assert.ok(args.context.overviewTopicReadings.some(item=>item.id==='claimsAdvance'&&item.latest.date));
- assert.ok(args.context.overviewBrief.some(item=>item.kind==='Verified published estimate'));
+ assert.ok(args.context.overviewBrief.some(item=>item.kind==='Latest revised observation'));
+ assert.ok(!args.context.overviewBrief.some(item=>item.kind==='Verified published estimate'),'unloaded archives cannot verify publications');
+ const reviewed=buildPinContext(parseRoute('#/overview'),{publicationContexts:{gdp:{status:'ready',archive:publicationArchive}}});
+ assert.ok(reviewed.context.overviewBrief.some(item=>item.kind==='Verified published estimate'));
  assert.ok(Array.isArray(args.context.nextCatalysts));
  const pkg=await createResearchPackage({name:'Overview evidence',...args}),text=exportResearchPackage(pkg);
  assert.deepEqual((await importResearchPackage(text)).context.overviewTopicReadings,pkg.context.overviewTopicReadings);
