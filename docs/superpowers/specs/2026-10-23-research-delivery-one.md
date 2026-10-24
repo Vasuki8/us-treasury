@@ -1,0 +1,27 @@
+# Research delivery one
+
+The user explicitly approved implementing release-evidence upkeep and CPI, a coverage inventory, longer GDP contribution history, a GDP revision matrix and funding percentile charts, guided by economist/investor agents and retaining the current UI and colors. This implements the selected first delivery; no new design-selection gate is needed.
+
+## Product design
+
+Extend native workflows rather than add a new shell. CPI belongs in existing Release evidence/Publication history/Calendar/Overview paths; GDP revision analysis belongs within GDP Publication history; Coverage inventory becomes a third Explore view; SOFR/EFFR distributions stay in Funding & market functioning. Reuse compact panels, tables, controls, disclosures, charts, existing palette tokens and mobile behavior.
+
+## Data and economic contracts
+
+- CPI: admit nine directly verified dated BLS Table A HTML editions for reference January–September2026, published February13/March11/April10/May12/June10/July14/August12/September11/October14. Exact dates/values/source headers are recorded in the task brief. Four measurements: headline/core monthly SA, headline/core twelve-month NSA. They are published percentage cells, distinct from the catalog's index-derived history. Use existing measurement IDs with an explicit publication measurement contract; never substitute current catalog values for release evidence.
+- CPI actual is the latest reference month in that edition. Monthly prior is the exact preceding month printed in the same Table A, separately labelled. Annual prior remains unavailable unless explicitly supplied. A difference between months is a movement, not a revision. A prior revision requires compatible same-measurement/same-month facts from different editions. Source strings, cells, raw-response hash and real retrieval receipt are retained.
+- Publication day has day precision; an embargo heading does not prove the actual publication instant. Unknown time stays null. Existing GDP/claims records and receipts are immutable.
+- Upkeep: check/archive coverage and discover official candidate editions; capture missing approved IDs idempotently. Unknown editions/changed layouts are a visible review queue, never silently admitted or treated as current verified results. Ongoing checks do not block unrelated current-data publication solely because a new archive edition needs review. Do not broaden existing GDP/claims source admission without reviewed source evidence.
+- GDP contributions: retain all available approved ten exact NIPA1.1.2 series within the existing400-quarter bound, preserving missing quarters, published import signs, SAAR percent/pp and five-component reconciliation. Component detail remains nested, never double counted. Earlier reference history is first captured now, not first released now. Refresh only this source; preserve old captures and frozen packages.
+- GDP matrix: one row per reference quarter using only archive facts on/before the chosen publication-day cutoff. Preserve source stage labels and dates. Advance; Second/Preliminary; Third/Final are explicit routine groups. Initial/Updated and missing stages remain exceptional/blank, never ordinal substitutes. Latest retained is archive-derived, not current NIPA history. Exclude explicit unchanged GDP confirmations from revision-opportunity statistics; distinguish the one evidenced annual update from unknown revision types. Pair statistics have independent eligible-quarter counts and preserve zero changes. Signed and absolute revisions are percentage points.
+- Coverage: one row per registered measurement including unavailable entries; expose reference-date bounds, usable/total observations, latest period, frequency/unit/adjustment, source/capture status. Official/calculated observation type is separate from revised/release/capture/publication history type. Coverage dates never imply publication-vintage coverage. Reuse existing search/topic/frequency filters; do not load every publication archive merely to render the inventory.
+- Funding: distinct SOFR and EFFR panels with median plus p25–p75 inner and p1–p99 outer bands from already retained published fields. Bands are transaction-rate distributions on each effective day, not time-series quantiles or confidence intervals. Missing endpoints make gaps only in that band; preserve median, zeros, exact dates, volume and revision flags. Do not subtract percentiles across populations. Add real shared history windows to the market page; label actual retained bounds. Existing specialist full-retained CSV stays byte-compatible and explicitly scoped.
+- Frozen results retain raw inputs, selected windows/cutoffs, methods, source rights/receipts and exact relevant CSVs. New views reconstruct from frozen inputs only. Existing packages and original exports remain valid.
+
+## Boundaries
+
+No new theme, layout replacement, consensus/surprise, price streaming, trading score, extra funding feed, background notification service, or API/account expansion. Do not mislabel a successful collection, elapsed schedule, newly captured history or imported record as a verified publication. Preserve exact current Light/Graphite tokens and all existing workflows.
+
+## Acceptance
+
+Verified source captures and scoped admissions; meaningful parser/method/history/freeze tests; economist/investor and independent code review; full regression/build; desktop and390/320px acceptance in both themes; live publication via the existing workflow and exact-asset verification.

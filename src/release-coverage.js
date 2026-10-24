@@ -1,11 +1,11 @@
 import {calendarRelatedIds} from './macro-calendar.js';
 import {getFreshness} from './freshness.js';
 import {releaseMeasurements,matchReleaseEvidence,selectReleaseEvidence} from './release-evidence.js';
+import {publicationFamily as family} from './publication-controller.js';
 import {escapeHtml as esc,panel,table} from './ui.js';
 
 const easternDay=now=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
 const chronological=(a,b)=>a.date.localeCompare(b.date)||String(a.time??'').localeCompare(String(b.time??''));
-const family=id=>id==='gdp'?'gdp':'claims';
 function publicationCoverage(id,latestDue,context){
  if(!releaseMeasurements[id])return {status:'unsupported',label:'Publication evidence not covered',date:null,retrievedAt:null,reason:'This program has no reviewed publication archive here. Latest revised readings and related schedules remain available.'};
  if(context?.status==='error')return {status:'unavailable',label:'Publication evidence unavailable',date:null,retrievedAt:null,reason:context.error??'The reviewed archive could not be loaded.'};
@@ -16,7 +16,7 @@ function publicationCoverage(id,latestDue,context){
 }
 
 /** Collection timeliness and release coverage are independent; no retry window establishes currentness. */
-export function releaseCoverage(catalog={},snapshot={}, {seriesIds=['gdp','payroll','pceCoreMonthly','claimsAdvance'],events=snapshot.releases??[],publicationContexts={},now=new Date()}={}) {
+export function releaseCoverage(catalog={},snapshot={}, {seriesIds=['gdp','cpiMonthly','payroll','pceCoreMonthly','claimsAdvance'],events=snapshot.releases??[],publicationContexts={},now=new Date()}={}) {
  const freshness=getFreshness(snapshot,{now}),today=easternDay(now),instant=now.getTime();
  return [...new Set(seriesIds)].flatMap(id=>{
   const current=catalog[id];if(!current)return [];

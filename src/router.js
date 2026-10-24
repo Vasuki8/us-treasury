@@ -15,7 +15,7 @@ export const defaults = {
   vintageCutoff:null,vintageSeries:'gdp',
   window:'1y',startDate:'',endDate:'',returnTo:null,
   macroFamily:'prices',macroMeasure:'cpiMonthly',laborGroup:'all',
-  researchView:'workspaces',packageId:'',changeSince:'',changePage:1,publicationCutoff:'',publicationPeriod:'',publicationSeries:'gdp',
+  researchView:'workspaces',packageId:'',changeSince:'',changePage:1,publicationCutoff:'',publicationPeriod:'',publicationSeries:'gdp',publicationMode:'quarter',
 };
 
 export const returnPages=['overview','explore','watchlist','macroCoverage','labor','fiscal','refinancing','yields','auctions','ownership','macro','vintages','market','credit','calendar'];
@@ -65,7 +65,8 @@ export function parseRoute(hash = '') {
     state.changeSince=(p.get('since')??'').slice(0,64);state.changePage=Math.max(1,Math.min(10000,Number.parseInt(p.get('changePage'),10)||1));
     state.publicationCutoff=(p.get('publishedBy')??'').slice(0,32);
     state.publicationPeriod=(p.get('period')??'').slice(0,16);
-    state.publicationSeries=['claimsAdvance','continuedClaimsAdvance'].includes(p.get('publicationSeries'))?p.get('publicationSeries'):'gdp';
+    state.publicationSeries=['claimsAdvance','continuedClaimsAdvance','cpi','cpiCore','cpiMonthly','cpiCoreMonthly'].includes(p.get('publicationSeries'))?p.get('publicationSeries'):'gdp';
+    state.publicationMode=state.publicationSeries==='gdp'&&p.get('publicationMode')==='matrix'?'matrix':'quarter';
     state.vintageCutoff=p.has('cutoff')?p.get('cutoff').slice(0,64):null;
     state.macroFamily=state.page==='labor'?'labor':Object.hasOwn(coverageFamilies,p.get('family'))?p.get('family'):'prices';
     state.macroMeasure=coverageFamilies[state.macroFamily].ids.includes(p.get('measure'))?p.get('measure'):coverageFamilies[state.macroFamily].defaultMeasure;
@@ -89,7 +90,7 @@ export function parseRoute(hash = '') {
     state.topic = topics.includes(p.get('topic')) ? p.get('topic') : 'All topics';
     state.frequency = frequencies.includes(p.get('frequency')) ? p.get('frequency') : 'All frequencies';
     if (p.has('selected')) state.selected = validIds(p.get('selected').split(','));
-    state.exploreMode = p.get('mode') === 'compare' ? 'compare' : 'catalog';
+    state.exploreMode = ['compare','coverage'].includes(p.get('mode')) ? p.get('mode') : 'catalog';
     state.comparison = ['indexed','difference'].includes(p.get('comparison')) ? p.get('comparison') : 'native';
     state.day = releases.some(event=>event.date===p.get('day')) ? p.get('day') : 'all';
     state.calendarMonth = releases.some(event => event.date.startsWith(p.get('month') + '-')) ? p.get('month') : !p.has('month') && state.day !== 'all' ? state.day.slice(0, 7) : 'upcoming';
@@ -113,7 +114,8 @@ export function routeFor(input) {
     if(state.changeSince)p.set('since',state.changeSince);if(state.changePage>1)p.set('changePage',String(state.changePage));
     if(state.publicationCutoff)p.set('publishedBy',state.publicationCutoff);
     if(state.publicationPeriod)p.set('period',state.publicationPeriod);
-    if(['claimsAdvance','continuedClaimsAdvance'].includes(state.publicationSeries))p.set('publicationSeries',state.publicationSeries);
+    if(['claimsAdvance','continuedClaimsAdvance','cpi','cpiCore','cpiMonthly','cpiCoreMonthly'].includes(state.publicationSeries))p.set('publicationSeries',state.publicationSeries);
+    if(state.publicationSeries==='gdp'&&state.publicationMode==='matrix')p.set('publicationMode','matrix');
   }
   if(state.page==='macroCoverage'){
     p.set('family',state.macroFamily);p.set('measure',state.macroMeasure);
@@ -151,7 +153,7 @@ export function routeFor(input) {
     if (state.query) p.set('q', state.query);
     if (state.topic !== 'All topics') p.set('topic', state.topic);
     if (state.frequency !== 'All frequencies') p.set('frequency', state.frequency);
-    if (state.exploreMode === 'compare') p.set('mode', 'compare');
+    if (['compare','coverage'].includes(state.exploreMode)) p.set('mode', state.exploreMode);
     if (['indexed','difference'].includes(state.comparison)) p.set('comparison', state.comparison);
   }
   if(['watchlist','macroCoverage','labor'].includes(state.page)){

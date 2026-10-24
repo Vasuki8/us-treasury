@@ -16,7 +16,7 @@ on:
     - cron: '37 23 * * *'
     # Catch a missed/delayed daily trigger; the guard skips completed captures.
     - cron: '17 0,1 * * *'
-    # GDP/claims 08:30 Eastern post-release checks across both DST offsets.
+    # GDP/claims/CPI 08:30 Eastern post-release checks across both DST offsets.
     # Bounded retries remain best effort; schedule time does not verify a result.
     - cron: '47 12,13,14 * * 1-5'
 
@@ -29,6 +29,38 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  publication_upkeep:
+    name: Report publication evidence upkeep
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the exact starting commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      - name: Install locked PDF collector dependency
+        run: npm ci --ignore-scripts
+
+      - name: Check approved scope and report new official candidates
+        run: node scripts/report-publication-upkeep.mjs
+
+      - name: Retain the read-only upkeep report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: publication-evidence-upkeep
+          path: publication-upkeep.json
+          if-no-files-found: warn
+          retention-days: 30
+
   refresh_check:
     name: Check daily and supported release refresh objectives
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh_data))

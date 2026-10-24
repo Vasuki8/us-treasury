@@ -8,7 +8,7 @@ test('only supported post-release windows request targeted sources',()=>{
  const snapshot={releases:[gdp,claims,{...gdp,id:'cpi',sourceId:'bls',program:'consumer-price-index'}],sources:{}};
  assert.deepEqual(api.getReleaseRefreshPlan(snapshot,{now:new Date('2026-10-29T12:44:59Z')}).sources,[]);
  const plan=api.getReleaseRefreshPlan(snapshot,{now:new Date('2026-10-29T12:47:00Z')});
- assert.equal(plan.required,true);assert.deepEqual(plan.sources,['bea','dolAdvance']);assert.equal(plan.events.length,2);
+ assert.equal(plan.required,true);assert.deepEqual(plan.sources,['bea','bls','dolAdvance']);assert.equal(plan.events.length,3);
  assert.equal(api.getReleaseRefreshPlan(snapshot,{now:new Date('2026-10-29T16:00:00Z')}).required,false);
 });
 test('fresh retrieval of an old result cannot mark a scheduled release verified or suppress retries',()=>{

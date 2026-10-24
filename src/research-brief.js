@@ -1,6 +1,6 @@
 import {releaseMeasurements,selectReleaseEvidence} from './release-evidence.js';
+import {publicationFamily as family} from './publication-controller.js';
 const labels={'first-capture':'First captured coverage','new-period':'New reference period','historical-backfill':'Historical backfill','value-change':'Observed change between retrievals','metadata-change':'Metadata update','observation-metadata-change':'Observation metadata update','coverage-removal':'Coverage removed'};
-const family=id=>id==='gdp'?'gdp':'claims';
 const newest=(field)=>(a,b)=>String(b[field]??'').localeCompare(String(a[field]??''));
 /** Curated overview only; the chronological full calendar remains unfiltered. */
 export function nextCatalysts(events,{now=new Date(),limit=4}={}) {
@@ -21,7 +21,7 @@ export function dailyBrief({catalog={},changes=[],failures=[],publicationContext
  const captures=[...changes].sort(newest('capturedAt')).slice(0,4).map(change=>({id:change.seriesId,category:'capture',kind:labels[change.kind]??'Retrieval change',period:change.period,publicationDate:null,retrievedAt:change.capturedAt,name:catalog[change.seriesId]?.name??change.seriesId,href:`#/research?view=changes&since=${encodeURIComponent(change.previousRetrievedAt??'')}`}));
  const attention=[...failures].sort(newest('fetchedAt')).map(failure=>({id:failure.id,category:'collection',kind:'Collection problem',period:null,publicationDate:null,retrievedAt:failure.fetchedAt??null,name:failure.error,href:'#/research?view=changes'}));
  const readings=['gdp','pceCoreMonthly','payroll'].flatMap(id=>{const current=catalog[id],row=current?.observations?.at(-1);return row?[{id,category:'reading',kind:'Latest revised observation',period:row.date,publicationDate:null,retrievedAt:current.fetchedAt??null,name:current.name,value:row.value,href:`#/series/${id}`}]:[];});
- return {publications:publications.sort(newest('publicationDate')),captures,attention,readings,publicationStates:{gdp:publicationContexts.gdp?.status??'idle',claims:publicationContexts.claims?.status??'idle'}};
+ return {publications:publications.sort(newest('publicationDate')),captures,attention,readings,publicationStates:{gdp:publicationContexts.gdp?.status??'idle',claims:publicationContexts.claims?.status??'idle',cpi:publicationContexts.cpi?.status??'idle'}};
 }
 /** Flat form is retained for frozen research packages; every row carries its evidence category. */
 export function evidenceBrief(options={}) {

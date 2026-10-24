@@ -43,3 +43,24 @@ test('collector retains official provenance and marks blocked CPI effects unavai
   assert.match(result.cpiCategoryEffects.methodology, /weights/i);
   await assert.rejects(() => collectMacroContributions({ fetchImpl: async () => Object.defineProperty(new Response(fixture()), 'redirected', { value: true }) }), /redirect/i);
 });
+
+test('default retains all approved contribution history within 400 quarters and preserves raw missing/zero fields', () => {
+  let text='%SeriesCode,Period,Value\r\n';
+  for(let i=0;i<401;i++){
+    const year=1900+Math.floor(i/4),q=i%4+1;
+    text+=fixture(i===200?[2.2,2.51,.82,'(NA)',.56,-1.66]:[2.2,2.51,.82,-.01,.56,-1.66],`${year}Q${q}`).split('\r\n').filter(line=>line&&!line.startsWith('%')&&!line.startsWith('A191RX')&&!line.startsWith('A191RL,2025,')).join('\r\n')+'\r\n';
+  }
+  text=text.replace('A007RY,1950Q1,1.28','A007RY,1950Q1,(NA)').replace('A014RY,1950Q1,-0.46','A014RY,1950Q1,0.00');
+  const result=parseMacroContributions(text);
+  assert.equal(result.quarterly.length,400);assert.equal(result.coverageStart,'1900-04-01');assert.equal(result.coverageEnd,'2000-01-01');
+  assert.equal(result.quarterly.find(r=>r.date==='1950-01-01').government,null);assert.equal(result.quarterly.find(r=>r.date==='1950-01-01').fixedInvestment,null);
+  assert.equal(result.series.gdpInventoriesContribution.observations.find(r=>r.date==='1950-01-01').value,0);assert.equal(result.series.gdpInventoriesContribution.observations.find(r=>r.date==='1950-01-01').sourceValue,'0.00');
+  assert.equal(result.series.gdpTotalContribution.observations[0].publishedAt,null);
+  assert.equal(parseMacroContributions(text,{limit:36}).quarterly.length,36);
+});
+
+test('absent quarters remain gaps rather than generated or forward-filled history', () => {
+ const gap=parseMacroContributions(fixture(undefined,'1947Q2')+fixture(undefined,'1947Q4').split('\r\n').slice(1).join('\r\n'));
+ assert.deepEqual(gap.quarterly.map(row=>row.date),['1947-04-01','1947-10-01']);
+ assert.deepEqual(gap.series.gdpConsumptionContribution.observations.map(row=>row.date),['1947-04-01','1947-10-01']);
+});

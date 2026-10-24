@@ -2,6 +2,7 @@ import { yieldCurve, dataStatus } from './data.js';
 import { getSeries, compareSeries, transformSeries, formatValue, periodLabel, observationCoverageLabel } from './model.js';
 import { selectCurveOverlays, NOMINAL_YIELD_TENORS } from './yields.js';
 import {createLinkedCursor} from './comparison-cursor.js';
+import {resolveDateWindow} from './date-window.js';
 
 const ns = 'http://www.w3.org/2000/svg';
 let chartId = 0;
@@ -23,7 +24,7 @@ function svgElement(name, attributes, parent, text) {
   return node;
 }
 
-function draw(container, panels, {height = 180, bars = false, curve = false, transformed = false,cursor=null,evidenceLabel='Official snapshot',yDomain} = {}) {
+function draw(container, panels, {height = 180, bars = false, curve = false, transformed = false,cursor=null,evidenceLabel='Official snapshot',yDomain,distribution=false} = {}) {
   container.replaceChildren();
   let domain;
   if(yDomain!==undefined){
@@ -34,7 +35,7 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   }
   const width = Math.max(210, Math.round(container.clientWidth));
   const right = 20;
-  const values = panels.flatMap(panel => panel.observations.map(o => o.value)).filter(finite);
+  const values = panels.flatMap(panel => panel.observations.flatMap(o => distribution?[o.value,o.percentile1,o.percentile25,o.percentile75,o.percentile99]:[o.value])).filter(finite);
   if (!values.length) { container.textContent = 'No observations available for this chart.'; return; }
   if(domain&&(values.some(value=>value<domain[0]||value>domain[1])||bars&&(domain[0]>0||domain[1]<0))){
     container.textContent='Chart configuration error: y-domain must cover every displayed value and any bar zero baseline.';return;
@@ -105,6 +106,20 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   });
   panels.forEach((panel,index) => {
     const className = curve && index>0 ? ' previous' : ['', ' secondary', ' tertiary', ' quaternary'][index];
+    if(distribution) {
+      // Each band has its own availability calendar; a missing median cannot erase it.
+      for(const [name,low,high,opacity] of [['outer','percentile1','percentile99',.12],['inner','percentile25','percentile75',.26]]) {
+        const segments=[];let segment=[];
+        for(const observation of panel.observations) {
+          if(finite(observation[low])&&finite(observation[high]))segment.push(observation);
+          else if(segment.length){segments.push(segment);segment=[];}
+        }
+        if(segment.length)segments.push(segment);
+        const path=segments.map(rows=>rows.map((o,i)=>`${i?'L':'M'}${xDate(o.date).toFixed(2)} ${y(o[high]).toFixed(2)}`).join(' ')
+          +' '+[...rows].reverse().map(o=>`L${xDate(o.date).toFixed(2)} ${y(o[low]).toFixed(2)}`).join(' ')+' Z').join(' ');
+        svgElement('path',{d:path,class:`funding-band ${name}`,fill:'var(--accent)','fill-opacity':opacity,stroke:'none','aria-hidden':'true'},svg);
+      }
+    }
     if (bars) {
       const barWidth = Math.max(4,Math.min(30,pw/orderedDates.length*.6));
       panel.observations.filter(o=>finite(o.value)).forEach(o => {
@@ -145,12 +160,19 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
       dots[panelIndex].setAttribute('cy',finite(value)?y(value):top);
       dots[panelIndex].setAttribute('visibility',finite(value)?'visible':'hidden');
       const span=document.createElement('span');
-      const label=curve?panel.label:panel.series.short;
+      const label=distribution?'Median':curve?panel.label:panel.series.short;
       const isIndex = panel.unit.startsWith('Index');
       const display = !finite(value)?'—':isIndex?value.toFixed(2):transformed?`${value.toFixed(panel.series.precision)} ${panel.unit}`:formatValue(panel.series,value);
       span.className = `readout-series series-${panelIndex}`;
       span.append(`${label} `);
       const strong=document.createElement('strong'); strong.textContent=display; span.append(strong);
+      if(distribution){
+        for(const [label,field] of [['p1','percentile1'],['p25','percentile25'],['p75','percentile75'],['p99','percentile99']]) {
+          const value=observation?.[field];span.append(` · ${label} ${finite(value)?`${value.toFixed(2)}%`:'—'}`);
+        }
+        const volume=observation?.volumeInBillions;
+        span.append(` · Volume ${finite(volume)?`$${volume.toLocaleString('en-US',{maximumFractionDigits:12})}B`:'—'} (USD billions) · Revision flag ${observation?.revisionIndicator||'not supplied'}`);
+      }
       const coverage=observationCoverageLabel(observation);if(coverage)span.append(` · ${coverage}`);
       if(!observation)span.append(' · no observation on this reference date');
       else if(!finite(value))span.append(' · source value unavailable');
@@ -208,6 +230,16 @@ export function renderCharts(root,{catalog,chartCatalogs={}}={}) {
     }
     const ids=(scoped?container.dataset.series??'':container.dataset.series).split(',').filter(Boolean);
     if(scoped&&(!ids.length||ids.some(id=>!lookup(id)))){container.textContent='Chart data unavailable: one or more selected series are unavailable in the requested chart catalog.';return;}
+    const distribution=kind==='funding-distribution';
+    const fundingSpread=scoped&&container.dataset.chartCatalog==='funding'&&ids.length===1&&ids[0]==='sofrEffrSpread'&&kind==='line'&&transform==='level'&&comparison==='native';
+    if(distribution||fundingSpread){
+      if(distribution&&(!scoped||container.dataset.chartCatalog!=='funding'||ids.length!==1||!['sofr','effr'].includes(ids[0])||transform!=='level'||comparison!=='native')){
+        container.textContent='Chart configuration error: funding distributions require one bound SOFR or EFFR population in published levels.';return;
+      }
+      const window=resolveDateWindow(range,Object.values(selectedCatalog)),panel=transformSeries(lookup(ids[0]),'level',range,window);
+      if(panel.error){container.textContent=panel.error;return;}
+      draw(container,[panel],{height,evidenceLabel,yDomain:container.dataset.yDomain,distribution});return;
+    }
     const result=comparison!=='native'||container.dataset.panelId?compareSeries(ids,comparison,range,selectedCatalog):{panels:ids.map(id=>transformSeries(lookup(id),transform,range))};
     if(comparison==='native'&&container.dataset.panelId&&transform!=='level'&&!result.error)result.panels=result.panels.map(panel=>transformSeries(panel.series,transform,range,result.window));
     result.error??=result.panels?.find(panel=>panel.error)?.error;

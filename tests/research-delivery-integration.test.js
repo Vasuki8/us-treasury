@@ -1,0 +1,73 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as contexts from '../src/research-context.js';
+import {parseRoute} from '../src/router.js';
+import {series,dataStatus,releases} from '../src/data.js';
+import {publicationArchive} from '../src/publication-archive.js';
+import {createResearchPackage,exportResearchPackage,importResearchPackage} from '../src/research-packages.js';
+import {buildCoverageInventory} from '../src/coverage-inventory.js';
+import {researchPage} from '../src/research-page.js';
+import {renderPage} from '../src/pages.js';
+
+test('CPI calendar and all four indicator measurements link to published evidence without claiming an exact publication time',()=>{
+ const event=releases.find(row=>row.sourceId==='bls'&&row.program==='consumer-price-index');assert.ok(event);
+ const calendar=renderPage(parseRoute('#/calendar?event='+event.id+'&month='+event.date.slice(0,7)));
+ assert.match(calendar,/OPEN RELEASE EVIDENCE/);assert.match(calendar,/publicationSeries=cpiMonthly/);
+ for(const id of ['cpi','cpiCore','cpiMonthly','cpiCoreMonthly']){
+  const html=renderPage(parseRoute('#/series/'+id));
+  assert.match(html,/VERIFIED RELEASE &amp; PUBLICATION EVIDENCE/);assert.match(html,new RegExp('publicationSeries='+id));
+  assert.match(html,/Published CPI rates use the dated release/);
+ }
+});
+
+test('the actual market page dispatch passes its selected window to every funding chart',()=>{
+ const html=renderPage(parseRoute('#/market?window=custom&start=2026-09-01&end=2026-10-22'));
+ const charts=[...html.matchAll(/<div[^>]*data-chart-catalog="funding"[^>]*>/g)].map(x=>x[0]);assert.equal(charts.length,3);
+ for(const chart of charts){assert.match(chart,/2026-09-01/);assert.match(chart,/2026-10-22/);assert.match(chart,/custom/);}
+});
+
+test('funding freeze retains the exact selected range, source percentiles and original specialist CSV',async()=>{
+ const args=contexts.buildPinContext(parseRoute('#/market?window=custom&start=2026-09-01&end=2026-10-22'));
+ assert.deepEqual(args.context.fundingDistributions,{version:1,range:{preset:'custom',startDate:'2026-09-01',endDate:'2026-10-22'}});
+ const original=args.context.attachments.find(x=>x.name==='market-functioning.csv').content;
+ const pkg=await createResearchPackage({name:'Funding distributions',...args}),restored=await importResearchPackage(exportResearchPackage(pkg));
+ assert.deepEqual(restored.context.moduleSources.marketFunctioning.series.sofr.observations,args.context.moduleSources.marketFunctioning.series.sofr.observations);
+ assert.equal(restored.context.attachments.find(x=>x.name==='market-functioning.csv').content,original);
+ const html=researchPage(parseRoute('#/research?view=packages&package='+pkg.id),{library:{packages:[restored]}});
+ assert.match(html,/FROZEN SOFR RATE DISTRIBUTION/);assert.match(html,/data-chart-catalog="funding"/);
+});
+
+test('coverage freeze reconstructs metadata from retained inputs and puts inventory before scalar histories',async()=>{
+ const state=parseRoute('#/explore?mode=coverage&q=unemployment&topic=Labor');
+ const live=buildCoverageInventory(series,state),args=contexts.buildPinContext(state);
+ assert.ok(args.context.coverageInventory);assert.equal(args.context.coverageInventory.version,1);
+ const pkg=await createResearchPackage({name:'Coverage inventory',...args}),restored=await importResearchPackage(exportResearchPackage(pkg));
+ const frozen=restored.context.coverageInventory,replayed=buildCoverageInventory(frozen.catalog,{...frozen.filters,registeredCount:frozen.registeredCount,publicationContexts:frozen.publicationContexts});
+ assert.deepEqual(replayed.rows.map(x=>[x.id,x.firstReference,x.lastReference,x.usableCount,x.totalCount]),live.rows.map(x=>[x.id,x.firstReference,x.lastReference,x.usableCount,x.totalCount]));
+ assert.ok(restored.context.attachments.some(x=>x.name==='coverage-inventory.csv'));
+ const html=researchPage(parseRoute('#/research?view=packages&package='+pkg.id),{library:{packages:[restored]}});
+ assert.match(html,/FROZEN COVERAGE INVENTORY/);assert.doesNotMatch(html,/data-chart/);
+});
+
+test('full GDP matrix pins retain archive cutoff and original CSV inside the portable limit',async()=>{
+ assert.equal(typeof contexts.buildGdpMatrixPin,'function');
+ const args=contexts.buildGdpMatrixPin(publicationArchive,'2026-09-30');
+ assert.equal(args.context.gdpRevisionMatrix.version,1);assert.equal(args.context.gdpRevisionMatrix.cutoff,'2026-09-30');
+ const original=args.context.attachments.find(x=>x.name==='gdp-revision-matrix.csv').content;
+ const pkg=await createResearchPackage({name:'GDP revision matrix',...args}),json=exportResearchPackage(pkg);assert.ok(Buffer.byteLength(json)<12*1024*1024);
+ const restored=await importResearchPackage(json);assert.equal(restored.context.attachments.find(x=>x.name==='gdp-revision-matrix.csv').content,original);
+ assert.equal(restored.context.gdpRevisionMatrix.archive.releases.length,publicationArchive.releases.length);
+ const html=researchPage(parseRoute('#/research?view=packages&package='+pkg.id),{library:{packages:[restored]}});
+ assert.match(html,/OFFICIAL GDP REVISION MATRIX/);assert.match(html,/Frozen publication cutoff: 2026-09-30/);assert.doesNotMatch(html,/id="publication-cutoff"|data-pin-gdp-matrix|data-chart/);
+});
+
+test('CPI publication pins preserve published rates and source basis rather than the live index-derived history',async()=>{
+ assert.equal(typeof contexts.buildCpiPublicationPin,'function');const {cpiPublicationArchive}=await import('../src/cpi-publication-archive.js');
+ for(const id of ['cpiMonthly','cpiCoreMonthly','cpi','cpiCore']){
+  const args=contexts.buildCpiPublicationPin(cpiPublicationArchive,id,'2026-10-14','2026-09-01'),captured=args.catalog[id];
+  assert.equal(captured.observationType,'official');assert.equal(captured.precision,1);assert.equal(captured.observations[0].publishedAt,null);assert.ok(captured.unit);
+  assert.equal(captured.adjustment,id.includes('Monthly')?'Seasonally adjusted':'Not seasonally adjusted');
+  const pkg=await createResearchPackage({name:'CPI published '+id,...args}),restored=await importResearchPackage(exportResearchPackage(pkg));
+  assert.equal(restored.context.publicationSeries,id);assert.ok(restored.context.attachments.some(x=>x.name==='cpi-publication-history.csv'));assert.equal(restored.catalog[id].observations[0].value,captured.observations[0].value);
+ }
+});

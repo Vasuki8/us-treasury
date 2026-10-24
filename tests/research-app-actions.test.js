@@ -5,7 +5,12 @@ import {createWorkspace,openWorkspace,MAX_RESEARCH_JSON_BYTES} from '../src/rese
 import {createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv} from '../src/research-packages.js';
 import {createResearchLibrary as createLibrary} from '../src/research-library.js';
 const createResearchLibrary=storage=>createLibrary(storage,{locks:{request:async(_name,_options,callback)=>callback()}});
-import {buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin} from '../src/research-context.js';
+import {buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin,buildCpiPublicationPin,buildGdpMatrixPin} from '../src/research-context.js';
+import {cpiPublicationArchive} from '../src/cpi-publication-archive.js';
+import {cpiPublicationIds,cpiPublicationCsv,selectCpiPublicationHistory} from '../src/cpi-publication-history.js';
+import {gdpRevisionMatrixCsv} from '../src/gdp-revision-matrix.js';
+import {buildCoverageInventory,coverageInventoryCsv} from '../src/coverage-inventory.js';
+import {fundingChartCatalog} from '../src/funding-distribution.js';
 import {parseRoute,routeFor} from '../src/router.js';
 import {updateWorkspaceSelection} from '../src/workspace-context.js';
 import {normalizedCutoff} from '../src/vintages-page.js';
@@ -55,6 +60,7 @@ async function app(hash='#/series/gdp?window=all',{archive=publicationArchive,ex
  const env={createWorkspace,openWorkspace,createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,MAX_RESEARCH_JSON_BYTES,buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin,selectClaimsPublicationHistory,claimsPublicationCsv,claimsPublicationIds,normalizedCutoff,normalizeVintageTimestamp,researchLibrary,parseRoute,routeFor,updateWorkspaceSelection,dataStatus,series,getSeries,publicationArchive:archive,publicationState:{status:publicationStatus},publicationExplanations:explanations,explanationState:{status:explanationStatus},publicationExplanationsCsv,publicationCsv,selectPublicationHistory,periodLabel,changesCsv,writeChangeCheckpoint,storage,
   publicationController:{context:()=>({status:publicationStatus,archive})},state:{...parseRoute(hash),saved:[]},activeWorkspaceId:null,researchLabel:'',pinBusy:false,changeCheckpoint:{enabled:true,since:'2026-10-01T12:00:00.000Z',snapshotAt:'2026-10-01T12:00:00.000Z'},changeState:{status:'ready',history:{captures:[]}},historyController:{context:()=>({historyState:{status:'idle'}})},
   document:{getElementById:id=>inputs.get(id)},location,history,watchDisclosureCharts,main:{addEventListener:(name,callback,capture)=>{assert.equal(name,'toggle');assert.equal(capture,true);listeners.set(name,callback);}},window:{addEventListener:(name,callback)=>listeners.set(name,callback)},cancelAnimationFrame(){},requestAnimationFrame(callback){callback();return 1;},render(){},rememberWorkspace(){},announce:message=>announcements.push(message),renderCharts:(root,options)=>{chartRoots.push(root);chartCalls.push(options);},downloadCsv:(content,name)=>downloads.push({content,name}),downloadJson:pkg=>downloads.push({content:exportResearchPackage(pkg),name:'json'}),changesContext:()=>({status:'ready',rows:[]}),syncChanges(){}};
+ Object.assign(env,{buildCpiPublicationPin,buildGdpMatrixPin,cpiPublicationIds,cpiPublicationCsv,selectCpiPublicationHistory,gdpRevisionMatrixCsv,buildCoverageInventory,coverageInventoryCsv,fundingChartCatalog});
  const change=/root\.addEventListener\('change',async event=>\{([^]*?)\n\}\);/.exec(source);assert.ok(change,'App change delegation must exist');
  const code=`let {${Object.keys(env).join(',')}}=env;\n`
   +section('function trackedChanges()','function syncPublications(')
@@ -170,4 +176,19 @@ test('the actual disclosure callback redraws only the expanded section with its 
  toggle({target:section});assert.equal(current.chartRoots.at(-1),section);assert.equal(current.chartCalls.at(-1).catalog,pkg.catalog);
  current.navigate({page:'indicator',seriesId:'gdp'});toggle({target:section});assert.equal(current.chartRoots.at(-1),section);assert.equal(current.chartCalls.at(-1).catalog,undefined);
  const calls=current.chartCalls.length;section.open=false;toggle({target:section});assert.equal(current.chartCalls.length,calls);
+});
+
+test('actual CPI publication selection, CSV and pin actions use published monthly evidence',async()=>{
+ const current=await app('#/research?view=publications&publicationSeries=cpiMonthly&period=2026-09-01&publishedBy=2026-10-14',{archive:cpiPublicationArchive});
+ await current.handleResearchAction({exportPublications:''});assert.match(current.downloads[0].name,/cpi/);assert.match(current.downloads[0].content,/cpiMonthly/);assert.doesNotMatch(current.downloads[0].name,/gdp/);
+ await current.handleResearchAction({pinPublication:''});const pkg=current.researchLibrary.getPackage(current.state().packageId);
+ assert.equal(pkg.context.publicationSeries,'cpiMonthly');assert.equal(pkg.catalog.cpiMonthly.observations[0].value,0.6);assert.equal(pkg.catalog.cpiMonthly.adjustment,'Seasonally adjusted');
+ const selector=await app('#/research?view=publications');await selector.changeHandler({target:{id:'publication-series',value:'cpiCore'}});assert.equal(selector.state().publicationSeries,'cpiCore');
+});
+
+test('actual GDP matrix and coverage exports preserve their selected scope and frozen result context',async()=>{
+ const current=await app('#/research?view=publications&publicationMode=matrix&publishedBy=2026-09-30');
+ await current.handleResearchAction({exportGdpMatrix:''});assert.equal(current.downloads.length,1);assert.match(current.downloads[0].name,/revision-matrix/);
+ await current.handleResearchAction({pinGdpMatrix:''});const pkg=current.researchLibrary.getPackage(current.state().packageId);assert.equal(pkg.context.gdpRevisionMatrix.cutoff,'2026-09-30');
+ const coverage=await app('#/explore?mode=coverage&q=unemployment&topic=Labor');await coverage.handleResearchAction({exportCoverage:''});assert.equal(coverage.downloads.length,1);assert.match(coverage.downloads[0].content,/first_reference_date/);assert.doesNotMatch(coverage.downloads[0].content,/^cpi,/m);
 });

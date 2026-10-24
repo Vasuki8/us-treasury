@@ -2,11 +2,16 @@ import {isIsoDate} from './date-window.js';
 
 /** Reviewed release identities. Current revised feeds cannot satisfy this contract. */
 export const releaseMeasurements=Object.freeze({
+ cpiMonthly:Object.freeze({name:'Headline CPI · monthly published rate',sourceId:'bls',program:'consumer-price-index',unit:'Percent change from preceding month',frequency:'Monthly',adjustment:'Seasonally adjusted'}),
+ cpiCoreMonthly:Object.freeze({name:'Core CPI · monthly published rate',sourceId:'bls',program:'consumer-price-index',unit:'Percent change from preceding month',frequency:'Monthly',adjustment:'Seasonally adjusted'}),
+ cpi:Object.freeze({name:'Headline CPI · twelve-month published rate',sourceId:'bls',program:'consumer-price-index',unit:'Percent change over twelve months',frequency:'Monthly',adjustment:'Not seasonally adjusted'}),
+ cpiCore:Object.freeze({name:'Core CPI · twelve-month published rate',sourceId:'bls',program:'consumer-price-index',unit:'Percent change over twelve months',frequency:'Monthly',adjustment:'Not seasonally adjusted'}),
  gdp:Object.freeze({name:'Real GDP growth',sourceId:'bea',program:'gdp',unit:'Percent change from preceding quarter, annualized',frequency:'Quarterly',adjustment:'Seasonally adjusted annual rate'}),
  claimsAdvance:Object.freeze({name:'Initial claims',sourceId:'dol',program:'weekly-claims',unit:'Thousands of claims',frequency:'Weekly',adjustment:'Seasonally adjusted'}),
  continuedClaimsAdvance:Object.freeze({name:'Continued claims',sourceId:'dol',program:'weekly-claims',unit:'Thousands of continued claims',frequency:'Weekly',adjustment:'Seasonally adjusted'}),
 });
 const priorStages=new Set(['prior-week-revised','prior-week-unrevised','prior-week-status-unknown']);
+const isCpi=id=>['cpiMonthly','cpiCoreMonthly','cpi','cpiCore'].includes(id);
 const claimsEstimates={advance:'Advance','prior-week-revised':'Revised prior','prior-week-unrevised':'Unrevised prior','prior-week-status-unknown':'Prior comparison (status unknown)'};
 const gdpEstimates=new Set(['Advance','Second','Third','Preliminary','Final','Initial','Updated','Revised']);
 const gdpWorkbooks=new Set(['https://www.bea.gov/sites/default/files/2026-06/gdp-gdi-vintage-history.xlsx','https://www.bea.gov/sites/default/files/2026-09/gdp-gdi-vintage-history.xlsx']);
@@ -16,6 +21,7 @@ function officialEvidence(row,seriesId){
   const url=new URL(row.releaseEvidenceUrl);
   if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash||url.port)return false;
   if(seriesId==='gdp')return gdpWorkbooks.has(row.sourceUrl)&&url.hostname==='www.bea.gov'&&(gdpWorkbooks.has(url.href)||url.pathname.startsWith('/news/'));
+  if(isCpi(seriesId)){const date=row.publicationDate;return row.sourceUrl===url.href&&url.hostname==='www.bls.gov'&&url.pathname===`/news.release/archives/cpi_${date.slice(5,7)}${date.slice(8,10)}${date.slice(0,4)}.htm`;}
   const date=row.publicationDate,datedPdf=`/press/${date.slice(0,4)}/${date.slice(5,7)}${date.slice(8,10)}${date.slice(2,4)}.pdf`;
   const admittedEdition='https://www.dol.gov/sites/dolgov/files/OPA/newsreleases/ui-claims/20230700.pdf';
   return row.sourceUrl===row.releaseEvidenceUrl&&(url.hostname==='oui.doleta.gov'&&url.pathname===datedPdf||date==='2023-04-13'&&url.href===admittedEdition);
@@ -29,6 +35,10 @@ function validReceipt(row){
 const sameMeasurement=(row,seriesId)=>{
  const measurement=releaseMeasurements[seriesId];
  if(!measurement||!row||typeof row!=='object'||Array.isArray(row)||row.seriesId!==seriesId||!['unit','frequency','adjustment'].every(key=>row[key]===measurement[key])||!isIsoDate(row.period)||!isIsoDate(row.publicationDate)||row.period>row.publicationDate||row.publicationDatePrecision!=='day'||row.publishedAt!==null||!Number.isFinite(row.value)||!validReceipt(row)||!officialEvidence(row,seriesId))return false;
+ if(isCpi(seriesId)){
+  const monthly=seriesId.endsWith('Monthly'),rowId=seriesId.includes('Core')?'cpi_pressa.r.1.3':'cpi_pressa.r.1',columnId=monthly?`cpi_pressa.h.2.${row.releaseStage==='prior-month'?'7':'8'}`:'cpi_pressa.h.1.9';
+  return /^\d{4}-\d{2}-01$/.test(row.period)&&['published','prior-month'].includes(row.releaseStage)&&(row.releaseStage!=='prior-month'||monthly)&&row.estimate===(row.releaseStage==='published'?'Published':'Prior month in same release')&&row.id===`bls-${seriesId}-${row.period}-${row.releaseStage}-${row.publicationDate}`&&row.sourceIds?.length===1&&row.sourceIds[0]===`BLS/CPI-U/Table-A/${seriesId}`&&row.sourceCells?.table==='cpi_pressa'&&row.sourceCells.row===rowId&&row.sourceCells.column===columnId&&row.sourceCells.headers===`${rowId} ${monthly?'cpi_pressa.h.1.2 ':''}${columnId}`&&typeof row.sourceValue==='string'&&/^-?\d+\.\d$/.test(row.sourceValue)&&Number(row.sourceValue)===row.value;
+ }
  const gdp=seriesId==='gdp',sourceId=gdp?'A191RL':seriesId==='claimsAdvance'?'InitialClaims/SA/Release':'ContinuedClaims/SA/Release';
  if(!Array.isArray(row.sourceIds)||row.sourceIds.length!==1||row.sourceIds[0]!==sourceId)return false;
  if(gdp)return /^\d{4}-(?:01|04|07|10)-01$/.test(row.period)&&gdpEstimates.has(row.estimate)&&row.id===`bea-gdp-${row.period.slice(0,4)}q${(Number(row.period.slice(5,7))+2)/3}-${row.estimate.toLowerCase()}-${row.publicationDate}`;
@@ -37,6 +47,7 @@ const sameMeasurement=(row,seriesId)=>{
 const archiveRows=archive=>Array.isArray(archive?.releases)?archive.releases:[];
 const delta=(row,previous)=>row&&previous&&row.seasonalAdjustmentKind!=='applied-update'?Number((row.value-previous.value).toFixed(12)):null;
 const previousWeek=date=>new Date(Date.parse(date+'T12:00:00Z')-7*86400000).toISOString().slice(0,10);
+const previousMonth=date=>new Date(Date.UTC(Number(date.slice(0,4)),Number(date.slice(5,7))-2,1)).toISOString().slice(0,10);
 function uniqueEarlier(rows,period,date){
  const candidates=rows.filter(row=>row.period===period&&row.publicationDate<date).sort((a,b)=>a.publicationDate.localeCompare(b.publicationDate));
  const last=candidates.at(-1);return last&&candidates.filter(row=>row.publicationDate===last.publicationDate).length===1?last:null;
@@ -47,7 +58,7 @@ export function releaseEventIdentity(event,seriesId='gdp'){
  const measurement=releaseMeasurements[seriesId];
  if(!measurement||event?.sourceId!==measurement.sourceId||event?.program!==measurement.program||!isIsoDate(event.date))return null;
  if(event.period!==null&&event.period!==undefined&&event.period!==''&&!isIsoDate(event.period))return null;
- if(seriesId!=='gdp')return {seriesId,period:isIsoDate(event.period)?event.period:null,stage:'advance'};
+ if(seriesId!=='gdp')return {seriesId,period:isIsoDate(event.period)?event.period:null,stage:isCpi(seriesId)?'published':'advance'};
  const text=[event.periodLabel,event.name].filter(Boolean).join(' '),quarter=/\b([1-4])(?:st|nd|rd|th) Quarter(?: and Year)? (\d{4})\b/.exec(text);
  const namedPeriod=quarter?`${quarter[2]}-${String((Number(quarter[1])-1)*3+1).padStart(2,'0')}-01`:null;
  const period=isIsoDate(event.period)?event.period:namedPeriod;
@@ -60,7 +71,7 @@ function joinedEvidence(actual,rows,event){
  const seriesId=actual.seriesId,earlierPublication=uniqueEarlier(rows,actual.period,actual.publicationDate);
  let sameReleasePrior=null,earlierPrior=null;
  if(seriesId!=='gdp'){
-  const priors=rows.filter(row=>row.period===previousWeek(actual.period)&&row.publicationDate===actual.publicationDate&&row.releaseEvidenceUrl===actual.releaseEvidenceUrl&&priorStages.has(row.releaseStage));
+  const priors=rows.filter(row=>row.period===(isCpi(seriesId)?previousMonth(actual.period):previousWeek(actual.period))&&row.publicationDate===actual.publicationDate&&row.releaseEvidenceUrl===actual.releaseEvidenceUrl&&(isCpi(seriesId)?row.releaseStage==='prior-month':priorStages.has(row.releaseStage)));
   if(priors.length===1){sameReleasePrior=priors[0];earlierPrior=uniqueEarlier(rows,sameReleasePrior.period,actual.publicationDate);}
  }
  return {status:'verified',reason:'Matched retained official publication evidence.',seriesId,event,period:actual.period,actual,earlierPublication,sameReleasePrior,earlierPrior,revision:delta(actual,earlierPublication),priorRevision:delta(sameReleasePrior,earlierPrior)};
@@ -72,7 +83,7 @@ export function matchReleaseEvidence(event,archive,{seriesId='gdp',period='',pub
  if(!identity)return unavailable(releaseMeasurements[seriesId]&&event?.sourceId===releaseMeasurements[seriesId].sourceId&&event?.program===releaseMeasurements[seriesId].program?'unavailable':'unsupported','No reviewed measurement, reference period and estimate-stage mapping for this schedule.',seriesId,event);
  if(publicationCutoff&&(!isIsoDate(publicationCutoff)||event.date>publicationCutoff))return unavailable('unavailable','The scheduled publication is outside the selected publication-day cutoff.',seriesId,event);
  const rows=archiveRows(archive).filter(row=>sameMeasurement(row,seriesId));
- const matches=rows.filter(row=>row.publicationDate===event.date&&(!identity.period||row.period===identity.period)&&(!period||row.period===period)&&(seriesId==='gdp'?row.estimate===identity.stage:row.releaseStage==='advance'));
+ const matches=rows.filter(row=>row.publicationDate===event.date&&(!identity.period||row.period===identity.period)&&(!period||row.period===period)&&(seriesId==='gdp'?row.estimate===identity.stage:row.releaseStage===identity.stage));
  if(matches.length!==1)return unavailable(matches.length>1?'ambiguous':'unavailable',matches.length>1?'Multiple matching publication facts; no result selected.':'No matching retained official result. A scheduled time does not verify publication.',seriesId,event);
  return joinedEvidence(matches[0],rows,event);
 }
@@ -81,7 +92,7 @@ export function matchReleaseEvidence(event,archive,{seriesId='gdp',period='',pub
 export function selectReleaseEvidence(archive,{seriesId='gdp',period='',publicationCutoff=''}={}){
  if(!releaseMeasurements[seriesId]||period&&!isIsoDate(period)||publicationCutoff&&!isIsoDate(publicationCutoff))return unavailable('unavailable','Invalid reviewed publication selection.',seriesId);
  const rows=archiveRows(archive).filter(row=>sameMeasurement(row,seriesId));
- const eligible=rows.filter(row=>(!period||row.period===period)&&(!publicationCutoff||row.publicationDate<=publicationCutoff)&&(seriesId==='gdp'||row.releaseStage==='advance'));
+ const eligible=rows.filter(row=>(!period||row.period===period)&&(!publicationCutoff||row.publicationDate<=publicationCutoff)&&(seriesId==='gdp'||row.releaseStage===(isCpi(seriesId)?'published':'advance')));
  const selectedPeriod=period||eligible.map(row=>row.period).sort().at(-1),ordered=eligible.filter(row=>row.period===selectedPeriod).sort((a,b)=>a.publicationDate.localeCompare(b.publicationDate));
  const actual=ordered.at(-1);
  if(!actual)return unavailable('unavailable','No retained publication for this measurement, period and cutoff. Current observations are not substituted.',seriesId);

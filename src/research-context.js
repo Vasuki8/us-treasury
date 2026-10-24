@@ -18,7 +18,10 @@ import {macroContributionsCsv} from './macro-page.js';
 import {marketFunctioningCsv} from './market-functioning-page.js';
 import {fiscalFinancingCsv} from './research-exports.js';
 import {selectPublicationHistory,publicationCsv,publicationContext} from './publication-history.js';
-import {periodLabel,transformSeries} from './model.js';
+import {periodLabel,transformSeries,BLS_DATA_NOTICE} from './model.js';
+import {cpiPublicationIds,selectCpiPublicationHistory,cpiPublicationCsv} from './cpi-publication-history.js';
+import {buildGdpRevisionMatrix,gdpRevisionMatrixCsv} from './gdp-revision-matrix.js';
+import {buildCoverageInventory,coverageInventoryCsv} from './coverage-inventory.js';
 import {publicationExplanationRows,publicationExplanationsCsv} from './publication-explanation-view.js';
 import {selectClaimsPublicationHistory,claimsPublicationCsv} from './claims-publication-history.js';
 import {matchReleaseEvidence,selectReleaseEvidence,releaseDelivery} from './release-evidence.js';
@@ -57,6 +60,16 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
  let capturedCatalog=catalog,capturedSources=sources;
  const context={page:state.page,route:routeFor(state),moduleSources:Object.fromEntries((sourceIds[state.page]??[]).filter(id=>sources[id]).map(id=>[id,sources[id]])),attachments:[],scope:'Selected registered measurements; explicitly retained supplementary inputs and CSVs when present.'};
  const assumptions={comparison:state.page==='explore'&&state.exploreMode==='compare'?state.comparison:'native',transform:state.page==='indicator'?state.transform:'level',missingDates:'No interpolation or frequency aggregation; unmatched dates remain unavailable.'};
+ if(state.page==='explore'&&state.exploreMode==='coverage'){
+  const inventory=buildCoverageInventory(catalog,{...state,publicationContexts});
+  if(!inventory.rows.length)throw new Error('No matching measurement coverage is available to freeze.');
+  selected=inventory.rows.slice(0,4).map(row=>row.id);
+  const publicationIds=new Set(inventory.rows.map(row=>row.publications.seriesId).filter(Boolean));
+  const retainedPublications=Object.fromEntries(Object.entries(publicationContexts).map(([family,value])=>[family,{status:value.status,error:value.error??null,archive:{version:1,releases:(value.archive?.releases??[]).filter(row=>publicationIds.has(row.seriesId)).map(row=>({id:row.id,seriesId:row.seriesId,period:row.period,publicationDate:row.publicationDate,estimate:row.estimate,releaseStage:row.releaseStage,provenance:row.provenance}))}}]));
+  context.coverageInventory={version:1,catalog:inventory.inputs,filters:inventory.filters,registeredCount:inventory.totalRegistered,publicationContexts:retainedPublications};
+  context.attachments.push(attachment('coverage-inventory.csv',coverageInventoryCsv(inventory)));
+  context.scope='Coverage inventory retains the filtered measurement metadata, original reference dates/values/suppression flags, source receipts and loaded publication-coverage inputs, plus its exact CSV. The compatible primary CSV retains up to four registered measurements; it is not the complete coverage inventory. Reference coverage is not publication-vintage coverage.';
+ }
  if(state.page==='overview'){
   selected=['gdp','pceCoreMonthly','payroll','policyTargetUpper'];
   context.overviewTopicReadings=['gdp','realSpendingMonthly','pceCoreMonthly','pceCore','payroll','unrate','claimsAdvance','continuedClaimsAdvance','policyTargetLower','policyTargetUpper','effr','yield','spread2s10s','publicDebt','interestRevenueRatio'].filter(id=>catalog[id]).map(id=>{const item=catalog[id];return {id,name:item.name,unit:item.unit,frequency:item.frequency,adjustment:item.adjustment,definition:item.definition,observationType:item.observationType,calculation:item.calculation,latest:item.observations.at(-1)??null,prior:item.observations.at(-2)??null,fetchedAt:item.fetchedAt,dataStatus:item.dataStatus,error:item.error,source:item.source,provenance:item.provenance};});
@@ -100,7 +113,11 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
  if(state.page==='auctions')context.attachments=[attachment('auction-results.csv',auctionsCsv(sources.auctions,{securityType:state.auctionType,auctionId:state.auctionId})),attachment('auction-peers.csv',auctionsCsv(sources.auctions,{securityType:state.auctionType,auctionId:state.auctionId,benchmark:true}))];
  if(state.page==='ownership')context.attachments=[attachment('debt-ownership.csv',ownershipCsv(sources.ownership))];
  if(state.page==='macro')context.attachments=[attachment('macro-contributions.csv',macroContributionsCsv(sources.macroContributions))];
- if(state.page==='market')context.attachments=[attachment('market-functioning.csv',marketFunctioningCsv(sources.marketFunctioning))];
+ if(state.page==='market'){
+  context.attachments=[attachment('market-functioning.csv',marketFunctioningCsv(sources.marketFunctioning))];
+  context.fundingDistributions={version:1,range:viewRange(state)};
+  context.scope='Primary registered measurements plus the full recorded market-functioning source. Funding distribution panels retain their exact date window, published median/percentile/volume fields and source notices. The original specialist CSV remains full retained scope.';
+ }
  if(state.page==='calendar'){
   const scope=calendarScope(state,{events,catalog,now}),event=scope.selected;
   if(!event)throw new Error('No calendar releases match the current filters. Choose another window or clear the filters before pinning.');
@@ -129,7 +146,7 @@ export function buildReleasePin(state,{archive,publicationState,explanationArchi
  const selection={seriesId:state.publicationSeries,period:state.publicationPeriod??'',publicationCutoff:state.publicationCutoff??''};
  const view=event?matchReleaseEvidence(event,archive,selection):selectReleaseEvidence(archive,selection);
  if(view.status!=='verified')throw new Error(view.reason??'Verified release evidence unavailable.');
- const row=view.actual,args=row.seriesId==='gdp'?buildPublicationPin(archive,row.publicationDate,row.period,{explanationArchive,explanationStatus}):buildClaimsPublicationPin(archive,row.seriesId,row.publicationDate,row.period);
+ const row=view.actual,args=row.seriesId==='gdp'?buildPublicationPin(archive,row.publicationDate,row.period,{explanationArchive,explanationStatus}):cpiPublicationIds.includes(row.seriesId)?buildCpiPublicationPin(archive,row.seriesId,row.publicationDate,row.period):buildClaimsPublicationPin(archive,row.seriesId,row.publicationDate,row.period);
  Object.assign(args.context,{releaseEvidence:view,releaseSchedule:event,releaseDelivery:releaseDelivery(event,row),releaseRoute:routeFor(state)});
  return args;
 }
@@ -161,4 +178,22 @@ export function buildClaimsPublicationPin(archive,seriesId,cutoff='',period=''){
   observations:[{date:row.period,value:row.value,sourceValue:row.sourceValue,publishedAt:row.publicationDate,publicationDatePrecision:'day',releaseStage:row.releaseStage,previouslyPublishedSourceValue:row.previouslyPublishedSourceValue,footnotes:row.footnotes,seasonalAdjustmentNote:row.seasonalAdjustmentNote,seasonalAdjustmentKind:row.seasonalAdjustmentKind??null}],
  };
  return {state:{page:'indicator',seriesId,selected:[seriesId],window:'all',transform:'level',comparison:'native'},catalog:{[seriesId]:captured},sources:{},snapshot:{generatedAt:dataStatus.generatedAt},context:{publicationSeries:seriesId,publicationCutoff:view.cutoff,publicationPeriod:view.period,publicationSelectedId:row.id,publicationReleases:view.releases,attachments:[attachment('claims-publication-history.csv',claimsPublicationCsv(archive,seriesId,cutoff,view.period))]},assumptions:{publicationDatePrecision:'day',scope:'Selected archived claims publication facts for one measurement and reference week. Same-release priors are not original advances; later annual revisions are unavailable. Publication replay is separate from retrieval replay.'}};
+}
+
+export function buildCpiPublicationPin(archive,seriesId,cutoff='',period=''){
+ const view=selectCpiPublicationHistory(archive,{seriesId,cutoff,period}),row=view.latest;
+ if(!row)throw new Error('No retained CPI publication is available for this month and cutoff.');
+ const current=series[seriesId],label=`${seriesId==='cpi'||seriesId==='cpiMonthly'?'Headline':'Core'} CPI · ${seriesId.includes('Monthly')?'monthly SA':'12-month NSA'}`;
+ const captured={...current,short:label,name:`${label} · ${row.period} · ${row.estimate} published ${row.publicationDate}`,definition:'Published CPI-U, U.S. city average percentage from this dated BLS Table A edition. Monthly seasonally adjusted and twelve-month not-seasonally-adjusted rates are distinct. This is not a calculation from current rounded index levels.',measure:label,observationType:'official',precision:1,frequency:row.frequency,unit:row.unit,adjustment:row.adjustment,calculation:row.calculation,source:{name:'U.S. Bureau of Labor Statistics',url:row.sourceUrl,seriesIds:row.sourceIds},sourceUrl:row.sourceUrl,sourceUrls:[row.sourceUrl],sourceTitle:row.sourceTitle,sourceNotice:BLS_DATA_NOTICE,licenseUrl:row.licenseUrl,attribution:row.attribution,fetchedAt:row.provenance.at(-1)?.retrievedAt,provenance:row.provenance,dataStatus:'official',error:null,warnings:row.footnotes??[],coverageNote:`Selected retained publication fact for ${row.period}, published ${row.publicationDate}, role ${row.releaseStage}. Later editions after ${view.cutoff} are excluded. Differences from current index-derived history are not automatically revisions.`,publicationNote:`Publication day ${row.publicationDate}; exact publication instant unknown.`,observations:[{date:row.period,value:row.value,sourceValue:row.sourceValue,publishedAt:null,publicationDate:row.publicationDate,publicationDatePrecision:'day',releaseStage:row.releaseStage,footnotes:row.footnotes}]};
+ return {state:{page:'indicator',seriesId,selected:[seriesId],window:'all',transform:'level',comparison:'native'},catalog:{[seriesId]:captured},sources:{},snapshot:{generatedAt:dataStatus.generatedAt},context:{publicationSeries:seriesId,publicationCutoff:view.cutoff,publicationPeriod:view.period,publicationSelectedId:row.id,publicationReleases:view.releases,attachments:[attachment('cpi-publication-history.csv',cpiPublicationCsv(archive,{seriesId,cutoff,period:view.period}))]},assumptions:{publicationDatePrecision:'day',scope:'Selected published CPI rate and its same-reference-month retained editions. Printed prior-month comparisons are labelled separately from original publications; published rates are not substituted with current index calculations.'}};
+}
+
+export function buildGdpMatrixPin(archive,cutoff=''){
+ const matrix=buildGdpRevisionMatrix(archive,{cutoff}),period=matrix.rows.at(-1)?.period;
+ if(!period)throw new Error('No GDP publication is retained by this cutoff.');
+ const args=buildPublicationPin(archive,matrix.cutoff,period);
+ args.context.gdpRevisionMatrix={version:1,cutoff:matrix.cutoff,archive};
+ args.context.attachments.push(attachment('gdp-revision-matrix.csv',gdpRevisionMatrixCsv(archive,{cutoff:matrix.cutoff})));
+ args.context.scope='GDP revision matrix reconstructed from retained official publication inputs and this publication-day cutoff. Routine pair statistics use independent eligible-quarter counts. Primary CSV is the selected latest quarter; the original matrix CSV retains the complete selected matrix and evidence.';
+ return args;
 }
