@@ -70,4 +70,4 @@
 - [x] Review each group for spec and code quality; resolve material findings. Economist/investor reviews final page order and caveats.
 - [x] Normalize LF, run full regression (1,427 passed), build and all-asset smoke check (153 assets).
 - [x] Browser-check all routes and important subviews on desktop, 390px/320px, Light/Graphite; exercise disclosures, async load, main controls, native charts and existing research workflows. Published proof follows deployment.
-- [ ] Commit scoped changes and publish via existing workflow as authorized by continuation of live rollout. Verify CI, exact live assets and representative published views; record runtime revision and checks.
+- [x] Commit scoped changes and publish via existing workflow as authorized by continuation of live rollout. CI, all 153 exact live assets and desktop/mobile published views verified; runtime and evidence recorded in `docs/superpowers/page-hierarchy-verification-2026-10-23.md`.
