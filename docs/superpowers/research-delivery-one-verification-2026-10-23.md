@@ -33,4 +33,9 @@ User-approved scope: release evidence upkeep and CPI, coverage inventory, longer
 
 ## Publication
 
-Live deployment and final source-review outcome are recorded after the verified main-branch publication.
+- Runtime commit: `571789372f71af826f8729214076cadbe6318e49`, fast-forwarded to the existing main branch and published through [Actions run 40059245626](https://github.com/Vasuki8/us-treasury/actions/runs/40059245626).
+- Hosted Node 22 and Node 24 verification/build/smoke jobs and GitHub Pages deployment succeeded. The daily data refresh was skipped by its completed-capture guard; Cloudflare was skipped by the existing deployment-target setting.
+- `check-live.mjs` independently matched all **163 deployed assets** to the final local build under `assets/b56c1a3eb5476c93`.
+- Live browser acceptance confirmed CPI published-rate history, all136 inventory measurements,98 matrix quarters/101 analytical rows after its lazy archive load,317 GDP contribution observations and three scoped funding charts. The live390px coverage view has no page overflow. Final live console check returned no warning/error entries.
+- The hosted upkeep job correctly retained a report with all approved facts complete: GDP1,076, claims768, CPI54. GDP/claims discovery succeeded. CPI candidate discovery was **unavailable on the hosted runner**, explicitly reported as `discovery-unavailable`, while the earlier local official discovery succeeded. This is an observed source-access limitation, not proof that no later publication exists. It does not change retained CPI evidence or gate unrelated data deployment. New editions still require source review and approved-scope admission.
+- Visual proof is retained in the primary checkout at `output/research-delivery-one/live-funding-light.jpg`. The local preview server/tab were closed, responsive viewport reset, and the new live funding tab left available.

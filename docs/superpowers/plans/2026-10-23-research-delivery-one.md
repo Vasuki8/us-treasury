@@ -83,4 +83,4 @@
 - [x] Economist/investor acceptance and independent source/code review; resolve material findings.
 - [x] Verify captured source metadata/rights and immutable history; complete regression/build/smoke.
 - [x] Browser desktop,390/320px, Light/Graphite; CPI actual/prior evidence, coverage filters, matrix cutoffs/exports, funding bands/ranges/readout and freeze/reopen; no overflow/console errors.
-- [ ] Commit scoped work, publish through existing approved live workflow, verify CI and exact live assets; record final runtime/coverage/limitations and proof.
+- [x] Commit scoped work, publish through existing approved live workflow, verify CI and exact live assets; record final runtime/coverage/limitations and proof.
