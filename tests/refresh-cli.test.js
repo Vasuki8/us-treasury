@@ -65,6 +65,38 @@ test('strict all-source CLI failure leaves the snapshot byte-for-byte unchanged'
   });
 });
 
+test('source health check reports every failure without replacing the snapshot or its original capture times',async()=>{
+  await withCliFixture(async({directory,destination,original})=>{
+    const {snapshot:prior}=await import(`${pathToFileURL(destination).href}?health-prior`);
+    await assert.rejects(execute(process.execPath,['--import','./unavailable.mjs','scripts/refresh-data.mjs','--check-only','--sources=bls'],{cwd:directory,timeout:publicationTimeout}),error=>error.code===1);
+    assert.ok((await readFile(destination)).equals(original),'a check must not write a failed candidate snapshot');
+    const report=JSON.parse(await readFile(path.join(directory,'source-health.json'),'utf8'));
+    assert.equal(report.passed,false);
+    assert.equal(report.sources.length,1);
+    const source=report.sources[0];
+    assert.equal(source.id,'data:bls');
+    assert.equal(source.status,'error');
+    assert.match(source.error,/503/);
+    assert.equal(source.fetchedAt,prior.sources.bls.fetchedAt);
+    assert.equal(source.series.cpiMonthly.latestReferencePeriod,'2026-09-01');
+    assert.ok(!JSON.stringify(report).includes('"observations"'),'health artifacts contain metadata, not duplicate statistical history');
+  });
+});
+
+test('source health check retains a failed admission report without publishing unreviewed captures',async()=>{
+  await withCliFixture(async({directory,destination,original})=>{
+    const adapter=path.join(directory,'scripts','sources','bls.mjs');
+    const code=await readFile(adapter,'utf8');
+    await writeFile(adapter,code.replace('export async function collectBls(', 'async function originalCollectBls(')+`\nimport {snapshot as prior} from '../../src/official-snapshot.js';\nexport async function collectBls(){return {...prior.sources.bls,fetchedAt:new Date().toISOString(),provenance:[]};}\n`);
+    await assert.rejects(execute(process.execPath,['scripts/refresh-data.mjs','--check-only','--sources=bls'],{cwd:directory,timeout:publicationTimeout}),error=>error.code===1);
+    assert.ok((await readFile(destination)).equals(original));
+    const report=JSON.parse(await readFile(path.join(directory,'source-health.json'),'utf8'));
+    assert.equal(report.passed,false);
+    assert.equal(report.admission.status,'failed');
+    assert.match(report.admission.error,/provenance|reviewed|rights|source/i);
+  });
+});
+
 test('default manual CLI failure records retained source status and exits unsuccessfully',async()=>{
   await withCliFixture(async({directory,destination,original})=>{
     await assert.rejects(execute(process.execPath,['--import','./unavailable.mjs','scripts/refresh-data.mjs','--sources=bls'],{cwd:directory,timeout:publicationTimeout}),error=>error.code===1);
@@ -173,6 +205,25 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
   `);
   return attemptAt;
 }
+
+test('source health check preserves the approved BLS calendar exception and never publishes its successful candidate',async()=>{
+  await withCliFixture(async({directory,destination,original})=>{
+    const {snapshot:prior}=await import(`${pathToFileURL(destination).href}?health-cached-prior`);
+    await blockedBlsFixture(directory);
+    await execute(process.execPath,['--import','./blocked-bls.mjs','scripts/refresh-data.mjs','--check-only','--sources=calendar'],{cwd:directory,timeout:publicationTimeout});
+    assert.ok((await readFile(destination)).equals(original));
+    const report=JSON.parse(await readFile(path.join(directory,'source-health.json'),'utf8'));
+    assert.equal(report.passed,true);
+    assert.equal(report.sources.length,7);
+    const cached=report.sources.find(source=>source.id==='calendar:bls');
+    assert.equal(cached.allowedCachedCalendar,true);
+    assert.equal(cached.status,'error');
+    assert.equal(cached.fetchedAt,prior.calendar.sources.bls.fetchedAt);
+    assert.ok(report.sources.filter(source=>source.id!=='calendar:bls').every(source=>source.status==='ok'&&!source.allowedCachedCalendar));
+    await assert.rejects(execute(process.execPath,['scripts/refresh-data.mjs','--check-only','--require-all'],{cwd:directory,timeout:20000}),error=>error.code===1&&/check-only alone/.test(error.stderr));
+    assert.ok((await readFile(destination)).equals(original));
+  });
+});
 
 test('approved cached-BLS CLI mode publishes other sources and reports the original retained capture',async()=>{
   await withCliFixture(async({directory,destination,original})=>{

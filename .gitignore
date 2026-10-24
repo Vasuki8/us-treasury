@@ -5,6 +5,7 @@ dist/
 *.log
 src/.official-snapshot.tmp
 test-results/
+/source-health.json
 
 # Local configuration and credentials
 .env

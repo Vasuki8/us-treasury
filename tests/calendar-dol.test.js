@@ -60,12 +60,14 @@ test('DOL normalizes the source generic EST wording to Eastern daylight and stan
   assert.equal(autumn.find(event => event.date === '2026-11-05')?.scheduledAt, '2026-11-05T13:30:00.000Z');
 });
 
-test('DOL drops elapsed instants on capture day and never backfills earlier dates', () => {
+test('DOL retains the current Eastern day for release retries and never backfills earlier dates', () => {
   assert.equal(parse('2026-10-22T12:29:59Z').events[0].date, '2026-10-22');
   assert.equal(parse('2026-10-22T12:30:00Z').events[0].date, '2026-10-22');
-  assert.equal(parse('2026-10-22T12:30:01Z').events[0].date, '2026-10-29');
+  assert.equal(parse('2026-10-22T12:30:01Z').events[0].date, '2026-10-22');
+  assert.equal(parse('2026-10-23T03:59:59Z').events[0].date, '2026-10-22');
+  assert.equal(parse('2026-10-23T04:00:00Z').events[0].date, '2026-10-29');
   const result = parse('2026-10-21T18:00:00Z');
-  assert.ok(result.events.every(event => event.scheduledAt >= '2026-10-21T18:00:00.000Z'));
+  assert.ok(result.events.every(event => event.date >= '2026-10-21'));
   assert.ok(!result.events.some(event => event.date === '2026-01-01'));
   assert.ok(result.events.every(event => event.period === null && event.periodLabel === null));
 });

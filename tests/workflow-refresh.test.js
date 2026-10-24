@@ -7,9 +7,9 @@ import vm from 'node:vm';
 // contexts. Actual job execution is also verified in Actions after publication.
 const workflow = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
 const jobs = Object.fromEntries([...workflow.slice(workflow.indexOf('\njobs:')).matchAll(/^  ([\w-]+):\r?\n([\s\S]*?)(?=^  [\w-]+:\r?$|(?![\s\S]))/gm)].map(match => [match[1], match[2]]));
-function context(event = 'push', { ref = 'refs/heads/main', force = false, cancelled = false, check = 'success', required = 'true', refresh = 'success', verify = 'success', target = '' } = {}) {
+function context(event = 'push', { ref = 'refs/heads/main', force = false, checkSources = false, cancelled = false, check = 'success', required = 'true', refresh = 'success', verify = 'success', target = '' } = {}) {
   return {
-    github: { event_name: event, ref }, inputs: { refresh_data: force }, vars: { DEPLOY_TARGET: target },
+    github: { event_name: event, ref }, inputs: { refresh_data: force, check_sources: checkSources }, vars: { DEPLOY_TARGET: target },
     needs: { refresh_check: { result: check, outputs: { required } }, refresh: { result: refresh }, verify: { result: verify } },
     cancelled: () => cancelled,
   };
@@ -31,6 +31,15 @@ test('trusted automatic main runs check for a missed refresh while PRs and redep
   assert.equal(eligible('refresh_check', context('workflow_dispatch')), false);
   assert.equal(eligible('refresh_check', context('pull_request', { ref: 'refs/pull/1/merge' })), false);
   assert.equal(eligible('refresh_check', context('push', { ref: 'refs/heads/feature' })), false);
+});
+
+test('all-source diagnostics require explicit manual selection and do not gate publication',()=>{
+ for(const ref of ['refs/heads/main','refs/heads/codex/source-update-reliability']){
+  assert.equal(eligible('source_health',context('workflow_dispatch',{ref,checkSources:true})),true);
+  assert.equal(eligible('source_health',context('workflow_dispatch',{ref})),false);
+ }
+ for(const event of ['push','schedule','pull_request'])assert.equal(eligible('source_health',context(event,{checkSources:true})),false);
+ for(const job of ['refresh_check','refresh','verify','deploy','deploy-cloudflare'])assert.doesNotMatch(jobs[job].match(/^    needs:\s*(.+)$/m)?.[1]??'',/source_health/);
 });
 
 test('refresh downloads run only after a successful due check', () => {

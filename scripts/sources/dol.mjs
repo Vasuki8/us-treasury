@@ -76,17 +76,27 @@ export function parseDol(xml) {
   const dates = new Set();
   const observations = [];
   const continuedObservations = [];
+  const warnings = [];
   const remainder = root[3].replace(/<week>([\s\S]*?)<\/week>/g, (_all, body) => {
     if (dates.size >= MAX_WEEKS) throw new Error('DOL XML exceeds the weekly observation limit');
     const row = /^\s*<weekEnded>([^<>]*)<\/weekEnded>\s*(?:<InitialClaims>([\s\S]*?)<\/InitialClaims>\s*)?(?:<ContinuedClaims>([\s\S]*?)<\/ContinuedClaims>\s*)?(?:<IUR>([\s\S]*?)<\/IUR>\s*)?(?:<CoveredEmployment>([^<>]*)<\/CoveredEmployment>\s*)?$/.exec(body);
     if (!row) throw new Error('Unrecognized DOL weekly XML schema');
-    const date = calendarDate(row[1], true);
+    const date = calendarDate(row[1]);
     if (dates.has(date)) throw new Error(`Duplicate DOL observation date: ${date}`);
     dates.add(date);
     const initial = fields(row[2] ?? '', ['NSA', 'SF', 'SA', 'SA4WK']);
     const continued = fields(row[3] ?? '', ['NSA', 'SF', 'SA', 'SA4WK']);
-    fields(row[4] ?? '', ['NSA', 'SA']);
-    if (row[5] !== undefined) blankEntities(row[5]);
+    const insuredRate = fields(row[4] ?? '', ['NSA', 'SA']);
+    const coveredEmployment = blankEntities(row[5] ?? '').trim();
+    if (new Date(`${date}T00:00:00Z`).getUTCDay() !== 6) {
+      const reported = [initial.NSA, initial.SA, initial.SA4WK, continued.NSA, continued.SA, continued.SA4WK, insuredRate.NSA, insuredRate.SA, coveredEmployment].some(value => value !== undefined && value !== '');
+      const factors = [initial.SF, continued.SF].filter(value => value !== undefined && value !== '');
+      if (reported || !factors.length) calendarDate(row[1], true);
+      if (factors.some(value => !/^\d+(?:\.\d+)?$/.test(value) || !Number.isFinite(Number(value)) || Number(value) <= 0)) throw new Error(`Invalid DOL seasonal factor for ${date}`);
+      // ETA can include factor-only dates alongside its actual Saturday weeks.
+      warnings.push(`Excluded DOL non-Saturday date ${date}: seasonal-factor-only row with no claims, insured-unemployment rate or covered-employment observations.`);
+      return '';
+    }
     observations.push(claimsObservation(date, initial.SA ?? '', 'initial claims'));
     continuedObservations.push(claimsObservation(date, continued.SA ?? '', 'continued claims'));
     return '';
@@ -94,7 +104,7 @@ export function parseDol(xml) {
   if (remainder.trim()) throw new Error('Unrecognized DOL XML weekly schema');
   observations.sort((a, b) => a.date.localeCompare(b.date));
   continuedObservations.sort((a, b) => a.date.localeCompare(b.date));
-  return { observations: trimMissing(observations), continuedObservations: trimMissing(continuedObservations), reportDate };
+  return { observations: trimMissing(observations), continuedObservations: trimMissing(continuedObservations), reportDate, warnings };
 }
 
 export async function collectDol({ fetchImpl = globalThis.fetch, now = new Date() } = {}) {
@@ -145,6 +155,7 @@ export async function collectDol({ fetchImpl = globalThis.fetch, now = new Date(
     },
     provenance: [provenance],
     warnings: [
+      ...parsed.warnings,
       ...(ageDays > 14 ? [`DOL historical feed latest observation is ${latestObservationDate}, ${ageDays} days before ${cutoff}; this feed may lag the latest advance weekly release.`] : []),
       ...(continuedAgeDays > 14 ? [`DOL historical continued claims latest observation is ${continuedLatestDate}, ${continuedAgeDays} days before ${cutoff}; this feed may lag the latest advance weekly release.`] : []),
     ],

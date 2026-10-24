@@ -19,6 +19,9 @@ function week(date, value = '198,000', continued = '1,699,000') {
 function xml(rows, reportDate = '10/21/2026') {
   return `<r539cyNational rundate="${reportDate}">\n${rows.join('\n')}\n</r539cyNational>`;
 }
+// Exact empty seasonal-factor row in the official XML captured 2026-10-24;
+// it is between the actual Saturday observations for March 28 and April 4.
+const seasonalFactorRow = `<week><weekEnded>04/03/2026</weekEnded><InitialClaims><NSA>&#160;</NSA><SF>92.3</SF><SA>&#160;</SA><SA4WK>&#160;</SA4WK></InitialClaims><ContinuedClaims><NSA>&#160;</NSA><SF>104.6</SF><SA>&#160;</SA><SA4WK>&#160;</SA4WK></ContinuedClaims><IUR><NSA>&#160;</NSA><SA>&#160;</SA></IUR><CoveredEmployment>&#160;</CoveredEmployment></week>`;
 function fixtureFetch(text) {
   return async (url, options) => {
     const body = new URLSearchParams(options.body);
@@ -74,6 +77,54 @@ test('DOL rejects invalid calendar dates and observation dates that are not week
     assert.throws(() => dol().parseDol(xml([week(date)])), /date|Saturday|week/i);
   }
   assert.throws(() => dol().parseDol(xml([week('09/19/2026')], '02/30/2026')), /date/i);
+});
+
+test('DOL excludes the empty non-Saturday seasonal-factor row with a warning and keeps actual weeks exact', async () => {
+  const input = xml([week('03/28/2026', '203,000', '1,787,000'), seasonalFactorRow, week('04/04/2026', '218,000', '1,809,000')]);
+  const parsed = dol().parseDol(input);
+  assert.deepEqual(parsed.observations.map(row => [row.date, row.value]), [['2026-03-28', 203], ['2026-04-04', 218]]);
+  assert.deepEqual(parsed.continuedObservations.map(row => [row.date, row.value]), [['2026-03-28', 1787], ['2026-04-04', 1809]]);
+  assert.equal(parsed.warnings.length, 1);
+  assert.match(parsed.warnings[0], /2026-04-03.*seasonal.factor.*no.*(?:claims|observations)/i);
+  const source = await dol().collectDol({ now: new Date('2026-04-10T12:00:00Z'), fetchImpl: fixtureFetch(input) });
+  assert.deepEqual(source.warnings, parsed.warnings);
+  assert.ok(Object.values(source.series).every(item => item.observations.every(row => row.date !== '2026-04-03')));
+});
+
+test('non-Saturday rows with any real count, insured-unemployment rate or employment still fail', () => {
+  for (const [section, names] of [['InitialClaims', ['NSA', 'SA', 'SA4WK']], ['ContinuedClaims', ['NSA', 'SA', 'SA4WK']], ['IUR', ['NSA', 'SA']]]) {
+    for (const name of names) {
+      const row = seasonalFactorRow.replace(new RegExp(`<${section}>(.*?)</${section}>`), (_all, fields) => `<${section}>${fields.replace(`<${name}>&#160;</${name}>`, `<${name}>0</${name}>`)}</${section}>`);
+      assert.throws(() => dol().parseDol(xml([week('04/04/2026'), row])), /Saturday/i, `${section}/${name}`);
+    }
+  }
+  assert.throws(() => dol().parseDol(xml([week('04/04/2026'), seasonalFactorRow.replace('<CoveredEmployment>&#160;</CoveredEmployment>', '<CoveredEmployment>153,547,535</CoveredEmployment>')])), /Saturday/i);
+});
+
+test('seasonal-factor exclusions retain strict calendar, XML, factor and duplicate validation', () => {
+  for (const oldFactor of ['92.3', '104.6']) {
+    for (const factor of ['junk', '1e2', 'Infinity', '-1', '0', '9'.repeat(400)]) {
+      assert.throws(() => dol().parseDol(xml([week('04/04/2026'), seasonalFactorRow.replace(`<SF>${oldFactor}</SF>`, `<SF>${factor}</SF>`)])), /factor/i, factor);
+    }
+  }
+  for (const row of [
+    seasonalFactorRow.replace('04/03/2026', '02/30/2026'),
+    seasonalFactorRow.replace('<SA>&#160;</SA>', '<SA>&unknown;</SA>'),
+    seasonalFactorRow.replace('</InitialClaims>', '<Other>1</Other></InitialClaims>'),
+    seasonalFactorRow.replace('<SF>92.3</SF>', '<SF>92.3</SF><SF>92.3</SF>'),
+    '<week><weekEnded>04/03/2026</weekEnded></week>',
+  ]) assert.throws(() => dol().parseDol(xml([week('04/04/2026'), row])), /DOL|XML|schema|date|entity|Saturday/i);
+  assert.throws(() => dol().parseDol(xml([week('04/04/2026'), seasonalFactorRow, seasonalFactorRow])), /duplicate/i);
+  assert.throws(() => dol().parseDol(xml([seasonalFactorRow])), /usable|numeric|observations/i);
+});
+
+test('excluded seasonal-factor dates count toward the source row limit', () => {
+  const start = Date.parse('2026-01-01T00:00:00Z');
+  const rows = Array.from({length: 10001}, (_, index) => {
+    const date = new Date(start + index * 86400000).toISOString().slice(0, 10);
+    return `<week><weekEnded>${date.slice(5, 7)}/${date.slice(8)}/${date.slice(0, 4)}</weekEnded><InitialClaims><SF>92.3</SF></InitialClaims></week>`;
+  });
+  assert.throws(() => dol().parseDol(xml(rows)), /observation limit/i);
 });
 
 test('DOL rejects malformed or negative claims rather than normalizing them into plausible data', () => {

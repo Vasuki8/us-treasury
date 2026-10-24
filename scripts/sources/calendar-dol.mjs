@@ -52,7 +52,7 @@ function publishedSchedule(html) {
   return { rawScheduleRule: decodeHtmlText(paragraph[1]), publishedExceptions };
 }
 
-/** Expand only upcoming dates from DOL's published weekly rule and explicit exceptions. */
+/** Expand current-day and upcoming dates from DOL's published rule and explicit exceptions. */
 export function parseDolCalendar(html, { now = new Date() } = {}) {
   if (!(now instanceof Date) || !Number.isFinite(now.getTime())) throw new Error('Invalid DOL calendar capture date');
   const { rawScheduleRule, publishedExceptions } = publishedSchedule(html);
@@ -71,7 +71,9 @@ export function parseDolCalendar(html, { now = new Date() } = {}) {
     const date = exception?.date ?? nominalDate;
     const time = exception?.time ?? '08:30';
     const scheduledAt = easternInstant(date, time);
-    if (date < coverageStart || date > coverageEnd || Date.parse(scheduledAt) < now.getTime()) continue;
+    // Keep today's schedule after 08:30 so a late full refresh can still retry
+    // an unavailable release. The scheduled clock does not verify publication.
+    if (date < coverageStart || date > coverageEnd) continue;
     events.push({
       id: `dol-claims-${nominalDate}`, sourceId: 'dol', program: 'weekly-claims',
       name: 'Unemployment Insurance Weekly Claims', agency: 'DOL ETA', seriesId: 'claims', seriesIds: ['claims'], topic: 'Labor',
@@ -79,12 +81,12 @@ export function parseDolCalendar(html, { now = new Date() } = {}) {
       scheduleBasis: exception ? 'published-exception' : 'recurring-rule', nominalDate,
     });
   }
-  if (!events.length) throw new Error('DOL schedule has no usable upcoming coverage within its posted horizon');
+  if (!events.length) throw new Error('DOL schedule has no usable current-day or upcoming coverage within its posted horizon');
   const warnings = requestedEnd > publishedHorizon ? [`DOL coverage stops at the posted exception horizon, ${publishedHorizon}; later weekly dates have not been expanded.`] : [];
   return {
     events, rawScheduleRule, publishedExceptions, coverageStart, coverageEnd,
     scheduleMethod: 'recurring-rule-with-exceptions', warnings,
-    coverageNote: `Upcoming DOL ETA weekly claims dates expanded from its published recurring Thursday rule and explicit Wednesday holiday exceptions; limited to 90 calendar days (${coverageStart} through ${coverageEnd}) and the posted exception-year horizon. These are agency schedule rules, not individually dated calendar entries. Source wording uses EST; 8:30 a.m. is normalized to America/New_York Eastern time, including daylight saving, consistent with the official release's Eastern-time embargo. Reference periods are not supplied. Dates can change; check the official schedule.`,
+    coverageNote: `Current-day and upcoming DOL ETA weekly claims dates expanded from its published recurring Thursday rule and explicit Wednesday holiday exceptions; limited to 90 calendar days (${coverageStart} through ${coverageEnd}) and the posted exception-year horizon. Current Eastern-day schedules remain available for release retries after the scheduled clock; a schedule does not establish publication. These are agency schedule rules, not individually dated calendar entries. Source wording uses EST; 8:30 a.m. is normalized to America/New_York Eastern time, including daylight saving, consistent with the official release's Eastern-time embargo. Reference periods are not supplied. Dates can change; check the official schedule.`,
   };
 }
 
