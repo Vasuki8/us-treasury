@@ -68,7 +68,7 @@ Files: `index.html`, `src/research-navigation.js`, `src/search.js` or focused gl
 - [x] Run focused tests throughout, then complete suite once integrated.
 - [x] Build and smoke-check exact assets; independently review whole change.
 - [x] Inspect desktop/mobile and both themes, including calendar deep links, current-account tabs, search and freshness.
-- [ ] Publish through existing GitHub Pages pipeline, compare live assets and verify live journeys.
+- [x] Publish through existing GitHub Pages pipeline, compare live assets and verify live journeys.
 
 
 ## Verification
@@ -79,4 +79,8 @@ Files: `index.html`, `src/research-navigation.js`, `src/search.js` or focused gl
 - Browser acceptance: desktop and 390/320 px mobile; Light and Graphite. Calendar defaults to 12 macro events; Treasury retains 20 debt events; All retains 32. Exact legacy Treasury links retain their revealed scope after filtering. Current-account Summary renders one native chart; controls collapse by default, retain selected context and remain open during edits. Trends/Decomposition retain their original calculations and exports.
 - Exact-code search, grouped search, mobile More/Escape focus, direct GDP evidence loading, Fiscal comparison → indicator → comparison → Fiscal, and separate collection/publication clocks were inspected. No page-level horizontal overflow or browser warning/error was observed in these checks.
 - No new source feeds, consensus data or publication-coverage expansion. GDP and claims remain the reviewed publication programs.
-- Deployment verification pending below.
+- Published implementation `c0ad1984c26c3f5144784be99773a047017bc916`. The existing daily refresh was due and produced verified snapshot revision `7e1871f52763cfc89556ea3fd38340a7a4bb61b6`, assembled `2026-10-24T00:05:06.798Z`.
+- GitHub Actions run [40043126432](https://github.com/Vasuki8/us-treasury/actions/runs/40043126432) succeeded: official-source refresh, refreshed-snapshot tests/build, Node 22 and Node 24 verification, and GitHub Pages deployment. Cloudflare was correctly skipped.
+- `scripts/check-live.mjs` confirmed all 151 deployed assets exactly match the local build of revision `7e1871f`.
+- Live acceptance repeated: Overview loaded both reviewed publication archives; 390 px grouped search opened Trade & current account Summary with one chart and collapsed controls; Calendar opened Macro with 12 events and FOMC preview. No page overflow or browser warnings/errors observed. Temporary viewport override reset; final live Overview retained as the deliverable.
+- Live screenshot saved locally at `D:/Projects/ChatGPT/New folder/us-treasury/output/research-phase-one-7e1871f.jpg`.
