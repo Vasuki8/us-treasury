@@ -28,7 +28,7 @@ test('Labor links directly to its next retained employment schedule with honest 
 
 test('Overview keeps a compact followed-measure monitor with checkpoint-specific update semantics',()=>{
  const html=render({saved:['unrate']},{checkpoint:{enabled:true},changes:{status:'ready',rows:[{seriesId:'unrate',kind:'value-change',period:'2026-09-01',capturedAt:'2026-10-22T12:00:00Z'}]}});
- assert.match(html,/FOLLOWING · EXCEPTIONS &amp; UPDATES/);assert.match(html,/Observed value change between retrievals/);assert.match(html,/Next related schedule/);
+ assert.match(html,/data-overview-disclosure="my-research"/);assert.match(html,/Following 1/);assert.match(html,/Observed value change between retrievals/);assert.match(html,/Next related schedule/);
  assert.ok(html.includes('#/watchlist'));
 });
 
@@ -140,15 +140,17 @@ test('HTML helpers escape untrusted values and expose declarative chart controls
   assert.match(chart(['unrate'], { range: 6, transform: 'change' }), /data-transform="change"/);
 });
 
-test('overview retains six dated topics and trend panels after the publication briefing', () => {
+test('overview leads with six dated topics and keeps catalysts, momentum and publication evidence reachable', () => {
  const html=render(),current=getSeries('unrate');
- assert.equal((html.match(/class="topic-card"/g)||[]).length,6);
+ assert.equal((html.match(/class="oh-topic"/g)||[]).length,6);
+ assert.equal((html.match(/data-overview-reading=/g)||[]).length,8);
  assert.ok(html.includes(formatValue(current,latest(current)?.value)));
  assert.match(html,/data-series="pceMonthly,pceCoreMonthly"/);
- assert.match(html,/data-series="payroll"/);
+ assert.match(html,/data-series="payrollAverage3m"/);
  assert.doesNotMatch(html,/data-chart[^>]*data-series="(?:pceMonthly|payroll),unrate"/);
- assert.match(html,/VERIFIED RETAINED PUBLICATIONS/);assert.match(html,/NEXT CATALYSTS/);
- assert.ok(html.indexOf('VERIFIED RETAINED PUBLICATIONS')<html.indexOf('class="topic-cards"'));
+ assert.match(html,/data-overview-disclosure="publications"/);assert.match(html,/NEXT CATALYSTS/);
+ assert.ok(html.indexOf('class="oh-topic-grid"')<html.indexOf('NEXT CATALYSTS'));
+ assert.ok(html.indexOf('NEXT CATALYSTS')<html.indexOf('class="oh-momentum"'));
  assert.match(html,/Source health, coverage and methodology/);
  assert.doesNotMatch(html,/synthetic|sample week|sample observations/i);
 });
@@ -451,7 +453,12 @@ test('unavailable indicators show missing values and the source explanation', ()
 
 test('missing latest retained curve spread stays unavailable in Overview', () => {
  const point=getSeries('spread2s10s').observations.at(-1),saved=point.value;point.value=null;
- try {assert.match(render(),/href="#\/series\/spread2s10s"[^]*?<strong>—<\/strong>/);}
+ try {
+  const reading=render().match(/<a[^>]*data-overview-reading="spread2s10s"[^]*?<\/a>/)?.[0];
+  assert.ok(reading,'curve spread has its own Overview reading');
+  assert.match(reading,/href="#\/series\/spread2s10s\?/);
+  assert.match(reading,/<strong class="reading-value">—<\/strong>/);
+ }
  finally {point.value=saved;}
 });
 

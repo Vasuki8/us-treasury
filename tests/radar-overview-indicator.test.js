@@ -18,40 +18,30 @@ const ordered = (html, labels) => {
   }
 };
 
-test('Overview keeps every current reading with native units after the daily evidence briefing', () => {
+test('Overview keeps primary readings and supporting measurements individually inspectable in the hierarchy', () => {
   const html = overviewPage(state());
-  assert.match(html, /class="radar-page radar-overview"/);
-  const pairs = [
-    ['gdp','Percent q/q annualized'], ['realSpendingMonthly','Percent month over month'],
-    ['pceCoreMonthly','Percent month over month'], ['pceCore','Percent year over year'],
-    ['payroll','Thousands of jobs'], ['unrate','Percent'],
-    ['policyTargetUpper','Percent'], ['effr','Percent'], ['yield','Percent'],
-    ['spread2s10s','Basis points'], ['publicDebt','USD trillions'], ['interestRevenueRatio','Percent of receipts'],
-  ];
-  const evidence = html.indexOf('VERIFIED RETAINED PUBLICATIONS');
-  assert.ok(evidence>=0,'a dedicated reviewed-publication section starts the briefing');
-  for (const [id, unit] of pairs) {
-    const reading = html.match(new RegExp(`<a class="topic-reading" href="#/series/${id}">([^]*?)</a>`));
-    assert.ok(reading, `${id} remains individually inspectable`);
-    assert.ok(reading.index > evidence, `${id} belongs to the current snapshot after the briefing`);
-    assert.ok(reading[1].includes(unit), `${id} keeps its native unit`);
-    assert.match(reading[1], /<strong>[^<]+<\/strong>/);
-    assert.match(reading[1], /<small>[^<]+ · [^<]+<\/small>/);
-    assert.match(reading[1], /<small class="muted">[^<]+<\/small>/);
+  assert.match(html, /class="radar-page radar-overview overview-hierarchy"/);
+  for (const id of ['gdp','pceCore','payroll','unrate','yield','spread2s10s','interestRevenueRatio']) {
+    const reading = html.match(new RegExp('data-overview-reading="'+id+'"([^]*?)</a>'));
+    assert.ok(reading, id+' remains individually inspectable');
+    assert.match(reading[1], /class="reading-value">[^<]+<\/strong>/);
+    assert.match(reading[1], /class="reading-unit">[^<]+ · [^<]+<\/span>/);
+    assert.match(reading[1], /class="reading-change"/);
   }
-  assert.equal((html.match(/class="topic-card"/g)||[]).length,6);
+  assert.equal((html.match(/class="oh-topic"/g)||[]).length,6);
+  for(const id of ['realSpendingMonthly','pceCoreMonthly','effr','policyTargetLower','policyTargetUpper','publicDebt','claimsAdvance','continuedClaimsAdvance'])assert.ok(html.includes('#/series/'+id),id);
   for (const href of ['#/economy?family=activity','#/economy?family=prices','#/economy/labor','#/economy?family=policy','#/yields','#/fiscal','#/explore']) assert.ok(html.includes(href));
-  assert.match(html,/LATEST INITIAL CLAIMS[^]*?week [\d-]+ · released [\d-]+/);
-  assert.match(html,/Target range:[^]*?Bounds and effective rates can refer to different days/);
+  assert.match(html,/Fed funds target range/);assert.match(html,/Effective rates and target bounds can refer to different days/);
 });
 
-test('Overview leads with publications and catalysts, then readings and momentum, then followed and capture exceptions', () => {
+test('Overview leads with conditions, then catalysts and momentum, with research exceptions in supporting disclosures', () => {
   const html=overviewPage(state({saved:['unrate']}), {checkpoint:{enabled:true,since:'2026-10-20'},changes:{status:'ready',rows:[{seriesId:'unrate',kind:'value-change',period:'2026-09-01',capturedAt:'2026-10-22T12:00:00Z'}]}});
-  ordered(html,['VERIFIED RETAINED PUBLICATIONS','NEXT CATALYSTS','Economy at a glance','INFLATION MOMENTUM','LABOR MOMENTUM','FOLLOWING · EXCEPTIONS &amp; UPDATES','CAPTURED CHANGES','COLLECTION ATTENTION','ACTIVITY &amp; INCOME','Source health, coverage and methodology']);
+  ordered(html,['ECONOMIC CONDITIONS','NEXT CATALYSTS','Published results · GDP &amp; claims','PCE INFLATION · MONTHLY','PAYROLL GAINS · 3-MONTH AVERAGE','Activity &amp; income','Weekly claims','My research','Following 1','Captured changes 1','Collection attention 0','Data &amp; methods','Source health, coverage and methodology']);
   assert.match(html,/retrieval update is not itself an official publication or market surprise/);
   assert.match(html,/Routine debt dates remain in the full calendar; schedules do not confirm results/);
   assert.match(html,/Observed value change between retrievals/);
-  for(const href of ['#/watchlist','#/research?view=changes','#/explore?mode=compare&amp;selected=pceMonthly,pceCoreMonthly','#/explore?mode=compare&amp;selected=unrate,underemployment,participation']) assert.ok(html.includes(href));
+  for(const href of ['#/watchlist','#/research?view=changes']) assert.ok(html.includes(href));
+  for(const ids of ['pceMonthly,pceCoreMonthly','unrate,underemployment,participation','realDisposableIncomeMonthly,realSpendingMonthly']) assert.ok(html.includes('data-compare="'+ids+'"'));
   assert.match(overviewPage(state()),/Follow measurements from their detail pages/);
   assert.match(overviewPage(state()),/Publication evidence not loaded/);
   assert.match(overviewPage(state()),/Historical publications captured recently are not new releases today/);
@@ -62,9 +52,9 @@ test('Overview renders a retained historical publication through reviewed archiv
   const row=claimsFact({period:'2026-03-14',publicationDate:'2026-03-19'});
   row.id=`dol-${row.seriesId}-${row.period}-${row.releaseStage}-${row.publicationDate}`;
   const html=overviewPage(state(),{publicationContexts:{claims:{status:'ready',archive:{releases:[row]}},gdp:{status:'error',error:'Archive unavailable'}}});
-  const publications=html.slice(html.indexOf('VERIFIED RETAINED PUBLICATIONS'),html.indexOf('NEXT CATALYSTS'));
-  assert.match(publications,/Initial claims/);assert.match(publications,/Published 2026-03-19 \(day precision\)/);
-  assert.match(publications,/Captured 2026-10-22T22:00:00\.000Z/);assert.match(publications,/Reference 2026-03-14/);
+  const publications=html.slice(html.indexOf('data-overview-disclosure="publications"'),html.indexOf('class="oh-momentum"'));
+  assert.match(publications,/Initial claims/);assert.match(publications,/Published 2026-03-19 · day precision/);
+  assert.match(publications,/Captured 2026-10-22T22:00:00\.000Z/);assert.match(publications,/reference 2026-03-14/);
   assert.match(publications,/GDP: Publication evidence unavailable/);
   assert.match(publications,/Historical publications captured recently are not new releases today/);
   assert.doesNotMatch(publications,/new publication today|Released today/);

@@ -16,7 +16,7 @@ export function indicatorHref(seriesId,state={}) {
 export function workspaceReturn(state={}) {
   const href=safeReturnTo(state.returnTo);if(!href)return null;
   const route=parseRoute(href);
-  const labels={watchlist:'WATCHLIST',labor:'LABOR',macroCoverage:'ECONOMY',fiscal:'FISCAL',refinancing:'REFINANCING',yields:'RATES & CURVES',auctions:'AUCTIONS',ownership:'OWNERSHIP',macro:'GDP CONTRIBUTIONS',vintages:'RETRIEVAL HISTORY',market:'MARKET FUNCTIONING',credit:'CREDIT & BANKING',calendar:'CALENDAR'};
+  const labels={overview:'OVERVIEW',watchlist:'WATCHLIST',labor:'LABOR',macroCoverage:'ECONOMY',fiscal:'FISCAL',refinancing:'REFINANCING',yields:'RATES & CURVES',auctions:'AUCTIONS',ownership:'OWNERSHIP',macro:'GDP CONTRIBUTIONS',vintages:'RETRIEVAL HISTORY',market:'MARKET FUNCTIONING',credit:'CREDIT & BANKING',calendar:'CALENDAR'};
   return {href,label:'BACK TO '+(labels[route.page]??(route.exploreMode==='compare'?'COMPARISON':route.query?'RESULTS':'CATALOG'))};
 }
 

@@ -18,8 +18,8 @@ export const defaults = {
   researchView:'workspaces',packageId:'',changeSince:'',changePage:1,publicationCutoff:'',publicationPeriod:'',publicationSeries:'gdp',
 };
 
-export const returnPages=['explore','watchlist','macroCoverage','labor','fiscal','refinancing','yields','auctions','ownership','macro','vintages','market','credit','calendar'];
-const returnPath=/^#\/(?:explore|watchlist|economy(?:\/labor)?|fiscal|refinancing|yields|auctions|ownership|macro|vintages|market|credit|calendar)(?:\?|$)/;
+export const returnPages=['overview','explore','watchlist','macroCoverage','labor','fiscal','refinancing','yields','auctions','ownership','macro','vintages','market','credit','calendar'];
+const returnPath=/^#\/(?:overview|explore|watchlist|economy(?:\/labor)?|fiscal|refinancing|yields|auctions|ownership|macro|vintages|market|credit|calendar)(?:\?|$)/;
 /** Only bounded local research workspaces can be offered as a return destination. */
 export function safeReturnTo(value) {
   if(typeof value!=='string'||value.length>4000||/[\u0000-\u001f\u007f]/.test(value)||!returnPath.test(value))return null;

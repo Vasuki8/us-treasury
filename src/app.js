@@ -34,6 +34,7 @@ import { readPreferences, writePreferences } from './storage.js';
 import { createHistoryLoader } from './history-loader.js';
 import { createHistoryController, preserveHistoryView } from './history-controller.js';
 import {viewRange,indicatorHref,createWorkspaceMemory,updateWorkspaceSelection} from './workspace-context.js';
+import {createOverviewDisclosureMemory} from './overview-disclosures.js';
 import {coverageFamilies} from './macro-registry.js';
 import {exactIndicatorMatch} from './global-search.js';
 import {createWorkspace,openWorkspace,MAX_RESEARCH_JSON_BYTES} from './research-workspaces.js';
@@ -69,6 +70,7 @@ const publicationController=createPublicationController({gdpLoader:publicationLo
 let publicationExplanations=null,explanationState={status:'idle',error:null};
 const explanationLoader=createPublicationExplanationLoader();
 const workspaceMemory=createWorkspaceMemory();
+const overviewDisclosures=createOverviewDisclosureMemory();
 if('scrollRestoration' in history)history.scrollRestoration='manual';
 const historyLoader = createHistoryLoader(dataStatus.historyArchive);
 const historyController = createHistoryController(historyLoader, {
@@ -213,6 +215,7 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   const focus=preserveFocus?rememberFocus():null;
   const saveOpen=main.querySelector('.context-save')?.open??false;
   const externalControlsOpen=main.querySelector('#external-history-controls')?.open??false;
+  overviewDisclosures.capture(main);
   historyController.sync(state);
   syncChanges();
   syncPublications();
@@ -225,6 +228,7 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   main.querySelector('.page-heading .actions')?.insertAdjacentHTML('beforeend',researchActions());
   if(saveOpen&&main.querySelector('.context-save'))main.querySelector('.context-save').open=true;
   if(externalControlsOpen&&main.querySelector('#external-history-controls'))main.querySelector('#external-history-controls').open=true;
+  overviewDisclosures.restore(main);
   document.getElementById('ticker').hidden=true;
   freshnessController.refresh();
   syncCompactNavigation(root,state);
@@ -410,7 +414,7 @@ root.addEventListener('click',async event=>{
     navigate({page:'explore',exploreMode:'compare',selected,returnTo});
   }
   else if('page' in d && pageNames[d.page])navigate({page:d.page});
-  else if('compare' in d)navigate({page:'explore',selected:[...new Set(d.compare.split(',').filter(id=>getSeries(id)))].slice(0,4),exploreMode:'compare',comparison:'native',returnTo:['macroCoverage','labor','fiscal','refinancing','yields','auctions','ownership','macro','vintages','market','credit','calendar'].includes(state.page)?routeFor(state):state.returnTo});
+  else if('compare' in d)navigate({page:'explore',selected:[...new Set(d.compare.split(',').filter(id=>getSeries(id)))].slice(0,4),exploreMode:'compare',comparison:'native',returnTo:['overview','macroCoverage','labor','fiscal','refinancing','yields','auctions','ownership','macro','vintages','market','credit','calendar'].includes(state.page)?routeFor(state):state.returnTo});
   else if('laborGroup' in d&&['all','jobs','people','pay','claims'].includes(d.laborGroup))navigate({laborGroup:d.laborGroup},{replace:true});
   else if('laborSection' in d&&['labor-analysis','labor-weekly','labor-trends','labor-readings','labor-notes'].includes(d.laborSection))document.getElementById(d.laborSection)?.scrollIntoView({block:'start'});
   else if('calendarPreview' in d)showCalendarPreview(true);
