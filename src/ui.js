@@ -71,12 +71,18 @@ export function coverageBadge(series) {
   return series.coverageNote ? `<span class="pill" title="${escapeHtml(series.coverageNote)}">${series.id === 'claims' ? 'Historical feed' : 'Coverage note'}</span>` : '';
 }
 
+function compactChange(series,change){
+ if(change.value===null)return 'Comparison unavailable';
+ const label=series.id==='payrollAverage3m'?'Change in average gains':series.id==='payroll'?'Change in gains':['gdp','gdpTotalContribution','wages'].includes(series.id)?'Growth-rate change':'Change';
+ return `${label} ${formatChange(series)} vs ${change.priorPeriod}`;
+}
+
 export function metrics(ids) {
   return `<section class="metrics" aria-label="Headline indicators">${ids.map(id => {
     const series = getSeries(id);
     if (!series) return '';
-    const observation = latest(series);
-    return `<a class="metric" href="#/series/${encodeURIComponent(id)}"${series.error ? ` title="${escapeHtml(series.error)}"` : ''}><span class="metric-name">${escapeHtml(series.short)}</span><strong class="metric-value">${escapeHtml(formatValue(series, observation?.value))}</strong><span class="metric-change">${escapeHtml(measurementChange(series).text)}</span><span class="metric-period">${escapeHtml(observation ? periodLabel(series, observation.date) : 'Unavailable')}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span>${coverageBadge(series)}</a>`;
+    const observation = latest(series),change=measurementChange(series);
+    return `<a class="metric" href="#/series/${encodeURIComponent(id)}"${series.error ? ` title="${escapeHtml(series.error)}"` : ''}><span class="metric-name">${escapeHtml(series.short)}</span><strong class="metric-value">${escapeHtml(formatValue(series, observation?.value))}</strong><span class="metric-change" title="${escapeHtml(change.text)}">${escapeHtml(compactChange(series,change))}</span><span class="metric-period">${escapeHtml(observation ? periodLabel(series, observation.date) : 'Unavailable')}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span>${coverageBadge(series)}</a>`;
   }).join('')}</section>`;
 }
 
@@ -88,8 +94,8 @@ export function seriesTable(ids) {
   const rows = ids.map(id => {
     const series = getSeries(id);
     if (!series) return '';
-    const observation = latest(series);
-    return `<tr><th scope="row">${seriesLink(id)}<span class="table-code mono muted">${escapeHtml(series.code)}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span>${coverageBadge(series)}${!observation && series.error ? `<span class="table-code muted">${escapeHtml(series.error)}</span>` : ''}</th><td class="num">${escapeHtml(formatValue(series, observation?.value))}</td><td class="num muted">${escapeHtml(measurementChange(series).text)}</td><td class="mono">${escapeHtml(observation ? periodLabel(series, observation.date) : '—')}</td></tr>`;
+    const observation = latest(series),change=measurementChange(series);
+    return `<tr><th scope="row">${seriesLink(id)}<span class="table-code mono muted">${escapeHtml(series.code)}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span>${coverageBadge(series)}${!observation && series.error ? `<span class="table-code muted">${escapeHtml(series.error)}</span>` : ''}</th><td class="num">${escapeHtml(formatValue(series, observation?.value))}</td><td class="num muted" title="${escapeHtml(change.text)}">${escapeHtml(compactChange(series,change))}</td><td class="mono">${escapeHtml(observation ? periodLabel(series, observation.date) : '—')}</td></tr>`;
   }).join('');
   return table(['INDICATOR', 'LATEST', 'PERIOD CHANGE', 'OBSERVATION'], rows, 'Official macroeconomic snapshot; unavailable observations appear as a dash');
 }

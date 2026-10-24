@@ -35,6 +35,7 @@ import { createHistoryLoader } from './history-loader.js';
 import { createHistoryController, preserveHistoryView } from './history-controller.js';
 import {viewRange,indicatorHref,createWorkspaceMemory,updateWorkspaceSelection} from './workspace-context.js';
 import {createOverviewDisclosureMemory} from './overview-disclosures.js';
+import {watchDisclosureCharts} from './page-hierarchy.js';
 import {coverageFamilies} from './macro-registry.js';
 import {exactIndicatorMatch} from './global-search.js';
 import {createWorkspace,openWorkspace,MAX_RESEARCH_JSON_BYTES} from './research-workspaces.js';
@@ -70,7 +71,7 @@ const publicationController=createPublicationController({gdpLoader:publicationLo
 let publicationExplanations=null,explanationState={status:'idle',error:null};
 const explanationLoader=createPublicationExplanationLoader();
 const workspaceMemory=createWorkspaceMemory();
-const overviewDisclosures=createOverviewDisclosureMemory();
+const researchDisclosures=createOverviewDisclosureMemory();
 if('scrollRestoration' in history)history.scrollRestoration='manual';
 const historyLoader = createHistoryLoader(dataStatus.historyArchive);
 const historyController = createHistoryController(historyLoader, {
@@ -185,6 +186,9 @@ function changesContext(){
 }
 function currentPackage(){return state.page==='research'&&state.researchView==='packages'?researchLibrary.getPackage(state.packageId):null;}
 function renderCurrentCharts(){
+ renderCurrentChartsIn(main);
+}
+function renderCurrentChartsIn(container){
  const pkg=currentPackage(),history=pkg?.context.currentAccountGdpHistory,breakdown=pkg?.context.currentAccountGdpBreakdown,trailing=pkg?.context.currentAccountGdpTrailing,comparison=pkg?.context.currentAccountGdpComparison,contributions=pkg?.context.currentAccountGdpContributions,balanceEffects=pkg?.context.currentAccountGdpBalanceEffects,componentEffects=pkg?.context.currentAccountGdpComponentEffects,allComponentEffects=pkg?.context.currentAccountGdpAllComponentEffects;
  const chartCatalogs=pkg?{
   ...(history?currentAccountGdpHistoryChartCatalog(history.sources,{frozen:true}):{}),
@@ -198,7 +202,7 @@ function renderCurrentCharts(){
   ...currentAccountGdpComparisonChartCatalog(dataStatus.sources),
   ...currentAccountGdpContributionsChartCatalog(dataStatus.sources,{effects:true,componentEffects:true}),
  }:{};
- renderCharts(main,{...(pkg?{catalog:pkg.catalog}:{}),chartCatalogs});
+ renderCharts(container,{...(pkg?{catalog:pkg.catalog}:{}),chartCatalogs});
 }
 function researchActions(){
   const alert=changeCheckpoint.enabled&&dataStatus.generatedAt>changeCheckpoint.snapshotAt?'<p class="panel-note amber" role="status">A newer snapshot is available since your local change checkpoint. <a href="#/research?view=changes">Review captured changes and collector failures</a>. A new snapshot does not itself establish a new economic release.</p>':'';
@@ -215,7 +219,7 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   const focus=preserveFocus?rememberFocus():null;
   const saveOpen=main.querySelector('.context-save')?.open??false;
   const externalControlsOpen=main.querySelector('#external-history-controls')?.open??false;
-  overviewDisclosures.capture(main);
+  researchDisclosures.capture(main);
   historyController.sync(state);
   syncChanges();
   syncPublications();
@@ -228,7 +232,7 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   main.querySelector('.page-heading .actions')?.insertAdjacentHTML('beforeend',researchActions());
   if(saveOpen&&main.querySelector('.context-save'))main.querySelector('.context-save').open=true;
   if(externalControlsOpen&&main.querySelector('#external-history-controls'))main.querySelector('#external-history-controls').open=true;
-  overviewDisclosures.restore(main);
+  researchDisclosures.restore(main);
   document.getElementById('ticker').hidden=true;
   freshnessController.refresh();
   syncCompactNavigation(root,state);
@@ -562,6 +566,7 @@ window.addEventListener('resize',()=>{
   resizeFrame=requestAnimationFrame(()=>renderCurrentCharts());
 });
 
+watchDisclosureCharts(main,renderCurrentChartsIn);
 render();
 if(!location.hash || location.hash==='#/')history.replaceState(null,'',routeFor(state));
 if(!state.storageAvailable)announce('Browser storage is unavailable; watchlists and preferences will last for this session.');

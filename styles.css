@@ -827,3 +827,18 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
  .overview-hierarchy .oh-event>a { display:flex; align-items:center; }
  .overview-hierarchy :is(.oh-topic,.oh-evidence,.oh-support) details>summary,.overview-hierarchy .oh-evidence>summary { min-height:44px; }
 }
+
+/* Supporting research shares the existing compact UI and palette. */
+.page-hierarchy { min-width:0; }
+.page-hierarchy .hierarchy-details { margin-top:10px; margin-bottom:10px; }
+.page-hierarchy .hierarchy-details>summary { display:flex; align-items:baseline; flex-wrap:wrap; gap:5px 12px; }
+.page-hierarchy .hierarchy-details>summary>span { flex:1; min-width:0; }
+.page-hierarchy .hierarchy-details>summary>small { color:var(--muted); font-size:11px; font-weight:400; }
+.page-hierarchy .hierarchy-details>.panel,.page-hierarchy .hierarchy-details>.grid { margin-top:10px; }
+.page-hierarchy .hierarchy-details>.panel:last-child,.page-hierarchy .hierarchy-details>.grid:last-child { margin-bottom:0; }
+.page-hierarchy .hierarchy-primary,.page-hierarchy .hierarchy-support { min-width:0; }
+.page-hierarchy .hierarchy-section-label { margin:12px 0 8px; color:var(--muted); font-size:11px; letter-spacing:.04em; }
+@media (max-width:600px) {
+ .page-hierarchy .hierarchy-details>summary { min-height:44px; align-items:center; }
+ .page-hierarchy .hierarchy-details>summary>small { flex-basis:100%; }
+}

@@ -59,7 +59,7 @@ test('Catalog keeps native unit and reference period with the latest reading and
 
 test('Catalog search and selection precede secondary starter questions without losing starter links',()=>{
   const html=render({page:'explore',query:'UNRATE'});
-  const starters=html.match(/<details class="supporting-details catalog-starters">([^]*?)<\/details>/);
+  const starters=html.match(/<details[^>]*data-page-disclosure="explore:catalog-starters"[^>]*>([^]*?)<\/details>/);
   assert.ok(starters,'starter questions remain available in a native closed disclosure');
   assert.ok(html.indexOf('id="catalog-search"')<starters.index);
   assert.ok(html.indexOf('class="catalog-table"')<starters.index);

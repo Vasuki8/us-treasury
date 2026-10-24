@@ -20,6 +20,7 @@ import {periodLabel} from '../src/model.js';
 import {selectClaimsPublicationHistory,claimsPublicationCsv,claimsPublicationIds} from '../src/claims-publication-history.js';
 import {claimsFixture} from './helpers/claims-publications-fixture.js';
 import {createPublicationController} from '../src/publication-controller.js';
+import {watchDisclosureCharts} from '../src/page-hierarchy.js';
 
 const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8');
 function section(start,end){
@@ -49,11 +50,11 @@ test('actual publication synchronization requests no archive on ordinary views a
 // boundaries are replaced; model, package, storage and route contracts stay real.
 async function app(hash='#/series/gdp?window=all',{archive=publicationArchive,explanations={version:1,explanations:[]},explanationStatus='ready',publicationStatus='ready'}={}){
  const values=new Map(),storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
- const researchLibrary=await createResearchLibrary(storage),inputs=new Map([['research-name',{value:'Handler research'}]]),downloads=[],chartCalls=[],listeners=new Map(),announcements=[];
+ const researchLibrary=await createResearchLibrary(storage),inputs=new Map([['research-name',{value:'Handler research'}]]),downloads=[],chartCalls=[],chartRoots=[],listeners=new Map(),announcements=[];
  const location={hash},history={pushState:(_state,_title,route)=>{location.hash=route;},replaceState:(_state,_title,route)=>{location.hash=route;}};
  const env={createWorkspace,openWorkspace,createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,MAX_RESEARCH_JSON_BYTES,buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin,selectClaimsPublicationHistory,claimsPublicationCsv,claimsPublicationIds,normalizedCutoff,normalizeVintageTimestamp,researchLibrary,parseRoute,routeFor,updateWorkspaceSelection,dataStatus,series,getSeries,publicationArchive:archive,publicationState:{status:publicationStatus},publicationExplanations:explanations,explanationState:{status:explanationStatus},publicationExplanationsCsv,publicationCsv,selectPublicationHistory,periodLabel,changesCsv,writeChangeCheckpoint,storage,
   publicationController:{context:()=>({status:publicationStatus,archive})},state:{...parseRoute(hash),saved:[]},activeWorkspaceId:null,researchLabel:'',pinBusy:false,changeCheckpoint:{enabled:true,since:'2026-10-01T12:00:00.000Z',snapshotAt:'2026-10-01T12:00:00.000Z'},changeState:{status:'ready',history:{captures:[]}},historyController:{context:()=>({historyState:{status:'idle'}})},
-  document:{getElementById:id=>inputs.get(id)},location,history,main:{},window:{addEventListener:(name,callback)=>listeners.set(name,callback)},cancelAnimationFrame(){},requestAnimationFrame(callback){callback();return 1;},render(){},rememberWorkspace(){},announce:message=>announcements.push(message),renderCharts:(root,options)=>chartCalls.push(options),downloadCsv:(content,name)=>downloads.push({content,name}),downloadJson:pkg=>downloads.push({content:exportResearchPackage(pkg),name:'json'}),changesContext:()=>({status:'ready',rows:[]}),syncChanges(){}};
+  document:{getElementById:id=>inputs.get(id)},location,history,watchDisclosureCharts,main:{addEventListener:(name,callback,capture)=>{assert.equal(name,'toggle');assert.equal(capture,true);listeners.set(name,callback);}},window:{addEventListener:(name,callback)=>listeners.set(name,callback)},cancelAnimationFrame(){},requestAnimationFrame(callback){callback();return 1;},render(){},rememberWorkspace(){},announce:message=>announcements.push(message),renderCharts:(root,options)=>{chartRoots.push(root);chartCalls.push(options);},downloadCsv:(content,name)=>downloads.push({content,name}),downloadJson:pkg=>downloads.push({content:exportResearchPackage(pkg),name:'json'}),changesContext:()=>({status:'ready',rows:[]}),syncChanges(){}};
  const change=/root\.addEventListener\('change',async event=>\{([^]*?)\n\}\);/.exec(source);assert.ok(change,'App change delegation must exist');
  const code=`let {${Object.keys(env).join(',')}}=env;\n`
   +section('function trackedChanges()','function syncPublications(')
@@ -63,7 +64,7 @@ async function app(hash='#/series/gdp?window=all',{archive=publicationArchive,ex
   +section('let resizeFrame;','\nrender();')
   +`;return {handleResearchAction,changeHandler:async event=>{${change[1]}},navigate,state:()=>state,workspaceId:()=>activeWorkspaceId,checkpoint:()=>changeCheckpoint};`;
  const handlers=new Function('env',code)(env);
- return {...handlers,researchLibrary,values,inputs,downloads,chartCalls,listeners,announcements,location};
+ return {...handlers,researchLibrary,values,inputs,downloads,chartCalls,chartRoots,listeners,announcements,location};
 }
 
 test('checkpoint mark, enable and disable clear the displayed cutoff/page in the actual route',async()=>{
@@ -161,4 +162,12 @@ test('the actual resize callback keeps the selected frozen catalog across naviga
  assert.equal(typeof resize,'function');resize();assert.equal(current.chartCalls.at(-1).catalog,pkg.catalog);
  current.navigate({page:'indicator',seriesId:'gdp'});resize();assert.equal(current.chartCalls.at(-1).catalog,undefined);
  current.navigate({page:'research',researchView:'packages',packageId:pkg.id});resize();assert.equal(current.chartCalls.at(-1).catalog,pkg.catalog);
+});
+
+test('the actual disclosure callback redraws only the expanded section with its frozen or live catalog',async()=>{
+ const current=await app();await current.handleResearchAction({pinResult:''});const pkg=current.researchLibrary.getPackage(current.state().packageId),toggle=current.listeners.get('toggle');
+ const section={tagName:'DETAILS',open:true,querySelector:()=>({})};assert.equal(typeof toggle,'function');
+ toggle({target:section});assert.equal(current.chartRoots.at(-1),section);assert.equal(current.chartCalls.at(-1).catalog,pkg.catalog);
+ current.navigate({page:'indicator',seriesId:'gdp'});toggle({target:section});assert.equal(current.chartRoots.at(-1),section);assert.equal(current.chartCalls.at(-1).catalog,undefined);
+ const calls=current.chartCalls.length;section.open=false;toggle({target:section});assert.equal(current.chartCalls.length,calls);
 });

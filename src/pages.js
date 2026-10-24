@@ -39,5 +39,6 @@ export function renderPage(input = {}, historyContext = {}) {
   const linked=specialist?content.replace(/href="#\/series\/([A-Za-z0-9]+)"/g,(_all,id)=>`href="${esc(indicatorHref(id,state))}"`):content;
   const ids=state.page==='indicator'?[state.seriesId]:state.page==='labor'?['payroll','claimsAdvance','continuedClaimsAdvance']:state.page==='macroCoverage'?[state.macroMeasure]:[];
   const freshness=releaseCoveragePanel(releaseCoverage(series,dataStatus,{seriesIds:ids,events:releases,publicationContexts:historyContext.publicationContexts}),{hrefFor:id=>indicatorHref(id,state)});
-  return researchNavigation(state)+(styled?linked:`<div class="koyfin-page">${linked}</div>`)+freshness;
+  const body=(styled?linked:`<div class="koyfin-page">${linked}</div>`)+freshness;
+  return researchNavigation(state)+(state.page==='overview'?body:`<div class="page-hierarchy" data-hierarchy-page="${esc(state.page)}">${body}</div>`);
 }
