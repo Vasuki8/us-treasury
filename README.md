@@ -95,8 +95,8 @@ npm run data:refresh -- --sources=fiscal,refinancing,yields,auctions,ownership,m
 npm run data:refresh -- --sources=calendar
 # Require every attempted source to succeed before replacing the snapshot
 npm run data:refresh -- --require-all
-# Daily publication policy: permit only the verified cached BLS calendar on HTTP 403
-npm run data:refresh -- --allow-cached-bls-calendar
+# Daily publication policy: retain verified BLS data after the recognized service failure
+npm run data:refresh -- --allow-cached-bls
 # Read-only check: has the latest scheduled daily refresh completed?
 node scripts/check-refresh-due.mjs
 # Manual, read-only check of official BLS calendar document access
@@ -111,7 +111,7 @@ Install the pinned PDF text extractor once with `npm ci --ignore-scripts`; it ru
 
 The refresh command writes new immutable, content-addressed gzip captures under `src/history/`, verifies retained files, then atomically replaces `src/official-snapshot.js` with current data and an ordered storage index. All original captures, confirmations, provenance and timestamps remain available; no history is pruned. Build, refresh and publication hydrate the archive before commercial-data admission. The command exits with an error if an agency fails. Other successful agencies still update. A failed agency retains its last successful values, original retrieval time and provenance; its cached status and refresh error are visible. A first failure leaves that agency unavailable. Do not hand-edit snapshot observations or archive files. See the [storage and replay contract](docs/vintages-design.md).
 
-Use `--require-all` when every selected source must succeed before replacing the snapshot. The daily workflow uses the explicitly approved `--allow-cached-bls-calendar` policy instead: every other selected source must succeed, while an actual HTTP 403 from an exact official BLS annual calendar URL may retain a valid, nonempty prior calendar capture. The modes are mutually exclusive. The BLS source remains cached/error and the aggregate calendar remains partial; its events, provenance and retrieval time stay unchanged, and Actions records a warning and summary. A successful later BLS capture clears the error automatically. Missing or invalid prior coverage, redirects, different BLS errors, and other source failures reject the candidate before writing.
+Use `--require-all` when every selected source must succeed before replacing the snapshot. The daily workflow uses the approved `--allow-cached-bls` policy: after the exact primary BLS HTTP 503, registered v2 is attempted once when a key is configured. If it also fails, a complete validated earlier BLS capture may remain cached/error with its original timestamps and safe failure context; all other selected sources must succeed. A successful later capture clears the cached marker. The modes are mutually exclusive. Missing/invalid prior data, primary redirects or other primary BLS failures reject the candidate before writing. The older annual-calendar HTTP 403 retention exception remains limited to reviewed legacy BLS schedules; it does not apply to the current New York Fed calendar.
 
 An unavailable BLS next-year schedule that has never been captured remains an explicit coverage limitation. Failure to retrieve a previously captured year rejects publication, except for the approved HTTP 403 retention policy above. The default local command retains its partial-update behavior for investigation.
 
