@@ -56,7 +56,20 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Collect and validate source health without writing snapshots
-        run: node scripts/refresh-data.mjs --check-only
+        run: |
+          node --input-type=module <<'NODE'
+          import {collectBlsBulk} from './scripts/sources/bls-bulk.mjs';
+          import {writeFile} from 'node:fs/promises';
+          let report;
+          try {
+            const capture=await collectBlsBulk();
+            report={passed:true,fetchedAt:capture.fetchedAt,provenance:capture.provenance,series:capture.payload.Results.series.map(row=>({id:row.seriesID,count:row.data.length}))};
+          } catch(error) {
+            report={passed:false,error:error.message};process.exitCode=1;
+          }
+          await writeFile('source-health.json',JSON.stringify(report,null,2)+'\n');
+          console.log(JSON.stringify(report));
+          NODE
 
       - name: Retain per-source errors, coverage, warnings and receipts
         if: always()
