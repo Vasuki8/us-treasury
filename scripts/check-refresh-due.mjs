@@ -5,8 +5,7 @@ import { getFreshness, getScheduledRefreshAt } from '../src/freshness.js';
 import { canPublishCachedBls,canPublishCachedBlsData } from './sources/refresh.mjs';
 
 /** Check committed capture provenance; attempts and assembly never replace it. */
-export function getDailyRefreshPlan(snapshot = {}, { now = new Date(), force = false } = {}) {
-  const expectedRefreshAt = getScheduledRefreshAt(now);
+export function getDailyRefreshPlan(snapshot = {}, { now = new Date(), force = false, expectedRefreshAt = getScheduledRefreshAt(now) } = {}) {
   const currentTime = now.toISOString();
   const freshness = getFreshness(snapshot, { now });
   const policy = snapshot?.publicationPolicy;

@@ -1,6 +1,8 @@
 import {readFile,appendFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
+import {githubApi,syncHealthIssue} from './github-maintenance.mjs';
+export {githubApi} from './github-maintenance.mjs';
 
 const repository='Vasuki8/us-treasury',base=`/repos/${repository}`;
 const workflowPath='.github/workflows/bls-registered-access.yml';
@@ -27,18 +29,6 @@ function expectedMonday(now,startsOn){
  const previousWeek=daysSinceMonday===0||daysSinceMonday===1&&local.slice(11)<'09:17';
  const monday=new Date(+today-(daysSinceMonday+(previousWeek?7:0))*dayMs).toISOString().slice(0,10);
  return monday>=startsOn?`${monday}T09:17`:null;
-}
-
-export function githubApi(token,fetchImpl=fetch){
- if(!token)throw new Error('Repository notification token is unavailable.');
- return async(method,apiPath,body)=>{
-  if(!apiPath.startsWith(`${base}/`))throw new Error('Unsupported repository notification path.');
-  let response;
-  try{response=await fetchImpl(`https://api.github.com${apiPath}`,{method,redirect:'error',signal:AbortSignal.timeout(20000),headers:{Authorization:`Bearer ${token}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});}
-  catch{throw new Error('GitHub maintenance request could not complete.');}
-  if(!response.ok)throw new Error(`GitHub maintenance request failed (HTTP ${response.status}).`);
-  return response.json();
- };
 }
 
 export async function maintainBlsBackup({api,config,now=new Date(),notificationTest=false}){
@@ -82,22 +72,11 @@ export async function maintainBlsBackup({api,config,now=new Date(),notificationT
   created++;return issue;
  }
  async function update(issue,body){await api('PATCH',`${base}/issues/${issue.number}`,body);updated++;}
- const healthIssue=issues.find(issue=>issue.body?.startsWith(healthMarker));
- const bodyHealth=healthIssue?.body?.match(/<!-- health:(ok|failed|unverified) -->/)?.[1];
- const comments=healthIssue?await list(`${base}/issues/${healthIssue.number}/comments`):[];
- const lastTransition=comments.filter(comment=>comment.user?.login==='github-actions[bot]'&&/^<!-- bls-backup-maintenance:health:(ok|failed|unverified) -->/.test(comment.body)).at(-1);
- const previousHealth=lastTransition?.body.match(/^<!-- bls-backup-maintenance:health:(ok|failed|unverified) -->/)[1]??bodyHealth;
- if((health!=='ok'&&!healthIssue)||(healthIssue&&(previousHealth!==health||bodyHealth!==health))){
-  const runLink=latest?`[Latest completed check](https://github.com/${repository}/actions/runs/${latest.id})`:`[Registered checks](https://github.com/${repository}/actions/workflows/bls-registered-access.yml)`;
-  const title=`[BLS backup] ${health==='ok'?'Recovered':health==='failed'?'Check needs attention':'Monitoring unverified'}`;
-  const body=`${healthMarker}\n<!-- health:${health} -->\n\n${recipient} ${detail}\n\n${runLink}. The registered check validates all 31 outputs; its report contains safe diagnostics. Published data are not changed by this monitor.\n\nWeekly validation: Monday 09:17 America/Toronto. Cloud monitoring checks daily and after each validation. An unchanged incident stays quiet; a later recovery and recurrence update this issue. Closing an unresolved issue acknowledges it and does not renew the key.\n`;
-  if(!healthIssue)await create(title,body);
-  else{
-   // Notify before updating; an interrupted update can retry using the comment's status without repeating the notification.
-   if(previousHealth!==health)await api('POST',`${base}/issues/${healthIssue.number}/comments`,{body:`<!-- bls-backup-maintenance:health:${health} -->\n\n${recipient} ${detail}\n\n${runLink}.`});
-   await update(healthIssue,{title,body,state:health==='ok'?'closed':'open',...(health==='ok'?{state_reason:'completed'}:{})});
-  }
- }
+ const healthNotice=await syncHealthIssue({api,issues,key:'bls-backup-maintenance',health,
+  title:`[BLS backup] ${health==='ok'?'Recovered':health==='failed'?'Check needs attention':'Monitoring unverified'}`,message:detail,
+  link:latest?`[Latest completed check](https://github.com/${repository}/actions/runs/${latest.id})`:`[Registered checks](https://github.com/${repository}/actions/workflows/bls-registered-access.yml)`,
+  footer:'The registered check validates all 31 outputs. Weekly validation: Monday 09:17 America/Toronto. An unchanged incident stays quiet; recovery and recurrence update this issue. Closing an unresolved issue acknowledges it and does not renew the key. Published data are not changed by this monitor.'});
+ created+=healthNotice.created;updated+=healthNotice.updated;
  const renewalMarker=`${renewalPrefix}${config.confirmedRegistrationOn} -->`;
  for(const issue of issues){
   const oldDate=issue.body?.match(/^<!-- bls-backup-maintenance:renewal:(\d{4}-\d{2}-\d{2}) -->/)?.[1];

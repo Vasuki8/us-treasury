@@ -111,7 +111,7 @@ test('GitHub request failures and redirects never expose token or response text'
 
 test('cloud notifier is main-only, does not receive the BLS key and cannot publish or deploy',async()=>{
  const workflow=await readFile(new URL('../.github/workflows/bls-backup-maintenance.yml',import.meta.url),'utf8');
- assert.match(workflow,/workflow_run:[\s\S]*workflows: \[Check registered BLS backup\][\s\S]*types: \[completed\][\s\S]*branches: \[main\]/);
+ assert.match(workflow,/workflow_run:[\s\S]*workflows: \['Check registered BLS backup', 'Test, build and deploy'\][\s\S]*types: \[completed\][\s\S]*branches: \[main\]/);
  assert.match(workflow,/cron: '43 9 \* \* \*'\s*\n\s*timezone: America\/Toronto/);
  assert.match(workflow,/github\.repository == 'Vasuki8\/us-treasury'/);assert.match(workflow,/github\.ref == 'refs\/heads\/main'/);
  assert.match(workflow,/head_repository\.full_name == github\.repository/);assert.match(workflow,/cancel-in-progress: false/);

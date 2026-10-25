@@ -1,8 +1,8 @@
-name: BLS backup cloud alerts and renewal
+name: Data health alerts and BLS renewal
 
 on:
   workflow_run:
-    workflows: [Check registered BLS backup]
+    workflows: ['Check registered BLS backup', 'Test, build and deploy']
     types: [completed]
     branches: [main]
   schedule:
@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       test_notification:
-        description: Create and close a clearly labeled notification test once
+        description: Create and close clearly labeled notification tests once
         type: boolean
         default: false
 
@@ -42,7 +42,15 @@ jobs:
         with:
           node-version: '24'
       - name: Notify only on actionable backup or renewal changes
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
           BLS_NOTIFICATION_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.test_notification && 'true' || 'false' }}
         run: node scripts/bls-backup-maintenance.mjs
+
+      - name: Notify on data-source and automatic-update failures
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BLS_NOTIFICATION_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.test_notification && 'true' || 'false' }}
+        run: node scripts/data-update-maintenance.mjs

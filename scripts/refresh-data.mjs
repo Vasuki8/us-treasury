@@ -31,6 +31,7 @@ import { collectPolicyRates } from './sources/policy-rates.mjs';
 import { collectActivity } from './sources/activity.mjs';
 import { collectHousing } from './sources/housing.mjs';
 import {addMomentumSeries} from '../src/momentum.js';
+import {buildSourceAttemptReport} from './source-attempt-report.mjs';
 
 const all={beaIta:collectBeaIta,householdDebt:collectHouseholdDebt,loanDelinquency:collectLoanDelinquency,bankCredit:collectBankCredit,lendingSurvey:collectLendingSurvey,fedBalance:collectFedBalance,onRrp:collectOnRrp,treasury:collectTreasury,bls:async options=>addMomentumSeries(await collectBls({...options,previous:previousRoot.sources.bls})),bea:async options=>addMomentumSeries(await collectBea(options)),dol:collectDol,dolAdvance:collectDolAdvance,census:collectCensus,fiscal:async options=>{const result=await collectFiscal(options);return {...result,series:{...result.series,...deriveFiscalSeries(result)}};},refinancing:collectRefinancing,yields:collectYields,auctions:collectAuctions,ownership:collectOwnership,macroContributions:collectMacroContributions,marketFunctioning:collectMarketFunctioning,policyRates:collectPolicyRates,activity:collectActivity,housing:collectHousing};
 const requireAll=process.argv.includes('--require-all');
@@ -48,7 +49,10 @@ const collectors=Object.fromEntries(selection.filter(id=>id!=='calendar').map(id
 const calendarCollectors=selection.includes('calendar')?{fomc:collectFomcCalendar,bls:collectNyFedBlsCalendar,bea:collectBeaCalendar,census:collectCensusCalendar,dol:collectDolCalendar,treasury:collectTreasuryCalendar,'treasury-yield-timing':collectTreasuryYieldTiming}:{};
 const previous={...previousRoot,vintages:await loadSnapshotHistory(previousRoot,{directory:fileURLToPath(new URL('../src/',import.meta.url))})};
 if(selection.includes('calendar'))console.log('Retrieving New York Fed BLS dates, agency calendars and Treasury yield timing…');
-const snapshot=await refreshSnapshot({previous,collectors,calendarCollectors,requireAll,allowCachedBlsCalendar,allowCachedBlsData});
+const snapshot=await refreshSnapshot({previous,collectors,calendarCollectors,requireAll,allowCachedBlsCalendar,allowCachedBlsData,onCollected:async candidate=>{
+  const report=buildSourceAttemptReport({...candidate,calendarSources:candidate.calendar.sources});
+  await writeFile('source-attempt-status.json',JSON.stringify(report,null,2)+'\n');
+}});
 const admission={status:'passed',error:null};
 try{assertCommercialData(snapshot);}
 catch(error){if(!checkOnly)throw error;admission.status='failed';admission.error=String(error.message||error);}

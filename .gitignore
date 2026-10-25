@@ -6,6 +6,7 @@ dist/
 src/.official-snapshot.tmp
 test-results/
 /source-health.json
+/source-attempt-status.json
 /bls-registered-access.json
 
 # Local configuration and credentials

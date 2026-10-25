@@ -98,7 +98,7 @@ function validate(result,cutoff) {
   }
 }
 
-export async function refreshSnapshot({previous={},collectors={},calendarCollectors={},now=new Date(),requireAll=false,allowCachedBlsCalendar=false,allowCachedBlsData=false}={}) {
+export async function refreshSnapshot({previous={},collectors={},calendarCollectors={},now=new Date(),requireAll=false,allowCachedBlsCalendar=false,allowCachedBlsData=false,onCollected}={}) {
   if(requireAll&&(allowCachedBlsCalendar||allowCachedBlsData))throw new Error('requireAll and cached BLS publication modes are mutually exclusive');
   const checkedAt=now.toISOString(),sources={...previous.sources};
   const calendarPromise=refreshCalendar(previous.calendar,calendarCollectors,checkedAt,now);
@@ -126,6 +126,8 @@ export async function refreshSnapshot({previous={},collectors={},calendarCollect
     }
   }
   const calendar=await calendarPromise;
+  // Collection evidence must remain available even when strict publication rejects the candidate.
+  if(onCollected)await onCollected({checkedAt,sources,calendar,attemptedDataIds:Object.keys(collectors),attemptedCalendarIds:Object.keys(calendarCollectors)});
   const priorPolicy=previous.publicationPolicy,dataSelected=Object.hasOwn(collectors,'bls'),calendarSelected=Object.hasOwn(calendarCollectors,'bls');
   const retainedCachedData=!dataSelected&&priorPolicy?.mode==='allow-cached-bls-data'&&Array.isArray(priorPolicy.cachedDataSources)&&priorPolicy.cachedDataSources.includes('bls')&&canPublishCachedBlsData(sources.bls,now);
   const retainedCachedCalendar=!calendarSelected&&['allow-cached-bls-data','allow-cached-bls-calendar'].includes(priorPolicy?.mode)&&Array.isArray(priorPolicy.cachedCalendarSources)&&priorPolicy.cachedCalendarSources.includes('bls')&&canPublishCachedBls(calendar.sources?.bls,now);

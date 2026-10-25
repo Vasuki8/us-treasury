@@ -150,6 +150,9 @@ test('legacy calendar CLI publishes successful current coverage when BLS has nev
     assert.deepEqual(published.calendar.sources.bls.coveredYears,[2026]);
     assert.equal(published.calendar.sources.bls.events.length,1);
     assert.match(published.calendar.sources.bls.warnings.join(' '),/2027.*unavailable/);
+    const attempts=JSON.parse(await readFile(path.join(directory,'source-attempt-status.json'),'utf8'));
+    assert.equal(attempts.sources.find(source=>source.id==='calendar:bea').status,'unverified','retained fixture capture is reported without adding a publication gate');
+    assert.equal(attempts.sources.find(source=>source.id==='calendar:bls').status,'ok','actual new retrieval keeps successful collection evidence');
   });
 });
 
