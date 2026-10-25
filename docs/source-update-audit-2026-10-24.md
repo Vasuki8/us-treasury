@@ -95,4 +95,13 @@ Red/green regressions cover the observed DOL row, excluded-row duplicate and obs
 
 Both hosted Node22 and Node24 jobs passed the final complete **1,512 tests**, built the application and smoke-checked all163 assets. The branch workflow is red solely because the independent source diagnostic correctly reports the reproduced BLS503. This result must not be described as all sources healthy. Both deployments and production refresh were skipped on the branch.
 
-Production acceptance follows below after publication.
+## Production acceptance
+
+Fixes were fast-forwarded to main at `124a1811083c754ba5489d6e2e43e948a4d93b97`. [Production run40145308948](https://github.com/Vasuki8/us-treasury/actions/runs/40145308948) exercised the actual daily refresh guard and required full refresh:
+
+- Publication upkeep succeeded again: all1,076 GDP,768 claims and54 CPI facts retained, all discoveries checked, no new review candidates.
+- The required refresh stopped at `2026-10-25T00:05:35Z` with **only** `bls: Official source HTTP503 (api.bls.gov)` in the failure list. The repaired DOL source was not a failure.
+- The atomic publication guard explicitly reported **snapshot was not replaced**. Snapshot commit, verification/deployment jobs were skipped after the failure. Remote main remained exactly the source/documentation commit, with no failed-refresh data commit.
+- Independent `check-live.mjs` verified **all163 live assets match the tested build**, version `b3aca80e706a77f5`. No UI, colors or live data were overwritten.
+
+The engineering fixes and repeatable diagnostic are published. BLS API availability remains an external blocker for a required full daily replacement; the existing scheduled catch-up checks will attempt it again. The narrower403calendar exception remains explicit. This acceptance is evidence of correct failure containment, not a claim that BLS access is repaired or all automatic updates are currently healthy.

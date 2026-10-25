@@ -50,8 +50,8 @@ Files: shared HTTP helper/tests if justified by reproduction; `.github/workflows
 
 - [x] Review all source audit receipts, newest usable reference dates and expected source lags.
 - [x] Run full tests, build, smoke verification and independent patch review.
-- [ ] Publish fixes, verify main's actual refresh/upkeep outcomes and compare live assets to the verified build.
-- [ ] Record source inventory, confirmed fixes, evidence, cached BLS calendar limitation and unresolved provider issues. Update stale documentation counts.
+- [x] Publish fixes, verify main's actual refresh/upkeep outcomes and compare live assets to the verified build.
+- [x] Record source inventory, confirmed fixes, evidence, cached BLS calendar limitation and unresolved provider issues. Update stale documentation counts.
 
 ## Execution ledger
 
@@ -61,3 +61,4 @@ Files: shared HTTP helper/tests if justified by reproduction; `.github/workflows
 - Review found and fixed missing diagnostic artifacts on admission failure. Normal publication still throws before writes; only check mode retains a failed admission report.
 - Integrated local suite1,511 passed; added admission regression independently passed. Initial sandbox baseline failures were environment restrictions and the permitted integrated run resolved them. Hosted verification will run the final complete suite.
 - Final hosted branch verification: Node22 and Node24 each pass1,512 tests/build/163-asset smoke. Real30-source diagnostic passes28 new captures and data admission, retains only the known BLS403 calendar exception, and correctly fails on BLS statistical503. All GDP/claims/Cleveland CPI upkeep discoveries pass. No branch data was published.
+- Production run40145308948 correctly blocked required snapshot replacement on BLS statistical503; no DOL failure remained. Upkeep succeeded and live163-asset equality passed. Main contains the engineering fixes; external BLS service availability remains unresolved and is reported explicitly rather than marked fixed.
