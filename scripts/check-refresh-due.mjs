@@ -2,7 +2,7 @@ import { appendFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getFreshness, getScheduledRefreshAt } from '../src/freshness.js';
-import { canPublishCachedBls } from './sources/refresh.mjs';
+import { canPublishCachedBls,canPublishCachedBlsData } from './sources/refresh.mjs';
 
 /** Check committed capture provenance; attempts and assembly never replace it. */
 export function getDailyRefreshPlan(snapshot = {}, { now = new Date(), force = false } = {}) {
@@ -11,6 +11,7 @@ export function getDailyRefreshPlan(snapshot = {}, { now = new Date(), force = f
   const freshness = getFreshness(snapshot, { now });
   const policy = snapshot?.publicationPolicy;
   let approvedCachedBls = false;
+  let approvedCachedBlsData = false;
   const pendingSources = freshness.entries.filter(entry => {
     const [kind, id] = entry.id.split(':');
     const source = kind === 'data' ? snapshot?.sources?.[id] : snapshot?.calendar?.sources?.[id];
@@ -22,11 +23,18 @@ export function getDailyRefreshPlan(snapshot = {}, { now = new Date(), force = f
     // Reuse the publisher's exact narrow HTTP403/provenance exception, and
     // require evidence that BLS was attempted during this specific daily slot.
     if (entry.id === 'calendar:bls' && captureIsValid &&
-        policy?.mode === 'allow-cached-bls-calendar' && Array.isArray(policy.cachedCalendarSources) &&
+        ['allow-cached-bls-calendar','allow-cached-bls-data'].includes(policy?.mode) && Array.isArray(policy.cachedCalendarSources) &&
         policy.cachedCalendarSources.includes('bls') && entry.lastAttemptAt !== null &&
         entry.lastAttemptAt >= expectedRefreshAt && entry.lastAttemptAt <= currentTime &&
         canPublishCachedBls(source, now)) {
       approvedCachedBls = true;
+      return false;
+    }
+    if (entry.id === 'data:bls' && captureIsValid && policy?.mode === 'allow-cached-bls-data' &&
+        Array.isArray(policy.cachedDataSources) && policy.cachedDataSources.includes('bls') &&
+        entry.lastAttemptAt !== null && entry.lastAttemptAt >= expectedRefreshAt && entry.lastAttemptAt <= currentTime &&
+        canPublishCachedBlsData(source, now)) {
+      approvedCachedBlsData = true;
       return false;
     }
     return true;
@@ -37,7 +45,8 @@ export function getDailyRefreshPlan(snapshot = {}, { now = new Date(), force = f
     pendingSources,
     reason: force === true ? 'Manual force requested; refresh all official sources.'
       : pendingSources.length ? `${pendingSources.length} sources still need a successful capture for this daily slot.`
-        : approvedCachedBls ? 'Daily slot is complete; the verified cached BLS calendar was attempted in this slot.'
+        : approvedCachedBlsData ? `Daily slot is complete; BLS statistics returned HTTP 503 and verified cached BLS data retain their original capture time.${approvedCachedBls?' The cached BLS calendar was also attempted in this slot.':''}`
+          : approvedCachedBls ? 'Daily slot is complete; the verified cached BLS calendar was attempted in this slot.'
           : `All ${freshness.entries.length} official sources already captured for this daily slot.`,
   };
 }

@@ -15,7 +15,12 @@ const calendarSourceNames = {
 const relatedSeries = event => seriesIds(calendarRelatedIds(event));
 const scheduledPeriod = event => event.periodLabel || 'Observation period not supplied';
 const scheduleSource = event => dataStatus.calendar?.sources?.[event.sourceId];
-const scheduleBasisLabel = event => event.scheduleBasis === 'recurring-rule' ? 'AGENCY RULE' : event.scheduleBasis === 'published-exception' ? 'AGENCY EXCEPTION' : event.scheduleBasis === 'calendar-estimate' ? 'ESTIMATED' : '';
+const calendarPublisherName = (id,source={}) => source.provider==='new-york-fed' ? 'New York Fed · BLS releases' : calendarSourceNames[id] ?? source.agency ?? id;
+function calendarSourceNotice(source={}) {
+  if(source.provider!=='new-york-fed')return '';
+  return `<p class="panel-note">${esc(source.sourceTitle)} · ${esc(source.attribution)} ${esc(source.sourceNotice)} ${esc(source.modificationNotice)} <a href="https://www.newyorkfed.org/privacy/termsofuse" target="_blank" rel="noopener noreferrer">Source terms ↗</a></p>`;
+}
+const scheduleBasisLabel = event => event.scheduleBasis === 'recurring-rule' ? 'AGENCY RULE' : event.scheduleBasis === 'published-exception' ? 'AGENCY EXCEPTION' : event.scheduleBasis === 'calendar-estimate' ? 'ESTIMATED' : event.scheduleBasis==='secondary-calendar' ? 'NY FED CALENDAR' : '';
 const scheduleState = event => scheduleSource(event)?.status !== 'ok' && scheduleSource(event)?.fetchedAt ? 'CACHED SCHEDULE' : scheduleBasisLabel(event) || 'SCHEDULED';
 const scheduleBasisPrefix = event => ['dol', 'treasury'].includes(event.sourceId) && scheduleBasisLabel(event) ? `${scheduleBasisLabel(event)} · ` : '';
 function scheduledTime(event) {
@@ -25,6 +30,7 @@ function scheduledTime(event) {
     : event.time ? `${event.time} ET` : 'Time not supplied';
 }
 function scheduleBasisNote(event) {
+  if(event.scheduleBasis==='secondary-calendar')return 'BLS release date and Eastern time listed by the Federal Reserve Bank of New York. Secondary calendar; dates and times are tentative. Observation period is not supplied and publication is not confirmed.';
   if (event.scheduleBasis === 'recurring-rule') return 'Generated from the DOL agency rule: Thursday at 08:30 Eastern Time. This future date was not individually listed and may change; check the official schedule for exceptions.';
   if (event.scheduleBasis === 'published-exception') return `The official DOL schedule lists this exception to its usual Thursday rule.${event.nominalDate ? ` Nominal Thursday: ${releaseDate(event.nominalDate)}.` : ''}`;
   if (event.scheduleBasis === 'calendar-estimate') return 'Individually listed estimate on the official Fiscal Data calendar. The date and time may change; this estimate does not confirm publication.';
@@ -45,4 +51,4 @@ function yieldTimingPanel() {
   return `<div class="grid">${panel('T', 'TREASURY YIELD PUBLICATION TIMING', `<div class="panel-body">${guidance}${metadata}</div>${notes}`, '<span class="pill">ONGOING TIMING</span>' + seriesLink('yield', '10Y DETAIL ↗', 'link-button'), '', 'yield-timing')}</div>`;
 }
 
-export {releaseDate,scheduleLinks,calendarSourceNames,relatedSeries,scheduledPeriod,scheduleSource,scheduleState,scheduleBasisPrefix,scheduledTime,scheduleBasisNote,yieldTimingPanel};
+export {releaseDate,scheduleLinks,calendarSourceNames,calendarPublisherName,calendarSourceNotice,relatedSeries,scheduledPeriod,scheduleSource,scheduleState,scheduleBasisPrefix,scheduledTime,scheduleBasisNote,yieldTimingPanel};

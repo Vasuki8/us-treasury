@@ -39,7 +39,11 @@ async function withCliFixture(run) {
     await cp(path.join(root,'scripts'),path.join(directory,'scripts'),{recursive:true});
     await cp(path.join(root,'src'),path.join(directory,'src'),{recursive:true});
     const destination=path.join(directory,'src','official-snapshot.js');
-    const original=await readFile(path.join(root,'src','official-snapshot.js'));
+    const {snapshot:fixtureSnapshot}=await import(pathToFileURL(destination).href);
+    const annual='https://www.bls.gov/schedule/2026/home.htm',captured='2026-10-20T12:00:00.000Z';
+    fixtureSnapshot.calendar.sources.bls={id:'bls',agency:'U.S. Bureau of Labor Statistics',status:'ok',fetchedAt:captured,lastAttemptAt:captured,error:null,failure:null,coveredYears:[2026],failedYears:[],warnings:[],provenance:[{url:annual,sha256:'a'.repeat(64),retrievedAt:captured,lastModified:null}],events:[{id:'bls-consumer-price-index-september-2026',sourceId:'bls',program:'consumer-price-index',name:'Consumer Price Index',agency:'BLS',seriesId:'cpi',seriesIds:['cpi'],topic:'Inflation',date:'2026-10-14',time:'08:30',scheduledAt:'2026-10-14T12:30:00.000Z',period:null,periodLabel:'September 2026',sourceUrl:annual,sourceUid:null}]};
+    fixtureSnapshot.releases=Object.values(fixtureSnapshot.calendar.sources).flatMap(source=>source.events??[]).sort((a,b)=>(a.scheduledAt??a.date).localeCompare(b.scheduledAt??b.date)||a.id.localeCompare(b.id));
+    const original=Buffer.from(`export const snapshot = ${JSON.stringify(fixtureSnapshot)};\n`);
     await writeFile(destination,original);
     await writeFile(path.join(directory,'package.json'),'{"type":"module"}');
     await writeFile(path.join(directory,'unavailable.mjs'),"globalThis.fetch=async()=>new Response('Official service unavailable',{status:503});\n");
@@ -50,6 +54,10 @@ async function withCliFixture(run) {
     assert.ok(resolvedDirectory.startsWith(`${resolvedRoot}${path.sep}`),'cleanup stays inside workspace test-results');
     await rm(resolvedDirectory,{recursive:true,force:true});
   }
+}
+
+async function legacyBlsCalendarFixture(directory){
+  await writeFile(path.join(directory,'scripts','sources','calendar-nyfed-bls.mjs'),"export {collectBlsCalendar as collectNyFedBlsCalendar} from './calendar-bls.mjs';\n");
 }
 
 test('strict all-source CLI failure leaves the snapshot byte-for-byte unchanged',async()=>{
@@ -108,8 +116,9 @@ test('default manual CLI failure records retained source status and exits unsucc
   });
 });
 
-test('strict calendar CLI publishes successful current coverage when BLS has never supplied the next year',async()=>{
+test('legacy calendar CLI publishes successful current coverage when BLS has never supplied the next year',async()=>{
   await withCliFixture(async({directory,destination})=>{
+    await legacyBlsCalendarFixture(directory);
     const {snapshot}=await import(`${pathToFileURL(destination).href}?initial`);
     const bls=snapshot.calendar.sources.bls;
     bls.coveredYears=[2026];
@@ -145,6 +154,7 @@ test('strict calendar CLI publishes successful current coverage when BLS has nev
 });
 
 async function blockedBlsFixture(directory,{failOther=false}={}) {
+  await legacyBlsCalendarFixture(directory);
   const {snapshot}=await import(pathToFileURL(path.join(directory,'src','official-snapshot.js')).href);
   // New committed captures must never make this simulated refresh travel back
   // in time. Retain their original timestamps and advance only the fixture clock.
@@ -205,6 +215,25 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
   `);
   return attemptAt;
 }
+
+test('approved statistical service-failure mode publishes healthy captures while retaining exact BLS observations and provenance',async()=>{
+  await withCliFixture(async({directory,destination})=>{
+    const {snapshot:prior}=await import(`${pathToFileURL(destination).href}?statistics-cached-prior`);
+    const attemptedAt=await blockedBlsFixture(directory);
+    await writeFile(path.join(directory,'scripts','sources','bls.mjs'),"import {OfficialSourceHttpError} from './http.mjs';\nexport async function collectBls(){throw new OfficialSourceHttpError(503,'https://api.bls.gov/publicAPI/v1/timeseries/data/');}\n");
+    const result=await execute(process.execPath,['--import','./blocked-bls.mjs','scripts/refresh-data.mjs','--allow-cached-bls'],{cwd:directory,timeout:publicationTimeout});
+    const {snapshot:published}=await import(`${pathToFileURL(destination).href}?statistics-cached-published`);
+    assert.equal(published.sources.bls.status,'error');
+    assert.equal(published.sources.bls.fetchedAt,prior.sources.bls.fetchedAt);
+    assert.equal(published.sources.bls.lastAttemptAt,attemptedAt);
+    assert.deepEqual(published.sources.bls.series,prior.sources.bls.series);
+    assert.deepEqual(published.sources.bls.provenance,prior.sources.bls.provenance);
+    assert.deepEqual(published.publicationPolicy.cachedDataSources,['bls']);
+    assert.equal(published.sources.bea.status,'ok');
+    assert.equal(published.sources.bea.fetchedAt,attemptedAt);
+    assert.match(result.stdout,/BLS statistics cached/);
+  });
+});
 
 test('source health check preserves the approved BLS calendar exception and never publishes its successful candidate',async()=>{
   await withCliFixture(async({directory,destination,original})=>{

@@ -17,8 +17,11 @@ test('retained contribution backfill has all approved history with original capt
  assert.equal(source.quarterly.at(-1).imports,-1.66);assert.equal(source.quarterly.at(-1).fixedInvestment,1.35);assert.equal(source.quarterly.at(-1).reconciliationResidual,-.02);
  const history=await loadSnapshotHistory(snapshot,{directory:fileURLToPath(new URL('../src/',import.meta.url))});
  const captures=history.captures.filter(row=>row.sourceId==='macroContributions');
- const latest=captures.at(-1);assert.equal(latest.capturedAt,source.fetchedAt);assert.equal(latest.series.gdpTotalContribution.upserts.length,281);assert.deepEqual(latest.series.gdpTotalContribution.deletedDates,[]);
+ const latest=captures.at(-1);assert.equal(latest.capturedAt,source.fetchedAt);assert.deepEqual(latest.series.gdpTotalContribution?.deletedDates??[],[]);
+ const backfill=captures.find(row=>row.capturedAt==='2026-10-24T03:06:14.124Z');
+ assert.ok(backfill,'the original admitted backfill remains in immutable capture history');
+ assert.equal(backfill.series.gdpTotalContribution.upserts.length,281);assert.deepEqual(backfill.series.gdpTotalContribution.deletedDates,[]);
  assert.equal(asKnownOn(history,source.fetchedAt).sources.macroContributions.series.gdpTotalContribution.observations.length,317);
- const earlier=captures.filter(row=>row.capturedAt<source.fetchedAt);assert.ok(earlier.length>=2);assert.equal(asKnownOn(history,earlier.at(-1).capturedAt).sources.macroContributions.series.gdpTotalContribution.observations.length,36);
+ const earlier=captures.filter(row=>row.capturedAt<backfill.capturedAt);assert.ok(earlier.length>=2);assert.equal(asKnownOn(history,earlier.at(-1).capturedAt).sources.macroContributions.series.gdpTotalContribution.observations.length,36);
  assert.ok(earlier.every(row=>row.capturedAt<latest.capturedAt));
 });

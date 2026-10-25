@@ -5,7 +5,7 @@ import { measurementChange } from './measurement-change.js';
 import { dailyBrief, nextCatalysts } from './research-brief.js';
 import { releaseCoverage, releaseCoveragePanel } from './release-coverage.js';
 import { calendarRelatedIds } from './macro-calendar.js';
-import { releaseDate, scheduledTime, scheduleBasisNote } from './calendar-presentation.js';
+import { releaseDate, scheduledTime, scheduleBasisNote, calendarSourceNotice } from './calendar-presentation.js';
 import { watchlistMonitor, monitorUpdateLabel } from './watchlist-monitor.js';
 import { indicatorHref } from './workspace-context.js';
 
@@ -58,10 +58,10 @@ function catalystPanel(state,context,brief){
  const rows=events.map(event=>{
   const day=event.date===priorDate?'':`<div class="oh-event-day">${esc(releaseDate(event.date))}</div>`;priorDate=event.date;
   const source=dataStatus.calendar?.sources?.[event.sourceId],scheduleWarning=source?.status==='ok'?'':source?.fetchedAt?' · CACHED SCHEDULE':' · SCHEDULE SOURCE UNAVAILABLE';
-  const basis={'recurring-rule':'AGENCY RULE','published-exception':'AGENCY EXCEPTION','calendar-estimate':'ESTIMATED','listed-date':'LISTED SCHEDULE'}[event.scheduleBasis]??'SCHEDULED';
+  const basis={'recurring-rule':'AGENCY RULE','published-exception':'AGENCY EXCEPTION','calendar-estimate':'ESTIMATED','listed-date':'LISTED SCHEDULE','secondary-calendar':'NY FED CALENDAR'}[event.scheduleBasis]??'SCHEDULED';
   const following=calendarRelatedIds(event).some(id=>(state.saved??[]).includes(id));
-  const official=/^https:\/\//i.test(event.sourceUrl??'')?` <a href="${esc(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Official schedule ↗︎</a>`:'';
-  const evidence=`<p class="panel-note">Scheduled publication timing; a schedule does not confirm a result. ${esc(scheduleBasisNote(event))}${official}</p>${source?.fetchedAt?`<p class="panel-note">Schedule captured ${esc(source.fetchedAt)}.</p>`:''}${source?.error?`<p class="panel-note amber">${esc(source.error)}</p>`:''}`;
+  const official=/^https:\/\//i.test(event.sourceUrl??'')?` <a href="${esc(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">${event.provider==='new-york-fed'?'NY Fed calendar':'Official schedule'} ↗︎</a>`:'';
+  const evidence=`<p class="panel-note">Scheduled publication timing; a schedule does not confirm a result. ${esc(scheduleBasisNote(event))}${official}</p>${source?.fetchedAt?`<p class="panel-note">Schedule captured ${esc(source.fetchedAt)}.</p>`:''}${calendarSourceNotice(source)}${source?.error?`<p class="panel-note amber">${esc(source.error)}</p>`:''}`;
   return day+`<article class="oh-event">${a(event.name,`#/calendar?event=${encodeURIComponent(event.id)}&month=${event.date.slice(0,7)}`,'')}<small>${esc(scheduledTime(event))}${event.periodLabel?` · ${esc(event.periodLabel)}`:''}${following?' · FOLLOWING':''}</small>${disclosure(`schedule-${event.id}`,`${event.agency??event.sourceId} · ${basis}${scheduleWarning}`,evidence,'','')}</article>`;
  }).join('');
  const body=(rows||'<p class="panel-note">No supported upcoming events are retained. Check the full calendar and official schedules.</p>')+`<div class="oh-chart-footer">${a('CALENDAR ↗︎','#/calendar','link-button')}<span class="muted">Eastern Time</span></div>`;

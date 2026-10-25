@@ -407,7 +407,7 @@ test('an unconnected calendar has no invented release results or fixed displayed
   try {
     const html = render({ page: 'calendar' });
     assert.match(html, /No verified releases have been ingested/i);
-    assert.match(html, /official release schedules/i);
+    assert.match(html, /release schedules|secondary calendars/i);
     assert.doesNotMatch(html, /2026-10-19|October 19|ACTUAL|CONSENSUS|PRIOR REVISED|class="detail-title"/);
     assert.match(html, /data-reset-calendar/);
   } finally { releases.push(...saved); }

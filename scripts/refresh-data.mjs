@@ -11,7 +11,7 @@ import { collectBea } from './sources/bea.mjs';
 import { collectDol } from './sources/dol.mjs';
 import { collectDolAdvance } from './sources/dol-advance.mjs';
 import { collectCensus } from './sources/census.mjs';
-import { collectBlsCalendar } from './sources/calendar-bls.mjs';
+import { collectNyFedBlsCalendar } from './sources/calendar-nyfed-bls.mjs';
 import { collectBeaCalendar } from './sources/calendar-bea.mjs';
 import { collectCensusCalendar } from './sources/calendar-census.mjs';
 import { collectDolCalendar } from './sources/calendar-dol.mjs';
@@ -34,20 +34,21 @@ import {addMomentumSeries} from '../src/momentum.js';
 
 const all={beaIta:collectBeaIta,householdDebt:collectHouseholdDebt,loanDelinquency:collectLoanDelinquency,bankCredit:collectBankCredit,lendingSurvey:collectLendingSurvey,fedBalance:collectFedBalance,onRrp:collectOnRrp,treasury:collectTreasury,bls:async options=>addMomentumSeries(await collectBls(options)),bea:async options=>addMomentumSeries(await collectBea(options)),dol:collectDol,dolAdvance:collectDolAdvance,census:collectCensus,fiscal:async options=>{const result=await collectFiscal(options);return {...result,series:{...result.series,...deriveFiscalSeries(result)}};},refinancing:collectRefinancing,yields:collectYields,auctions:collectAuctions,ownership:collectOwnership,macroContributions:collectMacroContributions,marketFunctioning:collectMarketFunctioning,policyRates:collectPolicyRates,activity:collectActivity,housing:collectHousing};
 const requireAll=process.argv.includes('--require-all');
-const allowCachedBlsCalendar=process.argv.includes('--allow-cached-bls-calendar');
+const allowCachedBlsData=process.argv.includes('--allow-cached-bls');
+const allowCachedBlsCalendar=allowCachedBlsData||process.argv.includes('--allow-cached-bls-calendar');
 const checkOnly=process.argv.includes('--check-only');
 if(requireAll&&allowCachedBlsCalendar)throw new Error('Cannot combine --require-all and --allow-cached-bls-calendar; publication modes are mutually exclusive.');
-if(checkOnly&&(requireAll||allowCachedBlsCalendar))throw new Error('Use --check-only alone; source checks never publish a snapshot.');
+if(checkOnly&&(requireAll||allowCachedBlsCalendar||allowCachedBlsData))throw new Error('Use --check-only alone; source checks never publish a snapshot.');
 const selection=process.argv.find(arg=>arg.startsWith('--sources='))?.split('=')[1]?.split(',')||[...Object.keys(all),'calendar'];
 if(selection.some(id=>!Object.hasOwn(all,id)&&id!=='calendar'))throw new Error(`Sources must be ${Object.keys(all).join(',')},calendar`);
 const collectors=Object.fromEntries(selection.filter(id=>id!=='calendar').map(id=>[id,async options=>{
   console.log(`Retrieving ${id.toUpperCase()} official data…`);
   return all[id](options);
 }]));
-const calendarCollectors=selection.includes('calendar')?{fomc:collectFomcCalendar,bls:collectBlsCalendar,bea:collectBeaCalendar,census:collectCensusCalendar,dol:collectDolCalendar,treasury:collectTreasuryCalendar,'treasury-yield-timing':collectTreasuryYieldTiming}:{};
+const calendarCollectors=selection.includes('calendar')?{fomc:collectFomcCalendar,bls:collectNyFedBlsCalendar,bea:collectBeaCalendar,census:collectCensusCalendar,dol:collectDolCalendar,treasury:collectTreasuryCalendar,'treasury-yield-timing':collectTreasuryYieldTiming}:{};
 const previous={...previousRoot,vintages:await loadSnapshotHistory(previousRoot,{directory:fileURLToPath(new URL('../src/',import.meta.url))})};
-if(selection.includes('calendar'))console.log('Retrieving BLS, BEA, Census, DOL and Treasury official schedules and yield timing…');
-const snapshot=await refreshSnapshot({previous,collectors,calendarCollectors,requireAll,allowCachedBlsCalendar});
+if(selection.includes('calendar'))console.log('Retrieving New York Fed BLS dates, agency calendars and Treasury yield timing…');
+const snapshot=await refreshSnapshot({previous,collectors,calendarCollectors,requireAll,allowCachedBlsCalendar,allowCachedBlsData});
 const admission={status:'passed',error:null};
 try{assertCommercialData(snapshot);}
 catch(error){if(!checkOnly)throw error;admission.status='failed';admission.error=String(error.message||error);}
@@ -64,6 +65,11 @@ if(checkOnly){
   if(process.env.GITHUB_STEP_SUMMARY)await appendFile(process.env.GITHUB_STEP_SUMMARY,`### Official source health check\n\n${passed?'Passed':'Failed'}: ${sources.filter(source=>source.status==='ok').length}/${sources.length} selected sources captured successfully. Admission: ${admission.status}. ${sources.filter(source=>source.allowedCachedCalendar).length} verified cached BLS calendar exception(s). See source-health.json for errors, warnings, reference-period coverage and original receipts. No snapshot was published.\n\n`);
   process.exitCode=passed?0:1;
 }else await writeStoredSnapshot(snapshot,{destination,previous:previousRoot});
+if(selection.includes('bls')&&snapshot.publicationPolicy?.cachedDataSources?.includes('bls')&&!checkOnly){
+  const retainedAt=snapshot.sources.bls.fetchedAt;
+  console.log(`::warning title=BLS statistics cached::BLS API returned HTTP 503; retained verified observations from ${retainedAt}. Healthy selected sources updated; BLS readings remain cached with their original retrieval time.`);
+  if(process.env.GITHUB_STEP_SUMMARY)await appendFile(process.env.GITHUB_STEP_SUMMARY,`### BLS statistics retained\n\nBLS API returned HTTP 503. Preserved verified BLS observations and original capture **${retainedAt}**. Other selected sources passed their required checks. BLS status remains cached/stale; no new BLS release is claimed.\n\n`);
+}
 if(selection.includes('calendar')&&snapshot.publicationPolicy?.cachedCalendarSources.includes('bls')) {
   const retainedAt=new Date(snapshot.calendar.sources.bls.fetchedAt).toISOString();
   console.log(`::warning title=BLS calendar cached::BLS calendar cached after HTTP 403; retained verified capture from ${retainedAt}. Other selected sources refreshed successfully.`);

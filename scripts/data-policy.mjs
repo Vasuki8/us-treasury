@@ -7,6 +7,7 @@ import {dolAdvancePolicy,matchesDolAdvanceFeed,assertDolAdvanceData} from './dol
 import {economicDepthPolicies,matchesEconomicDepthFeed,assertEconomicDepthData} from './economic-depth-policy.mjs';
 import { momentumPolicies, assertMomentumData } from './momentum-policy.mjs';
 import {beaItaPolicy,matchesBeaItaFeed,assertBeaItaData} from './bea-ita-policy.mjs';
+import {matchesNyFedBlsCalendarFeed,assertNyFedBlsCalendar} from './bls-alternate-policy.mjs';
 
 // Dataset-specific commercial reuse review. Evidence and limitations: docs/data-sources.md.
 // An official-looking hostname alone does not establish reuse rights.
@@ -81,9 +82,9 @@ function matchesFeed(value, feed) {
 export const calendarPolicies = {
   fomc:fomcCalendarPolicy,
   bls: {
-    reviewedOn:'2026-10-21',commercialUse:true,
-    basis:'BLS public-domain electronic publications; agency-authored release schedule metadata, with source credit',
-    terms:['https://www.bls.gov/opub/copyright-information.htm'],
+    reviewedOn:'2026-10-24',commercialUse:true,
+    basis:'Original BLS public-domain annual schedules retained unchanged; current BLS event dates/clocks from the New York Fed secondary calendar under its business redistribution terms, with original title, source attribution, modifications and terms retained.',
+    terms:['https://www.bls.gov/opub/copyright-information.htm','https://www.newyorkfed.org/privacy/termsofuse'],
     programs:{'employment-situation':['unrate','payroll','participation','wages'],'consumer-price-index':['cpi'],'job-openings':['openings']},
   },
   bea: {
@@ -123,7 +124,7 @@ function calendarFeed(value,id) {
   try {
     const url=new URL(value);
     if(url.username||url.password||url.search||url.hash)return false;
-    if(id==='bls')return url.origin==='https://www.bls.gov' && /^\/schedule\/\d{4}\/home\.htm$/.test(url.pathname);
+    if(id==='bls')return matchesNyFedBlsCalendarFeed(value)||url.origin==='https://www.bls.gov' && /^\/schedule\/\d{4}\/home\.htm$/.test(url.pathname);
     if(id==='bea')return url.href==='https://www.bea.gov/news/schedule/ics/online-calendar-subscription.ics';
     if(id==='census')return url.origin==='https://www.census.gov'&&/^\/economic-indicators\/calendar-listview(?:-\d{4})?\.html$/.test(url.pathname);
     if(id==='dol')return url.href==='https://oui.doleta.gov/unemploy/claims_arch.asp';
@@ -189,6 +190,7 @@ function assertCalendarData(snapshot) {
   const captured=new Map();
   for(const [id,source] of Object.entries(snapshot.calendar?.sources??{})) {
     const policy=calendarPolicies[id];
+    if(id==='bls')assertNyFedBlsCalendar(source);
     if(id==='fomc')assertFomcCalendarData(source);
     if(!Object.hasOwn(calendarPolicies,id)||!policy.commercialUse)throw new Error(`Commercial reuse review required for calendar source: ${id}`);
     if(id==='treasury-yield-timing')assertYieldTiming(source);

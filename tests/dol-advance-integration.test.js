@@ -14,13 +14,17 @@ import {createResearchPackage,exportResearchPackage,importResearchPackage,resear
 
 const ids=['claimsAdvance','continuedClaimsAdvance'];
 // A synthetic retrieval must follow the independently refreshed historical feed.
-const at=new Date(Math.max(Date.parse(snapshot.sources.dol.fetchedAt),Date.parse('2026-10-22T21:10:00.000Z'))+1000).toISOString();
+const at=new Date(Math.max(Date.parse(snapshot.generatedAt),Date.parse(snapshot.sources.dol.fetchedAt),Date.parse('2026-10-22T21:10:00.000Z'))+1000).toISOString();
 const nextAt=new Date(Date.parse(at)+7*86400000).toISOString();
 function source(input=releaseFixture(),fetchedAt=at){return {...parseDolAdvanceText(input,{now:new Date(fetchedAt)}),fetchedAt,provenance:[{url:'https://www.dol.gov/ui/data.pdf',sha256:'a'.repeat(64),retrievedAt:fetchedAt,lastModified:null}],warnings:[]};}
 function catalog(input){return Object.fromEntries(ids.map(id=>[id,{...registry[id],...input.series[id],source:{...registry[id].source,seriesIds:input.series[id].sourceIds},fetchedAt:input.fetchedAt,provenance:input.provenance,dataStatus:'official'}]));}
 
 test('an independent advance refresh never changes revised history, calendars or earlier captured coverage',async()=>{
- const previous={sources:{dol:structuredClone(snapshot.sources.dol)},calendar:structuredClone(snapshot.calendar),publicationPolicy:structuredClone(snapshot.publicationPolicy)},before=JSON.stringify(previous);
+ const policy=structuredClone(snapshot.publicationPolicy);
+ // This fixture retains only DOL statistics, so it cannot claim an approved
+ // cached BLS statistical capture that is absent from its source map.
+ if(policy?.cachedDataSources)policy.cachedDataSources=[];
+ const previous={sources:{dol:structuredClone(snapshot.sources.dol)},calendar:structuredClone(snapshot.calendar),publicationPolicy:policy},before=JSON.stringify(previous);
  const next=await refreshSnapshot({previous,collectors:{dolAdvance:async()=>source()},now:new Date(at)});
  assert.equal(JSON.stringify(previous),before);assert.deepEqual(next.sources.dol,previous.sources.dol);assert.deepEqual(next.calendar,previous.calendar);assert.deepEqual(next.publicationPolicy,previous.publicationPolicy);assertCommercialData(next);
  assert.equal(next.vintages.captures.length,2);assert.equal(asKnownOn(next.vintages,new Date(Date.parse(at)-1).toISOString()).sources.dolAdvance,undefined);

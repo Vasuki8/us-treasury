@@ -10,6 +10,18 @@ import {
 } from '../src/model.js';
 
 const ids = ['unrate', 'payroll', 'cpi', 'pce', 'gdp', 'yield', 'debt', 'claims', 'participation', 'wages', 'openings', 'retail'];
+function expectedCaptureStatus(agency){
+  const source=dataStatus.sources[agency];
+  if(agency==='bls'&&source.status==='error'){
+    assert.equal(dataStatus.publicationPolicy?.mode,'allow-cached-bls-data');
+    assert.deepEqual(dataStatus.publicationPolicy.cachedDataSources,['bls']);
+    assert.deepEqual(source.failure,{kind:'http',status:503,requestedUrl:'https://api.bls.gov/publicAPI/v1/timeseries/data/',url:'https://api.bls.gov/publicAPI/v1/timeseries/data/',redirected:false});
+    assert.ok(source.fetchedAt<source.lastAttemptAt,'the failed attempt cannot replace the original successful retrieval');
+    return 'cached';
+  }
+  assert.equal(source.status,'ok');
+  return 'official';
+}
 const fixture = (values, extra = {}) => ({
   id: 'fixture', code: 'FIX', name: 'Example', short: 'Example', topic: 'Labor',
   frequency: 'Monthly', unit: 'Percent', precision: 1, format: 'percent',
@@ -29,7 +41,7 @@ test('original and admitted research indicators have traced observations and ret
     assert.match(s.source.url,/^https:\/\//);
     assert.ok(Number.isInteger(s.precision));
     assert.equal(Object.hasOwn(s,'revisions'),false,'ordinary startup does not compute archived revision rows');
-    assert.equal(s.dataStatus,'official',id);
+    assert.equal(s.dataStatus,expectedCaptureStatus(s.agency),id);
     if(s.agency==='dolAdvance')assert.equal(s.observations.length,2,'latest release context contains the prior comparison and current advance only');
     else assert.ok(s.observations.filter(o=>Number.isFinite(o.value)).length>=12,id);
     assert.match(s.fetchedAt,/^\d{4}-\d{2}-\d{2}T/);
@@ -55,7 +67,7 @@ test('official observations follow their real frequencies and maintain source pr
   assert.match(series.claims.coverageNote,/historical|lag|advance/i);
   assert.match(series.retail.source.name,/Census.*Advance Monthly Retail Trade/i);
   for(const id of ['treasury','bls','bea','dol','census']) {
-    assert.equal(dataStatus.sources[id].status,'ok');
+    expectedCaptureStatus(id);
     assert.ok(dataStatus.sources[id].provenance.length);
     for(const source of dataStatus.sources[id].provenance) {
       assert.match(source.sha256,/^[a-f0-9]{64}$/);
@@ -66,7 +78,7 @@ test('official observations follow their real frequencies and maintain source pr
 
 test('production calendar contains traced official schedules without invented publication results', () => {
   assert.ok(releases.length>0);
-  assert.ok(dataStatus.calendar.links.some(link=>link.url.includes('bls.gov')));
+  assert.ok(dataStatus.calendar.links.some(link=>link.url.includes('bls.gov')||link.url==='https://www.newyorkfed.org/research/calendars/nationalecon_cal.html'));
   assert.ok(dataStatus.calendar.links.some(link=>link.url.includes('bea.gov')));
   let unpublishedNextYear=false,cachedBls=false;
   for(const sourceId of ['bls','bea','census','dol','treasury','treasury-yield-timing']) {
@@ -323,7 +335,7 @@ test('CSV exports the displayed range with official provenance and an unknown re
   assert.equal(row.date,latest(series.cpi).date);
   assert.equal(Number(row.value),latest(series.cpi).value);
   assert.equal(row.publication_date,'');
-  assert.equal(row.data_status,'official');
+  assert.equal(row.data_status,expectedCaptureStatus('bls'));
   assert.equal(row.retrieved_at,series.cpi.fetchedAt);
   assert.equal(row.source_series,'CUUR0000SA0');
   assert.match(row.source_url,/api.bls.gov/);

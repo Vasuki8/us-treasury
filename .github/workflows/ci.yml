@@ -56,20 +56,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Collect and validate source health without writing snapshots
-        run: |
-          node --input-type=module <<'NODE'
-          import {collectBlsBulk} from './scripts/sources/bls-bulk.mjs';
-          import {writeFile} from 'node:fs/promises';
-          let report;
-          try {
-            const capture=await collectBlsBulk();
-            report={passed:true,fetchedAt:capture.fetchedAt,provenance:capture.provenance,series:capture.payload.Results.series.map(row=>({id:row.seriesID,count:row.data.length}))};
-          } catch(error) {
-            report={passed:false,error:error.message};process.exitCode=1;
-          }
-          await writeFile('source-health.json',JSON.stringify(report,null,2)+'\n');
-          console.log(JSON.stringify(report));
-          NODE
+        run: node scripts/refresh-data.mjs --check-only
 
       - name: Retain per-source errors, coverage, warnings and receipts
         if: always()
@@ -165,8 +152,8 @@ jobs:
       - name: Install locked data-collector dependencies
         run: npm ci --ignore-scripts
 
-      - name: Refresh official sources and retain verified BLS calendar on access denial
-        run: npm run data:refresh -- ${{ needs.refresh_check.outputs.sources && format('--require-all --sources={0}', needs.refresh_check.outputs.sources) || '--allow-cached-bls-calendar' }}
+      - name: Refresh healthy sources and clearly retain verified BLS statistics during service failure
+        run: npm run data:refresh -- ${{ needs.refresh_check.outputs.sources && format('--allow-cached-bls --sources={0}', needs.refresh_check.outputs.sources) || '--allow-cached-bls' }}
 
       - name: Test the refreshed snapshot
         run: npm test
