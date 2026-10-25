@@ -23,33 +23,33 @@
 
 Files: `scripts/sources/dol.mjs`, existing DOL parser tests.
 
-- [ ] Reproduce official HTTP200 failure and record response hash and exact row shape.
-- [ ] Write and observe a failing regression for a non-Saturday seasonal-factor-only placeholder between valid weekly observations.
-- [ ] Skip only validated empty placeholders with a dated warning; reject non-Saturday numeric observations, malformed/duplicate records and invalid factors.
-- [ ] Verify the real saved response and the focused source/retention/admission tests.
+- [x] Reproduce official HTTP200 failure and record response hash and exact row shape.
+- [x] Write and observe a failing regression for a non-Saturday seasonal-factor-only placeholder between valid weekly observations.
+- [x] Skip only validated empty placeholders with a dated warning; reject non-Saturday numeric observations, malformed/duplicate records and invalid factors.
+- [x] Verify the real saved response and the focused source/retention/admission tests.
 
 ## Task 2: Claims release retry coverage
 
 Files: `scripts/sources/calendar-dol.mjs`, `tests/calendar-dol.test.js`, `tests/dol-calendar-release-refresh.test.js`.
 
-- [ ] Reproduce a late full refresh removing today's due event and incorrectly ending retries.
-- [ ] Observe failing real-parser/refresh/planner regressions for Thursday and the published Wednesday exception.
-- [ ] Retain the current Eastern day's schedule throughout that day within the existing coverage window; never expand earlier dates.
-- [ ] Verify old results remain eligible for retries and verified current results complete the objective.
+- [x] Reproduce a late full refresh removing today's due event and incorrectly ending retries.
+- [x] Observe failing real-parser/refresh/planner regressions for Thursday and the published Wednesday exception.
+- [x] Retain the current Eastern day's schedule throughout that day within the existing coverage window; never expand earlier dates.
+- [x] Verify old results remain eligible for retries and verified current results complete the objective.
 
 ## Task 3: Bounded transient failure recovery and hosted audit
 
 Files: shared HTTP helper/tests if justified by reproduction; `.github/workflows/ci.yml`, `tests/workflow-refresh.test.js`.
 
-- [ ] Distinguish BLS HTTP503 from documented API limits; test whether an unchanged official request recovers.
-- [ ] If warranted, add at most one transient HTTP retry with short bounded Retry-After, no denial/schema/redirect retries, and corresponding red/green tests.
-- [ ] Add optional `check_sources` manual input and independent read-only-permission source audit job using the existing full refresh/validation command, retaining logs and never publishing its candidate snapshot.
-- [ ] Test dispatch eligibility and verify actual all-source collection on a branch in Actions.
+- [x] Distinguish BLS HTTP503 from documented API limits; test whether an unchanged official request recovers.
+- [x] If warranted, add at most one transient HTTP retry with short bounded Retry-After, no denial/schema/redirect retries, and corresponding red/green tests.
+- [x] Add optional `check_sources` manual input and independent read-only-permission source audit job using the existing full refresh/validation command, retaining logs and never publishing its candidate snapshot.
+- [x] Test dispatch eligibility and verify actual all-source collection on a branch in Actions.
 
 ## Task 4: Review and publish verified fixes
 
-- [ ] Review all source audit receipts, newest usable reference dates and expected source lags.
-- [ ] Run full tests, build, smoke verification and independent patch review.
+- [x] Review all source audit receipts, newest usable reference dates and expected source lags.
+- [x] Run full tests, build, smoke verification and independent patch review.
 - [ ] Publish fixes, verify main's actual refresh/upkeep outcomes and compare live assets to the verified build.
 - [ ] Record source inventory, confirmed fixes, evidence, cached BLS calendar limitation and unresolved provider issues. Update stale documentation counts.
 
@@ -60,3 +60,4 @@ Files: shared HTTP helper/tests if justified by reproduction; `.github/workflows
 - Task3 hosted diagnostic implemented using `--check-only`, the existing registry and snapshot assembly/admission gates. It writes only ignored metadata. Three real-CLI regressions cover collector failure, admission failure and the explicit cached-calendar exception; all preserve original snapshot bytes.
 - Review found and fixed missing diagnostic artifacts on admission failure. Normal publication still throws before writes; only check mode retains a failed admission report.
 - Integrated local suite1,511 passed; added admission regression independently passed. Initial sandbox baseline failures were environment restrictions and the permitted integrated run resolved them. Hosted verification will run the final complete suite.
+- Final hosted branch verification: Node22 and Node24 each pass1,512 tests/build/163-asset smoke. Real30-source diagnostic passes28 new captures and data admission, retains only the known BLS403 calendar exception, and correctly fails on BLS statistical503. All GDP/claims/Cleveland CPI upkeep discoveries pass. No branch data was published.

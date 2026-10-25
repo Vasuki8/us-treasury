@@ -81,4 +81,18 @@ Red/green regressions cover the observed DOL row, excluded-row duplicate and obs
 - The initial sandbox-only baseline failed on prohibited local loopback/Git-fixture access. The permitted integrated run passed; source/parser failures were not hidden or reclassified as passing.
 - Source rights, archived publications, snapshot/history bytes, app markup, styles and colors have no changes in this patch.
 
-Hosted outcomes will be added after the actual runner check.
+- Build and local HTTP smoke check passed for all **163 assets**. Asset version remains `b3aca80e706a77f5`; app and UI assets are unchanged.
+
+## Hosted source evidence
+
+[Branch run40144970301](https://github.com/Vasuki8/us-treasury/actions/runs/40144970301), source commit `1526966a9ba48d306932aedfeb39566950163fde`, exercised all30 collectors at `2026-10-25T00:00:25.233Z` (October24 Eastern). Artifact12579834627, `official-source-health`, was downloaded and inspected:
+
+- **28 fresh captures succeeded; admission passed.** DOL's repaired collector returned both3,117-row histories and the explicit April3 placeholder exclusion warning. The stale revised-history warning remains independent of the current advance PDF.
+- **BLS statistical API failed HTTP503**, reproducing the local provider-busy condition from GitHub's network. Original last-good capture `2026-10-24T00:05:02.137Z` was retained in the diagnostic. It was not counted as successful, and the job correctly exited1.
+- **BLS calendar failed HTTP403** and qualified only for the existing exact cached-calendar exception, with original capture `2026-10-21T22:48:25.560Z`. No other failed source was allowed to pass from retained data.
+- No snapshot/history was written by the diagnostic, and branch deployment/production-refresh jobs were skipped. The failing external source remains visible in Actions rather than being converted into a green check.
+- Independent publication upkeep succeeded: GDP1,076/1,076, claims768/768 and CPI54/54 approved facts retained, zero review candidates, all three discoveries checked. Cleveland CPI still aligns to September2026, using Eastern through-date October24 despite UTC date October25.
+
+Both hosted Node22 and Node24 jobs passed the final complete **1,512 tests**, built the application and smoke-checked all163 assets. The branch workflow is red solely because the independent source diagnostic correctly reports the reproduced BLS503. This result must not be described as all sources healthy. Both deployments and production refresh were skipped on the branch.
+
+Production acceptance follows below after publication.
