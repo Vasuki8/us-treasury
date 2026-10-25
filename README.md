@@ -101,9 +101,13 @@ npm run data:refresh -- --allow-cached-bls-calendar
 node scripts/check-refresh-due.mjs
 # Manual, read-only check of official BLS calendar document access
 node scripts/check-bls-calendar-access.mjs
+# Read-only registered BLS backup check; BLS_API_KEY must be in the private environment
+node scripts/check-bls-registered-access.mjs
 ```
 
-Refresh and then reload the browser. No API keys are needed. Install the pinned PDF text extractor once with `npm ci --ignore-scripts`; it runs only in the Node collector, never in the browser. Refresh uses Node's server-side fetch; the browser does not contact agency APIs. BEA's two public bulk files total about 70 MB, so refreshing may take several seconds. BLS unauthenticated requests are rate-limited; the reviewed BLS source IDs are batched into one unregistered request covering ten calendar years.
+Refresh and then reload the browser. Primary feeds are keyless. The optional registered BLS backup reads `BLS_API_KEY` only in the Node collector; configure it as a private repository Actions secret. After the exact unredirected v1 HTTP 503, one paced v2 request can retrieve the same 20 inputs and 31 outputs with actual v2 provenance. Both routes depend on BLS. Use the separate **Check registered BLS backup** Actions workflow to validate the key without changing published data. [Setup, source conditions and failure behavior](docs/bls-registered-backup-source-review.md).
+
+Install the pinned PDF text extractor once with `npm ci --ignore-scripts`; it runs only in the Node collector, never in the browser. Refresh uses Node's server-side fetch; the browser does not contact agency APIs. BEA's two public bulk files total about 70 MB, so refreshing may take several seconds. BLS requests retain the same ten-calendar-year window and native definitions; the registered backup does not expand indicator scope or history.
 
 The refresh command writes new immutable, content-addressed gzip captures under `src/history/`, verifies retained files, then atomically replaces `src/official-snapshot.js` with current data and an ordered storage index. All original captures, confirmations, provenance and timestamps remain available; no history is pruned. Build, refresh and publication hydrate the archive before commercial-data admission. The command exits with an error if an agency fails. Other successful agencies still update. A failed agency retains its last successful values, original retrieval time and provenance; its cached status and refresh error are visible. A first failure leaves that agency unavailable. Do not hand-edit snapshot observations or archive files. See the [storage and replay contract](docs/vintages-design.md).
 

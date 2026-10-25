@@ -1,10 +1,10 @@
 // Exact statistical admissions and conditions, reviewed in the BLS/DOL family
 // reviews, docs/data-sources.md, and docs/macro-coverage-source-review.md.
 import {NY_FED_TERMS_URL,NY_FED_DATA_NOTICE,NY_FED_REFERENCE_RATE_NOTICE,NY_FED_PRODUCT_NOTICE} from '../src/market-functioning.js';
+import {matchesBlsApiFeed} from './bls-api-policy.mjs';
 
 const reviewedOn='2026-10-22';
 const boardTerms='https://www.federalreserve.gov/disclaimer.htm';
-const blsUrl='https://api.bls.gov/publicAPI/v1/timeseries/data/';
 const beaMonthly='https://apps.bea.gov/national/Release/TXT/NipaDataM.txt';
 const beaQuarterly='https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt';
 const dolUrl='https://oui.doleta.gov/unemploy/wkclaims/report.asp';
@@ -76,7 +76,7 @@ export function matchesMacroCoverageFeed(value,feed){
 // include both NIPA files, while each new monthly output has a narrower feed.
 function matchesSourceFeed(value,feed){
   if(matchesMacroCoverageFeed(value,feed))return true;
-  if(feed==='bls-api')return value===blsUrl;
+  if(feed==='bls-api')return matchesBlsApiFeed(value);
   if(feed==='bea-nipa')return [beaMonthly,beaQuarterly].includes(value);
   if(feed==='dol-national-claims')return value===dolUrl;
   return false;

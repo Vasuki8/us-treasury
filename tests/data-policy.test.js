@@ -9,6 +9,41 @@ const snapshot={...stored,vintages:await loadSnapshotHistory(stored,{directory:f
 test('all published datasets and provenance have a recorded commercial reuse review', () => {
   assert.doesNotThrow(() => assertCommercialData(snapshot));
 });
+
+const blsV1='https://api.bls.gov/publicAPI/v1/timeseries/data/';
+const blsV2='https://api.bls.gov/publicAPI/v2/timeseries/data/';
+function blsCapture(endpoint){
+  const source=structuredClone(stored.sources.bls);
+  for(const series of Object.values(source.series))series.sourceUrl=endpoint;
+  for(const receipt of source.provenance)receipt.url=endpoint;
+  return source;
+}
+
+test('all 31 BLS outputs admit the exact registered endpoint with their actual matching receipt',()=>{
+  const source=blsCapture(blsV2);
+  assert.equal(Object.keys(source.series).length,31);
+  assert.doesNotThrow(()=>assertCommercialData({sources:{bls:source}}));
+  assert.doesNotThrow(()=>assertCommercialData({sources:{bls:blsCapture(blsV1)}}));
+  for(const id of Object.keys(source.series)){
+    const missing=blsCapture(blsV1);missing.series[id].sourceUrl=blsV2;
+    assert.throws(()=>assertCommercialData({sources:{bls:missing}}),/provenance/i,id);
+    missing.provenance.push({...missing.provenance[0],url:blsV2});
+    assert.doesNotThrow(()=>assertCommercialData({sources:{bls:missing}}),id);
+  }
+  for(const change of [source=>{source.provenance=[];},source=>{source.provenance[0].sha256='invalid';}]){
+    const invalid=blsCapture(blsV2);change(invalid);
+    assert.throws(()=>assertCommercialData({sources:{bls:invalid}}),/provenance/i);
+  }
+});
+
+test('BLS admission rejects query, hash, credential, port and path endpoint lookalikes in series and receipts',()=>{
+  for(const endpoint of [blsV1,blsV2])for(const url of [endpoint+'?registrationkey=secret',endpoint+'?',endpoint+'#',endpoint+'#data',endpoint.replace('https://','https://user:secret@'),endpoint.replace('api.bls.gov','api.bls.gov:443'),endpoint.replace('api.bls.gov','api.bls.gov:444'),endpoint.replace('/data/','/data/extra'),endpoint.replace('/publicAPI/','/publicAPI/../publicAPI/')]){
+    const series=blsCapture(blsV1);series.series.unrate.sourceUrl=url;
+    assert.throws(()=>assertCommercialData({sources:{bls:series}}),/feed|provenance/i,url);
+    const provenance=blsCapture(blsV1);provenance.provenance.push({...provenance.provenance[0],url});
+    assert.throws(()=>assertCommercialData({sources:{bls:provenance}}),/provenance/i,url);
+  }
+});
 test('a stored archive index cannot bypass admission of historical states',()=>{
  assert.throws(()=>assertCommercialData({sources:{},vintageArchive:{version:1,captures:[]}}),/hydrat/i);
 });

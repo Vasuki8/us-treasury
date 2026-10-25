@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {assertCommercialData} from '../scripts/data-policy.mjs';
 import {parseBeaEconomicDepth} from '../scripts/sources/bea.mjs';
+import {snapshot as stored} from '../src/official-snapshot.js';
+import {assertEconomicDepthData} from '../scripts/economic-depth-policy.mjs';
 
 const codes=['A191RC','LB000003','PB000003','A261RC','A261RL','A008RL','A011RL','A009RL','Y033RL','Y001RL','B020RC','B021RC','A019RC'];
 const quarterly='https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt',monthly='https://apps.bea.gov/national/Release/TXT/NipaDataM.txt';
@@ -11,6 +13,17 @@ test('economic depth admission accepts only exact reviewed codes with correct qu
   assert.doesNotThrow(()=>assertCommercialData(snapshot()));
   for(const change of [s=>s.sources.bea.series.nominalGdp.sourceIds=['A191RX'],s=>s.sources.bea.series.nominalGdp.sourceUrl=monthly,s=>s.sources.bea.series.savingRate.sourceUrl=quarterly,s=>s.sources.bea.series.nominalGdp.observations[0].publishedAt='2026-09-30',s=>s.sources.bea.provenance=[]]){
     const value=snapshot();change(value);assert.throws(()=>assertCommercialData(value),/identifier|feed|publication|provenance/i);
+  }
+});
+
+test('BLS economic depth permits either exact API with a matching hashed capture',()=>{
+  for(const endpoint of ['https://api.bls.gov/publicAPI/v1/timeseries/data/','https://api.bls.gov/publicAPI/v2/timeseries/data/']){
+    const source=structuredClone(stored.sources.bls);
+    for(const series of Object.values(source.series))series.sourceUrl=endpoint;
+    for(const receipt of source.provenance)receipt.url=endpoint;
+    assert.doesNotThrow(()=>assertEconomicDepthData({sources:{bls:source}}));
+    source.provenance[0].url=endpoint.replace('/data/','/data/?key=secret');
+    assert.throws(()=>assertEconomicDepthData({sources:{bls:source}}),/provenance/i);
   }
 });
 

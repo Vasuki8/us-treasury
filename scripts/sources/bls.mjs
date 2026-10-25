@@ -1,4 +1,7 @@
-import { requestText } from './http.mjs';
+import { setTimeout as delay } from 'node:timers/promises';
+import { OfficialSourceHttpError, requestText } from './http.mjs';
+import { BLS_API_V1, BLS_API_V2 } from '../bls-api-policy.mjs';
+import { addMomentumSeries } from '../../src/momentum.js';
 
 export const BLS_IDS={
   unrate:'LNS14000000',payroll:'CES0000000001',cpi:'CUUR0000SA0',participation:'LNS11300000',wages:'CES0500000003',openings:'JTS000000000000000JOL',
@@ -8,7 +11,7 @@ export const BLS_IDS={
 };
 export const BLS_DEPTH_IDS={hiresRate:'JTS000000000000000HIR',quitsRate:'JTS000000000000000QUR',layoffsRate:'JTS000000000000000LDR',primeAgeEmploymentPopulation:'LNS12300060',primeAgeParticipation:'LNS11300060',eciCompensation:'CIS1010000000000I',laborProductivity:'PRS85006092',unitLaborCosts:'PRS85006112'};
 const quarterlyDepth=new Set(['eciCompensation','laborProductivity','unitLaborCosts']);
-const endpoint='https://api.bls.gov/publicAPI/v1/timeseries/data/';
+const endpoint=BLS_API_V1;
 const finite=value=>typeof value==='number' && Number.isFinite(value);
 const annualGrowth=new Set(['cpi','wages','cpiCore']);
 const monthlyGrowth=new Set(['cpiMonthly','cpiCoreMonthly']);
@@ -108,12 +111,82 @@ export function parseBls(payload) {
   return result;
 }
 
-export async function collectBls({fetchImpl=globalThis.fetch,now=new Date()}={}) {
+function configuredKey(apiKey) {
+  return typeof apiKey==='string'?apiKey.trim():'';
+}
+
+function containsKey(value,apiKey) {
+  if(!apiKey)return false;
+  if(typeof value==='string')return [apiKey,encodeURIComponent(apiKey)].some(key=>value.includes(key));
+  return value&&typeof value==='object'&&Object.entries(value).some(([key,item])=>containsKey(key,apiKey)||containsKey(item,apiKey));
+}
+
+async function collectEndpoint(url,{fetchImpl,now,apiKey,registered=false}) {
   const year=now.getUTCFullYear();
-  const request=await requestText(endpoint,{fetchImpl,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({seriesid:[...new Set([...Object.values(BLS_IDS),...Object.values(BLS_DEPTH_IDS)])],startyear:String(year-9),endyear:String(year)})});
+  const request=await requestText(url,{fetchImpl:async(requested,options)=>{
+    const response=await fetchImpl(requested,{...options,redirect:'manual'});
+    if(response.redirected||response.url&&response.url!==url||response.status>=300&&response.status<400)throw new Error('BLS source redirects are not permitted');
+    if(apiKey&&[...response.headers].some(([name,value])=>containsKey(`${name}:${value}`,apiKey)))throw new Error('BLS response included credential material');
+    return response;
+  },method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({seriesid:[...new Set([...Object.values(BLS_IDS),...Object.values(BLS_DEPTH_IDS)])],startyear:String(year-9),endyear:String(year),...(registered?{registrationkey:apiKey}:{})})});
   let payload;try{payload=JSON.parse(request.text);}catch{throw new Error('BLS did not return valid JSON');}
+  if(containsKey(payload,apiKey))throw new Error('BLS response included credential material');
+  if(registered){
+    if(payload?.status!=='REQUEST_SUCCEEDED'||!Array.isArray(payload.message)||payload.message.length)throw new Error('Registered BLS API response was not successful');
+    const quarterlyIds=new Set([...quarterlyDepth].map(id=>BLS_DEPTH_IDS[id]));
+    for(const source of payload.Results?.series??[])for(const row of source.data??[]){
+      const valid=quarterlyIds.has(source.seriesID)?/^Q0[1-5]$/:/^M(?:0[1-9]|1[0-3])$/;
+      if(!valid.test(row.period)||!/^\d{4}$/.test(row.year)||row.year==='0000')throw new Error('Invalid registered BLS source period');
+    }
+  }
   const series={...parseBls(payload),...parseBlsEconomicDepth(payload)},cutoff=now.toISOString().slice(0,10);
-  for(const value of Object.values(series))value.observations=value.observations.filter(observation=>observation.date<=cutoff).slice(-120);
+  for(const value of Object.values(series)){
+    value.sourceUrl=url;
+    value.observations=value.observations.filter(observation=>observation.date<=cutoff).slice(-120);
+    if(registered&&!value.observations.some(row=>finite(row.value)))throw new Error('Missing registered BLS numeric observations within the current window');
+  }
   const {text,...provenance}=request;
-  return {id:'bls',fetchedAt:request.retrievedAt,series,provenance:[provenance],warnings:payload.message||[]};
+  return {id:'bls',fetchedAt:request.retrievedAt,series,provenance:[provenance],warnings:registered?[]:payload.message||[]};
+}
+
+/** One authenticated request, also used by the read-only credential diagnostic. */
+export async function collectRegisteredBls({fetchImpl=globalThis.fetch,now=new Date(),apiKey=process.env.BLS_API_KEY,pause=delay}={}) {
+  const key=configuredKey(apiKey);
+  if(!key)throw new Error('A BLS_API_KEY is required for registered BLS access');
+  try {
+    return await collectEndpoint(BLS_API_V2,{fetchImpl,now,apiKey:key,registered:true});
+  } catch(error) {
+    if(error instanceof OfficialSourceHttpError&&Number.isInteger(error.status)&&error.status>=100&&error.status<=599)throw new OfficialSourceHttpError(error.status,BLS_API_V2);
+    throw new Error('Registered BLS request failed or its response could not be validated');
+  }
+}
+
+function assertRegisteredCoverage(result,previous,now) {
+  const start=`${now.getUTCFullYear()-9}-01-01`,cutoff=now.toISOString().slice(0,10);
+  for(const [id,series] of Object.entries(result.series)){
+    const prior=(previous?.series?.[id]?.observations??[]).filter(row=>row.date>=start&&row.date<=cutoff);
+    const dates=new Set(series.observations.map(row=>row.date));
+    const latestUsable=rows=>rows.reduce((latest,row)=>finite(row.value)&&row.date>latest?row.date:latest,'');
+    if(prior.some(row=>!dates.has(row.date))||latestUsable(series.observations)<latestUsable(prior))throw new Error('Registered BLS response regressed retained coverage');
+  }
+}
+
+export async function collectBls({fetchImpl=globalThis.fetch,now=new Date(),apiKey=process.env.BLS_API_KEY,pause=delay,previous}={}) {
+  const key=configuredKey(apiKey);
+  try {
+    return await collectEndpoint(BLS_API_V1,{fetchImpl,now,apiKey:key});
+  } catch(error) {
+    if(!key||!(error instanceof OfficialSourceHttpError)||error.status!==503||error.redirected||error.requestedUrl!==BLS_API_V1||error.url!==BLS_API_V1)throw error;
+    try {
+      await pause(1000);
+      const result=await collectRegisteredBls({fetchImpl,now,apiKey:key,pause});
+      assertRegisteredCoverage(addMomentumSeries(result),previous,now);
+      result.warnings.push('Primary BLS v1 returned HTTP 503; collected the complete family from registered BLS v2.');
+      return result;
+    } catch(backupError) {
+      const diagnosis=backupError instanceof OfficialSourceHttpError&&Number.isInteger(backupError.status)&&backupError.status>=100&&backupError.status<=599?`HTTP ${backupError.status}`:'request or validation failure';
+      error.message+=`; registered BLS backup failed (${diagnosis}).`;
+      throw error;
+    }
+  }
 }

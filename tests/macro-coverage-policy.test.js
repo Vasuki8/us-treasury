@@ -68,6 +68,20 @@ test('macro admission accepts exact family captures and leaves older captured so
   assert.doesNotThrow(()=>api().assertMacroCoverageData({sources:{policyRates:{series:{},provenance:[]},activity:{series:{},provenance:[]},housing:{series:{},provenance:[]}}}));
 });
 
+test('BLS macro admission permits exact v2 only with matching captured provenance',()=>{
+  const data=fixture(),registered='https://api.bls.gov/publicAPI/v2/timeseries/data/';
+  for(const series of Object.values(data.sources.bls.series))series.sourceUrl=registered;
+  data.sources.bls.provenance=[{url:registered,sha256:'a'.repeat(64)}];
+  assert.doesNotThrow(()=>api().assertMacroCoverageData(data));
+  data.sources.bls.provenance[0].url=bls;
+  assert.throws(()=>api().assertMacroCoverageData(data),/provenance/i);
+  data.sources.bls.provenance[0].url=registered;
+  for(const url of [registered+'?registrationkey=secret',registered+'#',registered.replace('api.bls.gov','api.bls.gov:443')]){
+    data.sources.bls.series.cpiCore.sourceUrl=url;
+    assert.throws(()=>api().assertMacroCoverageData(data),/feed/i,url);
+  }
+});
+
 test('wrong identifiers, unreviewed source files and per-observation substitutions reject the candidate capture',()=>{
   for(const mutate of [
     s=>{s.sources.bls.series.cpiCore.sourceIds=['CUSR0000SA0L1E'];},

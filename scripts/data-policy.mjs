@@ -8,6 +8,7 @@ import {economicDepthPolicies,matchesEconomicDepthFeed,assertEconomicDepthData} 
 import { momentumPolicies, assertMomentumData } from './momentum-policy.mjs';
 import {beaItaPolicy,matchesBeaItaFeed,assertBeaItaData} from './bea-ita-policy.mjs';
 import {matchesNyFedBlsCalendarFeed,assertNyFedBlsCalendar} from './bls-alternate-policy.mjs';
+import {BLS_API_V2,matchesBlsApiFeed} from './bls-api-policy.mjs';
 
 // Dataset-specific commercial reuse review. Evidence and limitations: docs/data-sources.md.
 // An official-looking hostname alone does not establish reuse rights.
@@ -59,6 +60,7 @@ export const dataPolicies = [
 ];
 
 function matchesFeed(value, feed) {
+  if(feed==='bls-api')return matchesBlsApiFeed(value);
   if(matchesBeaItaFeed(value,feed))return true;
   if(matchesCreditContextFeed(value,feed))return true;
   if(matchesEconomicDepthFeed(value,feed))return true;
@@ -69,7 +71,6 @@ function matchesFeed(value, feed) {
     const url=new URL(value);
     if(url.username || url.password)return false;
     const endpoint=url.origin+url.pathname;
-    if(feed==='bls-api')return endpoint==='https://api.bls.gov/publicAPI/v1/timeseries/data/';
     if(feed==='bea-nipa')return ['https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt','https://apps.bea.gov/national/Release/TXT/NipaDataM.txt'].includes(endpoint);
     if(feed==='treasury-debt')return endpoint==='https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny';
     if(feed==='treasury-par-yields')return url.origin==='https://home.treasury.gov' && /^\/resource-center\/data-chart-center\/interest-rates\/daily-treasury-rates\.csv\/\d{4}\/all$/.test(url.pathname) && url.searchParams.get('type')==='daily_treasury_yield_curve';
@@ -236,6 +237,7 @@ export function assertCommercialData(snapshot) {
       const approvedIds=policy.series[id];
       if(!Array.isArray(series.sourceIds) || series.sourceIds.length!==approvedIds.length || !approvedIds.every((value,index)=>series.sourceIds[index]===value))throw new Error(`Unreviewed source identifier for ${agency}/${id}`);
       if(!matchesFeed(series.sourceUrl,policy.seriesFeeds?.[id]??policy.feed))throw new Error(`Unreviewed feed for ${agency}/${id}`);
+      if(agency==='bls'&&series.sourceUrl===BLS_API_V2&&!source.provenance?.some(receipt=>receipt.url===series.sourceUrl&&/^[a-f0-9]{64}$/.test(receipt.sha256)))throw new Error(`Missing captured BLS provenance: ${id}`);
     }
     for(const item of source.provenance ?? []) {
       if(!policies.some(policy=>matchesFeed(item.url,policy.feed)))throw new Error(`Unreviewed provenance for ${agency}: ${item.url}`);

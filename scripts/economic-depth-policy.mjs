@@ -1,7 +1,7 @@
 // Exact reviewed measurement scope: docs/economic-depth-source-review.md.
+import {matchesBlsApiFeed} from './bls-api-policy.mjs';
 const quarterly='https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt';
 const monthly='https://apps.bea.gov/national/Release/TXT/NipaDataM.txt';
-const bls='https://api.bls.gov/publicAPI/v1/timeseries/data/';
 const ids=values=>Object.fromEntries(Object.entries(values).map(([id,code])=>[id,[code]]));
 export const economicDepthPolicies=[{
   id:'bea-economic-depth',agency:'bea',reviewedOn:'2026-10-23',commercialUse:true,
@@ -29,8 +29,8 @@ export function assertEconomicDepthData(snapshot){
     if(!source)continue;
     for(const [id,series]of Object.entries(source.series??{})){
       if(!Object.hasOwn(policy.series,id))continue;
-      const expected=policy.agency==='bls'?bls:id==='savingRate'?monthly:quarterly;
-      if(series.sourceUrl!==expected)throw new Error(`Unreviewed economic-depth feed: ${policy.agency}/${id}`);
+      const expected=policy.agency==='bls'?series.sourceUrl:id==='savingRate'?monthly:quarterly;
+      if(policy.agency==='bls'?!matchesBlsApiFeed(series.sourceUrl):series.sourceUrl!==expected)throw new Error(`Unreviewed economic-depth feed: ${policy.agency}/${id}`);
       if(!source.provenance?.some(item=>item.url===expected&&/^[a-f0-9]{64}$/.test(item.sha256)))throw new Error(`Missing captured economic-depth provenance: ${policy.agency}/${id}`);
       if(series.observationType!==(id==='eciCompensationQuarterly'?'calculated':'official'))throw new Error(`Unreviewed economic-depth measurement type: ${id}`);
       for(const row of series.observations??[])if(row.publishedAt!==null)throw new Error(`Unreviewed economic-depth historical publication timing: ${id}`);

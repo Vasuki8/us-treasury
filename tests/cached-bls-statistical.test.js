@@ -14,6 +14,7 @@ import {assertCommercialData} from '../scripts/data-policy.mjs';
 import {NYFED_BLS_CALENDAR_TITLE,NYFED_BLS_CALENDAR_TERMS,NYFED_BLS_CALENDAR_MODIFICATION_NOTICE,NYFED_BLS_CALENDAR_SOURCE_NOTICE,nyFedBlsCalendarAttribution} from '../scripts/bls-alternate-policy.mjs';
 
 const endpoint='https://api.bls.gov/publicAPI/v1/timeseries/data/';
+const registeredEndpoint='https://api.bls.gov/publicAPI/v2/timeseries/data/';
 const attempt='2026-10-24T23:42:00.000Z',now=new Date('2026-10-25T00:17:00.000Z');
 const unavailable=(status=503,url=endpoint,extra={})=>new OfficialSourceHttpError(status,url,extra);
 const failure=()=>({kind:'http',status:503,requestedUrl:endpoint,url:endpoint,redirected:false});
@@ -53,6 +54,26 @@ test('the cached-statistics exception admits the actual reviewed complete last-g
  assert.equal(canPublishCachedBlsData(undefined,now),false);
 });
 
+test('a last-good registered capture permits cached publication only after exact unredirected primary v1 HTTP 503',async()=>{
+ const source=cachedBls();
+ for(const series of Object.values(source.series))series.sourceUrl=registeredEndpoint;
+ for(const receipt of source.provenance)receipt.url=registeredEndpoint;
+ assert.equal(canPublishCachedBlsData(source,now),true);
+ for(const mutate of [
+  value=>{value.failure.requestedUrl=registeredEndpoint;value.failure.url=registeredEndpoint;},
+  value=>{value.failure.redirected=true;},value=>{value.failure.status=403;},value=>{value.failure.status=429;},
+  value=>{value.provenance[0].url=endpoint;},value=>{value.provenance[0].url=registeredEndpoint+'?key=secret';},value=>{value.provenance[0].url=registeredEndpoint+'#';},
+  value=>{value.provenance[0].url=registeredEndpoint.replace('api.bls.gov','api.bls.gov:443');},
+  value=>{value.series.unrate.sourceUrl=endpoint;},
+ ]){const invalid=structuredClone(source);mutate(invalid);assert.equal(canPublishCachedBlsData(invalid,now),false,mutate.toString());}
+ const prior=previous();prior.sources.bls=structuredClone(source);
+ const next=await refreshSnapshot({previous:prior,now,allowCachedBlsData:true,collectors:{bls:async()=>{throw unavailable();}}});
+ assert.deepEqual(next.sources.bls.series,source.series);
+ assert.deepEqual(next.sources.bls.provenance,source.provenance);
+ assert.deepEqual(next.sources.bls.failure,failure());
+ assert.deepEqual(next.publicationPolicy,{mode:'allow-cached-bls-data',cachedDataSources:['bls'],cachedCalendarSources:[]});
+});
+
 test('a New York Fed capture cannot qualify for the legacy BLS annual-calendar access-denial exception',()=>{
  const source={...nyfed(),status:'error',failure:{kind:'http',status:403,requestedUrl:'https://www.bls.gov/schedule/2026/home.htm',url:'https://www.bls.gov/schedule/2026/home.htm',redirected:false}};
  assert.equal(canPublishCachedBls(source,now),false);
@@ -60,6 +81,7 @@ test('a New York Fed capture cannot qualify for the legacy BLS annual-calendar a
 
 test('malformed receipts and observations after the original retrieval cannot count as a verified retained capture',()=>{
  const malformed=cachedBls();malformed.provenance=[null];assert.equal(canPublishCachedBlsData(malformed,now),false);
+ const malformedSeries=cachedBls();malformedSeries.series.unrate=null;assert.equal(canPublishCachedBlsData(malformedSeries,now),false);
  const futureObservation=cachedBls();futureObservation.series.unrate.observations.at(-1).date='2026-10-25';assert.equal(canPublishCachedBlsData(futureObservation,now),false);
 });
 

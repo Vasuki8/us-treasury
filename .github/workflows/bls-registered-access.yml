@@ -1,0 +1,42 @@
+name: Check registered BLS backup
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  registered_access:
+    name: Validate registered BLS without publishing
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the exact selected commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      - name: Install locked collector dependency
+        run: npm ci --ignore-scripts
+
+      - name: Check complete registered access and reference coverage
+        env:
+          BLS_API_KEY: ${{ secrets.BLS_API_KEY }}
+        run: node scripts/check-bls-registered-access.mjs
+
+      - name: Retain the safe read-only report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bls-registered-access
+          path: bls-registered-access.json
+          if-no-files-found: warn
+          retention-days: 30

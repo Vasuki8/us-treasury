@@ -56,6 +56,8 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Collect and validate source health without writing snapshots
+        env:
+          BLS_API_KEY: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.BLS_API_KEY || '' }}
         run: node scripts/refresh-data.mjs --check-only
 
       - name: Retain per-source errors, coverage, warnings and receipts
@@ -153,6 +155,8 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Refresh healthy sources and clearly retain verified BLS statistics during service failure
+        env:
+          BLS_API_KEY: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.BLS_API_KEY || '' }}
         run: npm run data:refresh -- ${{ needs.refresh_check.outputs.sources && format('--allow-cached-bls --sources={0}', needs.refresh_check.outputs.sources) || '--allow-cached-bls' }}
 
       - name: Test the refreshed snapshot
