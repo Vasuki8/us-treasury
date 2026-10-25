@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {fileURLToPath} from 'node:url';
 import {snapshot as official} from '../src/official-snapshot.js';
+import {loadSnapshotHistory} from '../scripts/snapshot-storage.mjs';
+import {asKnownOn} from '../src/vintages.js';
 import {registry} from '../src/registry.js';
 import {getFreshness} from '../src/freshness.js';
 import {OfficialSourceHttpError} from '../scripts/sources/http.mjs';
@@ -14,7 +17,11 @@ const endpoint='https://api.bls.gov/publicAPI/v1/timeseries/data/';
 const attempt='2026-10-24T23:42:00.000Z',now=new Date('2026-10-25T00:17:00.000Z');
 const unavailable=(status=503,url=endpoint,extra={})=>new OfficialSourceHttpError(status,url,extra);
 const failure=()=>({kind:'http',status:503,requestedUrl:endpoint,url:endpoint,redirected:false});
-const priorBls=()=>structuredClone(official.sources.bls);
+// Last-good BLS capture at the fixed test clock; later live refreshes remain future captures.
+const priorBlsAt='2026-10-24T00:05:02.137Z';
+const blsHistory=await loadSnapshotHistory({vintageArchive:{version:1,captures:official.vintageArchive.captures.filter(row=>row.sourceId==='bls'&&row.capturedAt<=priorBlsAt)}},{directory:fileURLToPath(new URL('../src/',import.meta.url))});
+const pinnedBls=asKnownOn(blsHistory,priorBlsAt).sources.bls;
+const priorBls=()=>structuredClone(pinnedBls);
 const cachedBls=()=>({...priorBls(),status:'error',lastAttemptAt:attempt,error:'Official source HTTP 503 (api.bls.gov)',failure:failure()});
 const receipt=url=>({url,sha256:'a'.repeat(64),retrievedAt:attempt,lastModified:null});
 const index='https://www.newyorkfed.org/research/calendars/nationalecon_cal.html',november='https://www.newyorkfed.org/research/calendars/i-nov26.html',december='https://www.newyorkfed.org/research/calendars/i-dec26.html';
@@ -142,7 +149,7 @@ test('explicit shorter NY Fed coverage is accepted on initial migration and when
 test('daily catch-up recognizes the approved 503 attempt while preserving visibly cached and stale BLS data',()=>{
  const value=completedDaily(),before=structuredClone(value),plan=getDailyRefreshPlan(value,{now});
  assert.equal(plan.required,false);assert.deepEqual(plan.pendingSources,[]);assert.match(plan.reason,/BLS.*503|cached BLS data|cached.*statistic/i);assert.deepEqual(value,before);
- const freshness=getFreshness(value,{now:new Date('2026-10-25T01:17:00Z')}).entries.find(entry=>entry.id==='data:bls');assert.equal(freshness.status,'cached');assert.equal(freshness.stale,true);assert.equal(freshness.fetchedAt,official.sources.bls.fetchedAt);
+ const freshness=getFreshness(value,{now:new Date('2026-10-25T01:17:00Z')}).entries.find(entry=>entry.id==='data:bls');assert.equal(freshness.status,'cached');assert.equal(freshness.stale,true);assert.equal(freshness.fetchedAt,priorBlsAt);
 });
 
 test('the daily exception requires its exact policy, proven cached data and a valid attempt in this slot',()=>{
