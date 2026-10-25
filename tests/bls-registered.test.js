@@ -178,6 +178,54 @@ test('registered diagnostics classify known failures without exposing API text o
   });
 });
 
+test('registered collection accepts only exact catalog-unavailable notices for requested native series',async()=>{
+  const p=payload();p.message=[
+    'Unable to get Catalog Data for series JTS000000000000000JOL',
+    'Unable to get Catalog Data for series JTS000000000000000HIR',
+  ];
+  const result=await bls.collectRegisteredBls({apiKey:KEY,now:NOW,fetchImpl:async()=>success(p)});
+  assert.equal(Object.keys(result.series).length,26);
+  assert.ok(Object.values(result.series).every(series=>series.sourceUrl===V2));
+  assert.deepEqual(result.warnings,[
+    'BLS catalog metadata unavailable for JTS000000000000000JOL; complete requested observations were validated.',
+    'BLS catalog metadata unavailable for JTS000000000000000HIR; complete requested observations were validated.',
+  ]);
+  for(const notice of [
+    'Unable to get Catalog Data for series UNREVIEWED123',
+    'Catalog disabled', 'Unable to get Catalog Data for series JTS000000000000000JOL; extra text',
+    `Invalid registration key ${KEY}`, 'Daily request quota exceeded',
+  ]){
+    const rejected=structuredClone(p);rejected.message.push(notice);
+    await assert.rejects(bls.collectRegisteredBls({apiKey:KEY,now:NOW,fetchImpl:async()=>success(rejected)}),error=>{
+      assertSafe(error);assert.ok(error.apiSummary);assert.equal(error.apiSummary.messageCount,3);return true;
+    });
+  }
+  const incomplete=structuredClone(p);incomplete.Results.series.pop();
+  await assert.rejects(bls.collectRegisteredBls({apiKey:KEY,now:NOW,fetchImpl:async()=>success(incomplete)}),error=>error.code==='incomplete-family');
+});
+
+test('rejected API diagnostics expose only bounded status, notice categories and counts',async()=>{
+  const messages=[
+    `Registration key ${KEY} is required`, 'Daily request quota exceeded', 'Catalog details are unavailable',
+    'Requested calculations were omitted', 'Requested years are out of range', 'Requested series could not be found',
+    'Scheduled maintenance is in progress', `Unclassified advisory ${KEY}`,
+  ];
+  await assert.rejects(bls.collectRegisteredBls({apiKey:KEY,now:NOW,fetchImpl:async()=>success({status:'REQUEST_SUCCEEDED',message:messages,Results:payload().Results})}),error=>{
+    assertSafe(error);
+    assert.deepEqual(error.apiSummary,{status:'REQUEST_SUCCEEDED',messageCount:8,categories:['registration','quota','catalog','calculations','years','series','maintenance','other'],seriesCount:20});
+    assert.equal(JSON.stringify(error.apiSummary).includes(KEY),false);return true;
+  });
+  for(const status of ['REQUEST_FAILED','REQUEST_NOT_PROCESSED',`unknown-${KEY}`]){
+    await assert.rejects(bls.collectRegisteredBls({apiKey:KEY,now:NOW,fetchImpl:async()=>success({status,message:Array(101).fill(`unknown ${KEY}`),Results:{series:Array(101).fill({})}})}),error=>{
+      assertSafe(error);
+      assert.deepEqual(error.apiSummary,{status:status.startsWith('unknown')?'other':status,messageCount:null,categories:['other'],seriesCount:null});return true;
+    });
+  }
+  await assert.rejects(bls.collectRegisteredBls({apiKey:KEY,now:NOW,fetchImpl:async()=>{throw Object.assign(new Error('remote failure'),{apiSummary:{status:KEY,categories:[KEY]}});}}),error=>{
+    assert.equal(error.apiSummary,undefined);assertSafe(error);return true;
+  });
+});
+
 test('registered collection filters future observations and preserves exact-calendar calculations',async()=>{
   assert.equal(typeof bls.collectRegisteredBls,'function');
   const p=payload();p.Results.series.forEach(series=>series.data.push({year:'2027',period:quarterly.has(series.seriesID)?'Q01':'M01',value:'999',footnotes:[]}));

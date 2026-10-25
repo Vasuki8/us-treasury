@@ -58,3 +58,10 @@ test('diagnostic records only a bounded typed HTTP status for a failed registere
  assert.equal(report.passed,false);assert.equal(report.httpStatus,503);assert.ok(!JSON.stringify(report).includes(key));
  assert.equal(report.failureStage,'registered-request');
 });
+test('API failure summaries contain fixed labels and bounded counts without remote text',async()=>{
+ const allowed={status:'REQUEST_SUCCEEDED',messageCount:2,categories:['catalog'],seriesCount:20};
+ for(const [summary,expected]of [[allowed,allowed],[{...allowed,status:key},null],[{...allowed,messageCount:101},null],[{...allowed,categories:[key]},null],[{...allowed,seriesCount:key},null]]){
+  const report=await checkRegisteredBlsAccess({apiKey:key,now,collect:async()=>{const error=new Error(key);error.apiSummary=summary;throw error;}});
+  assert.equal(report.passed,false);assert.deepEqual(report.apiSummary,expected);assert.ok(!JSON.stringify(report).includes(key));
+ }
+});

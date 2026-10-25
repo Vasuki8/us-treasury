@@ -52,7 +52,11 @@ export async function checkRegisteredBlsAccess({apiKey=process.env.BLS_API_KEY,n
  }catch(error){
   const httpStatus=error instanceof OfficialSourceHttpError&&error.requestedUrl===BLS_API_V2&&Number.isInteger(error.status)&&error.status>=100&&error.status<=599?error.status:null;
   const safeCodes=new Set(['registration-rejected','api-response-rejected','malformed-json','incomplete-family','invalid-observations','credential-echo','redirect-rejected','transport-failed']);
-  return {...base,status:'error',httpStatus,failureStage:stage,failedSeries:currentSeries,reason:safeCodes.has(error.code)?error.code:null,error:'Registered BLS request or validation failed. Check key validity, access and coverage; published data were not changed.'};
+  const summary=error.apiSummary,statuses=new Set(['REQUEST_SUCCEEDED','REQUEST_FAILED','REQUEST_NOT_PROCESSED','other']);
+  const categories=new Set(['registration','quota','catalog','calculations','years','series','maintenance','other']);
+  const count=value=>value===null||Number.isInteger(value)&&value>=0&&value<=100;
+  const apiSummary=summary&&statuses.has(summary.status)&&count(summary.messageCount)&&count(summary.seriesCount)&&Array.isArray(summary.categories)&&summary.categories.length<=8&&summary.categories.every(value=>categories.has(value))?{status:summary.status,messageCount:summary.messageCount,categories:summary.categories,seriesCount:summary.seriesCount}:null;
+  return {...base,status:'error',httpStatus,failureStage:stage,failedSeries:currentSeries,reason:safeCodes.has(error.code)?error.code:null,apiSummary,error:'Registered BLS request or validation failed. Check key validity, access and coverage; published data were not changed.'};
  }
 }
 

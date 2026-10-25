@@ -10,6 +10,7 @@ export const BLS_IDS={
   payrollLevel:'CES0000000001',underemployment:'LNS13327709',employmentPopulation:'LNS12300000',weeklyHours:'CES0500000002',
 };
 export const BLS_DEPTH_IDS={hiresRate:'JTS000000000000000HIR',quitsRate:'JTS000000000000000QUR',layoffsRate:'JTS000000000000000LDR',primeAgeEmploymentPopulation:'LNS12300060',primeAgeParticipation:'LNS11300060',eciCompensation:'CIS1010000000000I',laborProductivity:'PRS85006092',unitLaborCosts:'PRS85006112'};
+const nativeIds=[...new Set([...Object.values(BLS_IDS),...Object.values(BLS_DEPTH_IDS)])];
 const quarterlyDepth=new Set(['eciCompensation','laborProductivity','unitLaborCosts']);
 const endpoint=BLS_API_V1;
 const finite=value=>typeof value==='number' && Number.isFinite(value);
@@ -122,10 +123,30 @@ function containsKey(value,apiKey) {
 }
 
 class BlsCollectionError extends Error {
-  constructor(code,message) {
+  constructor(code,message,apiSummary) {
     super(message);
     this.code=code;
+    if(apiSummary)this.apiSummary=apiSummary;
   }
+}
+
+function summarizeApiResponse(payload,apiKey) {
+  const rules={
+    registration:/\b(?:registration(?:\s*key)?|registered|key)\b/i,
+    quota:/\b(?:quota|rate[\s-]*limit|too many|daily.*limit|request.*limit)\b/i,
+    catalog:/\bcatalog\b/i,
+    calculations:/\b(?:calculations?|annual\s*average|percent\s*change)\b/i,
+    years:/\b(?:years?|startyear|endyear)\b/i,
+    series:/\b(?:series|seriesid)\b/i,
+    maintenance:/\b(?:maintenance|temporarily|unavailable|outage)\b/i,
+  },categories=new Set();
+  for(const message of Array.isArray(payload?.message)?payload.message.slice(0,100):[]){
+    const text=typeof message==='string'?message.replaceAll(apiKey,''):'';
+    const matches=Object.entries(rules).filter(([,pattern])=>pattern.test(text)).map(([category])=>category);
+    for(const category of matches.length?matches:['other'])categories.add(category);
+  }
+  const count=value=>Array.isArray(value)&&value.length<=100?value.length:null;
+  return {status:['REQUEST_SUCCEEDED','REQUEST_FAILED','REQUEST_NOT_PROCESSED'].includes(payload?.status)?payload.status:'other',messageCount:count(payload?.message),categories:[...Object.keys(rules),'other'].filter(category=>categories.has(category)),seriesCount:count(payload?.Results?.series)};
 }
 
 async function collectEndpoint(url,{fetchImpl,now,apiKey,registered=false}) {
@@ -135,23 +156,27 @@ async function collectEndpoint(url,{fetchImpl,now,apiKey,registered=false}) {
     if(response.redirected||response.url&&response.url!==url||response.status>=300&&response.status<400)throw new BlsCollectionError('redirect-rejected','BLS source redirects are not permitted');
     if(apiKey&&[...response.headers].some(([name,value])=>containsKey(`${name}:${value}`,apiKey)))throw new BlsCollectionError('credential-echo','BLS response included credential material');
     return response;
-  },method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({seriesid:[...new Set([...Object.values(BLS_IDS),...Object.values(BLS_DEPTH_IDS)])],startyear:String(year-9),endyear:String(year),...(registered?{registrationkey:apiKey}:{})})});
+  },method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({seriesid:nativeIds,startyear:String(year-9),endyear:String(year),...(registered?{registrationkey:apiKey}:{})})});
   let payload;try{payload=JSON.parse(request.text);}catch{throw new BlsCollectionError('malformed-json','BLS did not return valid JSON');}
+  const catalogCodes=registered&&Array.isArray(payload?.message)?payload.message.map(message=>{
+    const code=typeof message==='string'?/^Unable to get Catalog Data for series ([A-Z0-9]+)$/.exec(message)?.[1]:null;
+    return nativeIds.includes(code)?code:null;
+  }):[];
   if(registered){
-    if(payload?.status!=='REQUEST_SUCCEEDED'||!Array.isArray(payload.message)||payload.message.length){
+    if(payload?.status!=='REQUEST_SUCCEEDED'||!Array.isArray(payload.message)||catalogCodes.some(code=>code===null)){
       const registrationRejected=Array.isArray(payload?.message)&&payload.message.some(message=>{
         if(typeof message!=='string')return false;
         const text=message.replaceAll(apiKey,'');
         return /\bnot\s+registered\b/i.test(text)||/\b(?:registration(?:\s*key)?|key)\b/i.test(text)&&/\b(?:invalid|expired|missing|required|renew|not[\s-]+valid)\b/i.test(text);
       });
-      throw new BlsCollectionError(registrationRejected?'registration-rejected':'api-response-rejected','Registered BLS API response was not successful');
+      throw new BlsCollectionError(registrationRejected?'registration-rejected':'api-response-rejected','Registered BLS API response was not successful',summarizeApiResponse(payload,apiKey));
     }
   }
   if(containsKey(payload,apiKey))throw new BlsCollectionError('credential-echo','BLS response included credential material');
   if(registered){
     const responses=payload.Results?.series;
     if(!Array.isArray(responses))throw new BlsCollectionError('incomplete-family','Registered BLS response did not include the complete family');
-    for(const code of new Set([...Object.values(BLS_IDS),...Object.values(BLS_DEPTH_IDS)])){
+    for(const code of nativeIds){
       const matches=responses.filter(source=>source?.seriesID===code);
       if(matches.length!==1||!Array.isArray(matches[0].data)||!matches[0].data.length)throw new BlsCollectionError('incomplete-family','Registered BLS response did not include the complete family');
     }
@@ -174,7 +199,7 @@ async function collectEndpoint(url,{fetchImpl,now,apiKey,registered=false}) {
     if(registered&&!value.observations.some(row=>finite(row.value)))throw new BlsCollectionError('invalid-observations','Missing registered BLS numeric observations within the current window');
   }
   const {text,...provenance}=request;
-  return {id:'bls',fetchedAt:request.retrievedAt,series,provenance:[provenance],warnings:registered?[]:payload.message||[]};
+  return {id:'bls',fetchedAt:request.retrievedAt,series,provenance:[provenance],warnings:registered?catalogCodes.map(code=>`BLS catalog metadata unavailable for ${code}; complete requested observations were validated.`):payload.message||[]};
 }
 
 /** One authenticated request, also used by the read-only credential diagnostic. */
@@ -187,6 +212,7 @@ export async function collectRegisteredBls({fetchImpl=globalThis.fetch,now=new D
     if(error instanceof OfficialSourceHttpError&&Number.isInteger(error.status)&&error.status>=100&&error.status<=599)throw new OfficialSourceHttpError(error.status,BLS_API_V2);
     const failure=new Error('Registered BLS request failed or its response could not be validated');
     failure.code=error instanceof BlsCollectionError?error.code:'transport-failed';
+    if(error instanceof BlsCollectionError&&error.apiSummary)failure.apiSummary=error.apiSummary;
     throw failure;
   }
 }
