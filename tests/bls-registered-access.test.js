@@ -43,15 +43,18 @@ test('partial, regressing, future and unreviewed captures fail the read-only che
   const value=fixture();mutate(value);
   const report=await checkRegisteredBlsAccess({apiKey:key,now,previous:snapshot.sources.bls,collect:async()=>value});
   assert.equal(report.passed,false,mutate.toString());assert.equal(report.status,'error');assert.ok(!JSON.stringify(report).includes(key));
+  assert.ok(['capture-validation','series-validation','coverage-validation','commercial-admission'].includes(report.failureStage));
  }
 });
 test('remote errors and secret echoes never enter the public diagnostic report',async()=>{
  for(const collect of [async()=>{throw new Error('server echoed '+key);},async()=>{const value=fixture();value.provenance[0].lastModified=key;return value;}]){
   const report=await checkRegisteredBlsAccess({apiKey:key,now,collect});
   assert.equal(report.passed,false);assert.equal(report.status,'error');assert.ok(!JSON.stringify(report).includes(key));
+  assert.equal(report.reason,null,'arbitrary exception details are not copied');
  }
 });
 test('diagnostic records only a bounded typed HTTP status for a failed registered request',async()=>{
  const report=await checkRegisteredBlsAccess({apiKey:key,now,collect:async()=>{throw new OfficialSourceHttpError(503,endpoint);}});
  assert.equal(report.passed,false);assert.equal(report.httpStatus,503);assert.ok(!JSON.stringify(report).includes(key));
+ assert.equal(report.failureStage,'registered-request');
 });

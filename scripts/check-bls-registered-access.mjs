@@ -15,8 +15,10 @@ export async function checkRegisteredBlsAccess({apiKey=process.env.BLS_API_KEY,n
  const base={checkedAt:now.toISOString(),endpoint:BLS_API_V2,passed:false};
  const key=typeof apiKey==='string'?apiKey.trim():'';
  if(!key)return {...base,status:'not-configured',error:'Configure the repository Actions secret BLS_API_KEY before this manual check.'};
+ let stage='registered-request',currentSeries=null;
  try{
   const source=addMomentumSeries(await collect({apiKey:key,now}));
+  stage='capture-validation';
   const validTime=value=>typeof value==='string'&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString()===value&&Date.parse(value)<=now.getTime()+45000;
   if(source.id!=='bls'||!validTime(source.fetchedAt)||source.provenance?.length!==1)throw new Error('Invalid registered capture');
   const receipt=source.provenance[0];
@@ -26,6 +28,7 @@ export async function checkRegisteredBlsAccess({apiKey=process.env.BLS_API_KEY,n
   const cutoff=new Date(Math.min(Date.parse(source.fetchedAt),now.getTime()+45000)).toISOString().slice(0,10);
   const start=`${now.getUTCFullYear()-9}-01-01`;
   const series=required.map(id=>{
+   stage='series-validation';currentSeries=id;
    const value=source.series[id],rows=value.observations;
    if(value.sourceUrl!==BLS_API_V2||!Array.isArray(rows)||!rows.length||!rows.some(row=>Number.isFinite(row.value)))throw new Error('Invalid registered observations');
    let priorDate='';
@@ -34,18 +37,22 @@ export async function checkRegisteredBlsAccess({apiKey=process.env.BLS_API_KEY,n
     priorDate=row.date;
    }
    const dates=new Set(rows.map(row=>row.date)),prior=previous?.series?.[id]?.observations??[];
+   stage='coverage-validation';
    if(prior.some(row=>row.date>=start&&row.date<=cutoff&&!dates.has(row.date)))throw new Error('Registered coverage regressed');
    const usable=rows.findLast(row=>Number.isFinite(row.value))?.date,priorUsable=prior.findLast(row=>Number.isFinite(row.value))?.date;
    if(priorUsable&&(!usable||usable<priorUsable))throw new Error('Registered usable coverage regressed');
    return {id,observationCount:rows.length,firstReferencePeriod:rows[0].date,latestReferencePeriod:rows.at(-1).date,latestUsableReferencePeriod:usable};
   });
+  stage='commercial-admission';currentSeries=null;
   assertCommercialData({sources:{bls:source}});
   const report={...base,passed:true,status:'ok',fetchedAt:source.fetchedAt,outputCount:required.length,provenance:source.provenance,series};
+  stage='credential-validation';
   if(JSON.stringify(source).includes(key)||JSON.stringify(report).includes(key))throw new Error('Secret echo rejected');
   return report;
  }catch(error){
   const httpStatus=error instanceof OfficialSourceHttpError&&error.requestedUrl===BLS_API_V2&&Number.isInteger(error.status)&&error.status>=100&&error.status<=599?error.status:null;
-  return {...base,status:'error',httpStatus,error:'Registered BLS request or validation failed. Check key validity, access and coverage; published data were not changed.'};
+  const safeCodes=new Set(['registration-rejected','api-response-rejected','malformed-json','incomplete-family','invalid-observations','credential-echo','redirect-rejected','transport-failed']);
+  return {...base,status:'error',httpStatus,failureStage:stage,failedSeries:currentSeries,reason:safeCodes.has(error.code)?error.code:null,error:'Registered BLS request or validation failed. Check key validity, access and coverage; published data were not changed.'};
  }
 }
 

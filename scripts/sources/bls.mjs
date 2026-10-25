@@ -121,29 +121,57 @@ function containsKey(value,apiKey) {
   return value&&typeof value==='object'&&Object.entries(value).some(([key,item])=>containsKey(key,apiKey)||containsKey(item,apiKey));
 }
 
+class BlsCollectionError extends Error {
+  constructor(code,message) {
+    super(message);
+    this.code=code;
+  }
+}
+
 async function collectEndpoint(url,{fetchImpl,now,apiKey,registered=false}) {
   const year=now.getUTCFullYear();
   const request=await requestText(url,{fetchImpl:async(requested,options)=>{
     const response=await fetchImpl(requested,{...options,redirect:'manual'});
-    if(response.redirected||response.url&&response.url!==url||response.status>=300&&response.status<400)throw new Error('BLS source redirects are not permitted');
-    if(apiKey&&[...response.headers].some(([name,value])=>containsKey(`${name}:${value}`,apiKey)))throw new Error('BLS response included credential material');
+    if(response.redirected||response.url&&response.url!==url||response.status>=300&&response.status<400)throw new BlsCollectionError('redirect-rejected','BLS source redirects are not permitted');
+    if(apiKey&&[...response.headers].some(([name,value])=>containsKey(`${name}:${value}`,apiKey)))throw new BlsCollectionError('credential-echo','BLS response included credential material');
     return response;
   },method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({seriesid:[...new Set([...Object.values(BLS_IDS),...Object.values(BLS_DEPTH_IDS)])],startyear:String(year-9),endyear:String(year),...(registered?{registrationkey:apiKey}:{})})});
-  let payload;try{payload=JSON.parse(request.text);}catch{throw new Error('BLS did not return valid JSON');}
-  if(containsKey(payload,apiKey))throw new Error('BLS response included credential material');
+  let payload;try{payload=JSON.parse(request.text);}catch{throw new BlsCollectionError('malformed-json','BLS did not return valid JSON');}
   if(registered){
-    if(payload?.status!=='REQUEST_SUCCEEDED'||!Array.isArray(payload.message)||payload.message.length)throw new Error('Registered BLS API response was not successful');
-    const quarterlyIds=new Set([...quarterlyDepth].map(id=>BLS_DEPTH_IDS[id]));
-    for(const source of payload.Results?.series??[])for(const row of source.data??[]){
-      const valid=quarterlyIds.has(source.seriesID)?/^Q0[1-5]$/:/^M(?:0[1-9]|1[0-3])$/;
-      if(!valid.test(row.period)||!/^\d{4}$/.test(row.year)||row.year==='0000')throw new Error('Invalid registered BLS source period');
+    if(payload?.status!=='REQUEST_SUCCEEDED'||!Array.isArray(payload.message)||payload.message.length){
+      const registrationRejected=Array.isArray(payload?.message)&&payload.message.some(message=>{
+        if(typeof message!=='string')return false;
+        const text=message.replaceAll(apiKey,'');
+        return /\bnot\s+registered\b/i.test(text)||/\b(?:registration(?:\s*key)?|key)\b/i.test(text)&&/\b(?:invalid|expired|missing|required|renew|not[\s-]+valid)\b/i.test(text);
+      });
+      throw new BlsCollectionError(registrationRejected?'registration-rejected':'api-response-rejected','Registered BLS API response was not successful');
     }
   }
-  const series={...parseBls(payload),...parseBlsEconomicDepth(payload)},cutoff=now.toISOString().slice(0,10);
+  if(containsKey(payload,apiKey))throw new BlsCollectionError('credential-echo','BLS response included credential material');
+  if(registered){
+    const responses=payload.Results?.series;
+    if(!Array.isArray(responses))throw new BlsCollectionError('incomplete-family','Registered BLS response did not include the complete family');
+    for(const code of new Set([...Object.values(BLS_IDS),...Object.values(BLS_DEPTH_IDS)])){
+      const matches=responses.filter(source=>source?.seriesID===code);
+      if(matches.length!==1||!Array.isArray(matches[0].data)||!matches[0].data.length)throw new BlsCollectionError('incomplete-family','Registered BLS response did not include the complete family');
+    }
+    const quarterlyIds=new Set([...quarterlyDepth].map(id=>BLS_DEPTH_IDS[id]));
+    for(const source of responses){
+      if(!Array.isArray(source?.data))throw new BlsCollectionError('invalid-observations','Invalid registered BLS source observations');
+      for(const row of source.data){
+        const valid=quarterlyIds.has(source.seriesID)?/^Q0[1-5]$/:/^M(?:0[1-9]|1[0-3])$/;
+        if(!valid.test(row?.period)||!/^\d{4}$/.test(row.year)||row.year==='0000')throw new BlsCollectionError('invalid-observations','Invalid registered BLS source period');
+      }
+    }
+  }
+  let series;
+  try {series={...parseBls(payload),...parseBlsEconomicDepth(payload)};}
+  catch(error){if(registered)throw new BlsCollectionError('invalid-observations','Invalid registered BLS source observations');throw error;}
+  const cutoff=now.toISOString().slice(0,10);
   for(const value of Object.values(series)){
     value.sourceUrl=url;
     value.observations=value.observations.filter(observation=>observation.date<=cutoff).slice(-120);
-    if(registered&&!value.observations.some(row=>finite(row.value)))throw new Error('Missing registered BLS numeric observations within the current window');
+    if(registered&&!value.observations.some(row=>finite(row.value)))throw new BlsCollectionError('invalid-observations','Missing registered BLS numeric observations within the current window');
   }
   const {text,...provenance}=request;
   return {id:'bls',fetchedAt:request.retrievedAt,series,provenance:[provenance],warnings:registered?[]:payload.message||[]};
@@ -157,7 +185,9 @@ export async function collectRegisteredBls({fetchImpl=globalThis.fetch,now=new D
     return await collectEndpoint(BLS_API_V2,{fetchImpl,now,apiKey:key,registered:true});
   } catch(error) {
     if(error instanceof OfficialSourceHttpError&&Number.isInteger(error.status)&&error.status>=100&&error.status<=599)throw new OfficialSourceHttpError(error.status,BLS_API_V2);
-    throw new Error('Registered BLS request failed or its response could not be validated');
+    const failure=new Error('Registered BLS request failed or its response could not be validated');
+    failure.code=error instanceof BlsCollectionError?error.code:'transport-failed';
+    throw failure;
   }
 }
 

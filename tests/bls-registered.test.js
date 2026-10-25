@@ -155,6 +155,29 @@ test('registered responses cannot echo credentials through payloads, receipt hea
   }
 });
 
+test('registered diagnostics classify known failures without exposing API text or trusting remote error codes',async()=>{
+  const cases=[
+    ['registration-rejected',()=>success({status:'REQUEST_FAILED',message:[`Invalid registration key ${KEY}`]})],
+    ['registration-rejected',()=>success({status:'REQUEST_SUCCEEDED',message:[`Key expired; renew ${KEY}`],Results:payload().Results})],
+    ['api-response-rejected',()=>success({status:'REQUEST_FAILED',message:['Unclassified API problem']})],
+    ['api-response-rejected',()=>success({status:'REQUEST_FAILED',message:['Invalid series identifier']})],
+    ['api-response-rejected',()=>success({status:'REQUEST_FAILED',message:['Invalid start year']})],
+    ['registration-rejected',()=>success({status:'REQUEST_FAILED',message:['A registration key is required']})],
+    ['registration-rejected',()=>success({status:'REQUEST_FAILED',message:['Please renew your registration']})],
+    ['registration-rejected',()=>success({status:'REQUEST_FAILED',message:['This request is not registered']})],
+    ['malformed-json',()=>new Response(`invalid JSON ${KEY}`,{status:200})],
+    ['incomplete-family',()=>{const p=payload();p.Results.series.pop();return success(p);}],
+    ['invalid-observations',()=>{const p=payload();p.Results.series[0].data[0].value='invalid';return success(p);}],
+    ['credential-echo',()=>{const p=payload();p.Results.series[0].data[0].footnotes=[{text:KEY}];return success(p);}],
+    ['redirect-rejected',()=>new Response('',{status:307,headers:{location:`https://unreviewed.example/${KEY}`}})],
+    ['transport-failed',()=>{throw Object.assign(new Error(`remote exception ${KEY}`),{code:`remote-${KEY}`});}],
+    ['transport-failed',()=>{throw Object.assign(new Error('Invalid BLS numeric observation'),{code:'registration-rejected'});}],
+  ];
+  for(const [code,response] of cases)await assert.rejects(bls.collectRegisteredBls({apiKey:KEY,now:NOW,fetchImpl:async()=>response()}),error=>{
+    assertSafe(error);assert.equal(error.code,code);return true;
+  });
+});
+
 test('registered collection filters future observations and preserves exact-calendar calculations',async()=>{
   assert.equal(typeof bls.collectRegisteredBls,'function');
   const p=payload();p.Results.series.forEach(series=>series.data.push({year:'2027',period:quarterly.has(series.seriesID)?'Q01':'M01',value:'999',footnotes:[]}));
