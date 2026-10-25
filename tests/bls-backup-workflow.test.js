@@ -17,15 +17,20 @@ test('BLS key is scoped to trusted main collection steps and never build or depl
  for(const [id,body]of Object.entries(jobs))if(!['source_health','refresh'].includes(id))assert.doesNotMatch(body,/BLS_API_KEY/);
  assert.equal((ci.match(/secrets\.BLS_API_KEY/g)??[]).length,2);
 });
-test('registered-only workflow is manually selected on main with no publishing or credentials in inputs',()=>{
+test('registered-only workflow supports the approved weekly Toronto schedule and manual checks without publishing',()=>{
  assert.ok(diagnostic,'registered access workflow exists');
  assert.match(diagnostic,/workflow_dispatch:/);
+ assert.match(diagnostic,/schedule:\s*\n\s*- cron: '17 9 \* \* 1'\s*\n\s*timezone: America\/Toronto/);
  assert.match(diagnostic,/if: github\.ref == 'refs\/heads\/main'/);
  assert.match(diagnostic,/contents: read/);
  assert.match(diagnostic,/persist-credentials: false/);
  assert.match(diagnostic,/node scripts\/check-bls-registered-access\.mjs/);
  assert.match(diagnostic,/BLS_API_KEY: \$\{\{ secrets\.BLS_API_KEY \}\}/);
- assert.doesNotMatch(diagnostic,/contents: write|pages: write|id-token: write|publish-snapshot|deploy-pages|data:refresh|pull_request|schedule:/);
+ assert.doesNotMatch(diagnostic,/contents: write|pages: write|id-token: write|publish-snapshot|deploy-pages|data:refresh|pull_request|^  push:/m);
  assert.match(diagnostic,/if: always\(\)[\s\S]*bls-registered-access\.json/);
  assert.doesNotMatch(diagnostic,/inputs:/);
+ const gate=diagnostic.match(/^    if: (.+)$/m)?.[1];
+ for(const event_name of ['schedule','workflow_dispatch'])for(const ref of ['refs/heads/main','refs/heads/feature']){
+  assert.equal(vm.runInNewContext(gate,{github:{ref,event_name}}),ref==='refs/heads/main');
+ }
 });

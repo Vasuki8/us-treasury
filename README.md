@@ -105,7 +105,7 @@ node scripts/check-bls-calendar-access.mjs
 node scripts/check-bls-registered-access.mjs
 ```
 
-Refresh and then reload the browser. Primary feeds are keyless. The optional registered BLS backup reads `BLS_API_KEY` only in the Node collector; configure it as a private repository Actions secret. After the exact unredirected v1 HTTP 503, one paced v2 request can retrieve the same 20 inputs and 31 outputs with actual v2 provenance. Both routes depend on BLS. Use the separate **Check registered BLS backup** Actions workflow to validate the key without changing published data. [Setup, source conditions and failure behavior](docs/bls-registered-backup-source-review.md).
+Refresh and then reload the browser. Primary feeds are keyless. The optional registered BLS backup reads `BLS_API_KEY` only in the Node collector; configure it as a private repository Actions secret. After the exact unredirected v1 HTTP 503, one paced v2 request can retrieve the same 20 inputs and 31 outputs with actual v2 provenance. Both routes depend on BLS. The separate **Check registered BLS backup** Actions workflow validates the key every Monday at 09:17 America/Toronto and can also run manually, without changing published data. [Setup, source conditions and failure behavior](docs/bls-registered-backup-source-review.md).
 
 Install the pinned PDF text extractor once with `npm ci --ignore-scripts`; it runs only in the Node collector, never in the browser. Refresh uses Node's server-side fetch; the browser does not contact agency APIs. BEA's two public bulk files total about 70 MB, so refreshing may take several seconds. BLS requests retain the same ten-calendar-year window and native definitions; the registered backup does not expand indicator scope or history.
 

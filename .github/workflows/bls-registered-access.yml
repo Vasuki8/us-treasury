@@ -2,6 +2,10 @@ name: Check registered BLS backup
 
 on:
   workflow_dispatch:
+  # Weekly check independent of desktop availability, away from the hour boundary.
+  schedule:
+    - cron: '17 9 * * 1'
+      timezone: America/Toronto
 
 permissions:
   contents: read
