@@ -30,4 +30,10 @@ The user selected **Update healthy sources; clearly retain cached BLS data** aft
 
 Local browser verification at1280px and390px confirmed the existing light layout, the New York Fed calendar label, unknown reference period and unchanged original BLS retrieval notice. Document widths were1265/375px respectively, with no horizontal page overflow or browser warnings/errors. `styles.css`, theme assets and navigation layout have no changes; only factual source labels/notices were added inside existing disclosures.
 
-Final full-suite, hosted and live-publication results are appended after execution.
+## Hosted candidate verification
+
+Candidate `b1d37f1a0d85a2120bb41bdb74520c03d7703c8c` passed the full suite independently on Node 22 and Node 24 in [run 40148154193](https://github.com/Vasuki8/us-treasury/actions/runs/40148154193): **1,561 tests passed, zero failed** in each matrix job. Both static builds and smoke checks passed for all 163 assets, including source-history bundles. Publication-evidence upkeep also passed.
+
+The separate read-only source-health diagnostic deliberately remains failed for the unavailable BLS statistical API. Artifact `official-source-health` (12581410277), checked at `2026-10-25T00:49:03.826Z`, confirms admission passed and **29 of 30 collectors succeeded**. Only `data:bls` returned HTTP 503; its original retrieval timestamp remained `2026-10-24T00:05:02.137Z`. The New York Fed calendar succeeded with eight events and coverage from October 1 through December 31, 2026. This independent diagnostic does not gate deployment or mislabel BLS statistics healthy.
+
+Live-publication results follow after deployment.

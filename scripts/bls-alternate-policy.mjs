@@ -60,4 +60,3 @@ export function assertNyFedBlsCalendar(source){
     ids.add(event.id);
   }
 }
-

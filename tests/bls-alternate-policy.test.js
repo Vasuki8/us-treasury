@@ -95,4 +95,3 @@ test('New York Fed calendar evidence cannot bypass rights admission by removing 
   const legacy={id:'bls',agency:'U.S. Bureau of Labor Statistics',events:[{sourceUrl:'https://www.bls.gov/schedule/2026/home.htm'}],provenance:[receipt('https://www.bls.gov/schedule/2026/home.htm')]};
   assert.doesNotThrow(()=>assertNyFedBlsCalendar(legacy));
 });
-
