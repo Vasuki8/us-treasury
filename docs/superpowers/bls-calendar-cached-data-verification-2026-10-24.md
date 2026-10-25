@@ -36,4 +36,10 @@ Candidate `b1d37f1a0d85a2120bb41bdb74520c03d7703c8c` passed the full suite indep
 
 The separate read-only source-health diagnostic deliberately remains failed for the unavailable BLS statistical API. Artifact `official-source-health` (12581410277), checked at `2026-10-25T00:49:03.826Z`, confirms admission passed and **29 of 30 collectors succeeded**. Only `data:bls` returned HTTP 503; its original retrieval timestamp remained `2026-10-24T00:05:02.137Z`. The New York Fed calendar succeeded with eight events and coverage from October 1 through December 31, 2026. This independent diagnostic does not gate deployment or mislabel BLS statistics healthy.
 
-Live-publication results follow after deployment.
+## Production verification
+
+[Production run 40148734994](https://github.com/Vasuki8/us-treasury/actions/runs/40148734994) completed successfully at `2026-10-25T01:03:18Z`, deploying `bdd778f3e4bd4aa5a3b7530831ecdeb888655882`. Both Node 22/24 verification jobs, publication-evidence upkeep and GitHub Pages deployment passed. The daily guard explicitly skipped a redundant refresh because the approved BLS 503 attempt completed the slot while the retained data kept their original capture time.
+
+`node scripts/check-live.mjs https://vasuki8.github.io/us-treasury/` confirmed **all 163 live assets exactly match the tested local build**, asset version `eb85f534cdb45d89`. The local smoke check also passed for all 163 assets after granting the loopback access required by its temporary test server; the first sandboxed smoke attempt was blocked by localhost EACCES, not an application assertion.
+
+The live November CPI calendar preview shows November 10 at 08:30 EST, `NY FED CALENDAR`, its authentic New York Fed November source link, an explicitly unknown reference period and the actual calendar retrieval time. Expanded refresh details show BLS statistics as overdue/cached, the unchanged successful retrieval `2026-10-24T00:05:02.137Z`, the later attempt `2026-10-25T00:30:52.409Z`, and the HTTP 503 error. Browser warnings/errors were empty. The temporary test tab was closed; UI/theme assets remain unchanged.
