@@ -1,0 +1,48 @@
+name: BLS backup cloud alerts and renewal
+
+on:
+  workflow_run:
+    workflows: [Check registered BLS backup]
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: '43 9 * * *'
+      timezone: America/Toronto
+  workflow_dispatch:
+    inputs:
+      test_notification:
+        description: Create and close a clearly labeled notification test once
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bls-backup-maintenance
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    if: github.repository == 'Vasuki8/us-treasury' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' || (github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event != 'pull_request'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    steps:
+      - name: Check out trusted default-branch maintenance code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Notify only on actionable backup or renewal changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BLS_NOTIFICATION_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.test_notification && 'true' || 'false' }}
+        run: node scripts/bls-backup-maintenance.mjs
