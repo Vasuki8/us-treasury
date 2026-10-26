@@ -8,6 +8,8 @@ import {createResearchPackage,exportResearchPackage,importResearchPackage} from 
 import {buildCoverageInventory} from '../src/coverage-inventory.js';
 import {researchPage} from '../src/research-page.js';
 import {renderPage} from '../src/pages.js';
+import {cpiPublicationCsv,selectCpiPublicationHistory} from '../src/cpi-publication-history.js';
+import {parseCsv} from '../scripts/sources/http.mjs';
 
 test('CPI calendar and all four indicator measurements link to published evidence without claiming an exact publication time',()=>{
  const event=releases.find(row=>row.sourceId==='bls'&&row.program==='consumer-price-index');assert.ok(event);
@@ -69,5 +71,27 @@ test('CPI publication pins preserve published rates and source basis rather than
   assert.equal(captured.adjustment,id.includes('Monthly')?'Seasonally adjusted':'Not seasonally adjusted');
   const pkg=await createResearchPackage({name:'CPI published '+id,...args}),restored=await importResearchPackage(exportResearchPackage(pkg));
   assert.equal(restored.context.publicationSeries,id);assert.ok(restored.context.attachments.some(x=>x.name==='cpi-publication-history.csv'));assert.equal(restored.catalog[id].observations[0].value,captured.observations[0].value);
+ }
+});
+
+test('CPI publication pins discard live API capture scope and preserve exact publication exports',async()=>{
+ const {cpiPublicationArchive}=await import('../src/cpi-publication-archive.js');
+ const apiTime='2099-12-31T23:59:59.000Z',apiHash='a'.repeat(64),apiUrl='https://api.bls.gov/publicAPI/v2/timeseries/data/';
+ for(const id of ['cpiMonthly','cpiCoreMonthly','cpi','cpiCore']){
+  const original=series[id];
+  series[id]={...original,inputProvenanceScope:'observation-source-urls',fetchedAt:apiTime,lastAttemptAt:apiTime,provenance:[{url:apiUrl,sha256:apiHash,retrievedAt:apiTime}],sourceUrl:apiUrl,sourceUrls:[apiUrl],observations:[{date:'2099-12-01',value:999,sourceUrl:apiUrl,retrievedAt:apiTime,sourceSha256:apiHash}]};
+  try{
+   const options={seriesId:id,cutoff:'2026-10-14',period:'2026-09-01'},row=selectCpiPublicationHistory(cpiPublicationArchive,options).latest;
+   const args=contexts.buildCpiPublicationPin(cpiPublicationArchive,id,options.cutoff,options.period);
+   const pkg=await createResearchPackage({name:'Published CPI with live API history '+id,...args});
+   const text=exportResearchPackage(pkg),restored=await importResearchPackage(text),captured=restored.catalog[id];
+   assert.equal(exportResearchPackage(restored),text);assert.equal(restored.csv,pkg.csv);
+   assert.notEqual(captured.inputProvenanceScope,'observation-source-urls');assert.equal(captured.lastAttemptAt,null);
+   assert.deepEqual(captured.provenance,row.provenance);assert.equal(captured.fetchedAt,row.provenance.at(-1).retrievedAt);assert.equal(captured.sourceUrl,row.sourceUrl);
+   assert.equal(restored.context.attachments.find(item=>item.name==='cpi-publication-history.csv').content,cpiPublicationCsv(cpiPublicationArchive,options));
+   const [headers,values]=parseCsv(restored.csv),csv=Object.fromEntries(headers.map((key,index)=>[key,values[index]]));
+   assert.deepEqual(JSON.parse(csv.capture_provenance_json),row.provenance);assert.equal(csv.retrieved_at,row.provenance.at(-1).retrievedAt);assert.equal(csv.source_url,row.sourceUrl);
+   for(const marker of [apiTime,apiHash,apiUrl])assert.equal(text.includes(marker),false,marker);
+  }finally{series[id]=original;}
  }
 });

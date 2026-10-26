@@ -1,4 +1,4 @@
-import {matchesBlsApiFeed} from './bls-api-policy.mjs';
+import {BLS_API_V1,matchesBlsApiFeed} from './bls-api-policy.mjs';
 
 export const BLS_HISTORY_STARTS={unrate:'1948-01-01',cpiIndex:'1913-01-01',cpiCoreIndex:'1957-01-01',cpiSaIndex:'1947-01-01',cpiCoreSaIndex:'1957-01-01'};
 export const BLS_HISTORY_CODES={unrate:'LNS14000000',cpiIndex:'CUUR0000SA0',cpiCoreIndex:'CUUR0000SA0L1E',cpiSaIndex:'CUSR0000SA0',cpiCoreSaIndex:'CUSR0000SA0L1E'};
@@ -22,6 +22,7 @@ export function assertBlsHistoryData(source) {
  const receipts=new Map();
  for(const receipt of source.provenance??[]){
   if(!matchesBlsApiFeed(receipt?.url)||!timestamp(receipt.retrievedAt)||receipt.retrievedAt>source.fetchedAt||!/^[a-f0-9]{64}$/.test(receipt.sha256))fail();
+  if(!Number.isInteger(receipt.startYear)||!Number.isInteger(receipt.endYear)||receipt.startYear>receipt.endYear||receipt.endYear-receipt.startYear>(receipt.url===BLS_API_V1?9:19))fail();
   receipts.set(blsReceiptKey(receipt),receipt);
  }
  for(const id of BLS_HISTORY_OUTPUTS){
@@ -30,7 +31,7 @@ export function assertBlsHistoryData(source) {
   if(BLS_HISTORY_STARTS[id]&&series.observations[0].date!==BLS_HISTORY_STARTS[id])fail();
   for(const row of series.observations){
    const receipt=receipts.get(blsReceiptKey({url:row.sourceUrl,retrievedAt:row.retrievedAt,sha256:row.sourceSha256}));
-   if(!receipt||!Array.isArray(receipt.seriesIds)||!series.sourceIds?.every(code=>receipt.seriesIds.includes(code))||!Number.isInteger(receipt.startYear)||!Number.isInteger(receipt.endYear)||receipt.startYear>receipt.endYear||receipt.endYear-receipt.startYear>19)fail();
+   if(!receipt||!Array.isArray(receipt.seriesIds)||!series.sourceIds?.every(code=>receipt.seriesIds.includes(code)))fail();
    const inputs=[row.date,...(row.baseDate?[row.baseDate]:[]),...(row.inputDates??[]).filter((date,index)=>row.inputValues?.[index]!==null)];
    if(inputs.some(date=>typeof date!=='string'||Number(date.slice(0,4))<receipt.startYear||Number(date.slice(0,4))>receipt.endYear))fail();
    if(Object.hasOwn(row,'sourceUrls')||row.publishedAt!==null)fail();

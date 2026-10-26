@@ -109,9 +109,11 @@ test('Indicator separates calculated or modeled measurement kind from captured o
 });
 
 test('Indicator exports retained missing changes and suppressed rows with exact-window provenance', () => {
-  const current=getSeries('unrate'), saved=current.observations;
+  const current=getSeries('unrate'), saved={observations:current.observations,inputProvenanceScope:current.inputProvenanceScope};
   const range={preset:'custom',startDate:'2017-01-01',endDate:'2017-01-01'};
   try {
+    // These synthetic missing rows have source-level provenance, not actual row receipts.
+    delete current.inputProvenanceScope;
     for(const [transform,observation] of [
       ['change',{date:'2017-01-01',value:4.8,publishedAt:'2017-02-03',footnotes:['First retained observation']}],
       ['level',{date:'2017-01-01',value:null,publishedAt:'2017-02-03',suppressed:true,footnotes:['Withheld by source']}],
@@ -129,7 +131,7 @@ test('Indicator exports retained missing changes and suppressed rows with exact-
       assert.equal(exported.source_notes,observation.footnotes[0]);
       if(observation.suppressed) assert.equal(exported.suppressed,'true');
     }
-  } finally {current.observations=saved;}
+  } finally {Object.assign(current,saved);}
 });
 
 test('Indicator keeps claims and GDP publication evidence prominent and workspace returns bounded', async () => {

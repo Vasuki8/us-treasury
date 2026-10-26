@@ -18,6 +18,8 @@ test('macro coverage routes validate family and measure while preserving the exa
 
 test('family workspace reuses date windows, history, detail context, safe comparisons and same-window CSV',()=>{
  const id='cpiMonthly',prior=series[id];series[id]={...prior,dataStatus:'official',error:null,fetchedAt:'2026-10-22T12:00:00Z',observations:[{date:'2026-07-01',value:.1},{date:'2026-08-01',value:.2},{date:'2026-09-01',value:.3}]};
+ // This display fixture supplies no observation receipts and uses the legacy contract.
+ delete series[id].inputProvenanceScope;
  try{
   const state=parseRoute('#/economy?family=prices&measure=cpiMonthly&window=custom&start=2026-08-01&end=2026-08-31'),html=renderPage(state);
   for(const text of ['ECONOMY','How do headline and core','WHAT CHANGED','CONTEXT','WHY IT MATTERS','LIMITATIONS','Seasonally adjusted','month over month','Retained: 3 observations','Displayed: 1 observations'])assert.ok(html.includes(text),text);

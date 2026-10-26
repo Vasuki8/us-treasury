@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import { snapshot as stored } from '../src/official-snapshot.js';
 import { assertCommercialData } from '../scripts/data-policy.mjs';
 import {loadSnapshotHistory} from '../scripts/snapshot-storage.mjs';
+import {currentBlsSource} from './helpers/bls-current-source.js';
 const snapshot={...stored,vintages:await loadSnapshotHistory(stored,{directory:fileURLToPath(new URL('../src/',import.meta.url))})};
 
 test('all published datasets and provenance have a recorded commercial reuse review', () => {
@@ -13,15 +14,14 @@ test('all published datasets and provenance have a recorded commercial reuse rev
 const blsV1='https://api.bls.gov/publicAPI/v1/timeseries/data/';
 const blsV2='https://api.bls.gov/publicAPI/v2/timeseries/data/';
 function blsCapture(endpoint){
-  const source=structuredClone(stored.sources.bls);
-  for(const series of Object.values(source.series))series.sourceUrl=endpoint;
-  for(const receipt of source.provenance)receipt.url=endpoint;
-  return source;
+  return currentBlsSource(stored.sources.bls,{endpoint});
 }
 
 test('all 31 BLS outputs admit the exact registered endpoint with their actual matching receipt',()=>{
   const source=blsCapture(blsV2);
   assert.equal(Object.keys(source.series).length,31);
+  assert.equal(source.historyProfile,undefined);assert.equal(source.provenance.length,1);
+  for(const series of Object.values(source.series))for(const row of series.observations){assert.equal(Object.hasOwn(row,'sourceUrl'),false);assert.equal(Object.hasOwn(row,'sourceSha256'),false);assert.equal(Object.hasOwn(row,'retrievedAt'),false);}
   assert.doesNotThrow(()=>assertCommercialData({sources:{bls:source}}));
   assert.doesNotThrow(()=>assertCommercialData({sources:{bls:blsCapture(blsV1)}}));
   for(const id of Object.keys(source.series)){

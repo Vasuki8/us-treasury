@@ -142,6 +142,19 @@ test('no configured key and no historical profile preserves the existing single-
  const source=await history.collectBlsWithHistory({now:NOW,apiKey:'',fetchImpl:service.fetchImpl});assert.equal(service.calls.length,1);assert.equal(source.historyProfile,undefined);assert.ok(source.series.cpiIndex.observations.length<=120);
 });
 
+test('source admission enforces each BLS endpoint query limit for bootstrap and routine receipts',async()=>{
+ const {source}=await bootstrap();
+ const routine=await history.collectBlsWithHistory({previous:source,now:NOW,apiKey:'',fetchImpl:server().fetchImpl});
+ for(const capture of [source,routine]){
+  assert.doesNotThrow(()=>assertCommercialData({sources:{bls:capture}}));
+  for(const [url,extraYears]of [[V1,10],[V2,20]]){
+   const invalid=structuredClone(capture),receipt=invalid.provenance.find(row=>row.url===url);
+   receipt.startYear=receipt.endYear-extraYears;
+   assert.throws(()=>assertCommercialData({sources:{bls:invalid}}),/BLS historical|provenance/i);
+  }
+ }
+});
+
 test('an unrecognized historical profile fails closed rather than dropping retained history',async()=>{
  const {source}=await bootstrap();const invalid=structuredClone(source);invalid.historyProfile.version=2;
  const service=server();await assert.rejects(history.collectBlsWithHistory({previous:invalid,now:NOW,apiKey:'',fetchImpl:service.fetchImpl}),/historical profile/i);
