@@ -40,3 +40,30 @@ All/custom windows, earlier-cycle comparisons, coverage inventory, CSV, captured
 The trusted manual `core-labor` scope selects only BLS, retains the existing registered secret boundary and preserves all publication gates. The new selector regression was observed failing before implementation and passing afterward with automatic/all-source modes unchanged. Actual full-history capture, archive-prefix acceptance, complete tests, live deployment and source/alert outcomes will be recorded after verification.
 
 Initial local verification passed all **1,772 tests**, with zero failures or skips. Focused evidence includes nineteen collector/migration/inventory/export/package tests, seven exact-profile admission tests, existing parser/registered/cached/backup tests and the workflow scope checks. Independent economic/source and engineering reviews found no material blocker. The registered-health fixture now converts a genuinely admitted retained source rather than overwriting its profile and raw evidence; it still verifies one current-window request, all 31 outputs and exact preservation of the previous source. A deliberately invalid predecessor was rejected before that fixture correction. No source safeguard, package limit or timeout was weakened. Actual captured-data and deployment evidence follows.
+
+## Verified registered capture and preservation
+
+The trusted [BLS-only cloud run](https://github.com/Vasuki8/us-treasury/actions/runs/40366490646) captured the expanded source at `2026-10-26T17:13:31.690Z`. All 1,772 tests passed against that actual refreshed snapshot, followed by build and the complete 163-asset HTTP smoke check, before the publisher committed `9d29379c5cf30b0808830d69755bd6ecb104b3f1`. The key was neither read nor stored locally. One genuine BLS capture extends the archive from 181 to 182 entries.
+
+| Measurement | Retained monthly rows | Usable rows | First usable month |
+| --- | ---: | ---: | --- |
+| Payroll employment level | 1,053 | 1,053 | January 1939 |
+| Monthly payroll change | 1,053 | 1,052 | February 1939 |
+| Three-month payroll average | 1,053 | 1,050 | April 1939 |
+| Participation | 945 | 944 | January 1948 |
+| Employment/population | 945 | 944 | January 1948 |
+| U-6 | 393 | 392 | January 1994 |
+
+All six end in September 2026. Native missing values remain null. Independent acceptance against `82527a23798e07ad106add9a056bcabdcf0e718a` verified every original descriptor, compressed Git blob, decoded capture object and all 181 replay checkpoints exactly, including both version-1 BLS capture cutoffs. Other sources, calendars and release schedules remain exact. All 14,311 old BLS dates remain; no raw strings or provider values changed. All 48 independent birth-year observations match their actual API probe bytes. The audit independently recomputed every one of the 1,053 payroll changes and 1,053 three-month averages.
+
+Four previously unavailable 2017 calculations gain valid earlier inputs: January payroll change is `145628 − 145408 = 220` thousand jobs; the January/February/March three-month averages become `(118+225+220)/3`, `(225+220+218)/3` and `(220+218+124)/3`. These are newly resolved calculation boundaries, not provider revisions or rewritten old captures. The original archived nulls and their CSV remain exact. Native inputs and their actual receipts are retained in the acceptance evidence. Real version-2 conversion to the weekly registered-health check also passes with 31 outputs, one fresh-window receipt and no historical profile.
+
+Actual portable verification passed exact JSON and CSV round trips for all four payroll/U-6 histories (3,552 rows; 5,884,534-byte CSV; 8,836,427-byte package), both participation/employment histories (1,890 rows; 4,278,926-byte package), a 48-row 2008 comparison and the twelve-row January–April 1939 payroll warm-up view. Every exported row resolves to its exact actual receipt. Original missing-value markers retain the existing spreadsheet-safe CSV escape; raw JSON markers remain exact. All packages fit the unchanged twelve-MiB portable limit. The two All-history packages exceed the separate three-MiB durable browser-library budget and retain the existing session-only warning and independent JSON download; no storage cap is raised. The local final-data build and all 163 HTTP asset checks pass. Both runtime and live-deployment evidence follows.
+
+## Final cloud and live verification
+
+Both Node 22 and Node 24 checked out the exact captured-data commit `9d29379c5cf30b0808830d69755bd6ecb104b3f1` and independently passed all **1,772 tests**, builds and 163-asset HTTP checks. The [release workflow](https://github.com/Vasuki8/us-treasury/actions/runs/40366490646) deployed GitHub Pages and completed successfully at `2026-10-26T17:34:03Z`.
+
+The first separate public asset check encountered HTTP503 for one historical gzip asset. The bounded retry then verified all 163 live assets exactly against the local final-data build, with no source or test change. Live browser checks confirmed payroll history from January 1939, the unavailable first monthly change, three unavailable initial average months, participation from January 1948 and U-6 from January 1994. Retained counts and source notes match the accepted capture; historical publication dates remain unknown and the current reading stays independent of a custom historical chart window. No browser console errors were observed. Layout, navigation, styles and colors remain unchanged.
+
+The follow-on [cloud data-health and renewal run](https://github.com/Vasuki8/us-treasury/actions/runs/40369830948) completed successfully at `2026-10-26T17:34:46Z`, and no GitHub issues remained open at the final check. Existing retries, failure alerts and renewal reminders retain their behavior. This subsequent documentation-only evidence update changes no deployed code or data.
