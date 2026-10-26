@@ -13,5 +13,5 @@
 - [x] Inspect official summary/schema, Treasury issuance evidence and existing source/CSV/pin paths; preserve genuine baseline exports and evaluate full-history package sizes.
 - [x] Source TDD: replace the 104-row retention assertion with full native retention; cover pre-issuance null/qualified exclusion, post-issuance unavailable totals, numeric zero, invalid inputs, old-row validation, dates and observation receipts/footnotes. Implement only the adapter and metadata changes necessary.
 - [x] Export/pin TDD: add optional positive `somaPeriods`, full-source lookback and explicit 104-week supplementary scope. Test complete inputs, full CSV, gaps, rights, old round trips and unchanged caps/page HTML.
-- [ ] Independently review the implementation; run affected/full tests. Capture through strict ownership-only CLI, verify all official dates/components/calculations, Z.1/current overlap and complete original 183-capture prefix.
-- [ ] Build and verify both supported runtimes, all source diagnostics and live assets/browser behavior. Record evidence, publish and synchronize primary checkout.
+- [x] Independently review the implementation; run affected/full tests. Capture through strict ownership-only CLI, verify all official dates/components/calculations, Z.1/current overlap and complete original 183-capture prefix.
+- [x] Build and verify both supported runtimes, all source diagnostics and live assets/browser behavior. Record evidence, publish and synchronize primary checkout.
