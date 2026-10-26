@@ -9,10 +9,10 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const execute=promisify(execFile);
 const root=fileURLToPath(new URL('../',import.meta.url));
 const scratchRoot=path.join(root,'test-results');
-// The full 12 MB admitted snapshot and 72 retained captures take about 28 s to
-// validate and rewrite in the measured manual fixture. Keep full coverage and a
-// bounded allowance for successful publication; early rejection stays at 20 s.
-const publicationTimeout=60000;
+// The 20 MB snapshot and expanded archive took 54.7 s locally; the full-refresh
+// CI fixture exceeded the former 60 s deadline. Preserve complete admission and
+// publication checks with CI headroom; early rejection remains bounded at 20 s.
+const publicationTimeout=120000;
 const independentCalendars=[
   ['calendar-bea.mjs','collectBeaCalendar','bea'],
   ['calendar-census.mjs','collectCensusCalendar','census'],
