@@ -56,7 +56,7 @@ export async function maintainBlsBackup({api,config,now=new Date(),notificationT
  ]);
  const runs=allRuns.filter(run=>Number.isSafeInteger(run.id)&&run.id>0&&run.workflow_id===workflow.id&&run.path===workflowPath&&run.head_branch==='main'&&run.head_repository?.full_name===repository&&['schedule','workflow_dispatch'].includes(run.event)&&Number.isFinite(Date.parse(run.created_at))&&Date.parse(run.created_at)<=+now).sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)||b.id-a.id);
  const latest=runs.find(run=>run.status==='completed');
- const deferred=workflow.state==='active'&&!runs.some(run=>run.id===triggerRunId&&run.status==='completed')&&hasActiveMainRun(allRuns,{workflowId:workflow.id,workflowPath,now,maxAgeMs:10*60000});
+ const registeredActive=workflow.state==='active'&&hasActiveMainRun(allRuns,{workflowId:workflow.id,workflowPath,now,maxAgeMs:10*60000});
  const expected=expectedMonday(now,config.weeklyChecksStartOn);
  const scheduled=expected&&runs.some(run=>run.event==='schedule'&&run.status==='completed'&&torontoTime(new Date(run.created_at))>=expected);
  let health='ok',detail='The registered backup check passed.';
@@ -64,6 +64,7 @@ export async function maintainBlsBackup({api,config,now=new Date(),notificationT
  else if(!latest){health='unverified';detail='No completed trusted registered check is available. Run the registered-check workflow.';}
  else if(latest.conclusion!=='success'){health='failed';detail='The latest completed registered backup check did not pass. Review its safe report and job status; this alone does not identify a key or upstream failure.';}
  else if(expected&&!scheduled){health='unverified';detail=`The expected weekly scheduled check for ${expected.slice(0,10)} has not completed after a 24-hour grace period. A manual check does not prove the schedule ran. This is not evidence of a BLS data failure.`;}
+ const deferred=registeredActive&&!(health==='failed'&&latest?.id===triggerRunId);
  const issues=allIssues.filter(issue=>!issue.pull_request&&issue.user?.login==='github-actions[bot]'&&Number.isSafeInteger(issue.number));
  const recipient=`@${config.recipient}`;
  let created=0,updated=0;

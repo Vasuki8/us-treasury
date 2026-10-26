@@ -51,6 +51,11 @@ test('registered check retries defer health alerts while active, with a bounded 
  await execute(f,'2027-09-25T14:00:00Z');assert.ok(f.issues.some(i=>i.body.startsWith(healthMarker)),'stalled checks cannot suppress indefinitely');
 });
 
+test('a completed manual check cannot release inferred schedule alerts while the registered retry is still active',async()=>{
+ const runs=[run(102,null,'2026-10-27T13:58:00Z','schedule'),run(101,'success','2026-10-27T13:00:00Z','workflow_dispatch')];runs[0].status='in_progress';
+ const f=fixture(runs);const result=await execute(f,'2026-10-27T14:00:00Z',{triggerRunId:101});assert.equal(result.deferred,true);assert.equal(f.issues.length,0);
+});
+
 test('missed schedules get a 24-hour Toronto grace, including DST; manual success does not prove the schedule ran',async()=>{
  const f=fixture([run(100,'success','2026-10-25T21:32:21Z','workflow_dispatch')]);
  assert.equal((await execute(f,'2026-10-26T13:18:00Z')).health,'ok');

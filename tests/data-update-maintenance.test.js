@@ -55,8 +55,18 @@ test('foreign or expired active runs cannot silence final failures; an unrelated
   await execute(f);assert.ok(find(f,'source:data:census'));
  }
  const f=fixture();f.reports['101:official-refresh-status']=report([['data:census','error']], '2026-10-27T13:01:00.000Z');f.runs.unshift(run(102,{status:'queued',conclusion:null,created_at:'2026-10-27T13:58:00Z'}));
+ f.snapshot.sources.treasury.fetchedAt=f.snapshot.sources.treasury.lastAttemptAt='2026-10-26T13:00:00.000Z';
  const api=async(method,path,body)=>path===`${base}/actions/runs/101`?f.runs.find(run=>run.id===101):f.api(method,path,body);
  await execute(f,{api,triggerRunId:101});assert.ok(find(f,'source:data:census'));
+ assert.equal(find(f,'daily'),undefined,'a completed source check does not end deferral of a different active daily update');
+});
+
+test('inferred stale deployment waits for an active update even when the older successful run is the trigger',async()=>{
+ const f=fixture(),old=run(101,{created_at:'2026-10-26T13:00:00Z',updated_at:'2026-10-26T13:10:00Z'});
+ f.runs=[run(102,{status:'in_progress',conclusion:null,created_at:'2026-10-27T13:58:00Z'}),old];f.jobs[101]=[job('Deploy GitHub Pages')];
+ const api=async(method,path,body)=>path===`${base}/actions/runs/101`?old:f.api(method,path,body);
+ await execute(f,{api,triggerRunId:101});assert.equal(find(f,'stage:deployment'),undefined);
+ f.runs=f.runs.filter(run=>run.id!==102);await execute(f,{api,triggerRunId:101});assert.ok(find(f,'stage:deployment'));
 });
 
 test('failed source is named once, unselected or older attempts cannot recover it, later attempted success does',async()=>{
