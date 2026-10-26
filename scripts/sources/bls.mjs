@@ -139,7 +139,7 @@ class BlsCollectionError extends Error {
   }
 }
 
-function summarizeApiResponse(payload,apiKey) {
+export function summarizeApiResponse(payload,apiKey) {
   const rules={
     registration:/\b(?:registration(?:\s*key)?|registered|key)\b/i,
     quota:/\b(?:quota|rate[\s-]*limit|too many|daily.*limit|request.*limit)\b/i,

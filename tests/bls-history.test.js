@@ -146,6 +146,40 @@ test('an unrecognized historical profile fails closed rather than dropping retai
  const service=server();await assert.rejects(history.collectBlsWithHistory({previous:invalid,now:NOW,apiKey:'',fetchImpl:service.fetchImpl}),/historical profile/i);
 });
 
+test('historical failures expose only fixed stages, requested windows and bounded API categories',async()=>{
+ const cases=[
+  ['api-status',p=>{p.status='REQUEST_FAILED';p.message=['Requested start year is out of range'];},'years'],
+  ['message',p=>{p.message=['Catalog disabled for this operation'];},'catalog'],
+  ['native-response',p=>{p.Results.series=[];},null],
+  ['period',p=>{p.Results.series[0].data[0].year='2000';},null],
+  ['parser',p=>{p.Results.series[0].data[0].value='invalid';},null],
+  ['usable',p=>{p.Results.series[0].data.forEach(row=>{row.value='-';});},null],
+  ['credential-echo',p=>{p.Results.series[0].data[0].footnotes=[{text:KEY}];},null],
+ ];
+ for(const [stage,mutate,category]of cases){
+  await assert.rejects(bootstrap({mutate:(p,b)=>{if(b.seriesid.length<20)mutate(p);}}),error=>{
+   assert.equal(error.historyDiagnostics?.stage,stage);assert.equal(error.historyDiagnostics.startYear,1913);assert.equal(error.historyDiagnostics.endYear,1932);
+   assert.equal(error.message.includes(KEY),false);assert.equal(JSON.stringify(error).includes(KEY),false);assert.ok(error.message.includes(stage));
+   if(category)assert.ok(error.historyDiagnostics.apiSummary.categories.includes(category));
+   if(['parser','usable'].includes(stage))assert.deepEqual(error.historyDiagnostics.nativeCoverage,[{seriesId:'CUUR0000SA0',observationCount:240,firstPeriod:'1913-M01',lastPeriod:'1932-M12'}]);
+   return true;
+  });
+ }
+});
+
+test('historical JSON and transport diagnostics never repeat bodies, keys or arbitrary exceptions',async()=>{
+ for(const kind of ['json','transport']){
+  const service=server(),fetchImpl=async(url,options)=>{
+   if(JSON.parse(options.body).seriesid.length===20)return service.fetchImpl(url,options);
+   if(kind==='json')return new Response(`invalid JSON ${KEY}`,{status:200});
+   throw Object.assign(new Error(`remote exception ${KEY}`),{historyDiagnostics:{stage:KEY}});
+  };
+  await assert.rejects(history.collectBlsWithHistory({now:NOW,apiKey:KEY,pause:async()=>{},fetchImpl}),error=>{
+   assert.equal(error.historyDiagnostics.stage,kind);assert.equal(error.message.includes(KEY),false);assert.equal(JSON.stringify(error).includes(KEY),false);return true;
+  });
+ }
+});
+
 test('a reordered historical profile retains history while unknown profile fields fail closed',async()=>{
  const {source}=await bootstrap();
  const reordered=structuredClone(source);

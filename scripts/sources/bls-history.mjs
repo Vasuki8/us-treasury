@@ -1,5 +1,5 @@
 import {setTimeout as delay} from 'node:timers/promises';
-import {collectBls,parseBlsHistory,BLS_IDS,BLS_DEPTH_IDS} from './bls.mjs';
+import {collectBls,parseBlsHistory,summarizeApiResponse,BLS_IDS,BLS_DEPTH_IDS} from './bls.mjs';
 import {OfficialSourceHttpError,requestText} from './http.mjs';
 import {BLS_API_V2} from '../bls-api-policy.mjs';
 import {BLS_HISTORY_STARTS,BLS_HISTORY_CODES,BLS_HISTORY_OUTPUTS,BLS_HISTORY_PROFILE,hasBlsHistory,blsReceiptKey,assertBlsHistoryData} from '../bls-history-policy.mjs';
@@ -21,21 +21,27 @@ function annotated(source){
 
 async function collectWindow({fetchImpl,now,apiKey,pause,maxAttempts,startYear,endYear}){
  const seriesIds=Object.entries(BLS_HISTORY_CODES).filter(([id])=>Number(BLS_HISTORY_STARTS[id].slice(0,4))<=endYear).map(([,code])=>code);
+ let stage='transport',payload=null;
  try{
   const request=await requestText(BLS_API_V2,{method:'POST',maxAttempts,sleepImpl:pause,headers:{'Content-Type':'application/json'},body:JSON.stringify({seriesid:seriesIds,startyear:String(startYear),endyear:String(endYear),registrationkey:apiKey}),fetchImpl:async(url,options)=>{
    const response=await fetchImpl(url,{...options,redirect:'manual'});
    if(response.redirected||response.url&&response.url!==BLS_API_V2||response.status>=300&&response.status<400)throw new Error('Rejected BLS history redirect');
-   if([...response.headers].some(([name,value])=>containsKey(`${name}:${value}`,apiKey)))throw new Error('Rejected BLS history credential echo');
+   if([...response.headers].some(([name,value])=>containsKey(`${name}:${value}`,apiKey))){stage='credential-echo';throw new Error('Rejected BLS history credential echo');}
    return response;
   }});
-  const payload=JSON.parse(request.text);
-  if(containsKey(payload,apiKey)||payload.status!=='REQUEST_SUCCEEDED'||!Array.isArray(payload.message)||payload.message.some(message=>!seriesIds.includes(typeof message==='string'?/^Unable to get Catalog Data for series ([A-Z0-9]+)$/.exec(message)?.[1]:null)))throw new Error('Rejected registered BLS history response');
+  stage='json';payload=JSON.parse(request.text);
+  stage='credential-echo';if(containsKey(payload,apiKey))throw new Error('Rejected BLS history credential echo');
+  stage='api-status';if(payload?.status!=='REQUEST_SUCCEEDED')throw new Error('Rejected registered BLS history status');
+  stage='message';if(!Array.isArray(payload.message)||payload.message.some(message=>!seriesIds.includes(typeof message==='string'?/^Unable to get Catalog Data for series ([A-Z0-9]+)$/.exec(message)?.[1]:null)))throw new Error('Rejected registered BLS history response');
+  stage='native-response';
   const responses=payload.Results?.series;
-  if(!Array.isArray(responses)||responses.length!==seriesIds.length)throw new Error('Incomplete BLS history response');
+  if(!Array.isArray(responses)||responses.length!==seriesIds.length||seriesIds.some(code=>responses.filter(response=>response?.seriesID===code).length!==1)||responses.some(response=>!Array.isArray(response?.data)))throw new Error('Incomplete BLS history response');
+  stage='period';
   for(const response of responses){
    if(!seriesIds.includes(response?.seriesID)||!Array.isArray(response.data)||response.data.some(row=>!/^M(?:0[1-9]|1[0-3])$/.test(row?.period)||!/^\d{4}$/.test(row.year)||Number(row.year)<startYear||Number(row.year)>endYear))throw new Error('Invalid BLS history period');
   }
-  const series=parseBlsHistory(payload,seriesIds),cutoff=now.toISOString().slice(0,10);
+  stage='parser';const series=parseBlsHistory(payload,seriesIds),cutoff=now.toISOString().slice(0,10);
+  stage='usable';
   for(const [id,value]of Object.entries(series)){
    value.sourceUrl=BLS_API_V2;value.observations=value.observations.filter(row=>row.date<=cutoff);
    if(!value.observations.length||BLS_HISTORY_STARTS[id]&&!value.observations.some(row=>Number.isFinite(row.value)))throw new Error('Missing BLS history observations');
@@ -43,8 +49,17 @@ async function collectWindow({fetchImpl,now,apiKey,pause,maxAttempts,startYear,e
   const {text:_text,...receipt}=request;
   return annotated({id:'bls',fetchedAt:receipt.retrievedAt,provenance:[receiptWithScope(receipt,startYear,endYear,seriesIds)],series,warnings:[]});
  }catch(error){
-  if(error instanceof OfficialSourceHttpError&&error.requestedUrl===BLS_API_V2&&error.url===BLS_API_V2&&!error.redirected)throw new OfficialSourceHttpError(error.status,BLS_API_V2);
-  throw new Error('Registered BLS historical request failed or its response could not be validated');
+  const http=error instanceof OfficialSourceHttpError&&error.requestedUrl===BLS_API_V2&&error.url===BLS_API_V2&&!error.redirected&&Number.isInteger(error.status)&&error.status>=100&&error.status<=599;
+  const diagnostics={startYear,endYear,stage,httpStatus:http?error.status:null,apiSummary:payload&&stage!=='credential-echo'?summarizeApiResponse(payload,apiKey):null};
+  if(['parser','usable'].includes(stage))diagnostics.nativeCoverage=seriesIds.map(seriesId=>{
+   const matches=payload.Results.series.filter(response=>response.seriesID===seriesId),rows=matches.length===1&&Array.isArray(matches[0].data)?matches[0].data:null;
+   const periods=(rows??[]).filter(row=>/^\d{4}$/.test(row?.year)&&/^M(?:0[1-9]|1[0-2])$/.test(row?.period)).map(row=>`${row.year}-${row.period}`).sort();
+   return {seriesId,observationCount:rows&&rows.length<=300?rows.length:null,firstPeriod:periods[0]??null,lastPeriod:periods.at(-1)??null};
+  });
+  const failure=http?new OfficialSourceHttpError(error.status,BLS_API_V2):new Error('Registered BLS historical request failed or its response could not be validated');
+  failure.historyDiagnostics=diagnostics;
+  failure.message+=` [historical diagnostics: ${JSON.stringify(diagnostics)}]`;
+  throw failure;
  }
 }
 

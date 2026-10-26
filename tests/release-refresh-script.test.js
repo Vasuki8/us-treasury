@@ -15,3 +15,13 @@ test('workflow planning preserves the complete daily refresh and chooses only du
  const missing=complete();delete missing.sources.treasury;assert.equal(api.getWorkflowRefreshPlan(missing,at).kind,'daily');
  const quiet=api.getWorkflowRefreshPlan(complete(),{now:new Date('2026-10-29T12:00:00Z')});assert.equal(quiet.required,false);assert.equal(quiet.kind,'none');
 });
+
+test('an explicit forced source scope refreshes only admitted selections and never changes automatic planning',()=>{
+ const args={now:new Date('2026-10-29T12:47:00Z'),force:true,forceSources:['bls','treasury','fiscal']};
+ const result=api.getWorkflowRefreshPlan(complete(),args);
+ assert.equal(result.required,true);assert.equal(result.kind,'manual');
+ assert.deepEqual(result.sources,['bls','treasury','fiscal']);
+ assert.throws(()=>api.getWorkflowRefreshPlan(complete(),{...args,force:false}),/force|manual/i);
+ for(const forceSources of [[],['bls','bls'],['vendor'],['bls;echo']])assert.throws(()=>api.getWorkflowRefreshPlan(complete(),{...args,forceSources}),/source|selection/i);
+ assert.deepEqual(api.getWorkflowRefreshPlan(complete(),{now:args.now,force:true}).sources,[]);
+});
