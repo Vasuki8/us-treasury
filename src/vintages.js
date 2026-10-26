@@ -7,8 +7,8 @@ const seriesFields = ['sourceIds', 'sourceUrl', 'calculation', 'dataStatus', 'co
 // newly admitted and needs its originating program in replayed rights metadata.
 const housingSeriesFields = [...seriesFields, 'programName'];
 const advanceSeriesFields = [...seriesFields, 'publicationNote'];
-const seriesFieldsFor = source => source === 'beaIta' ? [...seriesFields,'comparisonClass','sourceUnit','publicationNote'] : source === 'macroContributions' ? [...seriesFields,'contributionScope','parentContribution'] : ['treasury','fiscal'].includes(source) ? [...seriesFields,'fetchedAt','provenance'] : source === 'housing' ? housingSeriesFields : source === 'dolAdvance' ? advanceSeriesFields : seriesFields;
-const sourceFieldsFor = source => source === 'beaIta' ? [...sourceFields,'tableReleaseDate','nextReleaseDate'] : source === 'householdDebt' ? [...sourceFields,'methodology'] : source === 'bls' ? [...sourceFields,'historyProfile'] : sourceFields;
+const seriesFieldsFor = source => source === 'beaIta' ? [...seriesFields,'comparisonClass','sourceUnit','publicationNote'] : source === 'macroContributions' ? [...seriesFields,'contributionScope','parentContribution'] : ['treasury','fiscal'].includes(source) ? [...seriesFields,'fetchedAt','provenance'] : source === 'housing' ? housingSeriesFields : ['dolAdvance','dol'].includes(source) ? advanceSeriesFields : seriesFields;
+const sourceFieldsFor = source => source === 'beaIta' ? [...sourceFields,'tableReleaseDate','nextReleaseDate'] : source === 'householdDebt' ? [...sourceFields,'methodology'] : source === 'bls' ? [...sourceFields,'historyProfile'] : source === 'dol' ? [...sourceFields,'revisedHistoryProfile'] : sourceFields;
 const clone = value => JSON.parse(JSON.stringify(value));
 const own = (value, key) => Object.hasOwn(value, key);
 

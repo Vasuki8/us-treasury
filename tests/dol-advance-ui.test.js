@@ -72,10 +72,16 @@ test('DOL calendar connects all four measurements without rewriting captured sch
 });
 
 test('data mapping uses the source publication note for advance context and leaves historical fallback unchanged', async () => {
-  const prior = snapshot.sources.dolAdvance;
+  const prior = snapshot.sources.dolAdvance, priorHistory = snapshot.sources.dol;
   snapshot.sources.dolAdvance = {
     id: 'dolAdvance', status: 'ok', fetchedAt: '2026-10-22T13:00:00.000Z', provenance: [],
     series: Object.fromEntries(pairs.map(([, id, sourceId]) => [id, { publicationNote, sourceIds: [sourceId], observations: [] }])),
+  };
+  // Exercise the legacy XML fallback independently of the live source, which
+  // may retain a confirmed PDF supplement with its own publication note.
+  snapshot.sources.dol = {
+    id: 'dol', status: 'ok', fetchedAt: '2026-10-22T13:00:00.000Z', provenance: [],
+    series: Object.fromEntries(pairs.map(([id]) => [id, { sourceIds: [id === 'claims' ? 'InitialClaims/SA' : 'ContinuedClaims/SA'], observations: [] }])),
   };
   try {
     const { series: mapped } = await import('../src/data.js?dol-advance-publication-note');
@@ -83,9 +89,10 @@ test('data mapping uses the source publication note for advance context and leav
       assert.ok(mapped[id], `${id} must be mapped`);
       assert.equal(mapped[id].publicationNote, publicationNote);
     }
-    assert.equal(mapped.claims.publicationNote, 'The source feed does not provide historical publication timestamps. Retrieval time is shown separately; it is not a release date.');
+    for (const [id] of pairs) assert.equal(mapped[id].publicationNote, 'The source feed does not provide historical publication timestamps. Retrieval time is shown separately; it is not a release date.');
   } finally {
     if (prior === undefined) delete snapshot.sources.dolAdvance; else snapshot.sources.dolAdvance = prior;
+    snapshot.sources.dol = priorHistory;
   }
 });
 

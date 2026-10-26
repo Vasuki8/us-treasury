@@ -11,6 +11,7 @@ import { momentumPolicies, assertMomentumData } from './momentum-policy.mjs';
 import {beaItaPolicy,matchesBeaItaFeed,assertBeaItaData} from './bea-ita-policy.mjs';
 import {matchesNyFedBlsCalendarFeed,assertNyFedBlsCalendar} from './bls-alternate-policy.mjs';
 import {BLS_API_V2,matchesBlsApiFeed} from './bls-api-policy.mjs';
+import {hasDolRevisedHistory,matchesDolRevisedFeed} from './dol-revised-policy.mjs';
 
 // Dataset-specific commercial reuse review. Evidence and limitations: docs/data-sources.md.
 // An official-looking hostname alone does not establish reuse rights.
@@ -263,7 +264,7 @@ export function assertCommercialData(snapshot) {
       if(agency==='bls'&&series.sourceUrl===BLS_API_V2&&!source.provenance?.some(receipt=>receipt.url===series.sourceUrl&&/^[a-f0-9]{64}$/.test(receipt.sha256)))throw new Error(`Missing captured BLS provenance: ${id}`);
     }
     for(const item of source.provenance ?? []) {
-      if(!policies.some(policy=>matchesFeed(item.url,policy.feed)))throw new Error(`Unreviewed provenance for ${agency}: ${item.url}`);
+      if(!(agency==='dol'&&hasDolRevisedHistory(source)&&matchesDolRevisedFeed(item.url))&&!policies.some(policy=>matchesFeed(item.url,policy.feed)))throw new Error(`Unreviewed provenance for ${agency}: ${item.url}`);
     }
   }
   if(Object.hasOwn(snapshot,'vintageArchive')&&!Object.hasOwn(snapshot,'vintages'))throw new Error('Stored vintage archive must be hydrated before commercial-data admission');

@@ -365,8 +365,18 @@ test('CSV preserves claims coverage and Census attribution with exact retail cal
   const rows = values.map(row => Object.fromEntries(headers.map((key, index) => [key, row[index]])));
   const claims = rows.find(row => row.series_id === 'claims');
   const retail = rows.find(row => row.series_id === 'retail');
+  const point = latest(series.claims);
   assert.equal(claims.coverage_note, series.claims.coverageNote);
-  assert.match(claims.coverage_note, /historical.*week ending.*lag/i);
+  assert.ok(claims.coverage_note.length > 0);
+  assert.equal(claims.date, point.date);
+  assert.equal(claims.source_value, point.sourceValue);
+  assert.equal(claims.retrieved_at, point.retrievedAt ?? series.claims.fetchedAt);
+  assert.equal(claims.source_url, point.sourceUrl ?? series.claims.sourceUrl);
+  const receipts = series.claims.inputProvenanceScope === 'observation-source-urls'
+    ? series.claims.provenance.filter(receipt => receipt.url === point.sourceUrl && receipt.sha256 === point.sourceSha256 && receipt.retrievedAt === point.retrievedAt)
+    : series.claims.provenance;
+  assert.ok(receipts.length > 0);
+  assert.deepEqual(JSON.parse(claims.capture_provenance_json), receipts);
   assert.match(retail.source, /Census.*Advance Monthly Retail Trade/i);
   assert.equal(retail.source_value, latest(series.retail).sourceValue);
   assert.equal(retail.source_baseline_value, latest(series.retail).baseValue);

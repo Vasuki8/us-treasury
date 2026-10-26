@@ -42,6 +42,7 @@ async function withCliFixture(run) {
     // tests. Preserve the primitive's real parser/identifier exports for policy.
     await cp(path.join(directory,'scripts','sources','bls.mjs'),path.join(directory,'scripts','sources','bls-original.mjs'));
     await writeFile(path.join(directory,'scripts','sources','bls-history.mjs'),"import {collectBls} from './bls.mjs';\nimport {addMomentumSeries} from '../../src/momentum.js';\nexport async function collectBlsWithHistory(options){return addMomentumSeries(await collectBls(options));}\n");
+    await writeFile(path.join(directory,'scripts','sources','dol-revised.mjs'),"export {collectDol as collectDolWithRevisions} from './dol.mjs';\n");
     const destination=path.join(directory,'src','official-snapshot.js');
     const {snapshot:fixtureSnapshot}=await import(pathToFileURL(destination).href);
     const annual='https://www.bls.gov/schedule/2026/home.htm',captured='2026-10-20T12:00:00.000Z';
@@ -171,14 +172,15 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
   await writeFile(path.join(directory,'scripts','sources','fixture-retrieval.mjs'),`
     export function refreshedCapture(retained){
       const source=structuredClone(retained),retrievedAt=new Date().toISOString();
+      const retainedPdf=url=>source.id==='dol'&&source.revisedHistoryProfile&&typeof url==='string'&&url.startsWith('https://oui.doleta.gov/press/')&&url.endsWith('.pdf');
       const update=value=>{
         if(!value||typeof value!=='object')return;
-        if(typeof value.url==='string'&&typeof value.sha256==='string'&&Object.hasOwn(value,'retrievedAt'))value.retrievedAt=retrievedAt;
+        if(typeof value.url==='string'&&typeof value.sha256==='string'&&Object.hasOwn(value,'retrievedAt')&&!retainedPdf(value.url))value.retrievedAt=retrievedAt;
         if(Object.hasOwn(value,'fetchedAt'))value.fetchedAt=retrievedAt;
         if(typeof value.sourceUrl==='string'&&Object.hasOwn(value,'retrievedAt')){
           const receipt=source.provenance.find(item=>item.url===value.sourceUrl&&(!value.sourceSha256||item.sha256===value.sourceSha256));
           if(!receipt)throw new Error('Fixture row has no matching original response receipt');
-          value.retrievedAt=retrievedAt;
+          value.retrievedAt=retainedPdf(value.sourceUrl)?receipt.retrievedAt:retrievedAt;
           if(Object.hasOwn(value,'sourceSha256'))value.sourceSha256=receipt.sha256;
         }
         for(const item of Object.values(value))update(item);
@@ -291,7 +293,15 @@ test('approved cached-BLS CLI mode publishes other sources and reports the origi
         for(const item of source.provenance.filter(item=>item.retrievedAt!==attemptAt))assert.ok(originalNominal.some(original=>isDeepStrictEqual(item,original)),'historical Treasury receipts remain unchanged original captures');
         for(const original of originalNominal)assert.ok(source.provenance.some(item=>isDeepStrictEqual(item,original)),'harmonization retains every original historical yield receipt');
       }else{
-        assert.ok(source.provenance.every(item=>item.retrievedAt===source.fetchedAt),`${id} simulated successful responses carry their new actual retrieval time`);
+        if(id==='dol'&&source.revisedHistoryProfile){
+          const pdf=url=>url.startsWith('https://oui.doleta.gov/press/')&&url.endsWith('.pdf');
+          for(const receipt of source.provenance){
+            if(pdf(receipt.url))assert.deepEqual(receipt,prior.sources.dol.provenance.find(item=>item.url===receipt.url),'retained DOL PDF receipts keep their exact original clocks and hashes');
+            else assert.equal(receipt.retrievedAt,source.fetchedAt,'DOL XML and index responses carry the simulated fresh retrieval');
+          }
+          assert.deepEqual(source.revisedHistoryProfile.overlaps,prior.sources.dol.revisedHistoryProfile.overlaps,'DOL overlap evidence keeps its original PDF receipt');
+          for(const [id,measurement]of Object.entries(source.series))for(const row of measurement.observations.filter(row=>pdf(row.sourceUrl)))assert.deepEqual(row,prior.sources.dol.series[id].observations.find(item=>item.date===row.date),'retained DOL PDF rows keep their full original evidence');
+        }else assert.ok(source.provenance.every(item=>item.retrievedAt===source.fetchedAt),`${id} simulated successful responses carry their new actual retrieval time`);
         assert.deepEqual(source.provenance.map(item=>item.sha256),prior.sources[id].provenance.map(item=>item.sha256),'identical simulated response bytes retain their hashes');
       }
       for(const measurement of Object.values(source.series)){

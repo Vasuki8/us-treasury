@@ -3,6 +3,7 @@
 import {NY_FED_TERMS_URL,NY_FED_DATA_NOTICE,NY_FED_REFERENCE_RATE_NOTICE,NY_FED_PRODUCT_NOTICE} from '../src/market-functioning.js';
 import {matchesBlsApiFeed} from './bls-api-policy.mjs';
 import {assertBlsHistoryData,hasBlsHistory,BLS_HISTORY_OUTPUTS} from './bls-history-policy.mjs';
+import {assertDolRevisedHistoryData,hasDolRevisedHistory,matchesDolRevisedFeed} from './dol-revised-policy.mjs';
 
 const reviewedOn='2026-10-22';
 const boardTerms='https://www.federalreserve.gov/disclaimer.htm';
@@ -75,7 +76,8 @@ export function matchesMacroCoverageFeed(value,feed){
 
 // Existing providers keep their old policy feed names. Their provenance can
 // include both NIPA files, while each new monthly output has a narrower feed.
-function matchesSourceFeed(value,feed){
+function matchesSourceFeed(value,feed,source){
+  if(feed==='dol-national-claims'&&hasDolRevisedHistory(source))return matchesDolRevisedFeed(value);
   if(matchesMacroCoverageFeed(value,feed))return true;
   if(feed==='bls-api')return matchesBlsApiFeed(value);
   if(feed==='bea-nipa')return [beaMonthly,beaQuarterly].includes(value);
@@ -116,6 +118,7 @@ function assertNewMetadata(agency,id,item,source){
 /** Check only the new scope, so old immutable captures keep their old meanings. */
 export function assertMacroCoverageData(snapshot){
   assertBlsHistoryData(snapshot.sources?.bls);
+  assertDolRevisedHistoryData(snapshot.sources?.dol);
   const newProviders=new Set(['policyRates','activity','housing']);
   for(const [agency,source]of Object.entries(snapshot.sources??{})){
     const policies=macroCoveragePolicies.filter(policy=>policy.agency===agency);
@@ -128,16 +131,16 @@ export function assertMacroCoverageData(snapshot){
       continue;
     }
     const inputs=new Set((source.provenance??[]).map(row=>row.url));
-    for(const url of inputs)if(!policies.some(policy=>matchesSourceFeed(url,policy.feed)))throw new Error(`Unreviewed macro coverage provenance for ${agency}`);
+    for(const url of inputs)if(!policies.some(policy=>matchesSourceFeed(url,policy.feed,source)))throw new Error(`Unreviewed macro coverage provenance for ${agency}`);
     for(const [id,item]of selected){
       const policy=policies.find(policy=>Object.hasOwn(policy.series,id)),expected=policy.series[id],feed=policy.seriesFeeds?.[id]??policy.feed;
       if(!Array.isArray(item.sourceIds)||item.sourceIds.length!==expected.length||expected.some((code,index)=>item.sourceIds[index]!==code))throw new Error(`Unreviewed source identifier for ${agency}/${id}`);
-      if(!matchesSourceFeed(item.sourceUrl,feed))throw new Error(`Unreviewed macro coverage feed for ${agency}/${id}`);
+      if(!matchesSourceFeed(item.sourceUrl,feed,source))throw new Error(`Unreviewed macro coverage feed for ${agency}/${id}`);
       if(!inputs.has(item.sourceUrl))throw new Error(`Macro coverage source lacks captured provenance: ${agency}/${id}`);
-      for(const url of item.sourceUrls??[])if(!matchesSourceFeed(url,feed)||!inputs.has(url))throw new Error(`Unreviewed supporting source feed for ${agency}/${id}`);
+      for(const url of item.sourceUrls??[])if(!matchesSourceFeed(url,feed,source)||!inputs.has(url))throw new Error(`Unreviewed supporting source feed for ${agency}/${id}`);
       assertNewMetadata(agency,id,item,source);
       for(const row of item.observations??[]){
-        if((Object.hasOwn(row,'sourceUrl')||Object.hasOwn(row,'sourceUrls'))&&!(agency==='bls'&&hasBlsHistory(source)&&BLS_HISTORY_OUTPUTS.includes(id)))throw new Error(`Unreviewed per-observation source override for ${agency}/${id}`);
+        if((Object.hasOwn(row,'sourceUrl')||Object.hasOwn(row,'sourceUrls'))&&!(agency==='bls'&&hasBlsHistory(source)&&BLS_HISTORY_OUTPUTS.includes(id))&&!(agency==='dol'&&hasDolRevisedHistory(source)))throw new Error(`Unreviewed per-observation source override for ${agency}/${id}`);
         if(newProviders.has(agency)&&row.publishedAt!==null)throw new Error(`Unreviewed historical publication source timing for ${agency}/${id}`);
       }
     }

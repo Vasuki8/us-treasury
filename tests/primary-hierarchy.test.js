@@ -57,7 +57,9 @@ test('Explore comparison leads with charts, one export action and visible no-fil
  const supporting=html.indexOf('data-page-disclosure="explore:comparison-details"');
  assert.ok(supporting>html.indexOf('data-panel-id="unrate"'));
  assert.match(outsideDetails(html),/NO FILL/);
- assert.match(outsideDetails(html),/Revised historical|Historical feed|revised historical|may lag/);
+ const coverage=getSeries('claims').coverageNote;
+ assert.ok(coverage);
+ assert.ok(outsideDetails(html).includes(coverage.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;')),'the complete captured claims coverage stays visible before supporting details');
  assert.match(html,/id="comparison-select"/);assert.match(html,/id="window-start"/);
 });
 

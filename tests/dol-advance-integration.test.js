@@ -30,7 +30,7 @@ test('an independent advance refresh never changes revised history, calendars or
  assert.equal(next.vintages.captures.length,2);assert.equal(asKnownOn(next.vintages,new Date(Date.parse(at)-1).toISOString()).sources.dolAdvance,undefined);
  const replay=asKnownOn(next.vintages,at).sources.dolAdvance;
  assert.equal(replay.series.claimsAdvance.observations.at(-1).value,194);assert.equal(replay.series.continuedClaimsAdvance.observations.at(-1).date,'2026-10-10');assert.equal(replay.series.claimsAdvance.publicationNote,source().series.claimsAdvance.publicationNote);
- assert.equal(asKnownOn(next.vintages,at).sources.dol.series.claims.observations.length,3117);
+ assert.deepEqual(asKnownOn(next.vintages,at).sources.dol.series.claims.observations,previous.sources.dol.series.claims.observations);
 });
 
 test('advance failure retains only its own cached context and provenance without inventing captures or substituting history',async()=>{
