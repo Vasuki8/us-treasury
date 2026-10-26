@@ -65,13 +65,13 @@ function fixtureFetch(calls, overrides = {}) {
   };
 }
 
-test('collector retains five calendar years of curves with provenance and correct calculated/official series', async () => {
+test('collector retains paired curves from 2003 with annual provenance and correct calculated/official series', async () => {
   const calls = [];
   const result = await yields().collectYields({fetchImpl:fixtureFetch(calls), now:new Date('2026-10-21T23:00:00Z')});
   assert.equal(result.id, 'yields');
-  assert.equal(calls.length, 10);
-  assert.deepEqual([...new Set(calls.map(url => Number(new URL(url).searchParams.get('field_tdr_date_value'))))].sort(), [2022,2023,2024,2025,2026]);
-  assert.equal(result.curveHistory.length, 7);
+  assert.equal(calls.length, 48);
+  assert.deepEqual([...new Set(calls.map(url => Number(new URL(url).searchParams.get('field_tdr_date_value'))))].sort(), [2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025,2026]);
+  assert.equal(result.curveHistory.length, 26);
   assert.deepEqual(result.series.spread2s10s.sourceIds, ['BC_10YEAR','BC_2YEAR']);
   assert.equal(result.series.spread2s10s.observations.at(-1).value, 32);
   assert.equal(result.series.spread3m10y.observations.at(-1).value, 88);
@@ -82,15 +82,66 @@ test('collector retains five calendar years of curves with provenance and correc
   assert.equal(result.series.realYield10.observationType, 'official');
   assert.equal(result.series.nominalYield2.observations.at(-1).value, 4.81);
   assert.equal(result.series.nominalYield3m.observations.at(-1).value, 4.25);
+  assert.ok(Object.values(result.series).every(series=>series.inputProvenanceScope==='observation-source-urls'));
+  assert.ok(Object.values(result.series).every(series=>series.observations.every(row=>!Object.hasOwn(row,'inputProvenance'))));
   assert.ok(Object.values(result.series).every(series => series.observations.every(row => row.publishedAt === null)));
   assert.ok(result.provenance.every(row => !Object.hasOwn(row,'text') && /^[a-f\d]{64}$/.test(row.sha256)));
   assert.equal(result.fetchedAt, result.provenance.map(row => row.retrievedAt).sort().at(-1));
-  assert.equal(result.coverageStart, '2022-12-31');
+  assert.equal(result.coverageStart, '2003-12-31');
   assert.equal(result.coverageEnd, '2026-10-21');
-  assert.equal(result.series.spread2s10s.observations[0].sourceUrl,yields().treasuryParYieldUrl(2022));
-  assert.deepEqual(result.series.inflationComp10.observations[0].sourceUrls,[yields().treasuryParYieldUrl(2022),yields().treasuryParYieldUrl(2022,'real')]);
-  assert.equal(result.series.realYield10.observations[0].sourceUrl,yields().treasuryParYieldUrl(2022,'real'));
+  assert.equal(result.series.spread2s10s.observations[0].sourceUrl,yields().treasuryParYieldUrl(2003));
+  assert.deepEqual(result.series.inflationComp10.observations[0].sourceUrls,[yields().treasuryParYieldUrl(2003),yields().treasuryParYieldUrl(2003,'real')]);
+  assert.equal(result.series.realYield10.observations[0].sourceUrl,yields().treasuryParYieldUrl(2003,'real'));
   assert.ok(Object.values(result.series).every(series=>series.observations.every(row=>row.sourceUrls.every(url=>result.provenance.some(item=>item.url===url)))));
+  assert.deepEqual(result.methodologyBreaks.map(({date})=>date),['2008-12-01','2021-12-06']);
+  const tipsBreak=result.methodologyBreaks[0];
+  assert.equal(tipsBreak.kind,'real');
+  assert.equal(tipsBreak.from,'all-tips-securities');
+  assert.equal(tipsBreak.to,'most-recently-auctioned-tips');
+  assert.equal(tipsBreak.sourceUrl,'https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_real_yield_curve');
+});
+
+test('historical captures preserve early missing tenors and signed values while bounding paired annual requests', async () => {
+  const calls=[];
+  const fetchFixture=fixtureFetch(calls,{
+    'nominal-2003':'Date,"1 Mo","3 Mo","2 Yr","10 Yr","30 Yr"\n01/02/2003,0,1.22,1.8,4.07,N/A\n01/03/2003,0,1.22,1.82,4.05,N/A\n',
+    'real-2003':'Date,"5 YR","7 YR","10 YR","20 YR","30 YR"\n01/02/2003,-0.1,1.5,2.43,N/A,N/A\n01/06/2003,-0.02,1.4,2.4,N/A,N/A\n',
+  });
+  let active=0,maximum=0;
+  const result=await yields().collectYields({fetchImpl:async url=>{
+    active++;maximum=Math.max(maximum,active);
+    try { await new Promise(resolve=>setImmediate(resolve));return await fetchFixture(url); }
+    finally { active--; }
+  },now:new Date('2026-10-21T23:00:00Z')});
+  assert.equal(maximum,2);
+  assert.equal(result.coverageStart,'2003-01-02');
+  assert.equal(result.curveHistory[0].nominal['1M'],0);
+  assert.equal(result.curveHistory[0].nominal['30Y'],null);
+  assert.equal(result.curveHistory[0].real['5Y'],-0.1);
+  assert.equal(result.curveHistory[0].real['20Y'],null);
+  assert.deepEqual(result.series.inflationComp10.observations.slice(0,3).map(({date,value})=>({date,value})),[
+    {date:'2003-01-02',value:164},{date:'2003-01-03',value:null},{date:'2003-01-06',value:null},
+  ]);
+  assert.equal(result.series.spread2s10s.observations[0].value,227);
+  assert.equal(result.series.spread3m10y.observations[0].value,285);
+  for(let index=0;index<calls.length;index+=2){
+    const pair=calls.slice(index,index+2).map(url=>new URL(url)),year=2003+index/2;
+    assert.deepEqual(pair.map(url=>url.searchParams.get('type')),['daily_treasury_yield_curve','daily_treasury_real_yield_curve']);
+    assert.ok(pair.every(url=>url.pathname===`/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/${year}/all`&&url.searchParams.get('field_tdr_date_value')===String(year)));
+  }
+});
+
+test('collector rejects empty past-year feeds instead of silently dropping historical coverage', async () => {
+  for(const kind of ['nominal','real'])await assert.rejects(yields().collectYields({fetchImpl:fixtureFetch([],{
+    [`${kind}-2003`]:'Date,"10 Yr"\n',
+  }),now:new Date('2026-10-21T23:00:00Z')}),/empty|2003|past.year/i);
+});
+
+test('collector rejects past-year feeds with no usable 10-year observations', async () => {
+  for(const [kind,text] of [
+    ['nominal','Date,"2 Yr","10 Yr"\n01/02/2003,1.8,N/A\n'],
+    ['real','Date,"5 YR","10 YR"\n01/02/2003,1.4,N/A\n'],
+  ])await assert.rejects(yields().collectYields({fetchImpl:fixtureFetch([],{[`${kind}-2003`]:text}),now:new Date('2026-10-21T23:00:00Z')}),/usable.*2003|2003.*usable/i);
 });
 
 test('collector cutoff is an observation filter, preserves missing dates and rejects responses from the wrong year', async () => {

@@ -1,6 +1,6 @@
 /** Immutable local retrieval history, not a reconstruction of historical releases. */
 const measurementFields = ['name', 'unit', 'frequency', 'format', 'precision', 'adjustment', 'definition', 'observationType', 'periodType', 'dateConvention'];
-const sharedMetadata = ['sourceNotice', 'licenseUrl', 'termsUrl', 'redistributionNotice', 'attribution', 'sourceTitle', 'sourceUrls', ...measurementFields, 'measure'];
+const sharedMetadata = ['sourceNotice', 'licenseUrl', 'termsUrl', 'redistributionNotice', 'attribution', 'sourceTitle', 'sourceUrls', 'inputProvenanceScope', ...measurementFields, 'measure'];
 const sourceFields = ['agency', 'sourceUrl', 'coverageStart', 'coverageEnd', 'coverageNote', 'structuralBreak', ...sharedMetadata];
 const seriesFields = ['sourceIds', 'sourceUrl', 'calculation', 'dataStatus', 'coverageNote', ...sharedMetadata];
 // Existing providers keep their historical normalization contract. RESCONST is

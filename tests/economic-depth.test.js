@@ -52,6 +52,7 @@ test('main 10Y reuses reviewed curve history with exact dates and annual input p
   assert.deepEqual(result.series.yield.observations.map(o=>[o.date,o.value,o.publishedAt]),[['2022-01-03',0,null],['2026-10-21',null,null]]);
   assert.equal(result.series.yield.observations[0].sourceUrl,url(2022));
   assert.equal(result.series.yield.fetchedAt,curves.fetchedAt);
+  assert.equal(result.series.yield.inputProvenanceScope,'observation-source-urls');
   assert.equal(result.fetchedAt,curves.fetchedAt,'compound source clock cannot predate its newly added capture');
   assert.equal(result.series.debt.fetchedAt,base.fetchedAt,'debt retains its independently older real retrieval');
   assert.ok(result.provenance.some(o=>o.sha256==='b'.repeat(64)));

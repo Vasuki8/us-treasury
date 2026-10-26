@@ -29,3 +29,19 @@ test('yield curve CSV exports only selected actual dates with separate nominal/r
   assert.match(csv,/observation_type/);assert.match(csv,/nominal/);assert.match(csv,/real/);assert.match(csv,/calculated/);assert.match(csv,/retrieved_at/);assert.match(csv,/not pure expected inflation/);
   assert.doesNotMatch(page.yieldCurvesCsv(fixture,{yieldDateA:'2026-10-20',yieldDateB:'2026-10-20'}),/2026-10-21/);
 });
+
+test('historical curve CSV discloses the TIPS input era without assigning it to nominal rates',()=>{
+  const history={...fixture,curveHistory:[
+    {date:'2008-11-28',nominal:{'10Y':2.92},real:{'10Y':3.08}},
+    {date:'2008-12-01',nominal:{'10Y':2.72},real:{'10Y':2.59}},
+  ]};
+  const [headers,...rows]=parseCsv(page.yieldCurvesCsv(history,{yieldDateA:'2008-11-28',yieldDateB:'2008-12-01'}));
+  const values=rows.map(row=>Object.fromEntries(headers.map((key,i)=>[key,row[i]]))).filter(row=>row.tenor==='10Y');
+  for(const row of values){
+    assert.equal(row.curve_methodology,'quasi-cubic-hermite-spline');
+    assert.equal(row.real_curve_inputs,row.measure==='nominal'?'':row.date==='2008-11-28'?'all-tips-securities':'most-recently-auctioned-tips');
+  }
+  const html=page.yieldsPage({yieldDateA:'2008-11-28',yieldDateB:'2008-12-01'},history);
+  assert.match(html,/December 1, 2008/);
+  assert.match(html,/Retention begins in 2003 and uses currently published revised history/);
+});

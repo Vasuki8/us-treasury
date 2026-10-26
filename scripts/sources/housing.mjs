@@ -59,7 +59,7 @@ export function parseHousingCsv(text,{now=new Date()}={}) {
   }
   const cutoff=now.toISOString().slice(0,10),series={};
   for(const [id,code]of Object.entries(definitions)) {
-    const observations=[...values[id].values()].filter(row=>row.date>='2000-01-01'&&row.date<=cutoff).sort((a,b)=>a.date.localeCompare(b.date));
+    const observations=[...values[id].values()].filter(row=>row.date<=cutoff).sort((a,b)=>a.date.localeCompare(b.date));
     if(!observations.some(row=>finite(row.value)))fail(`no usable ${id} observations`);
     series[id]={observations,sourceIds:[`RESCONST:${code}:TOTAL:US:SA`]};
   }
@@ -78,7 +78,7 @@ export async function collectHousing({fetchImpl=globalThis.fetch,now=new Date()}
   const readme=extractZipEntry(request.bytes,'/README',{maxOutputBytes:128*1024}).toString('utf8');
   const usageNote=/Data Usage and Attribution\s*\n[=]+\s*\n([^]*?)(?:\nContacts|$)/.exec(readme)?.[1]?.trim();
   if(!usageNote?.includes('U.S. Census Bureau')||!usageNote.includes('originating'))fail('missing source attribution instructions');
-  const coverageNote='Total new privately owned housing units, United States, from January 2000, monthly seasonally adjusted annual rates in thousands of units. These are annual rate estimates, not actual monthly construction counts. Permits cover permit-issuing places; starts and completions use the Survey of Construction. Estimates are revisable; published missing values remain unavailable. Earlier reference dates are first captured on the actual new retrieval date, not backdated publication vintages.';
+  const coverageNote='Full published history for total new privately owned housing units, United States: starts from January 1959, permits from January 1960, and completions from January 1968, as available in the source. Monthly seasonally adjusted annual rates in thousands of units. These are annual rate estimates, not actual monthly construction counts. Permits cover permit-issuing places; starts and completions use the Survey of Construction. Estimates are revisable; published missing values remain unavailable, and absent months are not filled. Earlier reference dates are first captured on the actual new retrieval date, not backdated publication vintages.';
   const series=Object.fromEntries(Object.entries(parsed.series).map(([id,item])=>[id,{...item,sourceUrl:HOUSING_URL,sourceTitle:program,unit:'Thousands of units, SAAR',frequency:'Monthly',adjustment:'Seasonally adjusted annual rate',observationType:'official',dataStatus:'official',calculation:'Published Census total United States annual-rate series, seasonally adjusted, in thousands of housing units. No extra annualization or unit conversion.',coverageNote,licenseUrl:'https://creativecommons.org/publicdomain/zero/1.0/',attribution:`Source: U.S. Census Bureau, ${program}.`,programName:program}]));
   const {bytes,...metadata}=request;
   return {id:'housing',fetchedAt:request.retrievedAt,series,coverageNote,provenance:[{...metadata,filename:'RESCONST-mf.csv',fileUpdatedAt:parsed.fileUpdatedAt,usageNote}],warnings:parsed.notes};

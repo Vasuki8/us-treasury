@@ -1,6 +1,7 @@
 /** Treasury rates are published par-curve observations, not transaction or zero-coupon yields. */
 export const NOMINAL_YIELD_TENORS = Object.freeze(['1M','1.5M','2M','3M','4M','6M','1Y','2Y','3Y','5Y','7Y','10Y','20Y','30Y']);
 export const REAL_YIELD_TENORS = Object.freeze(['5Y','7Y','10Y','20Y','30Y']);
+export const REAL_YIELD_INPUT_CHANGE = '2008-12-01';
 export const YIELD_METHODOLOGY_CHANGE = '2021-12-06';
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 const rate = value => finite(value) ? value : null;
@@ -36,6 +37,7 @@ export function selectCurveOverlays(source, dates = []) {
       nominal:copyRates(row?.nominal,NOMINAL_YIELD_TENORS),
       real:copyRates(row?.real,REAL_YIELD_TENORS),
       methodology:date < YIELD_METHODOLOGY_CHANGE ? 'quasi-cubic-hermite-spline' : 'monotone-convex',
+      realCurveInputs:date < REAL_YIELD_INPUT_CHANGE ? 'all-tips-securities' : 'most-recently-auctioned-tips',
     };
   });
 }

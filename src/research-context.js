@@ -8,17 +8,17 @@ import {routeFor} from './router.js';
 import {coverageFamilies} from './macro-registry.js';
 import {calendarRelatedIds} from './macro-calendar.js';
 import {calendarScope} from './calendar-scope.js';
-import {asKnownOn} from './vintages.js';
+import {asKnownOn,normalizeVintageTimestamp} from './vintages.js';
 import {vintagesCsv,normalizedCutoff} from './vintages-page.js';
 import {refinancingCsv} from './refinancing-page.js';
-import {yieldCurvesCsv} from './yields-page.js';
+import {yieldCurvesCsv,yieldOverlayDates} from './yields-page.js';
 import {auctionsCsv} from './auctions-page.js';
 import {ownershipCsv} from './ownership-page.js';
 import {macroContributionsCsv} from './macro-page.js';
 import {marketFunctioningCsv} from './market-functioning-page.js';
 import {fiscalFinancingCsv} from './research-exports.js';
 import {selectPublicationHistory,publicationCsv,publicationContext} from './publication-history.js';
-import {periodLabel,transformSeries,BLS_DATA_NOTICE} from './model.js';
+import {periodLabel,transformSeries,resolveDateWindow,windowObservations,BLS_DATA_NOTICE} from './model.js';
 import {cpiPublicationIds,selectCpiPublicationHistory,cpiPublicationCsv} from './cpi-publication-history.js';
 import {buildGdpRevisionMatrix,gdpRevisionMatrixCsv} from './gdp-revision-matrix.js';
 import {buildCoverageInventory,coverageInventoryCsv} from './coverage-inventory.js';
@@ -39,6 +39,41 @@ const attachment=(name,content)=>({name,content,type:'text/csv'});
 const measurementFields=['name','unit','frequency','adjustment','definition','observationType','format','precision','periodType','dateConvention','measure','calculation'];
 const strings=values=>[...new Set(values.filter(value=>typeof value==='string'&&value.trim()))];
 
+function yieldPinInputs(state,catalog,sources){
+ const ids=moduleIds.yields.filter(id=>catalog[id]),range=viewRange(state),window=resolveDateWindow(range,ids.map(id=>catalog[id]));
+ if(window.error)throw new Error(window.error);
+ const scopedRows=rows=>{
+  const selected=windowObservations(rows,window),prior=selected.length?rows.findLast(row=>row.date<selected[0].date):null;
+  return prior?[prior,...selected]:selected;
+ };
+ const receipts=(item,rows,provenance=item.provenance??[])=>{
+  const urls=new Set([item.sourceUrl,...(item.sourceUrls??[]),...rows.flatMap(row=>[row.sourceUrl,...(row.sourceUrls??[])])].filter(Boolean));
+  const matched=provenance.filter(row=>urls.has(row.url));
+  return matched.length?matched:provenance;
+ };
+ const scopedCatalog={...catalog,...Object.fromEntries(ids.map(id=>{
+  const item=catalog[id],observations=scopedRows(item.observations);
+  return [id,{...item,observations,provenance:receipts(item,observations)}];
+ }))};
+ const overlayDates=yieldOverlayDates(sources.yields,state),curves=(sources.yields?.curveHistory??[]).filter(row=>overlayDates.includes(row.date));
+ const scope='Frozen yield inputs retain the analysis window and one preceding observation for change lookback, exact selected curve overlays, windowed spread-chart inputs, and current rate readings with their previous observations at their own reference dates. The full website history is not included unless All is requested. Current revised history and actual retrieval receipts do not reconstruct original publication vintages.';
+ const currentIds=['spread2s10s','spread3m10y','realYield10','inflationComp10','policyTargetLower','policyTargetUpper','effr','sofr'];
+ const currentReadings=currentIds.filter(id=>catalog[id]).map(id=>{
+  const item=catalog[id],observations=item.observations.slice(-2);
+  return {...item,observations,provenance:receipts(item,observations)};
+ });
+ const moduleSources=Object.fromEntries(['treasury','yields'].filter(id=>sources[id]).map(id=>{
+  const original=sources[id],seriesIds=id==='treasury'?['yield']:['spread2s10s','spread3m10y'];
+  const series=Object.fromEntries(seriesIds.filter(key=>original.series?.[key]).map(key=>[key,{...original.series[key],observations:scopedRows(original.series[key].observations)}]));
+  const rows=Object.values(series).flatMap(item=>item.observations),urls=new Set(Object.values(series).flatMap(item=>[item.sourceUrl,...(item.sourceUrls??[]),...item.observations.flatMap(row=>[row.sourceUrl,...(row.sourceUrls??[])])]));
+  if(id==='yields')for(const curve of curves)for(const row of original.provenance??[])if(row.url.includes(`.csv/${curve.date.slice(0,4)}/all`))urls.add(row.url);
+  const dates=[...rows.map(row=>row.date),...(id==='yields'?curves.map(row=>row.date):[])].sort();
+  const metadata=Object.fromEntries(['id','status','fetchedAt','lastAttemptAt','error','warnings','sourceNotice','licenseUrl','termsUrl','attribution','sourceTitle'].filter(key=>original[key]!==undefined).map(key=>[key,original[key]]));
+  return [id,{...metadata,series,coverageStart:dates[0]??null,coverageEnd:dates.at(-1)??null,coverageNote:scope,provenance:(original.provenance??[]).filter(row=>urls.has(row.url)),...(id==='yields'?{curveHistory:curves,methodologyBreaks:original.methodologyBreaks??[]}:{})}];
+ }));
+ return {catalog:scopedCatalog,sources:{...sources,...moduleSources},moduleSources,scope,overlayDates,currentReadings,window:{...window,range}};
+}
+
 function capturedMeasurement(current,source,item,id,agency){
  const measurement=Object.fromEntries(measurementFields.map(key=>[key,item[key]??source[key]??current[key]]));
  const sourceUrl=item.sourceUrl??source.sourceUrl??current.source.url;
@@ -51,6 +86,7 @@ function capturedMeasurement(current,source,item,id,agency){
   licenseUrl:item.licenseUrl??source.licenseUrl??item.termsUrl??source.termsUrl??'',
   termsUrl:item.termsUrl??source.termsUrl??item.licenseUrl??source.licenseUrl??'',
   sourceTitle:item.sourceTitle??source.sourceTitle??'',coverageNote:item.coverageNote??source.coverageNote??'',
+  inputProvenanceScope:item.inputProvenanceScope??source.inputProvenanceScope,
   fetchedAt:item.fetchedAt??source.fetchedAt,provenance:source.provenance,dataStatus:'captured-as-known',error:null};
 }
 
@@ -109,7 +145,12 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
   context.attachments=[attachment('credit-context.csv',creditContextCsv(sources)),attachment('fomc-references.csv',fomcDocumentsCsv(snapshot.calendar?.sources?.fomc))];
   context.scope='Primary selected measurements and the compact credit page: exact three-year chart and CSV inputs for each source group, with original definitions, receipt provenance and policy references. Full retained histories remain available in indicator details.';
  }
- if(state.page==='yields')context.attachments=[attachment('yield-curve-overlays.csv',yieldCurvesCsv(sources.yields,state))];
+ if(state.page==='yields'){
+  const retained=yieldPinInputs(state,catalog,sources);
+  capturedCatalog=retained.catalog;capturedSources=retained.sources;
+  Object.assign(context,{moduleSources:retained.moduleSources,scope:retained.scope,yieldAnalysisWindow:retained.window,yieldOverlayDates:retained.overlayDates,yieldCurrentReadings:retained.currentReadings});
+  context.attachments=[attachment('yield-curve-overlays.csv',yieldCurvesCsv(sources.yields,state))];
+ }
  if(state.page==='auctions')context.attachments=[attachment('auction-results.csv',auctionsCsv(sources.auctions,{securityType:state.auctionType,auctionId:state.auctionId})),attachment('auction-peers.csv',auctionsCsv(sources.auctions,{securityType:state.auctionType,auctionId:state.auctionId,benchmark:true}))];
  if(state.page==='ownership')context.attachments=[attachment('debt-ownership.csv',ownershipCsv(sources.ownership))];
  if(state.page==='macro')context.attachments=[attachment('macro-contributions.csv',macroContributionsCsv(sources.macroContributions))];
@@ -132,7 +173,8 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
   const [agency,source]=entry,item=source.series[id];
   capturedCatalog={[id]:capturedMeasurement(catalog[id],source,item,id,agency)};
   capturedSources=known.sources;selected=[id];pinState={...pinState,page:'indicator',seriesId:id,window:'all',startDate:'',endDate:'',transform:'level',comparison:'native'};
-  Object.assign(context,{captureCutoff:cutoff,selectedCaptureHistory:historyState.history});context.attachments=[attachment('captured-by-values.csv',vintagesCsv(historyState.history,{seriesId:id,cutoff}))];
+  const selectedCaptureHistory={version:1,captures:historyState.history.captures.filter(row=>row.sourceId===agency&&normalizeVintageTimestamp(row.capturedAt)<=cutoff).map(row=>({...row,series:Object.hasOwn(row.series,id)?{[id]:row.series[id]}:{},removedSeries:row.removedSeries.filter(key=>key===id)}))};
+  Object.assign(context,{captureCutoff:cutoff,selectedCaptureHistory});context.attachments=[attachment('captured-by-values.csv',vintagesCsv(selectedCaptureHistory,{seriesId:id,cutoff}))];
  }
  selected=[...new Set(selected??[])].filter(id=>Object.hasOwn(capturedCatalog,id)).slice(0,4);
  if(!selected.length)throw new Error('Select at least one available registered measurement to pin.');

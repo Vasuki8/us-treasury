@@ -44,3 +44,17 @@ test('curve model rejects conflicting/invalid captured dates and never converts 
   const bad = {curveHistory:[{date:'2026-10-21',nominal:{'10Y':'5'},real:{'10Y':Infinity}}]};
   assert.deepEqual(yields().matchedYieldComponents(bad).map(({nominal,real,inflationCompensationBps}) => ({nominal,real,inflationCompensationBps})),[{nominal:null,real:null,inflationCompensationBps:null}]);
 });
+
+test('overlay metadata distinguishes the 2008 real input break from the 2021 spline change',()=>{
+  const rows=yields().selectCurveOverlays({curveHistory:[
+    {date:'2008-11-28',nominal:{'10Y':2.92},real:{'10Y':3.08}},
+    {date:'2008-12-01',nominal:{'10Y':2.72},real:{'10Y':2.59}},
+    ...source.curveHistory,
+  ]},['2008-11-28','2008-12-01','2021-12-03','2021-12-06']);
+  assert.deepEqual(rows.map(({methodology,realCurveInputs})=>({methodology,realCurveInputs})),[
+    {methodology:'quasi-cubic-hermite-spline',realCurveInputs:'all-tips-securities'},
+    {methodology:'quasi-cubic-hermite-spline',realCurveInputs:'most-recently-auctioned-tips'},
+    {methodology:'quasi-cubic-hermite-spline',realCurveInputs:'most-recently-auctioned-tips'},
+    {methodology:'monotone-convex',realCurveInputs:'most-recently-auctioned-tips'},
+  ]);
+});

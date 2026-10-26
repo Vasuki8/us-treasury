@@ -170,6 +170,25 @@ export function csvCell(value, numericSource = false) {
 }
 export function tabularCsv(headers,rows){return [headers,...rows].map(row=>row.map(cell=>csvCell(cell)).join(',')).join('\r\n')+'\r\n';}
 
+/** New captures opt in; old frozen CSVs retain their original full-receipt fallback. */
+export function observationCapture(series,observation){
+  if(series.inputProvenanceScope!=='observation-source-urls'||observation.inputProvenance!=null)return {
+    provenance:observation.inputProvenance??series.provenance??[],retrievedAt:observation.retrievedAt??series.fetchedAt,
+  };
+  const urls=observation.sourceUrls??[observation.sourceUrl].filter(Boolean);
+  if(!Array.isArray(urls)||!urls.length||urls.some(url=>typeof url!=='string'||!url)||new Set(urls).size!==urls.length)throw new Error('Missing observation source URLs for capture provenance');
+  const provenance=urls.map(url=>{
+    const matches=(series.provenance??[]).filter(receipt=>receipt.url===url&&(!observation.sourceSha256||receipt.sha256===observation.sourceSha256)&&(!(urls.length===1&&observation.retrievedAt)||receipt.retrievedAt===observation.retrievedAt));
+    if(matches.length!==1)throw new Error('Missing or ambiguous observation capture provenance');
+    const receipt=matches[0];
+    if(!/^[a-f\d]{64}$/.test(receipt.sha256??'')||!Number.isFinite(Date.parse(receipt.retrievedAt)))throw new Error('Incomplete observation capture provenance');
+    return receipt;
+  });
+  const latest=provenance.reduce((left,right)=>Date.parse(left.retrievedAt)>=Date.parse(right.retrievedAt)?left:right).retrievedAt;
+  if(observation.retrievedAt!=null&&Date.parse(observation.retrievedAt)!==Date.parse(latest))throw new Error('Observation retrieval time does not match its capture provenance');
+  return {provenance,retrievedAt:observation.retrievedAt??latest};
+}
+
 /** Export exactly the displayed observations; missing numeric cells remain blank. */
 export function toCsv(ids, { transform = 'level', range = 12, comparison = 'native', catalog = series, maxBytes = Infinity } = {}) {
   const result = compareSeries(ids, comparison, range, catalog);
@@ -186,9 +205,22 @@ export function toCsv(ids, { transform = 'level', range = 12, comparison = 'nati
   for (const panel of panels) {
     const s = panel.series;
     const publications = new Map(s.observations.map((o) => [o.date, o.publishedAt]));
+    const scoped=s.inputProvenanceScope==='observation-source-urls';
+    const previous=scoped&&transform==='change'?new Map(s.observations.map((row,index)=>[row.date,s.observations[index-1]])):null;
+    const baseline=scoped&&comparison!=='native'?s.observations.find(row=>row.date===panel.baselineDate):null;
     for (const observation of panel.observations) {
+      let capture=observationCapture(s,observation);
+      let sourceUrls=scoped?(observation.sourceUrls??[observation.sourceUrl].filter(Boolean)):(observation.sourceUrls??s.sourceUrls??[]);
+      const input=previous?.get(observation.date)??baseline;
+      if(input){
+        const evidence=[...capture.provenance,...observationCapture(s,input).provenance];
+        if(evidence.some(receipt=>typeof receipt.url!=='string'||!/^[a-f\d]{64}$/.test(receipt.sha256??'')||!Number.isFinite(Date.parse(receipt.retrievedAt))))throw new Error('Incomplete transformed observation capture provenance');
+        const provenance=[...new Map(evidence.map(receipt=>[JSON.stringify([receipt.url,receipt.sha256,receipt.retrievedAt]),receipt])).values()];
+        capture={provenance,retrievedAt:provenance.reduce((left,right)=>Date.parse(left.retrievedAt)>=Date.parse(right.retrievedAt)?left:right).retrievedAt};
+        sourceUrls=[...new Set(provenance.map(receipt=>receipt.url))];
+      }
       append([s.id, s.name, observation.date, observation.value, panel.unit, s.frequency, s.adjustment,
-        s.source.name, publications.get(observation.date), comparison !== 'native' ? comparison : transform, s.dataStatus||'unknown',observation.retrievedAt??s.fetchedAt,observation.sourceUrl||s.sourceUrl||s.source.url,(s.source.seriesIds||[]).join('; '),s.calculation,observation.sourceValue,observation.baseDate|| (observation.yearAgoSourceValue!=null?`${Number(observation.date.slice(0,4))-1}${observation.date.slice(4)}`:null),observation.baseValue??observation.yearAgoSourceValue,comparison === 'indexed' ? panel.baselineDate : null,comparison === 'indexed' ? panel.baselineValue : null,s.agency === 'bls' ? BLS_DATA_NOTICE : s.sourceNotice??'',s.coverageNote,s.observationType??'official',(observation.sourceUrls??s.sourceUrls??[]).join('; '),s.licenseUrl,s.attribution,s.sourceTitle,observation.partial,observation.auctionCount,observation.pendingCount,observation.revisionIndicator,(observation.footnotes??[]).join('; '),observation.suppressed,s.measure,JSON.stringify(observation.inputProvenance??s.provenance??[]),comparison,panel.baselineDate,panel.baselineValue,panel.formula,panel.window.preset,panel.window.startDate,panel.window.endDate,panel.window.label,...(includeInputs?[observation.sourcePeriodLabel??null,observation.inputDates?JSON.stringify(observation.inputDates):null,observation.inputValues?JSON.stringify(observation.inputValues):null,s.dateConvention??null]:[])]);
+        s.source.name, publications.get(observation.date), comparison !== 'native' ? comparison : transform, s.dataStatus||'unknown',capture.retrievedAt,observation.sourceUrl||s.sourceUrl||s.source.url,(s.source.seriesIds||[]).join('; '),s.calculation,observation.sourceValue,observation.baseDate|| (observation.yearAgoSourceValue!=null?`${Number(observation.date.slice(0,4))-1}${observation.date.slice(4)}`:null),observation.baseValue??observation.yearAgoSourceValue,comparison === 'indexed' ? panel.baselineDate : null,comparison === 'indexed' ? panel.baselineValue : null,s.agency === 'bls' ? BLS_DATA_NOTICE : s.sourceNotice??'',s.coverageNote,s.observationType??'official',sourceUrls.join('; '),s.licenseUrl,s.attribution,s.sourceTitle,observation.partial,observation.auctionCount,observation.pendingCount,observation.revisionIndicator,(observation.footnotes??[]).join('; '),observation.suppressed,s.measure,JSON.stringify(capture.provenance),comparison,panel.baselineDate,panel.baselineValue,panel.formula,panel.window.preset,panel.window.startDate,panel.window.endDate,panel.window.label,...(includeInputs?[observation.sourcePeriodLabel??null,observation.inputDates?JSON.stringify(observation.inputDates):null,observation.inputValues?JSON.stringify(observation.inputValues):null,s.dateConvention??null]:[])]);
     }
   }
   return rows.join('');

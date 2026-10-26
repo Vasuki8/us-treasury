@@ -6,6 +6,7 @@ import { parseCsv } from '../scripts/sources/http.mjs';
 import { registry } from '../src/registry.js';
 import { BLS_DATA_NOTICE } from '../src/model.js';
 import { renderPage } from '../src/pages.js';
+import {treasuryParYieldUrl} from '../scripts/sources/yields.mjs';
 
 const t1 = '2026-10-20T12:00:00.123Z', t2 = '2026-10-21T12:00:00.456Z';
 const source = (fetchedAt, value) => ({ id: 'bea', fetchedAt, coverageNote: 'Only captured GDP values; no historical first releases.', provenance: [{ url: 'https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt', sha256: 'b'.repeat(64), retrievedAt: fetchedAt }], series: { gdp: { sourceIds: ['A191RL'], sourceUrl: 'https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt', calculation: 'Published real GDP annualized growth', dataStatus: 'official', observations: [{ date: '2026-04-01', value, publishedAt: null }] } } });
@@ -138,6 +139,44 @@ test('vintage CSV exports as-known observations and observed changes with proven
   const early = parseCsv(vintagesCsv(fixture(), { cutoff: t1, seriesId: 'gdp' }));
   assert.equal(early.length, 2);
   assert.throws(() => vintagesCsv(fixture(), { cutoff: 'bad', seriesId: 'gdp' }), /cutoff/i);
+});
+
+test('opted-in vintage CSV uses only each annual input receipt and its actual retrieval clock',()=>{
+ const nominal=treasuryParYieldUrl(2003),real=treasuryParYieldUrl(2003,'real');
+ const capture=(fetchedAt,id,urls,value,marked=true)=>{
+  const nominalAt=new Date(Date.parse(fetchedAt)-120000).toISOString(),realAt=new Date(Date.parse(fetchedAt)-60000).toISOString();
+  const provenance=Array.from({length:24},(_,index)=>2003+index).flatMap(year=>['nominal','real'].map(kind=>({url:treasuryParYieldUrl(year,kind),sha256:(year*2+(kind==='real'?1:0)).toString(16).padStart(64,'0'),retrievedAt:year===2003?(kind==='real'?realAt:nominalAt):fetchedAt})));
+  return {id:'yields',fetchedAt,provenance,series:{[id]:{...(marked?{inputProvenanceScope:'observation-source-urls'}:{}),sourceIds:['TC_10YEAR'],sourceUrl:treasuryParYieldUrl(2026),sourceUrls:[treasuryParYieldUrl(2026),treasuryParYieldUrl(2026,'real')],observations:[{date:'2003-01-02',value,publishedAt:null,sourceUrl:urls[0],sourceUrls:urls}]}}};
+ };
+ for(const [id,urls] of [['realYield10',[real]],['inflationComp10',[nominal,real]]]){
+  const first=capture(t1,id,urls,2),next=capture(t2,id,urls,3),history=recordVintages(null,{yields:first},{yields:next},{checkedAt:t2});
+  const [headers,...values]=parseCsv(vintagesCsv(history,{seriesId:id,cutoff:t2})),rows=values.map(row=>Object.fromEntries(headers.map((header,index)=>[header,row[index]])));
+  assert.deepEqual(rows.map(row=>row.row_type),['as-known-observation','observed-value-change']);
+  const expected=next.provenance.filter(row=>urls.includes(row.url));
+  for(const row of rows){
+   assert.equal(row.provenance_sha256,expected.map(receipt=>receipt.sha256).join('; '));
+   assert.equal(row.provenance_urls,urls.join('; '));
+   assert.equal(row.source_urls,urls.join('; '));
+   assert.equal(row.retrieved_at,expected.map(receipt=>receipt.retrievedAt).sort().at(-1));
+   assert.equal(row.last_captured_at,t2,'source confirmation remains separate from actual input retrieval');
+  }
+  const legacy=capture(t1,id,urls,2,false),legacyHistory=recordVintages(null,{}, {yields:legacy},{checkedAt:t1});
+  const [legacyHeaders,legacyValue]=parseCsv(vintagesCsv(legacyHistory,{seriesId:id,cutoff:t1})),row=Object.fromEntries(legacyHeaders.map((header,index)=>[header,legacyValue[index]]));
+  assert.equal(row.provenance_sha256,legacy.provenance.map(receipt=>receipt.sha256).join('; '));
+  assert.equal(row.provenance_urls,legacy.provenance.map(receipt=>receipt.url).join('; '));
+  assert.equal(row.retrieved_at,t1,'unmarked captures keep their source clock');
+ }
+});
+
+test('opted-in main 10Y vintage CSV matches retained receipt hashes and fails on incomplete evidence',()=>{
+ const sourceUrl=treasuryParYieldUrl(2003),receipt={url:sourceUrl,sha256:'a'.repeat(64),retrievedAt:t1};
+ const source={id:'treasury',fetchedAt:t2,provenance:[receipt,{...receipt,sha256:'b'.repeat(64),retrievedAt:t2}],series:{yield:{inputProvenanceScope:'observation-source-urls',sourceIds:['BC_10YEAR'],sourceUrl,observations:[{date:'2003-01-02',value:4,publishedAt:null,sourceUrl,sourceSha256:receipt.sha256,retrievedAt:t1}]}}};
+ const history=recordVintages(null,{}, {treasury:source},{checkedAt:t2}),[headers,value]=parseCsv(vintagesCsv(history,{seriesId:'yield',cutoff:t2}));
+ const row=Object.fromEntries(headers.map((header,index)=>[header,value[index]]));
+ assert.equal(row.provenance_sha256,receipt.sha256);assert.equal(row.retrieved_at,t1);assert.equal(row.provenance_urls,sourceUrl);
+ const bad=structuredClone(source);bad.series.yield.observations[0].sourceSha256='f'.repeat(64);
+ const badHistory=recordVintages(null,{}, {treasury:bad},{checkedAt:t2});
+ assert.throws(()=>vintagesCsv(badHistory,{seriesId:'yield',cutoff:t2}),/provenance|capture/i);
 });
 
 test('NY Fed calculated vintage rows retain captured notices, input URLs and terms at each change', t => {

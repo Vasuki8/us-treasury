@@ -2,8 +2,56 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {buildPinContext,buildPublicationPin,buildReleasePin} from '../src/research-context.js';
 import {createResearchPackage,exportResearchPackage,importResearchPackage} from '../src/research-packages.js';
 import {parseRoute} from '../src/router.js';import {dataStatus,series} from '../src/data.js';import {publicationArchive} from '../src/publication-archive.js';
-import {recordVintages} from '../src/vintages.js';
+import {recordVintages,asKnownOn} from '../src/vintages.js';
+import {readFile} from 'node:fs/promises';
+import {gunzipSync} from 'node:zlib';
+import {snapshot} from '../src/official-snapshot.js';
 import {parseCsv} from '../scripts/sources/http.mjs';
+import {toCsv,transformSeries} from '../src/model.js';
+import {yieldCurvesCsv} from '../src/yields-page.js';
+import {vintagesCsv} from '../src/vintages-page.js';
+
+const historicalYieldInputs=()=>{
+ const ids=['yield','realYield10','spread2s10s','spread3m10y','inflationComp10','nominalYield2','nominalYield3m'];
+ const catalog={...series,...Object.fromEntries(ids.map(id=>[id,{...series[id],inputProvenanceScope:'observation-source-urls'}]))};
+ const sources={...dataStatus.sources,...Object.fromEntries(['treasury','yields'].map(id=>[id,{...dataStatus.sources[id],series:Object.fromEntries(Object.entries(dataStatus.sources[id].series).map(([key,item])=>[key,{...item,...(ids.includes(key)?{inputProvenanceScope:'observation-source-urls'}:{})}]))}]))};
+ return {catalog,sources};
+};
+
+test('yield pins freeze the analysis window and selected overlays within portable limits at retained-history scale',async()=>{
+ const inputs=historicalYieldInputs();
+ assert.ok(inputs.catalog.realYield10.observations.length>5000,'exercise the full 2003 onward retained history');
+ for(const state of [parseRoute('#/yields'),parseRoute('#/yields?window=custom&start=2008-11-01&end=2008-12-31&curveA=2008-11-28&curveB=2008-12-01')]){
+  const args=buildPinContext(state,inputs),pkg=await createResearchPackage({name:'Windowed yield evidence',...args}),text=exportResearchPackage(pkg);
+  assert.equal(exportResearchPackage(await importResearchPackage(text)),text);
+  assert.match(pkg.context.scope,/analysis window.*lookback/i);
+  assert.ok(pkg.catalog.realYield10.observations.length<400);
+  assert.ok(pkg.catalog.realYield10.observations.filter(row=>row.date<pkg.resolvedWindow.startDate).length<=1);
+  assert.ok(pkg.csv===toCsv(args.state.selected,{catalog:inputs.catalog,range:pkg.request.range}),'scoping must preserve every displayed CSV value and receipt');
+  assert.equal(pkg.context.attachments[0].content,yieldCurvesCsv(inputs.sources.yields,state));
+  const selected=pkg.context.yieldOverlayDates;
+  assert.equal(selected.length,2);
+  assert.deepEqual(pkg.context.moduleSources.yields.curveHistory,inputs.sources.yields.curveHistory.filter(row=>selected.includes(row.date)));
+  assert.ok(pkg.context.moduleSources.yields.provenance.length<=6);
+  assert.deepEqual(pkg.context.yieldCurrentReadings.map(item=>item.id),['spread2s10s','spread3m10y','realYield10','inflationComp10','policyTargetLower','policyTargetUpper','effr','sofr']);
+  for(const item of pkg.context.yieldCurrentReadings)assert.deepEqual(item.observations,inputs.catalog[item.id].observations.slice(-2));
+  if(state.window==='custom'){
+   assert.equal(pkg.catalog.realYield10.observations[0].date,'2008-10-31','retain the actual predecessor for the first displayed change');
+   const firstChange=transformSeries(pkg.catalog.yield,'change',pkg.request.range).observations[0];
+   assert.deepEqual({date:firstChange.date,value:firstChange.value},{date:'2008-11-03',value:-5});
+   assert.deepEqual(pkg.context.yieldOverlayDates,['2008-11-28','2008-12-01']);
+   assert.deepEqual(pkg.context.moduleSources.yields.methodologyBreaks.map(row=>row.date),['2008-12-01','2021-12-06']);
+   assert.ok(pkg.context.yieldCurrentReadings.every(item=>item.observations.at(-1).date>'2008-12-31'));
+   assert.ok(pkg.context.moduleSources.yields.series.spread3m10y.observations.every(row=>row.date<='2008-12-31'));
+  }
+ }
+});
+
+test('All yield pins retain every requested history row and report the existing size limit without truncation',async()=>{
+ const inputs=historicalYieldInputs(),args=buildPinContext(parseRoute('#/yields?window=all'),inputs);
+ for(const id of args.state.selected)assert.deepEqual(args.catalog[id].observations,inputs.catalog[id].observations);
+ await assert.rejects(createResearchPackage({name:'All yield history',...args}),/byte limit/i);
+});
 
 test('release freezing retains the matched official result rather than current default chart selections',async()=>{
  const state=parseRoute('#/release?publicationSeries=gdp&publicationPeriod=2026-01-01&publicationCutoff=2026-06-25');
@@ -97,6 +145,72 @@ test('Captured by pin interprets the datetime-local control as exact UTC and nev
  assert.throws(()=>buildPinContext(parseRoute('#/vintages?series=gdp&cutoff=2026-02-30T12%3A00'),{historyState}),/cutoff|valid/i);
  const beforeLater={...historyState,history:{version:1,captures:history.captures.slice(0,1)}};
  assert.equal(buildPinContext(parseRoute('#/vintages?series=gdp'),{historyState:beforeLater}).context.captureCutoff,later.fetchedAt,'default cutoff preserves the manifest-wide latest retrieval, matching the view');
+});
+
+test('Captured by pins keep legacy receipt behavior and use only captured provenance scope',async()=>{
+ const capturedAt='2026-10-21T12:00:00.000Z',sourceUrl=series.yield.sourceUrl;
+ const provenance=[{url:sourceUrl,sha256:'a'.repeat(64),retrievedAt:capturedAt},{url:'https://example.gov/other-captured-input',sha256:'b'.repeat(64),retrievedAt:capturedAt}];
+ const source={id:'treasury',fetchedAt:capturedAt,provenance,series:{yield:{sourceIds:['BC_10YEAR'],sourceUrl,observations:[{date:'2026-10-20',value:4.2,publishedAt:null}]}}};
+ const catalog={...series,yield:{...series.yield,inputProvenanceScope:'observation-source-urls'}};
+ const pin=captured=>{
+  const history=recordVintages(null,{}, {treasury:captured},{checkedAt:capturedAt,seriesMetadata:series});
+  return buildPinContext({...parseRoute('#/vintages?series=yield'),vintageCutoff:capturedAt},{catalog,historyState:{status:'ready',history,latestCaptureAt:capturedAt}});
+ };
+ const legacy=pin(source);
+ assert.equal(legacy.catalog.yield.inputProvenanceScope,undefined,'an old capture must not inherit the current opt-in');
+ const pkg=await createResearchPackage({name:'Legacy captured yield',...legacy});
+ const [headers,row]=parseCsv(pkg.csv);
+ assert.deepEqual(JSON.parse(row[headers.indexOf('capture_provenance_json')]),provenance);
+ assert.equal(row[headers.indexOf('retrieved_at')],capturedAt);
+ assert.equal(exportResearchPackage(await importResearchPackage(exportResearchPackage(pkg))),exportResearchPackage(pkg));
+ for(const location of ['source','series']){
+  const marked=structuredClone(source);
+  (location==='source'?marked:marked.series.yield).inputProvenanceScope='observation-source-urls';
+  marked.series.yield.observations[0].sourceUrl=sourceUrl;
+  const args=pin(marked);
+  assert.equal(args.catalog.yield.inputProvenanceScope,'observation-source-urls',`${location} opt-in is captured`);
+  const current=await createResearchPackage({name:'Scoped captured yield',...args});
+  const [currentHeaders,currentRow]=parseCsv(current.csv);
+  assert.deepEqual(JSON.parse(currentRow[currentHeaders.indexOf('capture_provenance_json')]),[provenance[0]]);
+ }
+});
+
+test('earliest actual Treasury capture pins exclude future backfills without discarding rows at the size limit',async()=>{
+ for(const [agency,id] of [['treasury','yield'],['yields','realYield10']]){
+  const captures=await Promise.all(snapshot.vintageArchive.captures.filter(row=>row.sourceId===agency).map(async row=>JSON.parse(gunzipSync(await readFile(new URL(`../src/${row.path}`,import.meta.url))))));
+  const history={version:1,captures},original=JSON.stringify(history),cutoff=captures.map(row=>row.capturedAt).sort()[0];
+  assert.ok(captures.some(row=>row.capturedAt>cutoff),'exercise old captures alongside later historical backfills');
+  const args=buildPinContext({...parseRoute(`#/vintages?series=${id}`),vintageCutoff:cutoff},{historyState:{status:'ready',history,latestCaptureAt:captures.at(-1).capturedAt}});
+  const retained=args.context.selectedCaptureHistory;
+  assert.ok(retained.captures.every(row=>row.sourceId===agency&&row.capturedAt<=cutoff));
+  assert.ok(retained.captures.every(row=>Object.keys(row.series).every(key=>key===id)&&row.removedSeries.every(key=>key===id)));
+  const expected=asKnownOn(history,cutoff).sources[agency];
+  assert.deepEqual(asKnownOn(retained,cutoff).sources,{[agency]:{...expected,series:{[id]:expected.series[id]}}});
+  assert.deepEqual(args.catalog[id].observations,expected.series[id].observations);
+  assert.equal(args.catalog[id].inputProvenanceScope,undefined);
+  assert.equal(args.context.attachments[0].content,vintagesCsv(history,{seriesId:id,cutoff}),'the original legacy CSV is unchanged');
+  if(id==='yield'){
+   const pkg=await createResearchPackage({name:'Earliest retained Treasury capture',...args}),text=exportResearchPackage(pkg);
+   assert.equal(exportResearchPackage(await importResearchPackage(text)),text);
+  }else await assert.rejects(createResearchPackage({name:'Complete legacy real-yield capture',...args}),/byte limit/i,'the two original full-history CSVs still exceed the existing portable limit');
+  assert.equal(JSON.stringify(history),original,'scoping must not mutate immutable source captures');
+ }
+});
+
+test('capture pin history retains selected metadata confirmations, removals and required source baselines',()=>{
+ const times=['2026-10-20T12:00:00.000Z','2026-10-21T12:00:00.000Z','2026-10-22T12:00:00.000Z'];
+ const input=(fetchedAt,rows,definition)=>({id:'bea',fetchedAt,definition,provenance:[],series:{gdp:{sourceIds:['A191RL'],sourceUrl:series.gdp.sourceUrl,observations:rows},pce:{sourceIds:['DPCERG'],sourceUrl:series.pce.sourceUrl,observations:[{date:'2026-01-01',value:1,publishedAt:null}]}}});
+ const row={date:'2026-01-01',value:2,publishedAt:null};
+ let history=recordVintages(null,{}, {bea:input(times[0],[row],'Original source metadata')},{checkedAt:times[0],seriesMetadata:series});
+ history=recordVintages(history,{}, {bea:input(times[1],[row],'Confirmed source metadata')},{checkedAt:times[1],seriesMetadata:series});
+ history=recordVintages(history,{}, {bea:input(times[2],[],'Removed selected coverage')},{checkedAt:times[2],seriesMetadata:series});
+ for(const cutoff of times){
+  const args=buildPinContext({...parseRoute('#/vintages?series=gdp'),vintageCutoff:cutoff},{historyState:{status:'ready',history,latestCaptureAt:times[2]}}),retained=args.context.selectedCaptureHistory;
+  const expected=asKnownOn(history,cutoff).sources.bea;
+  assert.deepEqual(asKnownOn(retained,cutoff).sources,{bea:{...expected,series:{gdp:expected.series.gdp}}});
+  assert.equal(retained.captures.length,times.indexOf(cutoff)+1);
+  assert.ok(retained.captures[0].baseline);
+ }
 });
 
 test('calendar pins use visible month/day/topic/watch filters and choose the first visible event when the selection is stale',()=>{

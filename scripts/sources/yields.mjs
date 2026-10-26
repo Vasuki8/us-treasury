@@ -1,7 +1,7 @@
 import { parseCsv, requestText } from './http.mjs';
-import { NOMINAL_YIELD_TENORS, REAL_YIELD_TENORS, YIELD_METHODOLOGY_CHANGE, matchedYieldComponents } from '../../src/yields.js';
+import { NOMINAL_YIELD_TENORS, REAL_YIELD_TENORS, REAL_YIELD_INPUT_CHANGE, YIELD_METHODOLOGY_CHANGE, matchedYieldComponents } from '../../src/yields.js';
 
-const HISTORY_YEARS = 5;
+const HISTORY_START_YEAR = 2003;
 const MISSING = new Set(['','N/A','NA','NULL']);
 const NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
 const finite = value => typeof value === 'number' && Number.isFinite(value);
@@ -79,11 +79,13 @@ export async function collectYields({fetchImpl = globalThis.fetch, now = new Dat
   const cutoff = now.toISOString().slice(0,10), year = now.getUTCFullYear();
   const responses = [], nominalRows = [], realRows = [];
   // Two bounded, independent requests at a time. The current year may have no publication at New Year.
-  for (let captureYear = Math.max(2003,year-HISTORY_YEARS+1); captureYear <= year; captureYear++) {
+  for (let captureYear = HISTORY_START_YEAR; captureYear <= year; captureYear++) {
     const pair = await Promise.all(['nominal','real'].map(async kind => {
       const response = await requestText(treasuryParYieldUrl(captureYear,kind),{fetchImpl,maxBytes:2*1024*1024});
       const rows = parseParYieldCsv(response.text,kind);
       if (rows.some(row => Number(row.date.slice(0,4)) !== captureYear)) throw new Error('Treasury curve response contains observations outside its requested year');
+      if (captureYear < year && rows.length === 0) throw new Error(`Empty Treasury ${kind} curve response for past year ${captureYear}`);
+      if (captureYear < year && !rows.some(row => finite(row.rates['10Y']))) throw new Error(`No usable Treasury ${kind} 10-year observations for past year ${captureYear}`);
       return {kind,response,rows:rows.filter(row => row.date <= cutoff)};
     }));
     for (const {kind,response,rows} of pair) {
@@ -99,7 +101,7 @@ export async function collectYields({fetchImpl = globalThis.fetch, now = new Dat
   const observations = callback => curveHistory.map(row => ({date:row.date,value:callback(row),publishedAt:null}));
   const difference = (left,right) => finite(left) && finite(right) ? clean((left-right)*100) : null;
   const series = (sourceIds,sourceUrl,calculation,observationType,values,sourceUrls=[sourceUrl]) => ({
-    sourceIds,sourceUrl,sourceUrls,calculation,observationType,dataStatus:observationType,
+    sourceIds,sourceUrl,sourceUrls,calculation,observationType,dataStatus:observationType,inputProvenanceScope:'observation-source-urls',
     observations:values.map(row => {
       const observationYear = Number(row.date.slice(0,4));
       const inputs = sourceUrls.map(url => treasuryParYieldUrl(observationYear,new URL(url).searchParams.get('type') === 'daily_treasury_real_yield_curve' ? 'real' : 'nominal'));
@@ -109,7 +111,7 @@ export async function collectYields({fetchImpl = globalThis.fetch, now = new Dat
   return {
     id:'yields', fetchedAt:responses.map(row => row.retrievedAt).sort().at(-1),
     coverageStart:curveHistory[0].date, coverageEnd:curveHistory.at(-1).date,
-    coverageNote:'Five calendar years of published Treasury nominal and TIPS real par curves. Missing feed dates and tenors are not filled. The observation cutoff does not reconstruct historical data vintages. Source release timestamps are not supplied; retrieval timestamps are separate.',
+    coverageNote:'Published Treasury nominal and TIPS real par curves from 2003 through the capture cutoff, using currently published revised history. Missing feed dates and tenors are not filled. The observation cutoff does not reconstruct original release vintages. Source release timestamps are not supplied; retrieval timestamps are separate.',
     series:{
       spread2s10s:series(['BC_10YEAR','BC_2YEAR'],nominalUrl,'100 × (10-year minus 2-year nominal par yield) on the same observation date; basis points.','calculated',observations(row => difference(row.nominal['10Y'],row.nominal['2Y']))),
       spread3m10y:series(['BC_10YEAR','BC_3MONTH'],nominalUrl,'100 × (10-year minus 3-month nominal par yield) on the same observation date; basis points.','calculated',observations(row => difference(row.nominal['10Y'],row.nominal['3M']))),
@@ -119,7 +121,10 @@ export async function collectYields({fetchImpl = globalThis.fetch, now = new Dat
       nominalYield3m:series(['BC_3MONTH'],nominalUrl,'Published 3-month Treasury nominal par yield; percent.','official',observations(row => row.nominal['3M'])),
     },
     curveHistory,
-    methodologyBreaks:[{date:YIELD_METHODOLOGY_CHANGE,from:'quasi-cubic-hermite-spline',to:'monotone-convex',sourceUrl:'https://home.treasury.gov/policy-issues/financing-the-government/yield-curve-methodology-change-information-sheet'}],
+    methodologyBreaks:[
+      {date:REAL_YIELD_INPUT_CHANGE,kind:'real',change:'knot-point-selection',from:'all-tips-securities',to:'most-recently-auctioned-tips',sourceUrl:'https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_real_yield_curve'},
+      {date:YIELD_METHODOLOGY_CHANGE,from:'quasi-cubic-hermite-spline',to:'monotone-convex',sourceUrl:'https://home.treasury.gov/policy-issues/financing-the-government/yield-curve-methodology-change-information-sheet'},
+    ],
     provenance:responses.map(({text,...metadata}) => metadata), warnings:[],
   };
 }

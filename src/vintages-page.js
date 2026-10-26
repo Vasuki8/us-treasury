@@ -1,6 +1,6 @@
 import { supportingDetails } from './page-hierarchy.js';
 import { registry } from './registry.js';
-import { formatValue, tabularCsv, BLS_DATA_NOTICE } from './model.js';
+import { formatValue, tabularCsv, BLS_DATA_NOTICE, observationCapture } from './model.js';
 import { asKnownOn, revisionHistory, normalizeVintageTimestamp, vintageMeasurementsComparable } from './vintages.js';
 import { heading, button, panel, table, emptyState, escapeHtml as esc } from './ui.js';
 
@@ -152,22 +152,25 @@ export function vintagesCsv(vintages, { cutoff: requestedCutoff, seriesId = 'gdp
   const cutoff = normalizedCutoff(requestedCutoff, vintages), result = view(vintages, cutoff, seriesId), metadata = registry[seriesId];
   const columns = (source, series, observation, value) => {
     const captured = capturedMetadata(metadata, source, series), rights = capturedRights(captured, source, series, observation);
+    const inputProvenanceScope=series?.inputProvenanceScope??source?.inputProvenanceScope;
+    const capture=inputProvenanceScope==='observation-source-urls'?observationCapture({...series,inputProvenanceScope,provenance:series?.provenance??source?.provenance??[],fetchedAt:series?.fetchedAt??source?.fetchedAt},observation):null;
+    const provenance=capture?.provenance??source?.provenance??[];
     return {
-      captured,
-      common: [captured.observationType ?? 'official', 'captured-as-known', rights.sourceUrl, (series?.sourceIds ?? []).join('; '), series?.calculation ?? '', series?.coverageNote ?? source?.coverageNote ?? '', (source?.provenance ?? []).map(item => item.sha256).filter(Boolean).join('; '), limitation],
-      extra: [finite(value) ? 'observed numeric value' : 'explicit missing value', rights.sourceNotice, captured.frequency, captured.adjustment, captured.definition, series?.dataStatus ?? captured.observationType ?? 'official', rights.sourceUrls.join('; '), rights.licenseUrls.join('; '), rights.termsUrls.join('; '), rights.attribution, rights.sourceTitle, rights.redistributionNotice, joined((source?.provenance ?? []).map(item => item.url))],
+      captured,retrievedAt:capture?.retrievedAt,
+      common: [captured.observationType ?? 'official', 'captured-as-known', rights.sourceUrl, (series?.sourceIds ?? []).join('; '), series?.calculation ?? '', series?.coverageNote ?? source?.coverageNote ?? '', provenance.map(item => item.sha256).filter(Boolean).join('; '), limitation],
+      extra: [finite(value) ? 'observed numeric value' : 'explicit missing value', rights.sourceNotice, captured.frequency, captured.adjustment, captured.definition, series?.dataStatus ?? captured.observationType ?? 'official', capture?joined(provenance.map(item=>item.url)):rights.sourceUrls.join('; '), rights.licenseUrls.join('; '), rights.termsUrls.join('; '), rights.attribution, rights.sourceTitle, rights.redistributionNotice, joined(provenance.map(item => item.url))],
     };
   };
   const rows = result.observations.map(({ sourceId, source, series, observation, first }) => {
-    const { captured, common, extra } = columns(source, series, observation, observation.value);
+    const { captured, common, extra, retrievedAt } = columns(source, series, observation, observation.value);
     const initial = capturedMetadata(metadata, first?.source, first?.series), comparable = vintageMeasurementsComparable(initial, captured);
-    return ['as-known-observation', seriesId, captured.name, sourceId, observation.date, observation.value, captured.unit, cutoff, first?.capturedAt, first?.value, source.fetchedAt, null, null, '', observation.publishedAt ?? null, observation.retrievedAt??series.fetchedAt??source.fetchedAt, ...common, ...extra,initial.unit,null,captured.unit,observation.value,JSON.stringify(measurementDetails(initial)),null,JSON.stringify(measurementDetails(captured)),comparable,comparisonNote(comparable),null];
+    return ['as-known-observation', seriesId, captured.name, sourceId, observation.date, observation.value, captured.unit, cutoff, first?.capturedAt, first?.value, source.fetchedAt, null, null, '', observation.publishedAt ?? null, retrievedAt??observation.retrievedAt??series.fetchedAt??source.fetchedAt, ...common, ...extra,initial.unit,null,captured.unit,observation.value,JSON.stringify(measurementDetails(initial)),null,JSON.stringify(measurementDetails(captured)),comparable,comparisonNote(comparable),null];
   });
   for (const { sourceId, source, series, observation, item, change } of result.changeContexts) {
-    const { captured, common, extra } = columns(source, series, observation, change.value);
+    const { captured, common, extra, retrievedAt } = columns(source, series, observation, change.value);
     const initial = capturedMetadata(metadata, null, item.firstMetadata), previous = capturedMetadata(metadata, null, change.previousMetadata), latest = capturedMetadata(metadata, null, item.latestMetadata);
     const comparable = change.measurementComparable !== false && vintageMeasurementsComparable(previous, captured);
-    rows.push(['observed-value-change', seriesId, captured.name, sourceId, item.date, change.value, captured.unit, cutoff, item.firstCaptured.capturedAt, item.firstCaptured.value, item.latest.capturedAt, change.previousValue, change.capturedAt, change.reason, observation?.publishedAt ?? null, observation?.retrievedAt??series.fetchedAt??change.capturedAt, ...common, ...extra,initial.unit,previous.unit,latest.unit,item.latest.value,JSON.stringify(measurementDetails(initial)),JSON.stringify(measurementDetails(previous)),JSON.stringify(measurementDetails(latest)),comparable,comparisonNote(comparable),change.previousCapturedAt]);
+    rows.push(['observed-value-change', seriesId, captured.name, sourceId, item.date, change.value, captured.unit, cutoff, item.firstCaptured.capturedAt, item.firstCaptured.value, item.latest.capturedAt, change.previousValue, change.capturedAt, change.reason, observation?.publishedAt ?? null, retrievedAt??observation?.retrievedAt??series.fetchedAt??change.capturedAt, ...common, ...extra,initial.unit,previous.unit,latest.unit,item.latest.value,JSON.stringify(measurementDetails(initial)),JSON.stringify(measurementDetails(previous)),JSON.stringify(measurementDetails(latest)),comparable,comparisonNote(comparable),change.previousCapturedAt]);
   }
   return tabularCsv(headers, rows);
 }

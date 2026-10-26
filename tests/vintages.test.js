@@ -29,6 +29,19 @@ test('GDP subcomponent replay retains its parent and prevents later double-count
  const restored=asKnownOn(history,times[1]).sources.macroContributions.series.test;
  assert.equal(restored.contributionScope,'subcomponent');assert.equal(restored.parentContribution,'investment');
 });
+
+test('receipt selection opt-in survives new capture replay without changing legacy capture metadata',()=>{
+ const previous=source(times[0],[observation('2026-07-01',1)]);
+ const current=source(times[1],[observation('2026-07-01',1)]);
+ current.series.test.inputProvenanceScope='observation-source-urls';
+ const history=recordVintages(null,{treasury:previous},{treasury:current},{checkedAt:times[2]});
+ const legacy=asKnownOn(history,times[0]).sources.treasury.series.test;
+ const latest=asKnownOn(history,times[1]).sources.treasury.series.test;
+ assert.equal(Object.hasOwn(legacy,'inputProvenanceScope'),false);
+ assert.equal(latest.inputProvenanceScope,'observation-source-urls');
+ assert.equal(history.captures[1].series.test.upserts.length,0,'the opt-in changes metadata without inventing observation changes');
+ assert.equal(Object.hasOwn(history.captures[0].series.test.metadata,'inputProvenanceScope'),false);
+});
 const sources = item => ({ treasury: item });
 const record = (vintages, previous, next, checkedAt = times[2]) => recordVintages(vintages, previous ? sources(previous) : {}, next ? sources(next) : {}, { checkedAt });
 
