@@ -44,6 +44,13 @@ test('healthy checks stay silent and a failed check alerts once, recovers and al
  const before=f.writes.length;await execute(f);assert.equal(f.writes.length,before);
 });
 
+test('registered check retries defer health alerts while active, with a bounded wait and independent renewal reminder',async()=>{
+ const runs=[run(102,null,'2027-09-25T13:40:00Z','workflow_dispatch'),run(101,'failure','2027-09-25T13:30:00Z','workflow_dispatch')];runs[0].status='in_progress';
+ const f=fixture(runs);const result=await execute(f,'2027-09-25T13:43:00Z');
+ assert.equal(result.deferred,true);assert.equal(f.issues.filter(i=>i.body.startsWith(healthMarker)).length,0);assert.equal(f.issues.filter(i=>i.body.includes(':renewal:')).length,1);
+ await execute(f,'2027-09-25T14:00:00Z');assert.ok(f.issues.some(i=>i.body.startsWith(healthMarker)),'stalled checks cannot suppress indefinitely');
+});
+
 test('missed schedules get a 24-hour Toronto grace, including DST; manual success does not prove the schedule ran',async()=>{
  const f=fixture([run(100,'success','2026-10-25T21:32:21Z','workflow_dispatch')]);
  assert.equal((await execute(f,'2026-10-26T13:18:00Z')).health,'ok');

@@ -11,7 +11,7 @@ import {isIsoDate} from '../src/date-window.js';
 import {OfficialSourceHttpError} from './sources/http.mjs';
 
 /** Explicit registered-only read check. No source snapshots or histories are written. */
-export async function checkRegisteredBlsAccess({apiKey=process.env.BLS_API_KEY,now=new Date(),previous=snapshot.sources.bls,collect=collectRegisteredBls}={}){
+export async function checkRegisteredBlsAccess({apiKey=process.env.BLS_API_KEY,now=new Date(),clock=()=>now,previous=snapshot.sources.bls,collect=collectRegisteredBls}={}){
  const base={checkedAt:now.toISOString(),endpoint:BLS_API_V2,passed:false};
  const key=typeof apiKey==='string'?apiKey.trim():'';
  if(!key)return {...base,status:'not-configured',error:'Configure the repository Actions secret BLS_API_KEY before this manual check.'};
@@ -19,13 +19,15 @@ export async function checkRegisteredBlsAccess({apiKey=process.env.BLS_API_KEY,n
  try{
   const source=addMomentumSeries(await collect({apiKey:key,now}));
   stage='capture-validation';
-  const validTime=value=>typeof value==='string'&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString()===value&&Date.parse(value)<=now.getTime()+45000;
+  const completedAt=clock();
+  if(!(completedAt instanceof Date)||!Number.isFinite(+completedAt)||+completedAt<+now)throw new Error('Invalid completion clock');
+  const validTime=value=>typeof value==='string'&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString()===value&&Date.parse(value)<=completedAt.getTime()+45000;
   if(source.id!=='bls'||!validTime(source.fetchedAt)||source.provenance?.length!==1)throw new Error('Invalid registered capture');
   const receipt=source.provenance[0];
   if(receipt.url!==BLS_API_V2||receipt.retrievedAt!==source.fetchedAt||!/^[a-f0-9]{64}$/.test(receipt.sha256))throw new Error('Invalid registered receipt');
   const required=Object.entries(registry).filter(([,metadata])=>metadata.agency==='bls').map(([id])=>id);
   if(Object.keys(source.series).length!==required.length||required.some(id=>!source.series[id]))throw new Error('Incomplete registered family');
-  const cutoff=new Date(Math.min(Date.parse(source.fetchedAt),now.getTime()+45000)).toISOString().slice(0,10);
+  const cutoff=new Date(Math.min(Date.parse(source.fetchedAt),completedAt.getTime()+45000)).toISOString().slice(0,10);
   const start=`${now.getUTCFullYear()-9}-01-01`;
   const series=required.map(id=>{
    stage='series-validation';currentSeries=id;
@@ -62,7 +64,7 @@ export async function checkRegisteredBlsAccess({apiKey=process.env.BLS_API_KEY,n
 
 async function main(){
  if(process.argv.length>2)throw new Error('This check accepts no arguments; use the private BLS_API_KEY environment variable.');
- const report=await checkRegisteredBlsAccess();
+ const report=await checkRegisteredBlsAccess({clock:()=>new Date()});
  await writeFile('bls-registered-access.json',JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify(report,null,2));
  if(process.env.GITHUB_STEP_SUMMARY)await appendFile(process.env.GITHUB_STEP_SUMMARY,`### Registered BLS read-only access\n\n${report.passed?'Passed':'Not verified'}: ${report.status}. ${report.passed?`${report.outputCount} outputs validated with non-regressing reference coverage.`:report.error}\n\nNo snapshot, immutable capture or published website was changed. The key remains private; this is a second BLS endpoint, not an independent upstream.\n`);

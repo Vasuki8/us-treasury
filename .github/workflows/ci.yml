@@ -57,6 +57,7 @@ jobs:
 
       - name: Collect and validate source health without writing snapshots
         env:
+          SOURCE_RETRY_ATTEMPTS: '3'
           BLS_API_KEY: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.BLS_API_KEY || '' }}
         run: node scripts/refresh-data.mjs --check-only
 
@@ -100,6 +101,8 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Check approved scope and report new official candidates
+        env:
+          SOURCE_RETRY_ATTEMPTS: '3'
         run: node scripts/report-publication-upkeep.mjs
 
       - name: Retain the read-only upkeep report
@@ -136,7 +139,7 @@ jobs:
       - name: Check all registered daily capture outcomes
         id: check
         # Only this explicit manual option forces a repeat of a completed run.
-        run: node scripts/check-release-refresh.mjs ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_data && '--force' || '' }}
+        run: node scripts/retry-command.mjs -- node scripts/check-release-refresh.mjs ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_data && '--force' || '' }}
 
   refresh:
     name: Refresh official data and calendars
@@ -166,22 +169,24 @@ jobs:
 
       - name: Refresh healthy sources and clearly retain verified BLS statistics during service failure
         env:
+          SOURCE_RETRY_ATTEMPTS: '3'
           BLS_API_KEY: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.BLS_API_KEY || '' }}
         run: npm run data:refresh -- ${{ needs.refresh_check.outputs.sources && format('--allow-cached-bls --sources={0}', needs.refresh_check.outputs.sources) || '--allow-cached-bls' }}
 
       - name: Test the refreshed snapshot
-        run: npm test
+        run: node scripts/retry-command.mjs -- npm test
 
       - name: Build the refreshed application
-        run: npm run build
+        run: node scripts/retry-command.mjs -- npm run build
 
       - name: Smoke test the refreshed build
-        run: node scripts/check-build.mjs
+        run: node scripts/retry-command.mjs -- node scripts/check-build.mjs
 
       - name: Commit and push only the verified snapshot
         id: publish
         env:
           EXPECTED_HEAD: ${{ github.sha }}
+          UPDATE_RETRY_ATTEMPTS: '3'
         run: node scripts/publish-snapshot.mjs
 
       - name: Record failed refresh
@@ -203,7 +208,7 @@ jobs:
     needs: [refresh_check, refresh]
     if: ${{ !cancelled() && (needs.refresh_check.result == 'success' || needs.refresh_check.result == 'skipped') && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') && (github.event_name != 'schedule' || needs.refresh.result == 'success') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -226,13 +231,13 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Run tests
-        run: npm test
+        run: node scripts/retry-command.mjs -- npm test
 
       - name: Build static application
-        run: npm run build
+        run: node scripts/retry-command.mjs -- npm run build
 
       - name: Smoke test built application
-        run: node scripts/check-build.mjs
+        run: node scripts/retry-command.mjs -- node scripts/check-build.mjs
 
       - name: Save static build
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -253,32 +258,58 @@ jobs:
     needs: verify
     if: ${{ !cancelled() && needs.verify.result == 'success' && vars.DEPLOY_TARGET != 'cloudflare' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 35
     permissions:
       pages: write
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deploy_first.outcome == 'success' && steps.deploy_first.outputs.page_url || steps.deploy_second.outcome == 'success' && steps.deploy_second.outputs.page_url || steps.deploy_third.outputs.page_url }}
     steps:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
-      - name: Deploy verified static artifact
-        id: deployment
+      - name: Deploy verified static artifact (attempt 1)
+        id: deploy_first
+        continue-on-error: true
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          timeout: '600000'
+
+      - name: Wait before the second deployment attempt
+        if: "!cancelled() && steps.deploy_first.outcome == 'failure'"
+        run: sleep 5
+
+      - name: Deploy verified static artifact (attempt 2)
+        id: deploy_second
+        if: "!cancelled() && steps.deploy_first.outcome == 'failure'"
+        continue-on-error: true
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          timeout: '600000'
+
+      - name: Wait before the last deployment attempt
+        if: "!cancelled() && steps.deploy_second.outcome == 'failure'"
+        run: sleep 30
+
+      - name: Deploy verified static artifact (attempt 3)
+        id: deploy_third
+        if: "!cancelled() && steps.deploy_second.outcome == 'failure'"
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          timeout: '600000'
 
   deploy-cloudflare:
     name: Deploy Cloudflare
     needs: verify
     if: ${{ !cancelled() && needs.verify.result == 'success' && vars.DEPLOY_TARGET == 'cloudflare' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 35
     permissions:
       contents: read
     environment:
       name: cloudflare-production
-      url: ${{ steps.deployment.outputs.deployment-url }}
+      url: ${{ steps.deploy_first.outcome == 'success' && steps.deploy_first.outputs.deployment-url || steps.deploy_second.outcome == 'success' && steps.deploy_second.outputs.deployment-url || steps.deploy_third.outputs.deployment-url }}
     steps:
       - name: Check deployment credentials
         env:
@@ -307,8 +338,43 @@ jobs:
           name: meridian-static-node-24
           path: dist/
 
-      - name: Deploy verified static assets
-        id: deployment
+      - name: Deploy verified static assets (attempt 1)
+        id: deploy_first
+        timeout-minutes: 10
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.151.3'
+          packageManager: npm
+          command: deploy --config wrangler.json
+
+      - name: Wait before the second deployment attempt
+        if: "!cancelled() && steps.deploy_first.outcome == 'failure'"
+        run: sleep 5
+
+      - name: Deploy verified static assets (attempt 2)
+        id: deploy_second
+        if: "!cancelled() && steps.deploy_first.outcome == 'failure'"
+        timeout-minutes: 10
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.151.3'
+          packageManager: npm
+          command: deploy --config wrangler.json
+
+      - name: Wait before the last deployment attempt
+        if: "!cancelled() && steps.deploy_second.outcome == 'failure'"
+        run: sleep 30
+
+      - name: Deploy verified static assets (attempt 3)
+        id: deploy_third
+        if: "!cancelled() && steps.deploy_second.outcome == 'failure'"
+        timeout-minutes: 10
         uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -319,5 +385,5 @@ jobs:
 
       - name: Verify the public deployment against its build
         env:
-          DEPLOYMENT_URL: ${{ steps.deployment.outputs.deployment-url }}
-        run: node scripts/check-live.mjs "$DEPLOYMENT_URL"
+          DEPLOYMENT_URL: ${{ steps.deploy_first.outcome == 'success' && steps.deploy_first.outputs.deployment-url || steps.deploy_second.outcome == 'success' && steps.deploy_second.outputs.deployment-url || steps.deploy_third.outputs.deployment-url }}
+        run: node scripts/retry-command.mjs -- node scripts/check-live.mjs "$DEPLOYMENT_URL"

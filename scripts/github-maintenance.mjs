@@ -1,5 +1,9 @@
 export const repository='Vasuki8/us-treasury',base=`/repos/${repository}`;
 
+export function hasActiveMainRun(runs,{workflowId,workflowPath,now,maxAgeMs}){
+ return runs.some(run=>Number.isSafeInteger(run.id)&&run.id>0&&run.workflow_id===workflowId&&run.path===workflowPath&&run.head_branch==='main'&&run.head_repository?.full_name===repository&&['push','schedule','workflow_dispatch'].includes(run.event)&&['queued','requested','pending','waiting','in_progress'].includes(run.status)&&Number.isFinite(Date.parse(run.created_at))&&Date.parse(run.created_at)<=+now&&+now-Date.parse(run.created_at)<=maxAgeMs);
+}
+
 export function githubApi(token,fetchImpl=fetch){
  if(!token)throw new Error('Repository notification token is unavailable.');
  return async(method,apiPath,body)=>{

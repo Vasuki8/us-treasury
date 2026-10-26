@@ -1,7 +1,7 @@
 import {appendFile,readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
-import {repository,base,githubApi,listGithub,syncHealthIssue,createNotice} from './github-maintenance.mjs';
+import {repository,base,githubApi,listGithub,syncHealthIssue,createNotice,hasActiveMainRun} from './github-maintenance.mjs';
 import {validateSourceAttemptReport} from './source-attempt-report.mjs';
 import {getFreshness} from '../src/freshness.js';
 import {getDailyRefreshPlan} from './check-refresh-due.mjs';
@@ -24,6 +24,7 @@ export async function maintainDataUpdates({api,readReport,snapshot,now=new Date(
  const triggering=Number.isSafeInteger(triggerRunId)&&triggerRunId>0?await api('GET',`${base}/actions/runs/${triggerRunId}`):null;
  const candidates=[...new Map([...response.workflow_runs,...(triggering?[triggering]:[])].map(run=>[run.id,run])).values()];
  const runs=candidates.filter(run=>Number.isSafeInteger(run.id)&&run.id>0&&run.workflow_id===workflow.id&&run.path==='.github/workflows/ci.yml'&&run.head_branch==='main'&&run.head_repository?.full_name===repository&&['push','schedule','workflow_dispatch'].includes(run.event)&&run.status==='completed'&&canonical(run.created_at)&&Date.parse(run.created_at)<=+now).sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)||b.id-a.id);
+ const retryActive=workflow.state==='active'&&!runs.some(run=>run.id===triggerRunId)&&hasActiveMainRun(candidates,{workflowId:workflow.id,workflowPath:'.github/workflows/ci.yml',now,maxAgeMs:105*60000});
  const freshness=getFreshness(snapshot,{now}),sourceEvidence=new Map(),stages=new Map();let unexplainedWorkflowFailure=false;
  for(const entry of freshness.entries){
   const [kind,id]=entry.id.split(':'),source=kind==='data'?snapshot?.sources?.[id]:snapshot?.calendar?.sources?.[id];
@@ -53,9 +54,10 @@ export async function maintainDataUpdates({api,readReport,snapshot,now=new Date(
    }
   }
  }
- let created=0,updated=0;
+ let created=0,updated=0,deferred=0;
  const footer='Runs in GitHub with no local app required. Repeated unchanged incidents stay quiet. Closing an unresolved issue acknowledges it; a later recovery/recurrence sends a mentioned update. No source key, published data or website is changed by this monitor.';
  async function notice(key,health,title,message,runId=null,observedAt=null){
+  if(retryActive){if(health!=='ok')deferred++;return;}
   const result=await syncHealthIssue({api,issues,key:`data-update-maintenance:${key}`,health,title:`[Data updates] ${title}${health==='ok'?' — recovered':''}`,message,link:runId?runLink(runId):`[Automatic updates](https://github.com/${repository}/actions/workflows/ci.yml)`,footer,observedAt});
   created+=result.created;updated+=result.updated;
  }
@@ -77,7 +79,7 @@ export async function maintainDataUpdates({api,readReport,snapshot,now=new Date(
   const issue=await createNotice(api,'[Data updates] Cloud notification delivery test',`${testMarker}\n\n@Vasuki8 This is a notification test for statistical sources, calendars and automatic updates, not an actual source, refresh or deployment failure. Alerts run in GitHub while Codex is closed. Email/mobile delivery follows your [GitHub settings](https://github.com/settings/notifications). This test closes automatically.\n`);
   created++;await api('PATCH',`${base}/issues/${issue.number}`,{state:'closed',state_reason:'completed'});updated++;
  }
- return {sourceCount:sourceEvidence.size,inspectedRuns:runs.length,created,updated,daily:daily.required?'unverified':'ok'};
+ return {sourceCount:sourceEvidence.size,inspectedRuns:runs.length,created,updated,deferred,daily:daily.required?'unverified':'ok'};
 }
 
 async function main(){
@@ -88,6 +90,6 @@ async function main(){
  const triggerRunId=event?.workflow_run?.path==='.github/workflows/ci.yml'?event.workflow_run.id:null;
  const result=await maintainDataUpdates({api,snapshot,readReport:options=>readSourceAttemptArtifact({...options,api,token}),notificationTest:process.env.BLS_NOTIFICATION_TEST==='true',triggerRunId});
  console.log(JSON.stringify(result));
- if(process.env.GITHUB_STEP_SUMMARY)await appendFile(process.env.GITHUB_STEP_SUMMARY,`### Data-source and update alerts\n\nInspected ${result.inspectedRuns} trusted runs and ${result.sourceCount} source outcomes. Daily capture status: ${result.daily}. Issues created: ${result.created}; updated: ${result.updated}. Collection, publication and deployment remain separate evidence.\n`);
+ if(process.env.GITHUB_STEP_SUMMARY)await appendFile(process.env.GITHUB_STEP_SUMMARY,`### Data-source and update alerts\n\nInspected ${result.inspectedRuns} trusted runs and ${result.sourceCount} source outcomes. Daily capture status: ${result.daily}. Issues created: ${result.created}; updated: ${result.updated}; alerts deferred for an active bounded update: ${result.deferred}. Collection, publication and deployment remain separate evidence.\n`);
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(()=>{console.error('Data-update monitoring could not complete. Check GitHub access and workflow status; no credential or arbitrary upstream error is logged.');process.exitCode=1;});

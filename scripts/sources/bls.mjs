@@ -149,14 +149,17 @@ function summarizeApiResponse(payload,apiKey) {
   return {status:['REQUEST_SUCCEEDED','REQUEST_FAILED','REQUEST_NOT_PROCESSED'].includes(payload?.status)?payload.status:'other',messageCount:count(payload?.message),categories:[...Object.keys(rules),'other'].filter(category=>categories.has(category)),seriesCount:count(payload?.Results?.series)};
 }
 
-async function collectEndpoint(url,{fetchImpl,now,apiKey,registered=false}) {
+async function collectEndpoint(url,{fetchImpl,now,apiKey,registered=false,maxAttempts=1,pause=delay}) {
   const year=now.getUTCFullYear();
   const request=await requestText(url,{fetchImpl:async(requested,options)=>{
     const response=await fetchImpl(requested,{...options,redirect:'manual'});
     if(response.redirected||response.url&&response.url!==url||response.status>=300&&response.status<400)throw new BlsCollectionError('redirect-rejected','BLS source redirects are not permitted');
     if(apiKey&&[...response.headers].some(([name,value])=>containsKey(`${name}:${value}`,apiKey)))throw new BlsCollectionError('credential-echo','BLS response included credential material');
     return response;
-  },method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({seriesid:nativeIds,startyear:String(year-9),endyear:String(year),...(registered?{registrationkey:apiKey}:{})})});
+  },method:'POST',maxAttempts,sleepImpl:pause,
+  // Primary503 must reach the registered backup immediately, without repeating v1.
+  retryStatuses:registered?[408,429,500,502,503,504]:[408,429,500,502,504],
+  headers:{'Content-Type':'application/json'},body:JSON.stringify({seriesid:nativeIds,startyear:String(year-9),endyear:String(year),...(registered?{registrationkey:apiKey}:{})})});
   let payload;try{payload=JSON.parse(request.text);}catch{throw new BlsCollectionError('malformed-json','BLS did not return valid JSON');}
   const catalogCodes=registered&&Array.isArray(payload?.message)?payload.message.map(message=>{
     const code=typeof message==='string'?/^Unable to get Catalog Data for series ([A-Z0-9]+)$/.exec(message)?.[1]:null;
@@ -202,12 +205,12 @@ async function collectEndpoint(url,{fetchImpl,now,apiKey,registered=false}) {
   return {id:'bls',fetchedAt:request.retrievedAt,series,provenance:[provenance],warnings:registered?catalogCodes.map(code=>`BLS catalog metadata unavailable for ${code}; complete requested observations were validated.`):payload.message||[]};
 }
 
-/** One authenticated request, also used by the read-only credential diagnostic. */
-export async function collectRegisteredBls({fetchImpl=globalThis.fetch,now=new Date(),apiKey=process.env.BLS_API_KEY,pause=delay}={}) {
+/** One registered collection with bounded transient retries when enabled. */
+export async function collectRegisteredBls({fetchImpl=globalThis.fetch,now=new Date(),apiKey=process.env.BLS_API_KEY,pause=delay,maxAttempts=process.env.SOURCE_RETRY_ATTEMPTS==='3'?3:1}={}) {
   const key=configuredKey(apiKey);
   if(!key)throw new Error('A BLS_API_KEY is required for registered BLS access');
   try {
-    return await collectEndpoint(BLS_API_V2,{fetchImpl,now,apiKey:key,registered:true});
+    return await collectEndpoint(BLS_API_V2,{fetchImpl,now,apiKey:key,registered:true,maxAttempts,pause});
   } catch(error) {
     if(error instanceof OfficialSourceHttpError&&Number.isInteger(error.status)&&error.status>=100&&error.status<=599)throw new OfficialSourceHttpError(error.status,BLS_API_V2);
     const failure=new Error('Registered BLS request failed or its response could not be validated');
@@ -227,15 +230,15 @@ function assertRegisteredCoverage(result,previous,now) {
   }
 }
 
-export async function collectBls({fetchImpl=globalThis.fetch,now=new Date(),apiKey=process.env.BLS_API_KEY,pause=delay,previous}={}) {
+export async function collectBls({fetchImpl=globalThis.fetch,now=new Date(),apiKey=process.env.BLS_API_KEY,pause=delay,previous,maxAttempts=process.env.SOURCE_RETRY_ATTEMPTS==='3'?3:1}={}) {
   const key=configuredKey(apiKey);
   try {
-    return await collectEndpoint(BLS_API_V1,{fetchImpl,now,apiKey:key});
+    return await collectEndpoint(BLS_API_V1,{fetchImpl,now,apiKey:key,maxAttempts,pause});
   } catch(error) {
     if(!key||!(error instanceof OfficialSourceHttpError)||error.status!==503||error.redirected||error.requestedUrl!==BLS_API_V1||error.url!==BLS_API_V1)throw error;
     try {
       await pause(1000);
-      const result=await collectRegisteredBls({fetchImpl,now,apiKey:key,pause});
+      const result=await collectRegisteredBls({fetchImpl,now,apiKey:key,pause,maxAttempts});
       assertRegisteredCoverage(addMomentumSeries(result),previous,now);
       result.warnings.push('Primary BLS v1 returned HTTP 503; collected the complete family from registered BLS v2.');
       return result;

@@ -4,6 +4,7 @@ import { appendFile,readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {setTimeout as delay} from 'node:timers/promises';
 import {loadSnapshotHistory,validateArchiveIndex,assertArchivePrefix} from './snapshot-storage.mjs';
 import {assertCommercialData} from './data-policy.mjs';
 
@@ -12,9 +13,64 @@ const snapshotPath = 'src/official-snapshot.js';
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const paths = output => output.split('\0').filter(Boolean);
 
+function transientGitFailure(error){
+  if(error?.signal||error?.killed)return false;
+  const detail=`${error?.message??''}\n${error?.stderr??''}`.slice(-8192);
+  if(/authentication failed|permission denied|access denied|could not read username|returned error:\s*40[13]|pre-receive hook declined|non-fast-forward|\[rejected\]/i.test(detail))return false;
+  return ['ETIMEDOUT','ECONNRESET','ECONNREFUSED','EAI_AGAIN','ENETUNREACH','EHOSTUNREACH'].includes(error?.code)||/could not resolve host|failed to connect|connection (?:reset|timed out|closed unexpectedly)|operation timed out|returned error:\s*50\d|HTTP\s+50\d|RPC failed|remote end hung up|unexpected disconnect|recv failure|empty reply from server|early EOF/i.test(detail);
+}
+
+/** Retry the pre-publication network read before any staging or commit changes. */
+export async function readPublicationRemote({git,maxAttempts=1,sleepImpl=delay}={}){
+  if(typeof git!=='function'||!Number.isInteger(maxAttempts)||maxAttempts<1||maxAttempts>3)throw new Error('Invalid publication remote retry configuration.');
+  for(let attempt=1;attempt<=maxAttempts;attempt++){
+    try{return (await git('ls-remote','--exit-code','origin','refs/heads/main')).trim();}
+    catch(error){
+      if(!transientGitFailure(error)||attempt===maxAttempts)throw new Error('Publication remote check failed; publication was not attempted.');
+      await sleepImpl(attempt===1?5000:30000);
+    }
+  }
+}
+
+/** Retry only the immutable verified commit; a fresh remote guard precedes every push. */
+export async function pushVerifiedCommit({git,expectedHead,commitSha,maxAttempts=1,sleepImpl=delay}={}){
+  if(typeof git!=='function'||!Number.isInteger(maxAttempts)||maxAttempts<1||maxAttempts>3||![expectedHead,commitSha].every(value=>typeof value==='string'&&/^[a-f0-9]{40}$/.test(value)))throw new Error('Invalid verified publication retry configuration.');
+  const failed=()=>{throw new Error('Verified snapshot push failed; publication could not be confirmed.');};
+  const remoteState=async()=>{
+    const remote=(await git('ls-remote','--exit-code','origin','refs/heads/main')).trim();
+    if(remote===`${commitSha}\trefs/heads/main`)return 'published';
+    if(remote===`${expectedHead}\trefs/heads/main`)return 'expected';
+    const error=new Error('Remote main changed; refusing to retry a stale verified publication.');error.code='STALE_PUBLICATION';throw error;
+  };
+  for(let attempt=1;attempt<=maxAttempts;attempt++){
+    try{
+      if(await remoteState()==='published')return {attempts:attempt,alreadyPublished:true};
+    }catch(error){
+      if(error?.code==='STALE_PUBLICATION')throw error;
+      if(!transientGitFailure(error)||attempt===maxAttempts)failed();
+      await sleepImpl(attempt===1?5000:30000);continue;
+    }
+    try{
+      await git('push','origin',`${commitSha}:refs/heads/main`);
+      return {attempts:attempt,alreadyPublished:false};
+    }catch(error){
+      if(!transientGitFailure(error))failed();
+      // A transport failure may follow an accepted push. Verify before sending it again.
+      try{if(await remoteState()==='published')return {attempts:attempt,alreadyPublished:true};}
+      catch(readError){
+        if(readError?.code==='STALE_PUBLICATION')throw readError;
+        if(!transientGitFailure(readError))failed();
+      }
+      if(attempt===maxAttempts)failed();
+      await sleepImpl(attempt===1?5000:30000);
+    }
+  }
+}
+
 export async function publishSnapshot({ cwd = process.cwd(), expectedHead } = {}) {
   if (typeof expectedHead !== 'string' || expectedHead.length !== 40 || !/^[a-f0-9]{40}$/i.test(expectedHead)) throw new Error('Expected HEAD must be a complete 40-character commit SHA.');
   expectedHead = expectedHead.toLowerCase();
+  const maxAttempts=process.env.UPDATE_RETRY_ATTEMPTS==='3'?3:1;
   const git = async (...args) => (await exec('git', args, { cwd,maxBuffer:64*1024*1024, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } })).stdout;
   const gitBytes=async(...args)=>(await exec('git',args,{cwd,encoding:'buffer',maxBuffer:64*1024*1024,env:{...process.env,GIT_TERMINAL_PROMPT:'0'}})).stdout;
   const head = (await git('rev-parse', 'HEAD')).trim();
@@ -50,7 +106,7 @@ export async function publishSnapshot({ cwd = process.cwd(), expectedHead } = {}
   if(Object.hasOwn(next,'sources')||Object.hasOwn(next,'vintageArchive')||Object.hasOwn(next,'vintages'))assertCommercialData({...next,vintages:history});
 
   // Workflow concurrency does not prevent a developer from pushing to main.
-  const remote = (await git('ls-remote', '--exit-code', 'origin', 'refs/heads/main')).trim();
+  const remote = await readPublicationRemote({git,maxAttempts});
   if (remote !== `${expectedHead}\trefs/heads/main`) throw new Error('Remote main has changed since this run started; refusing to publish a stale refresh.');
   // The remote request can overlap another local refresh or a developer staging
   // changes. Refuse those races before touching the existing index.
@@ -82,7 +138,7 @@ export async function publishSnapshot({ cwd = process.cwd(), expectedHead } = {}
   const commitSha=(await git('-c','user.name=github-actions[bot]','-c','user.email=41898282+github-actions[bot]@users.noreply.github.com','commit-tree',tree,'-p',expectedHead,'-m','data: refresh official data and release calendars')).trim();
   await git('update-ref','-m','data: publish verified official snapshot','HEAD',commitSha,expectedHead);
   // A concurrent remote update after ls-remote is rejected by this normal push.
-  await git('push', 'origin', `${commitSha}:refs/heads/main`);
+  await pushVerifiedCommit({git,expectedHead,commitSha,maxAttempts});
   return { commitSha, changed: true };
 }
 

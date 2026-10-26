@@ -41,6 +41,24 @@ test('healthy sources and actual successful update/deployment stay quiet',async(
  const f=fixture();const result=await execute(f);assert.equal(f.writes.length,0);assert.equal(result.sourceCount,30);
 });
 
+test('daily monitoring defers incidents while a trusted bounded retry job is active, then alerts on its final failure',async()=>{
+ const f=fixture();f.reports['101:official-refresh-status']=report([['data:census','error']], '2026-10-27T13:01:00.000Z');
+ f.runs.unshift(run(102,{status:'in_progress',conclusion:null,created_at:'2026-10-27T13:58:00Z'}));
+ const pending=await execute(f);assert.equal(f.writes.length,0);assert.ok(pending.deferred>0);
+ f.runs[0].status='completed';f.runs[0].conclusion='failure';f.jobs[102]=[job('Refresh official data and calendars','failure')];f.runs[0].updated_at='2026-10-27T13:59:00Z';
+ const final=await execute(f);assert.ok(find(f,'source:data:census'));assert.ok(find(f,'stage:refresh'));assert.equal(final.deferred,0);
+});
+
+test('foreign or expired active runs cannot silence final failures; an unrelated queued run cannot hide a completed trigger',async()=>{
+ for(const extra of [{head_repository:{full_name:'other/repo'}},{created_at:'2026-10-27T10:00:00Z'}]){
+  const f=fixture();f.reports['101:official-refresh-status']=report([['data:census','error']], '2026-10-27T13:01:00.000Z');f.runs.unshift(run(102,{status:'in_progress',conclusion:null,created_at:'2026-10-27T13:58:00Z',...extra}));
+  await execute(f);assert.ok(find(f,'source:data:census'));
+ }
+ const f=fixture();f.reports['101:official-refresh-status']=report([['data:census','error']], '2026-10-27T13:01:00.000Z');f.runs.unshift(run(102,{status:'queued',conclusion:null,created_at:'2026-10-27T13:58:00Z'}));
+ const api=async(method,path,body)=>path===`${base}/actions/runs/101`?f.runs.find(run=>run.id===101):f.api(method,path,body);
+ await execute(f,{api,triggerRunId:101});assert.ok(find(f,'source:data:census'));
+});
+
 test('failed source is named once, unselected or older attempts cannot recover it, later attempted success does',async()=>{
  const f=fixture();f.reports['101:official-refresh-status']=report([['data:census','error']], '2026-10-27T13:01:00.000Z');
  await execute(f);const issue=find(f,'source:data:census');assert.ok(issue);assert.match(issue.body,/Census/);assert.deepEqual(issue.assignees,['Vasuki8']);

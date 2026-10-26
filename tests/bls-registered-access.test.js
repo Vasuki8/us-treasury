@@ -29,6 +29,14 @@ test('complete registered source passes admission and coverage without mutating 
  assert.deepEqual(previous,before);assert.ok(!JSON.stringify(report).includes(key));
  assert.equal(report.series.length,31);assert.ok(report.series.every(row=>row.latestReferencePeriod));
 });
+
+test('live completion clock accepts a genuine delayed retry receipt and still rejects future receipts',async()=>{
+ const late=new Date(now.getTime()+150000),value=fixture();value.fetchedAt=late.toISOString();value.provenance[0].retrievedAt=value.fetchedAt;
+ const report=await checkRegisteredBlsAccess({apiKey:key,now,clock:()=>late,collect:async()=>value});
+ assert.equal(report.passed,true);assert.equal(report.checkedAt,now.toISOString());assert.equal(report.fetchedAt,late.toISOString());
+ value.fetchedAt=new Date(late.getTime()+46000).toISOString();value.provenance[0].retrievedAt=value.fetchedAt;
+ assert.equal((await checkRegisteredBlsAccess({apiKey:key,now,clock:()=>late,collect:async()=>value})).passed,false);
+});
 test('partial, regressing, future and unreviewed captures fail the read-only check',async()=>{
  for(const mutate of [
   source=>{delete source.series.unrate;},

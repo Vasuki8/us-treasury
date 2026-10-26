@@ -33,6 +33,7 @@ jobs:
 
       - name: Check complete registered access and reference coverage
         env:
+          SOURCE_RETRY_ATTEMPTS: '3'
           BLS_API_KEY: ${{ secrets.BLS_API_KEY }}
         run: node scripts/check-bls-registered-access.mjs
 

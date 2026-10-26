@@ -1,7 +1,7 @@
 import {readFile,appendFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
-import {githubApi,syncHealthIssue} from './github-maintenance.mjs';
+import {githubApi,syncHealthIssue,hasActiveMainRun} from './github-maintenance.mjs';
 export {githubApi} from './github-maintenance.mjs';
 
 const repository='Vasuki8/us-treasury',base=`/repos/${repository}`;
@@ -31,7 +31,7 @@ function expectedMonday(now,startsOn){
  return monday>=startsOn?`${monday}T09:17`:null;
 }
 
-export async function maintainBlsBackup({api,config,now=new Date(),notificationTest=false}){
+export async function maintainBlsBackup({api,config,now=new Date(),notificationTest=false,triggerRunId=null}){
  const today=torontoTime(now).slice(0,10);
  const registered=validDay(config.confirmedRegistrationOn);validDay(config.weeklyChecksStartOn);
  if(config.confirmedRegistrationOn>today||config.recipient!=='Vasuki8')throw new Error('Maintenance confirmation or recipient is invalid.');
@@ -56,6 +56,7 @@ export async function maintainBlsBackup({api,config,now=new Date(),notificationT
  ]);
  const runs=allRuns.filter(run=>Number.isSafeInteger(run.id)&&run.id>0&&run.workflow_id===workflow.id&&run.path===workflowPath&&run.head_branch==='main'&&run.head_repository?.full_name===repository&&['schedule','workflow_dispatch'].includes(run.event)&&Number.isFinite(Date.parse(run.created_at))&&Date.parse(run.created_at)<=+now).sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)||b.id-a.id);
  const latest=runs.find(run=>run.status==='completed');
+ const deferred=workflow.state==='active'&&!runs.some(run=>run.id===triggerRunId&&run.status==='completed')&&hasActiveMainRun(allRuns,{workflowId:workflow.id,workflowPath,now,maxAgeMs:10*60000});
  const expected=expectedMonday(now,config.weeklyChecksStartOn);
  const scheduled=expected&&runs.some(run=>run.event==='schedule'&&run.status==='completed'&&torontoTime(new Date(run.created_at))>=expected);
  let health='ok',detail='The registered backup check passed.';
@@ -72,7 +73,7 @@ export async function maintainBlsBackup({api,config,now=new Date(),notificationT
   created++;return issue;
  }
  async function update(issue,body){await api('PATCH',`${base}/issues/${issue.number}`,body);updated++;}
- const healthNotice=await syncHealthIssue({api,issues,key:'bls-backup-maintenance',health,
+ const healthNotice=deferred?{created:0,updated:0}:await syncHealthIssue({api,issues,key:'bls-backup-maintenance',health,
   title:`[BLS backup] ${health==='ok'?'Recovered':health==='failed'?'Check needs attention':'Monitoring unverified'}`,message:detail,
   link:latest?`[Latest completed check](https://github.com/${repository}/actions/runs/${latest.id})`:`[Registered checks](https://github.com/${repository}/actions/workflows/bls-registered-access.yml)`,
   footer:'The registered check validates all 31 outputs. Weekly validation: Monday 09:17 America/Toronto. An unchanged incident stays quiet; recovery and recurrence update this issue. Closing an unresolved issue acknowledges it and does not renew the key. Published data are not changed by this monitor.'});
@@ -89,14 +90,16 @@ export async function maintainBlsBackup({api,config,now=new Date(),notificationT
   const issue=await create('[BLS backup] Cloud notification delivery test',`${testMarker}\n\n${recipient} This is a cloud notification delivery test, not a backup failure or renewal warning. The GitHub workflow can assign you maintenance issues while Codex and your computer are off. It will close this test automatically.\n\nEnable participating/mention notifications [on GitHub and by email](https://github.com/settings/notifications), or configure GitHub Mobile push delivery. This test confirms issue creation and assignment; delivery to your email/device depends on those settings.\n`);
   await update(issue,{state:'closed',state_reason:'completed'});
  }
- return {health,renewalDueOn,reminderOn,created,updated};
+ return {health,renewalDueOn,reminderOn,created,updated,deferred};
 }
 
 async function main(){
  if(process.argv.length>2||process.env.GITHUB_REPOSITORY!==repository||process.env.GITHUB_REF!=='refs/heads/main')throw new Error('Cloud maintenance is restricted to this repository main branch.');
  const config=JSON.parse(await readFile(new URL('./bls-backup-maintenance.json',import.meta.url),'utf8'));
- const result=await maintainBlsBackup({api:githubApi(process.env.GH_TOKEN),config,notificationTest:process.env.BLS_NOTIFICATION_TEST==='true'});
+ const event=process.env.GITHUB_EVENT_NAME==='workflow_run'?JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH,'utf8')):null;
+ const triggerRunId=event?.workflow_run?.path===workflowPath?event.workflow_run.id:null;
+ const result=await maintainBlsBackup({api:githubApi(process.env.GH_TOKEN),config,notificationTest:process.env.BLS_NOTIFICATION_TEST==='true',triggerRunId});
  console.log(JSON.stringify(result));
- if(process.env.GITHUB_STEP_SUMMARY)await appendFile(process.env.GITHUB_STEP_SUMMARY,`### BLS cloud maintenance\n\nBackup monitoring: **${result.health}**. Issues created: ${result.created}; updated: ${result.updated}. Renewal reminder starts ${result.reminderOn}, before the ${result.renewalDueOn} anniversary.\n\n[Maintenance issues](https://github.com/${repository}/issues?q=author%3Aapp%2Fgithub-actions). No BLS key, published data or website changes.\n`);
+ if(process.env.GITHUB_STEP_SUMMARY)await appendFile(process.env.GITHUB_STEP_SUMMARY,`### BLS cloud maintenance\n\nBackup monitoring: **${result.health}**${result.deferred?' (health notices deferred while the bounded check is active)':''}. Issues created: ${result.created}; updated: ${result.updated}. Renewal reminder starts ${result.reminderOn}, before the ${result.renewalDueOn} anniversary.\n\n[Maintenance issues](https://github.com/${repository}/issues?q=author%3Aapp%2Fgithub-actions). No BLS key, published data or website changes.\n`);
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(()=>{console.error('BLS cloud maintenance could not complete. Review workflow permissions and GitHub availability; no credential or upstream response is logged.');process.exitCode=1;});

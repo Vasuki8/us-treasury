@@ -78,6 +78,22 @@ test('registered-only collection requires a key before any request and never tri
   assert.ok(Object.values(result.series).every(series=>series.sourceUrl===V2));
 });
 
+test('enabled transient retries keep the immediate primary503 fallback and retry only the registered endpoint',async()=>{
+ const events=[];let registered=0;
+ const result=await bls.collectBls({now:NOW,apiKey:KEY,maxAttempts:3,pause:async wait=>events.push(wait),fetchImpl:async url=>{
+  events.push(url);if(url===V1)return new Response('unavailable',{status:503});
+  registered++;return registered<3?new Response('temporarily unavailable',{status:503}):success();
+ }});
+ assert.deepEqual(events,[V1,1000,V2,5000,V2,30000,V2]);assert.equal(result.provenance[0].url,V2);
+ assert.equal(JSON.stringify(result).includes(KEY),false);
+});
+
+test('enabled registered retries do not repeat key rejection, redirects or invalid data',async()=>{
+ for(const response of [()=>new Response('denied',{status:403}),()=>new Response('',{status:302,headers:{location:V1}}),()=>success({status:'REQUEST_FAILED',message:['invalid registration key '+KEY]}),()=>success({status:'REQUEST_SUCCEEDED',message:[],Results:{series:[]}})]){
+  let count=0;await assert.rejects(bls.collectRegisteredBls({apiKey:KEY,now:NOW,maxAttempts:3,pause:async()=>assert.fail('permanent failure cannot retry'),fetchImpl:async()=>{count++;return response();}}),assertSafe);assert.equal(count,1);
+ }
+});
+
 test('missing key preserves the original typed primary 503 without pause or retry',async()=>{
   let calls=0;
   await assert.rejects(bls.collectBls({apiKey:'',now:NOW,pause:async()=>assert.fail('missing key must not pause'),fetchImpl:async()=>{calls++;return new Response('unavailable',{status:503});}}),error=>{
