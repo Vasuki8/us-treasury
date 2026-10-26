@@ -1,11 +1,18 @@
 import { requestText } from './http.mjs';
 import {setTimeout as delay} from 'node:timers/promises';
+import {createHash} from 'node:crypto';
 
 const endpoint = 'https://oui.doleta.gov/unemploy/wkclaims/report.asp';
 const MAX_XML_BYTES = 2 * 1024 * 1024;
 const MAX_WEEKS = 10000;
 const dayMs = 86400000;
 const historyStartYear = 1967;
+// Exact 127-byte Informix connection-error page captured from this endpoint
+// on 2026-10-26. Unknown responses still reach the strict XML parser.
+const unavailableHash = '6f9c0062c38cf72787234255d172cc1de42da253ac445a1443f5eb8d0388f17a';
+function isTransientResponse({bytes,status,url,redirected,contentType}){
+  return status===200&&url===endpoint&&!redirected&&contentType.split(';')[0].trim().toLowerCase()==='text/html'&&bytes.length===127&&createHash('sha256').update(bytes).digest('hex')===unavailableHash;
+}
 const reuse = {
   licenseUrl: 'https://www.dol.gov/general/aboutdol/copyright',
   attribution: 'Source: U.S. Department of Labor, Employment and Training Administration.',
@@ -113,7 +120,7 @@ export async function collectDol({ fetchImpl = globalThis.fetch, now = new Date(
   const cutoff = now.toISOString().slice(0, 10);
   const body = new URLSearchParams({ level: 'us', strtdate: String(historyStartYear), enddate: String(year), filetype: 'xml', submit: 'Submit' }).toString();
   // This POST only exports data; explicitly opt it into the bounded read policy.
-  const response = await requestText(endpoint, { fetchImpl, method: 'POST', maxAttempts, sleepImpl:pause, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body, maxBytes: MAX_XML_BYTES });
+  const response = await requestText(endpoint, { fetchImpl, method: 'POST', maxAttempts, sleepImpl:pause, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body, maxBytes: MAX_XML_BYTES, isTransientResponse });
   const parsed = parseDol(response.text);
   const withinCoverage = row => row.date >= `${historyStartYear}-01-01` && row.date <= cutoff;
   const observations = trimMissing(parsed.observations.filter(withinCoverage));

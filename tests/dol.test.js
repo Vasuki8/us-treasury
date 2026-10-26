@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 
 let adapter;
 try {
@@ -13,6 +14,9 @@ function dol() {
 }
 
 const endpoint = 'https://oui.doleta.gov/unemploy/wkclaims/report.asp';
+// Exact 127-byte HTTP 200 HTML response captured from the official export on
+// October 26, 2026. An identical query also returned valid national XML.
+const databaseUnavailable = 'Unable to connect!<br/>SQLSTATE=HY000, SQLDriverConnect: -25546 [Informix][Informix ODBC Driver][Informix]Invalid ASF assoc_id.';
 function week(date, value = '198,000', continued = '1,699,000') {
   return `<week><weekEnded>${date}</weekEnded><InitialClaims><NSA>164,717</NSA><SF>83.0</SF>${value === null ? '' : `<SA>${value}</SA>`}<SA4WK>202,500</SA4WK></InitialClaims><ContinuedClaims><NSA>1,497,243</NSA><SF>88.1</SF>${continued === null ? '' : `<SA>${continued}</SA>`}<SA4WK>1,723,250</SA4WK></ContinuedClaims><IUR><NSA>1.0</NSA><SA>1.1</SA></IUR><CoveredEmployment>153,732,307</CoveredEmployment></week>`;
 }
@@ -50,6 +54,54 @@ test('DOL retry exhaustion stays failed and an unrecognized successful response 
  let attempts=0;
  await assert.rejects(dol().collectDol({maxAttempts:3,pause:async()=>{},fetchImpl:async()=>{attempts++;return new Response('unavailable',{status:503});}}),/HTTP.*503/);assert.equal(attempts,3);
  attempts=0;await assert.rejects(dol().collectDol({maxAttempts:3,pause:async()=>assert.fail('schema errors cannot retry'),fetchImpl:async()=>{attempts++;return new Response('<html>Invalid export</html>');}}),/schema/);assert.equal(attempts,1);
+});
+
+test('DOL shares one retry budget across its exact HTTP200 database outage and transient HTTP failures',async()=>{
+ const calls=[],waits=[],accepted=xml([week('10/17/2026')]);
+ const source=await dol().collectDol({now:new Date('2026-10-26T12:00:00Z'),maxAttempts:3,pause:async ms=>waits.push(ms),fetchImpl:async(url,options)=>{
+  calls.push({url,method:options.method,body:options.body});
+  if(calls.length===1)return new Response(databaseUnavailable,{headers:{'content-type':'text/html;charset=UTF-8'}});
+  if(calls.length===2)return new Response('temporarily unavailable',{status:503});
+  return fixtureFetch(accepted)(url,options);
+ }});
+ assert.equal(calls.length,3);assert.deepEqual(waits,[5000,30000]);
+ assert.ok(calls.every(call=>JSON.stringify(call)===JSON.stringify(calls[0])));
+ assert.equal(source.series.claims.observations.at(-1).value,198);
+ assert.equal(source.series.continuedClaims.observations.at(-1).value,1699);
+ assert.equal(source.provenance.length,1);
+ assert.equal(source.provenance[0].sha256,createHash('sha256').update(accepted).digest('hex'));
+ assert.equal(source.fetchedAt,source.provenance[0].retrievedAt);
+ assert.doesNotMatch(JSON.stringify(source),/SQLSTATE|Informix|Unable to connect/);
+});
+
+test('the exact DOL database outage exhausts bounded retries without masquerading as an HTTP503',async()=>{
+ let calls=0;const waits=[];
+ await assert.rejects(dol().collectDol({maxAttempts:3,pause:async ms=>waits.push(ms),fetchImpl:async()=>{
+  calls++;return new Response(databaseUnavailable,{headers:{'content-type':'text/html; charset=UTF-8'}});
+ }}),error=>{
+  assert.match(error.message,/temporarily unavailable/i);assert.equal(error.status,200);
+  assert.equal(error.url,endpoint);assert.equal(error.redirected,false);
+  assert.doesNotMatch(JSON.stringify(error),/SQLSTATE|Informix|assoc_id/);return true;
+ });
+ assert.equal(calls,3);assert.deepEqual(waits,[5000,30000]);
+});
+
+test('DOL outage recognition rejects lookalikes, changed scope, redirects and unknown content',async()=>{
+ for(const [body,type,properties] of [
+  [databaseUnavailable+'<other/>','text/html',{}],
+  [databaseUnavailable.replace('-25546','-25547'),'text/html',{}],
+  [databaseUnavailable,'text/xml',{}],
+  [databaseUnavailable,'text/html',{redirected:true,url:endpoint}],
+  [databaseUnavailable,'text/html',{url:'https://other.test/report.asp'}],
+  ['<html>Access denied</html>','text/html',{}],
+ ]){
+  let calls=0;
+  await assert.rejects(dol().collectDol({maxAttempts:3,pause:async()=>assert.fail('unrecognized successful content cannot retry'),fetchImpl:async()=>{
+   calls++;const response=new Response(body,{headers:{'content-type':type}});
+   Object.defineProperties(response,Object.fromEntries(Object.entries(properties).map(([key,value])=>[key,{value}])));return response;
+  }}),/schema/i);
+  assert.equal(calls,1);
+ }
 });
 
 test('DOL preserves week-ending periods and raw counts while converting SA initial claims to thousands', () => {

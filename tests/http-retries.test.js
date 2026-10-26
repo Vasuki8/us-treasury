@@ -87,3 +87,26 @@ test('invalid Retry-After uses bounded backoff; explicit options are validated b
  for(const maxAttempts of [0,4,1.5,'3',null])await assert.rejects(requestBytes(url,{maxAttempts,fetchImpl:async()=>assert.fail('invalid attempt count must not request')}),RangeError);
  for(const retryStatuses of [[403],[503,503],['503'],null])await assert.rejects(requestBytes(url,{retryStatuses,fetchImpl:async()=>assert.fail('invalid retry status list must not request')}),RangeError);
 });
+
+test('explicit transient-response recognition runs after the byte bound and honors Retry-After',async()=>{
+ const body='known service outage',pauses=[];let calls=0,checked=0;
+ const result=await requestBytes(url,{maxAttempts:3,retryNow:()=>Date.parse('2026-10-26T12:00:00Z'),isTransientResponse:({bytes,status,contentType})=>{
+  checked++;return status===200&&contentType==='text/html'&&bytes.toString('utf8')===body;
+ },sleepImpl:async ms=>pauses.push(ms),fetchImpl:async()=>++calls===1?new Response(body,{headers:{'content-type':'text/html','retry-after':'12'}}):new Response('accepted')});
+ assert.equal(calls,2);assert.equal(checked,2);assert.deepEqual(pauses,[12000]);
+ assert.equal(result.bytes.toString('utf8'),'accepted');
+ calls=0;
+ await assert.rejects(requestBytes(url,{maxAttempts:3,isTransientResponse:()=>assert.fail('oversized bodies cannot reach recognition'),maxBytes:2,fetchImpl:async()=>{calls++;return new Response(body);},sleepImpl:async()=>assert.fail('oversized content cannot retry')}),/byte limit/);
+ assert.equal(calls,1);
+});
+
+test('transient response recognition cannot bypass cooldown budget or enable implicit retries',async()=>{
+ for(const options of [{maxAttempts:3,headers:{'retry-after':'61'}},{maxAttempts:1,headers:{}}]){
+  let calls=0;
+  await assert.rejects(requestBytes(url,{maxAttempts:options.maxAttempts,isTransientResponse:()=>true,fetchImpl:async()=>{calls++;return new Response('known outage',{headers:options.headers});},sleepImpl:async()=>assert.fail('cooldown or single-attempt must stop retries')}),/temporarily unavailable/);
+  assert.equal(calls,1);
+ }
+ let calls=0;
+ const result=await requestBytes(url,{maxAttempts:3,fetchImpl:async()=>{calls++;return new Response('unrecognized response');},sleepImpl:async()=>assert.fail('other consumers remain unchanged')});
+ assert.equal(calls,1);assert.equal(result.bytes.toString('utf8'),'unrecognized response');
+});

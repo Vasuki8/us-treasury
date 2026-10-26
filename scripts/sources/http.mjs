@@ -28,6 +28,7 @@ function retryAfterMilliseconds(value,clock){
 }
 
 function transientFailure(error,statuses){
+  if(error instanceof OfficialSourceUnavailableError)return !error.redirected&&error.url===error.requestedUrl;
   if(error instanceof OfficialSourceHttpError)return statuses.includes(error.status)&&!error.redirected&&error.url===error.requestedUrl;
   return error instanceof Error&&(['AbortError','TimeoutError'].includes(error.name)||error instanceof TypeError&&networkCodes.has(error.cause?.code??error.code));
 }
@@ -66,7 +67,18 @@ export class OfficialSourceHttpError extends Error {
   }
 }
 
-async function requestOnce(url,{fetchImpl,method,body,headers,timeoutMs,maxBytes,retryNow}) {
+/** A trusted collector recognized an exact service-outage body, not a schema error. */
+export class OfficialSourceUnavailableError extends Error {
+  constructor(requestedUrl,response) {
+    super(`Official source temporarily unavailable (${new URL(requestedUrl).hostname})`);
+    this.status=response.status;
+    this.requestedUrl=requestedUrl;
+    this.url=response.url||requestedUrl;
+    this.redirected=Boolean(response.redirected);
+  }
+}
+
+async function requestOnce(url,{fetchImpl,method,body,headers,timeoutMs,maxBytes,retryNow,isTransientResponse}) {
   const response=await fetchImpl(url,{method,body,headers:{'Accept':'text/plain, application/json, text/csv, */*',...headers},signal:AbortSignal.timeout(timeoutMs)});
   if(!response.ok){
     try{Promise.resolve(response.body?.cancel()).catch(()=>{});}catch{}
@@ -92,19 +104,26 @@ async function requestOnce(url,{fetchImpl,method,body,headers,timeoutMs,maxBytes
     chunks.push(bytes);length=bytes.length;
   }
   const bytes=Buffer.concat(chunks,length);
+  if(isTransientResponse?.({bytes,status:response.status,url:response.url||url,redirected:Boolean(response.redirected),contentType:response.headers.get('content-type')||''})===true){
+    const error=new OfficialSourceUnavailableError(url,response);
+    const retryAfterMs=retryAfterMilliseconds(response.headers.get('retry-after'),retryNow);
+    if(retryAfterMs!==null)error.retryAfterMs=retryAfterMs;
+    throw error;
+  }
   return {bytes,url:response.url||url,sha256:createHash('sha256').update(bytes).digest('hex'),retrievedAt:new Date().toISOString(),lastModified:response.headers.get('last-modified')||null};
 }
 
 /** Retries are opt-in for trusted collection; read-only POST callers must opt in explicitly. */
-export async function requestBytes(url,{fetchImpl=globalThis.fetch,method='GET',body,headers={},timeoutMs=45000,maxBytes=80*1024*1024,maxAttempts,retryStatuses=transientStatuses,sleepImpl=sleep,retryNow=Date.now}={}) {
+export async function requestBytes(url,{fetchImpl=globalThis.fetch,method='GET',body,headers={},timeoutMs=45000,maxBytes=80*1024*1024,maxAttempts,retryStatuses=transientStatuses,sleepImpl=sleep,retryNow=Date.now,isTransientResponse}={}) {
   const configured=String(method).toUpperCase()==='GET'&&/^[123]$/.test(process.env.SOURCE_RETRY_ATTEMPTS??'')?Number(process.env.SOURCE_RETRY_ATTEMPTS):1;
   const attempts=maxAttempts===undefined?configured:maxAttempts;
   if(!Number.isInteger(attempts)||attempts<1||attempts>3)throw new RangeError('Source attempts must be an integer from one to three.');
   if(!Array.isArray(retryStatuses)||retryStatuses.some(status=>!transientStatuses.includes(status))||new Set(retryStatuses).size!==retryStatuses.length)throw new RangeError('Source retry statuses must be a unique subset of transient HTTP statuses.');
   if(typeof sleepImpl!=='function'||typeof retryNow!=='function')throw new TypeError('Source retry clock and sleep must be functions.');
+  if(isTransientResponse!==undefined&&typeof isTransientResponse!=='function')throw new TypeError('Source response recognition must be a function.');
   let waited=0;
   for(let attempt=1;;attempt++){
-    try{return await requestOnce(url,{fetchImpl,method,body,headers,timeoutMs,maxBytes,retryNow});}
+    try{return await requestOnce(url,{fetchImpl,method,body,headers,timeoutMs,maxBytes,retryNow,isTransientResponse});}
     catch(error){
       if(attempt>=attempts||!transientFailure(error,retryStatuses))throw error;
       const wait=Math.max(attempt===1?5000:30000,error.retryAfterMs??0);

@@ -1,13 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { registry } from '../src/registry.js';
 import { compareSeries, resolveDateWindow, toCsv, transformSeries, windowObservations } from '../src/model.js';
 import { createResearchPackage, exportResearchPackage, importResearchPackage, packagePanels, researchPackageCsv } from '../src/research-packages.js';
 import { createResearchLibrary, RESEARCH_LIBRARY_KEY } from '../src/research-library.js';
 import { asKnownOn, recordVintages } from '../src/vintages.js';
 import { captureChanges } from '../src/capture-changes.js';
-import { parseCsv } from '../scripts/sources/http.mjs';
+import { parseCsv, OfficialSourceHttpError, OfficialSourceUnavailableError } from '../scripts/sources/http.mjs';
+import { collectDol } from '../scripts/sources/dol.mjs';
 import { refreshSnapshot } from '../scripts/sources/refresh.mjs';
+import { assertCommercialData } from '../scripts/data-policy.mjs';
 
 const ids = ['claims', 'continuedClaims'];
 const endpoint = 'https://oui.doleta.gov/unemploy/wkclaims/report.asp';
@@ -271,4 +274,68 @@ test('a required DOL-only backfill preserves unrelated sources and calendar and 
   assert.equal(JSON.stringify(previous), originalBytes);
   await assert.rejects(refreshSnapshot({ previous, collectors: { dol: async () => { throw new Error('synthetic DOL failure'); } }, now: new Date(newRetrieval), requireAll: true }), /Required official refresh failed/);
   assert.equal(JSON.stringify(previous), originalBytes);
+});
+
+test('DOL database outages preserve required history until recovered national XML creates a genuine capture', async () => {
+  const prior = source(oldRetrieval);
+  const previous = { sources: { dol: prior }, vintages: recordVintages(null, {}, { dol: prior }, { checkedAt: oldRetrieval, seriesMetadata: registry }) };
+  const original = JSON.stringify(previous), originalCaptures = JSON.stringify(previous.vintages.captures);
+  const outage = 'Unable to connect!<br/>SQLSTATE=HY000, SQLDriverConnect: -25546 [Informix][Informix ODBC Driver][Informix]Invalid ASF assoc_id.';
+  const continued = new Map(prior.series.continuedClaims.observations.map(row => [row.date, row]));
+  const xml = `<r539cyNational rundate="10/26/2026">${prior.series.claims.observations.map(row => {
+    const [year, month, day] = row.date.split('-');
+    return `<week><weekEnded>${month}/${day}/${year}</weekEnded><InitialClaims><SA>${row.sourceValue}</SA></InitialClaims><ContinuedClaims><SA>${continued.get(row.date)?.sourceValue ?? ''}</SA></ContinuedClaims></week>`;
+  }).join('')}</r539cyNational>`;
+  const attempts = [], waits = [];
+  let recovered = false, collectionError, candidate;
+  const collector = async options => {
+    try {
+      return await collectDol({ ...options, maxAttempts: 3, pause: async ms => waits.push(ms), fetchImpl: async (url, request) => {
+        assert.equal(url, endpoint);
+        assert.equal(request.method, 'POST');
+        assert.equal(new URLSearchParams(request.body).get('level'), 'us');
+        assert.equal(new URLSearchParams(request.body).get('strtdate'), '1967');
+        attempts.push(request.body);
+        const accepted = recovered && attempts.length === 3;
+        return new Response(accepted ? xml : outage, { headers: { 'content-type': accepted ? 'text/xml;charset=UTF-8' : 'text/html; charset=UTF-8' } });
+      } });
+    } catch (error) { collectionError = error; throw error; }
+  };
+  const options = { previous, collectors: { dol: collector }, now: new Date('2026-10-26T12:00:00.000Z'), requireAll: true };
+  await assert.rejects(refreshSnapshot({ ...options, onCollected: evidence => { candidate = evidence.sources.dol; } }), /Required official refresh failed.*temporarily unavailable/i);
+  assert.equal(attempts.length, 3);
+  assert.deepEqual(waits, [5000, 30000]);
+  assert.ok(collectionError instanceof OfficialSourceUnavailableError);
+  assert.equal(collectionError instanceof OfficialSourceHttpError, false);
+  assert.equal(collectionError.status, 200, 'a service outage must not invent an HTTP 503');
+  assert.equal(candidate.status, 'error');
+  assert.equal(candidate.failure, null, 'a successful HTTP response must not become HTTP-failure metadata');
+  assert.equal(candidate.fetchedAt, prior.fetchedAt);
+  assert.deepEqual(candidate.provenance, prior.provenance);
+  assert.deepEqual(candidate.series, prior.series);
+  assert.equal(JSON.stringify(previous), original);
+
+  recovered = true; attempts.length = 0; waits.length = 0;
+  const refreshed = await refreshSnapshot(options), current = refreshed.sources.dol;
+  assert.equal(attempts.length, 3);
+  assert.deepEqual(waits, [5000, 30000]);
+  assert.equal(current.status, 'ok');
+  assert.equal(current.failure, null);
+  for (const id of ids) assert.deepEqual(current.series[id].observations, prior.series[id].observations, 'recovery retains every old week and explicit missing observation');
+  assert.equal(current.provenance.length, 1);
+  assert.equal(current.provenance[0].sha256, createHash('sha256').update(xml).digest('hex'));
+  assert.equal(current.fetchedAt, current.provenance[0].retrievedAt);
+  assert.equal(refreshed.vintages.captures.length, previous.vintages.captures.length + 1);
+  assert.equal(JSON.stringify(refreshed.vintages.captures.slice(0, -1)), originalCaptures);
+  const capture = refreshed.vintages.captures.at(-1);
+  assert.equal(capture.sourceId, 'dol');
+  assert.equal(capture.capturedAt, current.fetchedAt);
+  for (const delta of Object.values(capture.series)) {
+    assert.deepEqual(delta.upserts, []);
+    assert.deepEqual(delta.deletedDates, []);
+  }
+  assert.deepEqual(asKnownOn(refreshed.vintages, current.fetchedAt).sources.dol.series.claims.observations, prior.series.claims.observations);
+  assert.doesNotThrow(() => assertCommercialData(refreshed));
+  assert.doesNotMatch(JSON.stringify(refreshed), /SQLSTATE|Informix|assoc_id/);
+  assert.equal(JSON.stringify(previous), original);
 });
