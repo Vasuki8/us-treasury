@@ -12,6 +12,7 @@ import {asKnownOn,normalizeVintageTimestamp} from './vintages.js';
 import {vintagesCsv,normalizedCutoff} from './vintages-page.js';
 import {refinancingCsv} from './refinancing-page.js';
 import {yieldCurvesCsv,yieldOverlayDates} from './yields-page.js';
+import {H15_TREASURY_CMT_URL} from './yields.js';
 import {auctionsCsv} from './auctions-page.js';
 import {ownershipCsv} from './ownership-page.js';
 import {macroContributionsCsv} from './macro-page.js';
@@ -66,10 +67,15 @@ function yieldPinInputs(state,catalog,sources){
   const original=sources[id],seriesIds=id==='treasury'?['yield']:['spread2s10s','spread3m10y'];
   const series=Object.fromEntries(seriesIds.filter(key=>original.series?.[key]).map(key=>[key,{...original.series[key],observations:scopedRows(original.series[key].observations)}]));
   const rows=Object.values(series).flatMap(item=>item.observations),urls=new Set(Object.values(series).flatMap(item=>[item.sourceUrl,...(item.sourceUrls??[]),...item.observations.flatMap(row=>[row.sourceUrl,...(row.sourceUrls??[])])]));
-  if(id==='yields')for(const curve of curves)for(const row of original.provenance??[])if(row.url.includes(`.csv/${curve.date.slice(0,4)}/all`))urls.add(row.url);
+  if(id==='yields')for(const curve of curves){for(const row of original.provenance??[])if(row.url.includes(`.csv/${curve.date.slice(0,4)}/all`))urls.add(row.url);for(const supplement of Object.values(curve.nominalSupplements??{}))urls.add(supplement.sourceUrl);}
   const dates=[...rows.map(row=>row.date),...(id==='yields'?curves.map(row=>row.date):[])].sort();
   const metadata=Object.fromEntries(['id','status','fetchedAt','lastAttemptAt','error','warnings','sourceNotice','licenseUrl','termsUrl','attribution','sourceTitle'].filter(key=>original[key]!==undefined).map(key=>[key,original[key]]));
-  return [id,{...metadata,series,coverageStart:dates[0]??null,coverageEnd:dates.at(-1)??null,coverageNote:scope,provenance:(original.provenance??[]).filter(row=>urls.has(row.url)),...(id==='yields'?{curveHistory:curves,methodologyBreaks:original.methodologyBreaks??[]}:{})}];
+  let h15GapEvidence;
+  if(id==='yields'){
+   const overlayDates=curves.filter(row=>row.nominalSupplements).map(row=>row.date),required=new Set([...overlayDates,...rows.filter(row=>row.sourceUrls?.includes(H15_TREASURY_CMT_URL)).map(row=>row.date)]);
+   if(required.size){const supporting=original.h15GapEvidence?.curves?.filter(row=>required.has(row.date))??[];if(supporting.length!==required.size)throw new Error('Missing scoped H15 yield input evidence');h15GapEvidence={version:2,scope:'selected-inputs',overlayDates,curves:structuredClone(supporting)};}
+  }
+  return [id,{...metadata,series,coverageStart:dates[0]??null,coverageEnd:dates.at(-1)??null,coverageNote:scope,provenance:(original.provenance??[]).filter(row=>urls.has(row.url)),...(id==='yields'?{curveHistory:curves,methodologyBreaks:original.methodologyBreaks??[],...(h15GapEvidence?{h15GapEvidence}:{})}:{})}];
  }));
  return {catalog:scopedCatalog,sources:{...sources,...moduleSources},moduleSources,scope,overlayDates,currentReadings,window:{...window,range}};
 }

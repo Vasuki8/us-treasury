@@ -139,7 +139,7 @@ export function parseFiscalDebt(payload, cutoff = '9999-12-31', {quarantineSourc
 
 export async function collectFiscal({ fetchImpl = globalThis.fetch, now = new Date() } = {}) {
   if (!(now instanceof Date) || !Number.isFinite(now.getTime())) throw new Error('Invalid fiscal capture date');
-  const cutoff = now.toISOString().slice(0, 10), start = `${now.getUTCFullYear() - 6}-01-01`;
+  const cutoff = now.toISOString().slice(0, 10), start = '2015-03-01';
   const fields = {
     table9: 'record_date,parent_id,classification_id,classification_desc,current_month_rcpt_outly_amt,data_type_cd,record_type_cd',
     table2: 'record_date,classification_desc,current_month_budget_amt',

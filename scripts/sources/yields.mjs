@@ -1,5 +1,5 @@
 import { parseCsv, requestText } from './http.mjs';
-import { NOMINAL_YIELD_TENORS, REAL_YIELD_TENORS, REAL_YIELD_INPUT_CHANGE, YIELD_METHODOLOGY_CHANGE, matchedYieldComponents } from '../../src/yields.js';
+import { NOMINAL_YIELD_TENORS, REAL_YIELD_TENORS, REAL_YIELD_INPUT_CHANGE, YIELD_METHODOLOGY_CHANGE, matchedYieldComponents, H15_TREASURY_CMT_URL, H15_3M_GAP_DATES, H15_3M_GAP_NOTE } from '../../src/yields.js';
 
 const HISTORY_START_YEAR = 2003;
 const MISSING = new Set(['','N/A','NA','NULL']);
@@ -9,6 +9,24 @@ const clean = value => Number(value.toFixed(10));
 const aliases = { '1M':['1 mo'], '1.5M':['1.5 month','1.5 mo'], '2M':['2 mo'], '3M':['3 mo'], '4M':['4 mo'], '6M':['6 mo'], '1Y':['1 yr'], '2Y':['2 yr'], '3Y':['3 yr'], '5Y':['5 yr'], '7Y':['7 yr'], '10Y':['10 yr'], '20Y':['20 yr'], '30Y':['30 yr'] };
 const normalize = value => String(value).replace(/^\uFEFF/,'').trim().toLowerCase().replace(/\s+/g,' ');
 const emptyRates = tenors => Object.fromEntries(tenors.map(tenor => [tenor,null]));
+const h15Tenors = ['1M','3M','6M','1Y','2Y','3Y','5Y','7Y','10Y','20Y','30Y'];
+const h15Codes = ['RIFLGFCM01_N.B','RIFLGFCM03_N.B','RIFLGFCM06_N.B','RIFLGFCY01_N.B','RIFLGFCY02_N.B','RIFLGFCY03_N.B','RIFLGFCY05_N.B','RIFLGFCY07_N.B','RIFLGFCY10_N.B','RIFLGFCY20_N.B','RIFLGFCY30_N.B'];
+
+/** This package also contains discontinued-tenor alternatives; only three reviewed 3M cells are eligible. */
+function parseH15CmtCsv(text) {
+  const rows=parseCsv(text),fail=()=>{throw new Error('Invalid H15 Treasury constant-maturity supplement');};
+  const terms=['1-month','3-month','6-month','1-year','2-year','3-year','5-year','7-year','10-year','20-year','30-year'];
+  const metadata=[['Series Description',...terms.map(term=>`Market yield on U.S. Treasury securities at ${term} constant maturity, quoted on investment basis`)],['Unit:',...h15Codes.map(()=>'Percent:_Per_Year')],['Multiplier:',...h15Codes.map(()=>'1')],['Currency:',...h15Codes.map(()=>'NA')],['Unique Identifier:',...h15Codes.map(code=>'H15/H15/'+code)],['Time Period',...h15Codes]];
+  if(rows.length<=6||rows.length>20006||metadata.some((expected,index)=>rows[index]?.length!==expected.length||expected.some((value,column)=>normalize(rows[index][column])!==normalize(value))))fail();
+  const result=new Map();
+  for(const row of rows.slice(6)){
+    const day=row[0],parsed=new Date(`${day}T00:00:00Z`);
+    if(row.length!==12||!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isFinite(+parsed)||parsed.toISOString().slice(0,10)!==day||result.has(day))fail();
+    const values=row.slice(1).map(value=>{if(value===''||value==='ND')return null;if(!NUMBER.test(value)||!Number.isFinite(Number(value)))fail();return Number(value);});
+    result.set(day,{rates:Object.fromEntries(h15Tenors.map((tenor,index)=>[tenor,values[index]])),sourceValue:row[2]});
+  }
+  return result;
+}
 
 function parseDate(value) {
   const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(value).trim());
@@ -96,7 +114,21 @@ export async function collectYields({fetchImpl = globalThis.fetch, now = new Dat
   for (const [kind,rows] of [['nominal',nominalRows],['real',realRows]]) {
     if (!rows.some(row => finite(row.rates['10Y']))) throw new Error(`No usable Treasury ${kind} par-yield observations`);
   }
-  const curveHistory = joinParCurves(nominalRows,realRows), matched = matchedYieldComponents({curveHistory});
+  const curveHistory = joinParCurves(nominalRows,realRows);
+  const gaps=curveHistory.filter(row=>H15_3M_GAP_DATES.includes(row.date)&&row.nominal['3M']===null);
+  if(gaps.length){
+    const response=await requestText(H15_TREASURY_CMT_URL,{fetchImpl:async(url,options)=>{const result=await fetchImpl(url,options);if(result.redirected||(result.url&&result.url!==url))throw new Error('Unreviewed H15 supplement redirect');return result;},maxBytes:2*1024*1024});
+    if(response.url!==H15_TREASURY_CMT_URL)throw new Error('Unreviewed H15 supplement URL');
+    const supplemental=parseH15CmtCsv(response.text);
+    for(const primary of gaps){
+      const alternate=supplemental.get(primary.date);
+      if(!alternate||alternate.sourceValue!=='0.00'||alternate.rates['3M']!==0||!finite(primary.nominal['2Y'])||!finite(primary.nominal['10Y'])||h15Tenors.some(tenor=>finite(primary.nominal[tenor])&&primary.nominal[tenor]!==alternate.rates[tenor]))throw new Error(`H15 supplement does not match Treasury controls at ${primary.date}`);
+      primary.nominalSupplements={'3M':{value:0,primaryValue:null,primarySourceUrl:treasuryParYieldUrl(2008),sourceValue:alternate.sourceValue,sourceSeriesId:'RIFLGFCM03_N.B',sourceUrl:response.url,sourceSha256:response.sha256,retrievedAt:response.retrievedAt}};
+      primary.nominal['3M']=0;
+    }
+    responses.push(response);
+  }
+  const matched = matchedYieldComponents({curveHistory});
   const nominalUrl = treasuryParYieldUrl(year), realUrl = treasuryParYieldUrl(year,'real');
   const observations = callback => curveHistory.map(row => ({date:row.date,value:callback(row),publishedAt:null}));
   const difference = (left,right) => finite(left) && finite(right) ? clean((left-right)*100) : null;
@@ -105,13 +137,15 @@ export async function collectYields({fetchImpl = globalThis.fetch, now = new Dat
     observations:values.map(row => {
       const observationYear = Number(row.date.slice(0,4));
       const inputs = sourceUrls.map(url => treasuryParYieldUrl(observationYear,new URL(url).searchParams.get('type') === 'daily_treasury_real_yield_curve' ? 'real' : 'nominal'));
-      return {...row,sourceUrl:inputs[0],sourceUrls:inputs};
+      const supplement=sourceIds.includes('BC_3MONTH')&&gaps.find(item=>item.date===row.date)?.nominalSupplements['3M'];
+      return {...row,sourceUrl:inputs[0],sourceUrls:supplement?[...inputs,H15_TREASURY_CMT_URL]:inputs,...(supplement?{footnotes:[H15_3M_GAP_NOTE],...(sourceIds.length===1?{sourceValue:supplement.sourceValue,primaryValue:null}:{})}:{})};
     }),
   });
   return {
     id:'yields', fetchedAt:responses.map(row => row.retrievedAt).sort().at(-1),
     coverageStart:curveHistory[0].date, coverageEnd:curveHistory.at(-1).date,
-    coverageNote:'Published Treasury nominal and TIPS real par curves from 2003 through the capture cutoff, using currently published revised history. Missing feed dates and tenors are not filled. The observation cutoff does not reconstruct original release vintages. Source release timestamps are not supplied; retrieval timestamps are separate.',
+    ...(gaps.length?{h15GapEvidence:{version:1,curves:gaps.map(({date,nominal,nominalSupplements})=>({date,nominal:structuredClone(nominal),nominalSupplements:structuredClone(nominalSupplements)}))}}:{}),
+    coverageNote:'Published Treasury nominal and TIPS real par curves from 2003 through the capture cutoff, using currently published revised history. Exactly three reviewed December 2008 3-month gaps use matched official Federal Reserve Board H.15 Treasury CMT zeros, retaining the primary null and both receipts. Other missing feed dates and tenors are not filled. The observation cutoff does not reconstruct original release vintages. Source release timestamps are not supplied; retrieval timestamps are separate.',
     series:{
       spread2s10s:series(['BC_10YEAR','BC_2YEAR'],nominalUrl,'100 × (10-year minus 2-year nominal par yield) on the same observation date; basis points.','calculated',observations(row => difference(row.nominal['10Y'],row.nominal['2Y']))),
       spread3m10y:series(['BC_10YEAR','BC_3MONTH'],nominalUrl,'100 × (10-year minus 3-month nominal par yield) on the same observation date; basis points.','calculated',observations(row => difference(row.nominal['10Y'],row.nominal['3M']))),

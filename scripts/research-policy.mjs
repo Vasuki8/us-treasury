@@ -3,10 +3,16 @@
 import {marketPolicies,matchesMarketFeed,assertMarketData} from './market-policy.mjs';
 import {normalizeVintageTimestamp} from '../src/vintages.js';
 import {SOMA_2014_GAP_URL,SOMA_2014_GAP_DATES} from '../src/ownership.js';
+import {H15_TREASURY_CMT_URL,H15_3M_GAP_DATES} from '../src/yields.js';
+import {isDeepStrictEqual} from 'node:util';
 const fiscalBase='https://api.fiscaldata.treasury.gov/services/api/fiscal_service/';
 const fiscalPaths=['v1/accounting/mts/mts_table_9','v1/accounting/mts/mts_table_2','v1/accounting/mts/mts_receipts_outlays_deficit_surplus','v2/accounting/od/debt_to_penny'];
 const fiscalDerived=['budgetDeficit','primaryDeficit','receiptsTtm','outlaysTtm','netInterestTtm','primaryDeficitTtm','interestRevenueRatio'];
 export const researchPolicies=[...marketPolicies,{
+  id:'fed-h15-treasury-cmt-supplement',agency:'yields',reviewedOn:'2026-10-26',commercialUse:true,
+  basis:'Board public-domain H.15 Treasury constant-maturity facts; only RIFLGFCM03_N.B zeros for three reviewed December 2008 Treasury CSV blanks, with same-date controls, primary null and both receipts retained',
+  terms:['https://www.federalreserve.gov/disclaimer.htm'],feed:'fed-h15-treasury-cmt-supplement',series:{},
+},{
   id:'treasury-mts-fiscal',agency:'fiscal',reviewedOn:'2026-10-21',commercialUse:true,
   basis:'Fiscal Data explicitly permits commercial copying, adaptation and redistribution; MTS fiscal observations and calculated monthly arithmetic, not copied narrative or imagery',
   terms:['https://fiscaldata.treasury.gov/api-documentation/#license-and-authorization'],feed:'treasury-mts-fiscal',
@@ -44,6 +50,7 @@ export const researchPolicies=[...marketPolicies,{
 }];
 export function matchesResearchFeed(value,feed){
   if(matchesMarketFeed(value,feed))return true;
+  if(feed==='fed-h15-treasury-cmt-supplement')return value===H15_TREASURY_CMT_URL;
   try{
     const url=new URL(value);if(url.username||url.password||url.hash)return false;
     if(feed==='bea-contributions')return url.href==='https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt';
@@ -123,9 +130,38 @@ export function assertResearchData(snapshot){
   const yieldSource=snapshot.sources?.yields;
   if(yieldSource){
     const captured=new Set((yieldSource.provenance??[]).map(item=>item.url));
-    for(const series of Object.values(yieldSource.series??{}))for(const row of series.observations??[]){
-      for(const url of row.sourceUrls??[]){if(!matchesResearchFeed(url,'research-par-yields')||!captured.has(url)||!url.includes(`.csv/${row.date.slice(0,4)}/all`))throw new Error('Unreviewed yield observation input provenance');}
+    const supplements=new Map(),fail=()=>{throw new Error('Unreviewed H15 yield supplement provenance or scope');};
+    const evidence=yieldSource.h15GapEvidence;
+    const scoped=evidence?.version===2&&evidence.scope==='selected-inputs';
+    if(evidence!==undefined&&(Object.keys(evidence??{}).length!==(scoped?4:2)||(!scoped&&evidence?.version!==1)||!Array.isArray(evidence.curves)||!evidence.curves.length||evidence.curves.length>3||evidence.curves.some(row=>!row||Object.keys(row).length!==3||!row.nominalSupplements)))fail();
+    const selected=yieldSource.curveHistory??evidence?.curves??[],recorded=selected.filter(row=>row.nominalSupplements).map(({date,nominal,nominalSupplements})=>({date,nominal,nominalSupplements}));
+    if(scoped){
+      const required=[...new Set([...recorded.map(row=>row.date),...Object.values(yieldSource.series??{}).flatMap(item=>(item.observations??[]).filter(row=>row.sourceUrls?.includes(H15_TREASURY_CMT_URL)).map(row=>row.date))])].sort();
+      if(!Array.isArray(yieldSource.curveHistory)||!isDeepStrictEqual(evidence.overlayDates,recorded.map(row=>row.date))||!isDeepStrictEqual(evidence.curves.map(row=>row.date),required))fail();
+      for(const {date,nominal,nominalSupplements}of selected)if(evidence.curves.some(row=>row.date===date)&&!evidence.curves.some(row=>isDeepStrictEqual(row,{date,nominal,nominalSupplements})))fail();
+    }else if(recorded.length&&!evidence||evidence&&!isDeepStrictEqual(recorded,evidence.curves))fail();
+    const curves=scoped?evidence.curves:selected;
+    for(const curve of curves){
+      if(!curve.nominalSupplements)continue;
+      const s=curve.nominalSupplements['3M'];
+      if(!['2Y','10Y'].every(tenor=>typeof curve.nominal?.[tenor]==='number'&&Number.isFinite(curve.nominal[tenor])))fail();
+      if(Object.keys(curve.nominalSupplements).length!==1||!s||!H15_3M_GAP_DATES.includes(curve.date)||s.value!==0||curve.nominal?.['3M']!==0||s.primaryValue!==null||s.sourceValue!=='0.00'||s.sourceSeriesId!=='RIFLGFCM03_N.B'||s.sourceUrl!==H15_TREASURY_CMT_URL||!matchesResearchFeed(s.primarySourceUrl,'research-nominal-par')||!s.primarySourceUrl.includes('.csv/2008/all')||supplements.has(curve.date)||yieldSource.provenance?.filter(r=>r.url===s.sourceUrl&&r.sha256===s.sourceSha256&&r.retrievedAt===s.retrievedAt).length!==1)fail();
+      if(!/^[a-f0-9]{64}$/.test(s.sourceSha256))fail();
+      try{if(normalizeVintageTimestamp(s.retrievedAt)>normalizeVintageTimestamp(yieldSource.fetchedAt))fail();}catch{fail();}
+      supplements.set(curve.date,s);
     }
+    let used=scoped&&recorded.length>0;
+    for(const [id,series]of Object.entries(yieldSource.series??{}))for(const row of series.observations??[]){
+      const supplemental=row.sourceUrls?.includes(H15_TREASURY_CMT_URL),s=supplements.get(row.date);
+      if(row.sourceUrl===H15_TREASURY_CMT_URL&&!supplemental)fail();
+      if(supplemental){
+        const curve=curves.find(r=>r.date===row.date),expected=id==='nominalYield3m'?0:id==='spread3m10y'?Number((curve?.nominal?.['10Y']*100).toFixed(10)):null;
+        if(!s||expected===null||!Number.isFinite(expected)||row.value!==expected||row.publishedAt!==null||row.sourceUrl!==s.primarySourceUrl||row.sourceUrls.length!==2||row.sourceUrls[0]!==s.primarySourceUrl||row.sourceUrls[1]!==s.sourceUrl||series.inputProvenanceScope!=='observation-source-urls'||['inputProvenance','sourceSha256','retrievedAt'].some(key=>Object.hasOwn(row,key))||!row.footnotes?.some(note=>note.includes('RIFLGFCM03_N.B')))fail();
+        used=true;
+      }else if(s&&['nominalYield3m','spread3m10y'].includes(id))fail();
+      for(const url of row.sourceUrls??[]){if(!captured.has(url)||url!==H15_TREASURY_CMT_URL&&(!matchesResearchFeed(url,'research-par-yields')||!url.includes(`.csv/${row.date.slice(0,4)}/all`)))throw new Error('Unreviewed yield observation input provenance');}
+    }
+    if(captured.has(H15_TREASURY_CMT_URL)!==used||supplements.size&&!used)fail();
   }
   for(const row of snapshot.sources?.auctions?.auctions??[]){
     if(Object.hasOwn(row,'cusip')||Object.hasOwn(row,'tail')||row.publishedAt!==null||!['Bill','Note','Bond','FRN','TIPS'].includes(row.securityType))throw new Error('Unreviewed auction identifier, tail, publication time or instrument');

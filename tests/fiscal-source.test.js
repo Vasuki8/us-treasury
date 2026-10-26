@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { parseFiscalTables, parseFiscalDebt, collectFiscal } from '../scripts/sources/fiscal.mjs';
+import { deriveFiscalSeries } from '../src/fiscal.js';
 
 const amount = n => String(n * 1e9);
 function tables(date = '2026-09-30', scale = 1) {
@@ -136,6 +137,7 @@ test('collector uses only exact approved official endpoints, retains hashes and 
   };
   const result = await collectFiscal({ fetchImpl, now: new Date('2026-10-21T20:00:00Z') });
   assert.equal(requested.length, 4);
+  for(const url of requested.filter(url=>!url.includes('debt_to_penny')))assert.equal(new URL(url).searchParams.get('filter'),'record_date:gte:2015-03-01,record_date:lte:2026-10-21');
   assert.equal(result.id, 'fiscal');
   assert.equal(result.provenance.length, 4);
   assert.ok(result.provenance.every(x => /^[a-f0-9]{64}$/.test(x.sha256)));
@@ -148,6 +150,33 @@ test('collector uses only exact approved official endpoints, retains hashes and 
   assert.ok(result.series.publicDebt.observations.every(row => !('provenance' in row) && !('sourceUrl' in row)));
   assert.ok(result.warnings.some(x => /revis/i.test(x)));
   await assert.rejects(() => collectFiscal({ now: new Date('2026-10-21T20:00:00Z'), fetchImpl: async () => Object.defineProperty(new Response('{}'), 'redirected', { value: true }) }), /redirect|source URL/i);
+});
+
+test('full MTS history restores existing first-year trailing totals and ratios without filling incomplete windows',async()=>{
+  const statements=Array.from({length:24},(_,index)=>tables(new Date(Date.UTC(2019,index+1,0)).toISOString().slice(0,10)));
+  const debt={data:[{record_date:'2020-12-31',debt_held_public_amt:amount(30000),intragov_hold_amt:amount(7000),tot_pub_debt_out_amt:amount(37000)}],meta:{count:1,'total-count':1,'total-pages':1},links:{next:null}};
+  const fetchImpl=async url=>{
+    const target=new URL(url),start=/record_date:gte:(\d{4}-\d{2}-\d{2})/.exec(target.searchParams.get('filter'))?.[1];
+    const key=target.pathname.endsWith('mts_table_9')?'table9':target.pathname.endsWith('mts_table_2')?'table2':target.pathname.endsWith('mts_receipts_outlays_deficit_surplus')?'unitCheck':null;
+    const data=key?statements.flatMap(item=>item[key].data).filter(row=>row.record_date>=start):null;
+    return new Response(JSON.stringify(key?{data,meta:{count:data.length,'total-count':data.length,'total-pages':1},links:{next:null}}:debt));
+  };
+  const source=await collectFiscal({fetchImpl,now:new Date('2026-10-21T20:00:00Z')}),derived=deriveFiscalSeries(source);
+  assert.equal(source.monthly.length,24);
+  assert.equal(source.monthly[0].date,'2019-01-01');
+  const earlier={series:Object.fromEntries(Object.entries(source.series).filter(([id])=>['receipts','outlays','netInterest'].includes(id)).map(([id,item])=>[id,{...item,observations:item.observations.filter(row=>row.date>='2020-01-01')}]))};
+  const previous=deriveFiscalSeries(earlier),expected={receiptsTtm:6000,outlaysTtm:7200,netInterestTtm:900,primaryDeficitTtm:300,interestRevenueRatio:15};
+  let recovered=0;
+  for(const [id,value]of Object.entries(expected)){
+    for(const row of previous[id].observations){
+      const next=derived[id].observations.find(next=>next.date===row.date);
+      if(row.value===null){assert.equal(next.value,value);recovered++;}else assert.equal(next.value,row.value);
+      assert.equal(next.publishedAt,null);
+    }
+    assert.ok(derived[id].observations.slice(0,11).every(row=>row.value===null));
+    assert.equal(derived[id].observations[11].value,value);
+  }
+  assert.equal(recovered,55);
 });
 
 test('fiscal collection requests full debt coverage and rejects incomplete history before publishing composition', async () => {

@@ -1,6 +1,6 @@
 import {supportingDetails} from './page-hierarchy.js';
 import {dataStatus} from './data.js';
-import {NOMINAL_YIELD_TENORS,REAL_YIELD_TENORS,selectCurveOverlays} from './yields.js';
+import {NOMINAL_YIELD_TENORS,REAL_YIELD_TENORS,selectCurveOverlays,H15_3M_GAP_NOTE} from './yields.js';
 import {tabularCsv} from './model.js';
 import {heading,button,panel,metrics,chart,table,emptyState,escapeHtml as esc} from './ui.js';
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
@@ -16,7 +16,7 @@ export function yieldCurvesCsv(source={},state={}){
     const nominal=curve.nominal[tenor],real=curve.real[tenor];
     const facts=[[curve.date,tenor,'nominal',finite(nominal)?nominal:null,'Percent','official','Published Treasury nominal par yield']];
     if(REAL_YIELD_TENORS.includes(tenor))facts.push([curve.date,tenor,'real',finite(real)?real:null,'Percent','official','Published Treasury TIPS real par yield'],[curve.date,tenor,'inflation compensation',finite(nominal)&&finite(real)?Number((100*(nominal-real)).toFixed(10)):null,'Basis points','calculated','100 × same-date nominal minus real par yield; includes risk/liquidity effects, not pure expected inflation']);
-    return facts.map(row=>{const captures=feedCaptures(source,curve.date.slice(0,4),row[2]);return [...row,source.fetchedAt,source.status==='ok'?'official':'cached',null,curve.methodology,row[2]==='nominal'?null:curve.realCurveInputs,'U.S. Treasury, Office of Debt Management',captures.map(item=>item.url).join('; '),JSON.stringify(captures)];});
+    return facts.map(row=>{const supplement=row[2]==='nominal'?curve.nominalSupplements?.[tenor]:null,captures=feedCaptures(source,curve.date.slice(0,4),row[2]);if(supplement){const receipt=source.provenance?.find(item=>item.url===supplement.sourceUrl&&item.sha256===supplement.sourceSha256&&item.retrievedAt===supplement.retrievedAt);if(!receipt)throw new Error('Missing H15 curve supplement receipt');captures.push(receipt);row[6]+=`; ${H15_3M_GAP_NOTE}`;}return [...row,source.fetchedAt,source.status==='ok'?'official':'cached',null,curve.methodology,row[2]==='nominal'?null:curve.realCurveInputs,`U.S. Treasury, Office of Debt Management${supplement?'; Federal Reserve Board H.15 RIFLGFCM03_N.B':''}`,captures.map(item=>item.url).join('; '),JSON.stringify(captures)];});
   }):[]);
   return tabularCsv(['date','tenor','measure','value','unit','observation_type','calculation','retrieved_at','data_status','release_date','curve_methodology','real_curve_inputs','source','source_urls','input_provenance'],rows);
 }
