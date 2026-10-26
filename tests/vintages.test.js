@@ -42,6 +42,22 @@ test('receipt selection opt-in survives new capture replay without changing lega
  assert.equal(history.captures[1].series.test.upserts.length,0,'the opt-in changes metadata without inventing observation changes');
  assert.equal(Object.hasOwn(history.captures[0].series.test.metadata,'inputProvenanceScope'),false);
 });
+
+test('Treasury and fiscal measurement receipts replay without retrofitting legacy capture keys',()=>{
+ for(const id of ['treasury','fiscal']){
+  const first={...source(times[0],[observation('2026-07-01',1)]),id};
+  const old=recordVintages(null,{}, {[id]:first},{checkedAt:times[2]});
+  const richer=structuredClone(first);richer.series.test.fetchedAt=times[0];richer.series.test.provenance=first.provenance;
+  assert.deepEqual(recordVintages(old,{}, {[id]:richer},{checkedAt:times[2]}),old);
+  const next={...source(times[1],[observation('2026-07-01',1)]),id};next.provenance.push(first.provenance[0]);
+  next.series.test.fetchedAt=times[0];next.series.test.provenance=first.provenance;
+  const stored=recordVintages(old,{}, {[id]:next},{checkedAt:times[2]});
+  const restored=asKnownOn(stored,times[1]).sources[id].series.test;
+  assert.equal(restored.fetchedAt,times[0]);assert.deepEqual(restored.provenance,first.provenance);
+  const invalid=structuredClone(next);invalid.series.test.fetchedAt=times[2];
+  assert.throws(()=>recordVintages(old,{}, {[id]:invalid},{checkedAt:times[2]}),/retrieval|provenance/i);
+ }
+});
 const sources = item => ({ treasury: item });
 const record = (vintages, previous, next, checkedAt = times[2]) => recordVintages(vintages, previous ? sources(previous) : {}, next ? sources(next) : {}, { checkedAt });
 

@@ -2,18 +2,29 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {snapshot} from '../src/official-snapshot.js';
 import {OfficialSourceHttpError} from '../scripts/sources/http.mjs';
+import {BLS_HISTORY_PROFILE} from '../scripts/bls-history-policy.mjs';
+import {BLS_IDS,BLS_DEPTH_IDS,parseBls,parseBlsEconomicDepth} from '../scripts/sources/bls.mjs';
+import {addMomentumSeries} from '../src/momentum.js';
 
 let checkRegisteredBlsAccess;
 try {({checkRegisteredBlsAccess}=await import('../scripts/check-bls-registered-access.mjs'));} catch(error) {if(error.code!=='ERR_MODULE_NOT_FOUND')throw error;}
 const key='registered-access-test-key-PRIVATE';
 const now=new Date(Date.parse(snapshot.generatedAt)+60000);
 const endpoint='https://api.bls.gov/publicAPI/v2/timeseries/data/';
-function fixture(){
- const source=structuredClone(snapshot.sources.bls);
- source.fetchedAt=now.toISOString();
- source.provenance=[{url:endpoint,sha256:'a'.repeat(64),retrievedAt:source.fetchedAt,lastModified:null}];
- for(const series of Object.values(source.series))series.sourceUrl=endpoint;
- return source;
+function fixture(previous=snapshot.sources.bls){
+ const start=`${now.getUTCFullYear()-9}-01-01`,cutoff=now.toISOString().slice(0,10);
+ const native=new Map(),quarterly=new Set(['eciCompensation','laborProductivity','unitLaborCosts']);
+ for(const [id,code]of Object.entries({...BLS_IDS,...BLS_DEPTH_IDS}))if(!native.has(code)){
+  const data=previous.series[id].observations.filter(row=>row.date>=start&&row.date<=cutoff).map(row=>({
+   year:row.date.slice(0,4),period:quarterly.has(id)?`Q0${Math.floor((Number(row.date.slice(5,7))-1)/3)+1}`:`M${row.date.slice(5,7)}`,
+   value:row.sourceValue,footnotes:(row.footnotes??[]).map(text=>({text})),
+  }));
+  native.set(code,{seriesID:code,data});
+ }
+ const payload={status:'REQUEST_SUCCEEDED',message:[],Results:{series:[...native.values()]}};
+ const series={...parseBls(payload),...parseBlsEconomicDepth(payload)};
+ for(const value of Object.values(series)){value.sourceUrl=endpoint;value.observations=value.observations.slice(-120);}
+ return addMomentumSeries({id:'bls',fetchedAt:now.toISOString(),series,provenance:[{url:endpoint,sha256:'a'.repeat(64),retrievedAt:now.toISOString(),lastModified:null}],warnings:[]});
 }
 test('registered access check is exported for a credential-safe read-only workflow',()=>assert.equal(typeof checkRegisteredBlsAccess,'function'));
 test('missing key fails clearly without making a request',async()=>{
@@ -28,6 +39,22 @@ test('complete registered source passes admission and coverage without mutating 
  assert.equal(report.fetchedAt,now.toISOString());assert.equal(report.endpoint,endpoint);
  assert.deepEqual(previous,before);assert.ok(!JSON.stringify(report).includes(key));
  assert.equal(report.series.length,31);assert.ok(report.series.every(row=>row.latestReferencePeriod));
+});
+
+test('registered fresh-window fixture discards retained historical profile and row receipts without mutating previous history',async()=>{
+ const previous=structuredClone(snapshot.sources.bls);previous.historyProfile=structuredClone(BLS_HISTORY_PROFILE);
+ const oldReceipt={url:endpoint,sha256:'b'.repeat(64),retrievedAt:'2026-01-01T00:00:00.000Z',lastModified:null};previous.provenance.push(oldReceipt);
+ for(const [id,date]of Object.entries({unrate:'1948-01-01',cpiIndex:'1913-01-01',cpiCoreIndex:'1957-01-01',cpiSaIndex:'1947-01-01',cpiCoreSaIndex:'1957-01-01'})){
+  const series=previous.series[id];
+  if(series.observations[0].date>date)series.observations.unshift({date,value:100,sourceValue:'100',publishedAt:null,footnotes:[]});
+  series.inputProvenanceScope='observation-source-urls';
+  for(const row of series.observations)Object.assign(row,{sourceUrl:endpoint,sourceSha256:oldReceipt.sha256,retrievedAt:oldReceipt.retrievedAt});
+ }
+ const before=structuredClone(previous),fresh=fixture(previous),start=`${now.getUTCFullYear()-9}-01-01`;
+ assert.equal(fresh.historyProfile,undefined);assert.equal(fresh.provenance.length,1);
+ for(const series of Object.values(fresh.series))for(const row of series.observations){assert.ok(row.date>=start);assert.equal(Object.hasOwn(row,'sourceUrl'),false);assert.equal(Object.hasOwn(row,'sourceSha256'),false);assert.equal(Object.hasOwn(row,'retrievedAt'),false);}
+ const report=await checkRegisteredBlsAccess({apiKey:key,now,previous,collect:async()=>fresh});
+ assert.equal(report.passed,true);assert.equal(report.outputCount,31);assert.deepEqual(previous,before);
 });
 
 test('live completion clock accepts a genuine delayed retry receipt and still rejects future receipts',async()=>{

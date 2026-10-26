@@ -1,4 +1,5 @@
 import { requestText } from './http.mjs';
+import { DEBT_HISTORY_START, debtHistoryUrl, requireCompleteDebtHistory } from './treasury-debt.mjs';
 
 const base = 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/';
 const endpoints = {
@@ -114,21 +115,23 @@ export function parseFiscalTables({ table9, table2, unitCheck, cutoff = '9999-12
 export function parseFiscalDebt(payload, cutoff = '9999-12-31', {quarantineSourceResiduals=false}={}) {
   date(cutoff);
   const seen = new Set(), observations = [], debtBreakdown = [], warnings=[];
-  // Retain the bounded complete response; the collector requests ten calendar years.
-  const selected = rows(payload).filter(row => date(row.record_date) <= cutoff).sort((a, b) => b.record_date.localeCompare(a.record_date));
+  const selected = rows(payload).filter(row => date(row.record_date) <= cutoff && row.record_date >= DEBT_HISTORY_START).sort((a, b) => b.record_date.localeCompare(a.record_date));
   for (const row of selected) {
     const recordDate = date(row.record_date);
     if (recordDate > cutoff) continue;
     if (seen.has(recordDate)) throw new Error('Duplicate fiscal debt date');
     seen.add(recordDate);
     const publicDebt = number(row.debt_held_public_amt), intragovernmentalDebt = number(row.intragov_hold_amt), grossDebt = number(row.tot_pub_debt_out_amt);
-    if ([publicDebt, intragovernmentalDebt, grossDebt].some(value => value === null || value < 0)) throw new Error('Missing or invalid fiscal debt amount');
-    const residual=Number((grossDebt-publicDebt-intragovernmentalDebt).toFixed(2)),invalid=Math.abs(residual)>1;
+    // Treasury documents sparse composition before daily reporting began on 4 April 2005;
+    // both nulls and historical paired zero placeholders mean unpublished, not zero debt.
+    const unavailable = recordDate < '2005-04-04' && ((publicDebt === null && intragovernmentalDebt === null) || (publicDebt === 0 && intragovernmentalDebt === 0));
+    if (grossDebt === null || grossDebt < 0 || (!unavailable && [publicDebt, intragovernmentalDebt].some(value => value === null || value < 0))) throw new Error('Missing or invalid fiscal debt amount');
+    const residual=unavailable?null:Number((grossDebt-publicDebt-intragovernmentalDebt).toFixed(2)),invalid=residual!==null&&Math.abs(residual)>1;
     if(invalid&&!quarantineSourceResiduals)close(grossDebt,publicDebt+intragovernmentalDebt,'Gross debt does not reconcile with public and intragovernmental debt');
-    const quality=invalid?{reconciliation:'source-residual-quarantined',reconciliationResidualUSD:residual}:{};
+    const quality=unavailable?{reconciliation:'composition-not-published'}:invalid?{reconciliation:'source-residual-quarantined',reconciliationResidualUSD:residual}:{};
     if(invalid)warnings.push(`Debt composition for ${recordDate} is unavailable: published gross debt differs from public plus intragovernmental debt by USD ${Math.abs(residual).toLocaleString('en-US')}. Raw amounts are retained; no balancing adjustment or replacement date is used.`);
-    observations.push({ date: recordDate, value: invalid?null:publicDebt / 1e12, publishedAt: null, sourceValue: String(row.debt_held_public_amt),...quality });
-    debtBreakdown.push({ date: recordDate, publicDebt: invalid?null:publicDebt / 1e12, intragovernmentalDebt: invalid?null:intragovernmentalDebt / 1e12, grossDebt: invalid?null:grossDebt / 1e12, sourceValues: { debt_held_public_amt: String(row.debt_held_public_amt), intragov_hold_amt: String(row.intragov_hold_amt), tot_pub_debt_out_amt: String(row.tot_pub_debt_out_amt) },...quality });
+    observations.push({ date: recordDate, value: invalid||unavailable?null:publicDebt / 1e12, publishedAt: null, sourceValue: String(row.debt_held_public_amt),...quality });
+    debtBreakdown.push({ date: recordDate, publicDebt: invalid||unavailable?null:publicDebt / 1e12, intragovernmentalDebt: invalid||unavailable?null:intragovernmentalDebt / 1e12, grossDebt: invalid?null:grossDebt / 1e12, sourceValues: { debt_held_public_amt: String(row.debt_held_public_amt), intragov_hold_amt: String(row.intragov_hold_amt), tot_pub_debt_out_amt: String(row.tot_pub_debt_out_amt) },...quality });
   }
   if (!observations.length) throw new Error('No usable fiscal debt observations');
   return { observations: observations.sort((a, b) => a.date.localeCompare(b.date)), debtBreakdown: debtBreakdown.sort((a, b) => a.date.localeCompare(b.date)),warnings };
@@ -144,7 +147,7 @@ export async function collectFiscal({ fetchImpl = globalThis.fetch, now = new Da
     debt: 'record_date,debt_held_public_amt,intragov_hold_amt,tot_pub_debt_out_amt',
   };
   const requested = Object.fromEntries(Object.keys(endpoints).map(key => [key, key === 'debt'
-    ? `${endpoints[key]}?fields=${fields[key]}&filter=record_date:gte:${now.getUTCFullYear()-9}-01-01,record_date:lte:${cutoff}&sort=-record_date&page%5Bsize%5D=10000`
+    ? debtHistoryUrl(fields[key], cutoff)
     : `${endpoints[key]}?fields=${fields[key]}&filter=record_date:gte:${start},record_date:lte:${cutoff}&sort=record_date&page%5Bsize%5D=10000`]));
   const captures = await Promise.all(Object.entries(requested).map(async ([key, url]) => {
     const response = await requestText(url, { fetchImpl: async (value, options) => {
@@ -156,10 +159,12 @@ export async function collectFiscal({ fetchImpl = globalThis.fetch, now = new Da
     return [key, response];
   }));
   const payloads = Object.fromEntries(captures.map(([key, response]) => [key, JSON.parse(response.text)]));
+  requireCompleteDebtHistory(payloads.debt);
   const fiscal = parseFiscalTables({ ...payloads, cutoff }), debt = parseFiscalDebt(payloads.debt, cutoff,{quarantineSourceResiduals:true});
   for (const series of Object.values(fiscal.series)) series.sourceUrl = requested.table9;
   const provenance = captures.map(([, { text: _text, ...metadata }]) => metadata);
+  const debtProvenance = provenance.find(item => item.url === requested.debt);
   const warnings = [historyNote,...debt.warnings];
   if (fiscal.monthly.some(month => month.financingReconciliation === 'source-residual')) warnings.push('Some published financing rows do not reconcile to the budget deficit. Their reported amounts are retained with an explicit calculated financing residual.');
-  return { id: 'fiscal', fetchedAt: provenance.map(item => item.retrievedAt).sort().at(-1), series: { ...fiscal.series, publicDebt: { observations: debt.observations, calculation: 'Debt held by the public USD dollars / 1e12; excludes intragovernmental holdings; ten calendar years of actual daily record dates; no filled weekends or missing dates', sourceUrl: requested.debt, sourceIds: ['debt_held_public_amt'], dataStatus: 'official' } }, monthly: fiscal.monthly, coverageStart: fiscal.coverageStart, coverageEnd: fiscal.coverageEnd, coverageNote: historyNote, fiscal: { debtBreakdown: debt.debtBreakdown, historyNote, unitCheck: fiscal.unitCheck, methodology: 'Deficit (positive) = outlays - receipts. Financing bridge: deficit = borrowing from the public + reduction of operating cash + other financing + calculated source residual. Monthly actuals, not fiscal-year-to-date or budget estimates. Net interest is the published budget function, not gross Treasury interest expense. Borrowing flow and debt stock changes have distinct accounting scope.' }, provenance, warnings };
+  return { id: 'fiscal', fetchedAt: provenance.map(item => item.retrievedAt).sort().at(-1), series: { ...fiscal.series, publicDebt: { observations: debt.observations, fetchedAt: debtProvenance.retrievedAt, provenance: [debtProvenance], calculation: 'Debt held by the public USD dollars / 1e12; excludes intragovernmental holdings; actual debt record dates from 1 April 1993. Composition is annual from September 1997 through September 2001, monthly through March 2005, and daily from 4 April 2005; unpublished historical composition remains null, including source zero placeholders. No filled weekends or missing dates.', sourceUrl: requested.debt, sourceIds: ['debt_held_public_amt'], dataStatus: 'official' } }, monthly: fiscal.monthly, coverageStart: fiscal.coverageStart, coverageEnd: fiscal.coverageEnd, coverageNote: historyNote, fiscal: { debtBreakdown: debt.debtBreakdown, historyNote, unitCheck: fiscal.unitCheck, methodology: 'Deficit (positive) = outlays - receipts. Financing bridge: deficit = borrowing from the public + reduction of operating cash + other financing + calculated source residual. Monthly actuals, not fiscal-year-to-date or budget estimates. Net interest is the published budget function, not gross Treasury interest expense. Borrowing flow and debt stock changes have distinct accounting scope.' }, provenance, warnings };
 }

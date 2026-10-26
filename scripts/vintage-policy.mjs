@@ -1,8 +1,13 @@
 import { asKnownOn, recordVintages, normalizeVintageTimestamp } from '../src/vintages.js';
+import {hasBlsHistory} from './bls-history-policy.mjs';
+import {BLS_API_V1,BLS_API_V2} from './bls-api-policy.mjs';
+import {BLS_IDS,BLS_DEPTH_IDS} from './sources/bls.mjs';
 
 const fail=message=>{throw new Error(`Invalid vintage archive: ${message}`);};
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 const provenanceFields=new Set(['url','sha256','retrievedAt','lastModified']);
+const blsHistoryProvenanceFields=new Set(['startYear','endYear','seriesIds']);
+const blsNativeIds=new Set([...Object.values(BLS_IDS),...Object.values(BLS_DEPTH_IDS)]);
 const censusProvenanceFields=new Set(['filename','fileUpdatedAt','usageNote']);
 const censusZipMembers={census:'MARTS-mf.csv',housing:'RESCONST-mf.csv'};
 const boardZipMembers={bankCredit:'H8_data.xml',lendingSurvey:'SLOOS_data.xml',fedBalance:'H41_data.xml',householdDebt:'DSR_data.xml',loanDelinquency:'CHGDEL_data.xml'};
@@ -19,8 +24,13 @@ function retrievalProvenance(capture,capturedAt){
   if(!Array.isArray(capture.provenance)||!capture.provenance.length)fail('capture has no original retrieval provenance');
   const zipMember=Object.hasOwn(censusZipMembers,capture.sourceId)?censusZipMembers[capture.sourceId]:null;
   const boardMember=Object.hasOwn(boardZipMembers,capture.sourceId)?boardZipMembers[capture.sourceId]:null;
+  const blsHistory=capture.sourceId==='bls'&&hasBlsHistory(capture.metadata);
   const retrievals=capture.provenance.map(item=>{
-    if(!object(item)||Object.keys(item).some(key=>!provenanceFields.has(key)&&!(zipMember&&censusProvenanceFields.has(key))&&!(boardMember&&key==='filename'))||typeof item.url!=='string'||!/^[a-f0-9]{64}$/.test(item.sha256))fail('invalid provenance fields, content or SHA256');
+    if(!object(item)||Object.keys(item).some(key=>!provenanceFields.has(key)&&!(blsHistory&&blsHistoryProvenanceFields.has(key))&&!(zipMember&&censusProvenanceFields.has(key))&&!(boardMember&&key==='filename'))||typeof item.url!=='string'||!/^[a-f0-9]{64}$/.test(item.sha256))fail('invalid provenance fields, content or SHA256');
+    if(blsHistory){
+      const years=item.url===BLS_API_V1?10:item.url===BLS_API_V2?20:0;
+      if(!years||!Number.isInteger(item.startYear)||!Number.isInteger(item.endYear)||item.startYear<1900||item.endYear>9999||item.startYear>item.endYear||item.endYear-item.startYear>=years||!Array.isArray(item.seriesIds)||!item.seriesIds.length||item.seriesIds.length>20||new Set(item.seriesIds).size!==item.seriesIds.length||item.seriesIds.some(code=>!blsNativeIds.has(code)))fail('invalid BLS history query provenance scope');
+    }
     if(boardMember&&item.filename!==boardMember)fail('unreviewed Board provenance ZIP member');
     if(item.lastModified!==undefined&&item.lastModified!==null&&typeof item.lastModified!=='string')fail('invalid provenance last-modified metadata');
     if(zipMember){

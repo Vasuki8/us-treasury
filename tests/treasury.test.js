@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 
 let adapter;
 try {
@@ -80,7 +81,7 @@ test('yield parser rejects HTML, unknown schemas, invalid calendar dates, and un
 function fixtureFetch({ debt = debtPayload, current = yieldCsv, previous = 'Date,"10 Yr"\n12/31/2025,4.17\n' } = {}) {
   return async function fetchFixture(url) {
     const target = new URL(url);
-    if (target.hostname === 'api.fiscaldata.treasury.gov') return new Response(JSON.stringify(debt), { headers: { 'content-type': 'application/json' } });
+    if (target.hostname === 'api.fiscaldata.treasury.gov') return new Response(JSON.stringify({ ...debt, meta: debt.meta ?? { count: debt.data.length, 'total-count': debt.data.length, 'total-pages': 1 }, links: debt.links ?? { next: null } }), { headers: { 'content-type': 'application/json' } });
     if (target.hostname === 'home.treasury.gov' && target.searchParams.get('field_tdr_date_value') === '2026') return new Response(current, { headers: { 'content-type': 'text/csv' } });
     if (target.hostname === 'home.treasury.gov' && target.searchParams.get('field_tdr_date_value') === '2025') return new Response(previous, { headers: { 'content-type': 'text/csv' } });
     throw new Error(`Unexpected source URL ${url}`);
@@ -103,6 +104,28 @@ test('Treasury collector applies an arbitrary as-of date to curves and series an
   assert.deepEqual(result.warnings, []);
 });
 
+test('gross debt keeps its exact response receipt and retrieval clock after decades of curve receipts are merged', async () => {
+  const body = JSON.stringify({ ...debtPayload, meta: { count: 3, 'total-count': 3, 'total-pages': 1 }, links: { next: null } });
+  const sources = fixtureFetch();
+  const collected = await treasury().collectTreasury({ now: new Date('2026-10-19T17:00:00Z'), fetchImpl: async (url, options) => new URL(url).hostname === 'api.fiscaldata.treasury.gov' ? new Response(body) : sources(url, options) });
+  const debtReceipt = collected.provenance.find(row => row.url === collected.series.debt.sourceUrl);
+  const provenance = Array.from({ length: 60 }, (_, index) => ({
+    url: `https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/${1967 + index}/all?type=daily_treasury_yield_curve&field_tdr_date_value=${1967 + index}&page&_format=csv`,
+    sha256: 'a'.repeat(64), retrievedAt: '2099-01-01T00:00:00.000Z', lastModified: null,
+  }));
+  const result = treasury().harmonizeTreasuryYieldHistory(collected, {
+    provenance,
+    curveHistory: provenance.map((_, index) => ({ date: `${1967 + index}-01-02`, nominal: { '10Y': 4 } })),
+  });
+  assert.ok(result.provenance.length >= 60, 'all unrelated curve receipts remain at source level');
+  assert.deepEqual(result.series.debt.provenance, [debtReceipt]);
+  assert.equal(result.series.debt.provenance[0].sha256, createHash('sha256').update(body).digest('hex'));
+  assert.equal(result.series.debt.fetchedAt, debtReceipt.retrievedAt);
+  assert.equal(result.fetchedAt, '2099-01-01T00:00:00.000Z');
+  assert.notEqual(result.series.debt.fetchedAt, result.fetchedAt);
+  assert.ok(result.series.debt.observations.every(row => !('provenance' in row) && !('sourceUrl' in row)));
+});
+
 test('collector includes prior-year observations when January has fewer than 36 daily observations', async () => {
   const result = await treasury().collectTreasury({
     now: new Date('2026-01-02T12:00:00Z'),
@@ -112,18 +135,48 @@ test('collector includes prior-year observations when January has fewer than 36 
   assert.equal(result.previousCurveDate, '2025-12-31');
 });
 
-test('collector can retrieve historical debt instead of filtering only the latest 100 present-day records', async () => {
+test('collector retains the earliest admitted daily gross debt without shifting the requested latest date', async () => {
   const otherSources = fixtureFetch();
   const fetchImpl = async (url, options) => {
     const target = new URL(url);
     if (target.hostname !== 'api.fiscaldata.treasury.gov') return otherSources(url, options);
-    const historical = target.searchParams.get('filter') === 'record_date:gte:2017-01-01,record_date:lte:2026-01-02';
+    const historical = target.searchParams.get('filter') === 'record_date:gte:1993-04-01,record_date:lte:2026-01-02';
     assert.equal(target.searchParams.get('page[size]'),'10000');
-    return new Response(JSON.stringify({ data: [{ record_date: historical ? '2026-01-02' : '2026-10-20', tot_pub_debt_out_amt: '39000000000000' }] }));
+    const data = [
+      { record_date: '1993-03-31', tot_pub_debt_out_amt: '1' },
+      { record_date: '1993-04-01', tot_pub_debt_out_amt: '4225873987843.44' },
+      { record_date: historical ? '2026-01-02' : '2026-10-20', tot_pub_debt_out_amt: '39000000000000' },
+      { record_date: '2026-01-05', tot_pub_debt_out_amt: '40000000000000' },
+    ];
+    return new Response(JSON.stringify({ data, meta: { count: 4, 'total-count': 4, 'total-pages': 1 }, links: { next: null } }));
   };
   const result = await treasury().collectTreasury({ now: new Date('2026-01-02T12:00:00Z'), fetchImpl });
+  assert.deepEqual(result.series.debt.observations.map(row => row.date), ['1993-04-01', '2026-01-02']);
+  assert.equal(result.series.debt.observations[0].sourceValue, '4225873987843.44');
+  assert.equal(result.series.debt.observations[0].publishedAt, null);
   assert.equal(result.series.debt.observations.at(-1).date, '2026-01-02');
   assert.equal(result.series.debt.observations.at(-1).value, 39);
+});
+
+test('debt collection fails closed on incomplete or unverifiable single-page history', async () => {
+  for (const debt of [
+    { ...debtPayload, meta: { count: 3, 'total-count': 4, 'total-pages': 1 } },
+    { ...debtPayload, meta: { count: 3, 'total-count': 3, 'total-pages': 2 } },
+    { ...debtPayload, meta: { count: 3, 'total-count': 3, 'total-pages': 1 }, links: { next: '&page%5Bnumber%5D=2' } },
+    { ...debtPayload, meta: { count: 3, 'total-count': 3, 'total-pages': '1' } },
+    { ...debtPayload, meta: {} },
+  ]) {
+    await assert.rejects(treasury().collectTreasury({ now: new Date('2026-10-20T12:00:00Z'), fetchImpl: fixtureFetch({ debt }) }), /debt.*(pagin|page|count|metadata|bound)/i);
+  }
+});
+
+test('debt collection rejects redirected receipts instead of attributing them to the admitted URL', async () => {
+  const sources = fixtureFetch();
+  await assert.rejects(treasury().collectTreasury({ now: new Date('2026-10-20T12:00:00Z'), fetchImpl: async (url, options) => {
+    const response = await sources(url, options);
+    if (new URL(url).hostname === 'api.fiscaldata.treasury.gov') Object.defineProperty(response, 'redirected', { value: true });
+    return response;
+  } }), /Treasury debt.*redirect/i);
 });
 
 test('prior-year fallback also runs after 13 current-year points until there are at least 36', async () => {

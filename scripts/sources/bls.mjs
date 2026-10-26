@@ -73,11 +73,11 @@ export function parseBlsEconomicDepth(payload) {
   return result;
 }
 
-export function parseBls(payload) {
+function parseBlsSeries(payload,ids) {
   if(payload.status!=='REQUEST_SUCCEEDED')throw new Error(`BLS request failed: ${(payload.message||[]).join('; ')}`);
   const responses=payload.Results?.series;
   if(!Array.isArray(responses))throw new Error('Missing BLS series response');
-  const rawSeries=new Map(),required=[...new Set(Object.values(BLS_IDS))];
+  const rawSeries=new Map(),required=[...new Set(Object.values(ids))];
   for(const code of required) {
     const matches=responses.filter(item=>item.seriesID===code);
     if(matches.length>1)throw new Error(`Duplicate BLS series: ${code}`);
@@ -95,7 +95,7 @@ export function parseBls(payload) {
     rawSeries.set(code,values);
   }
   const result={};
-  for(const [id,code] of Object.entries(BLS_IDS)) {
+  for(const [id,code] of Object.entries(ids)) {
     const values=rawSeries.get(code);
     const observations=[...values.values()].sort((a,b)=>a.date.localeCompare(b.date)).map(item=>{
       if(id==='openings')return {...item,value:finite(item.value)?item.value/1000:null};
@@ -110,6 +110,15 @@ export function parseBls(payload) {
     result[id]={observations,sourceUrl:endpoint,sourceIds:[code],dataStatus:'official',calculation:id==='payroll'?'Employment level minus exact previous month, thousands of jobs':id==='openings'?'Published thousands of openings / 1000':id==='cpi'||id==='wages'?'100 × (level / exact year-ago month level − 1)':'Published seasonally adjusted percent',...(familyMetadata[id]?{observationType:'official',...familyMetadata[id]}:{})};
   }
   return result;
+}
+
+export function parseBls(payload) {return parseBlsSeries(payload,BLS_IDS);}
+
+/** The historical extension admits only these existing native CPI/CPS inputs. */
+export function parseBlsHistory(payload,nativeIds) {
+  const allowed=['LNS14000000','CUUR0000SA0','CUUR0000SA0L1E','CUSR0000SA0','CUSR0000SA0L1E'];
+  if(!Array.isArray(nativeIds)||!nativeIds.length||new Set(nativeIds).size!==nativeIds.length||nativeIds.some(code=>!allowed.includes(code)))throw new Error('Invalid BLS historical input scope');
+  return parseBlsSeries(payload,Object.fromEntries(Object.entries(BLS_IDS).filter(([,code])=>nativeIds.includes(code))));
 }
 
 function configuredKey(apiKey) {

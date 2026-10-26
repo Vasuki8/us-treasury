@@ -154,7 +154,7 @@ export function vintagesCsv(vintages, { cutoff: requestedCutoff, seriesId = 'gdp
     const captured = capturedMetadata(metadata, source, series), rights = capturedRights(captured, source, series, observation);
     const inputProvenanceScope=series?.inputProvenanceScope??source?.inputProvenanceScope;
     const capture=inputProvenanceScope==='observation-source-urls'?observationCapture({...series,inputProvenanceScope,provenance:series?.provenance??source?.provenance??[],fetchedAt:series?.fetchedAt??source?.fetchedAt},observation):null;
-    const provenance=capture?.provenance??source?.provenance??[];
+    const provenance=capture?.provenance??series?.provenance??source?.provenance??[];
     return {
       captured,retrievedAt:capture?.retrievedAt,
       common: [captured.observationType ?? 'official', 'captured-as-known', rights.sourceUrl, (series?.sourceIds ?? []).join('; '), series?.calculation ?? '', series?.coverageNote ?? source?.coverageNote ?? '', provenance.map(item => item.sha256).filter(Boolean).join('; '), limitation],

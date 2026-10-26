@@ -5,7 +5,8 @@ import { recordVintages } from '../../src/vintages.js';
 import { registry } from '../../src/registry.js';
 import {isIsoDate} from '../../src/date-window.js';
 import {harmonizeTreasuryYieldHistory} from './treasury.mjs';
-import {BLS_API_V1,matchesBlsApiFeed} from '../bls-api-policy.mjs';
+import {BLS_API_V1,BLS_API_V2,matchesBlsApiFeed} from '../bls-api-policy.mjs';
+import {hasBlsHistory} from '../bls-history-policy.mjs';
 
 const calendarLinks=[{name:'New York Fed calendar · BLS releases',url:'https://www.newyorkfed.org/research/calendars/nationalecon_cal.html'},{name:'BEA release schedule',url:'https://www.bea.gov/news/schedule/'},{name:'Census release schedule',url:'https://www.census.gov/economic-indicators/calendar-listview.html'},{name:'DOL claims release schedule',url:'https://oui.doleta.gov/unemploy/claims_arch.asp'},{name:'Treasury Fiscal Data release calendar',url:'https://fiscaldata.treasury.gov/release-calendar/'},{name:'Treasury yield publication timing',url:'https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology'}];
 const calendarCoverage='Employment Situation, CPI and JOLTS dates come from the secondary New York Fed calendar within its explicitly captured monthly coverage; reference periods are not supplied. Other schedules cover national GDP, Personal Income and Outlays, Census advance retail sales and New Residential Construction, DOL weekly claims and Treasury Debt to the Penny. Treasury debt entries retain the agency calendar\'s estimated dates and times. Treasury yield publication timing appears separately as ongoing guidance when a verified capture is available; it adds no dated events. DOL dates expand its published Thursday rule and explicit holiday exceptions within a 90-day upcoming window. Auctions are not ingested. Dates can change; a scheduled time does not confirm publication or results.';
@@ -75,7 +76,7 @@ function utcTimestamp(value) {
 /** A known service outage can retain a complete reviewed capture, never invent one. */
 export function canPublishCachedBlsData(source,now) {
   const failure=source?.failure;
-  if(!(now instanceof Date)||!Number.isFinite(now.getTime())||source?.id!=='bls'||source.status!=='error'||failure?.kind!=='http'||failure.status!==503||failure.redirected!==false||failure.requestedUrl!==BLS_API_V1||failure.url!==BLS_API_V1)return false;
+  if(!(now instanceof Date)||!Number.isFinite(now.getTime())||source?.id!=='bls'||source.status!=='error'||failure?.kind!=='http'||failure.status!==503||failure.redirected!==false||failure.url!==failure.requestedUrl||!(failure.requestedUrl===BLS_API_V1||hasBlsHistory(source)&&failure.requestedUrl===BLS_API_V2))return false;
   const fetchedAt=utcTimestamp(source.fetchedAt);
   if(fetchedAt===null||fetchedAt>now.getTime()||!Array.isArray(source.provenance)||!source.provenance.length)return false;
   if(!source.provenance.every(receipt=>matchesBlsApiFeed(receipt?.url)&&/^[a-f0-9]{64}$/.test(receipt.sha256)&&utcTimestamp(receipt.retrievedAt)!==null&&utcTimestamp(receipt.retrievedAt)<=fetchedAt)||!source.provenance.some(receipt=>utcTimestamp(receipt.retrievedAt)===fetchedAt))return false;

@@ -2,6 +2,7 @@
 // reviews, docs/data-sources.md, and docs/macro-coverage-source-review.md.
 import {NY_FED_TERMS_URL,NY_FED_DATA_NOTICE,NY_FED_REFERENCE_RATE_NOTICE,NY_FED_PRODUCT_NOTICE} from '../src/market-functioning.js';
 import {matchesBlsApiFeed} from './bls-api-policy.mjs';
+import {assertBlsHistoryData,hasBlsHistory,BLS_HISTORY_OUTPUTS} from './bls-history-policy.mjs';
 
 const reviewedOn='2026-10-22';
 const boardTerms='https://www.federalreserve.gov/disclaimer.htm';
@@ -114,6 +115,7 @@ function assertNewMetadata(agency,id,item,source){
 
 /** Check only the new scope, so old immutable captures keep their old meanings. */
 export function assertMacroCoverageData(snapshot){
+  assertBlsHistoryData(snapshot.sources?.bls);
   const newProviders=new Set(['policyRates','activity','housing']);
   for(const [agency,source]of Object.entries(snapshot.sources??{})){
     const policies=macroCoveragePolicies.filter(policy=>policy.agency===agency);
@@ -135,7 +137,7 @@ export function assertMacroCoverageData(snapshot){
       for(const url of item.sourceUrls??[])if(!matchesSourceFeed(url,feed)||!inputs.has(url))throw new Error(`Unreviewed supporting source feed for ${agency}/${id}`);
       assertNewMetadata(agency,id,item,source);
       for(const row of item.observations??[]){
-        if(Object.hasOwn(row,'sourceUrl')||Object.hasOwn(row,'sourceUrls'))throw new Error(`Unreviewed per-observation source override for ${agency}/${id}`);
+        if((Object.hasOwn(row,'sourceUrl')||Object.hasOwn(row,'sourceUrls'))&&!(agency==='bls'&&hasBlsHistory(source)&&BLS_HISTORY_OUTPUTS.includes(id)))throw new Error(`Unreviewed per-observation source override for ${agency}/${id}`);
         if(newProviders.has(agency)&&row.publishedAt!==null)throw new Error(`Unreviewed historical publication source timing for ${agency}/${id}`);
       }
     }

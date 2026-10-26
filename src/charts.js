@@ -133,6 +133,10 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
         return `${command}${xDate(o.date).toFixed(2)} ${y(o.value).toFixed(2)}`;
       }).join(' ');
       svgElement('path',{d:path,class:`series-line${className}`},svg);
+      panel.observations.forEach((observation,point,all)=>{
+        if(finite(observation.value)&&!finite(all[point-1]?.value)&&!finite(all[point+1]?.value))
+          svgElement('circle',{cx:xDate(observation.date),cy:y(observation.value),r:3,class:`dot${curve&&index>0?' previous':index%2?' secondary':''} isolated-point`,'aria-hidden':'true'},svg);
+      });
     }
   });
   const guide = svgElement('line',{x1:0,x2:0,y1:top,y2:h-bottom,class:'guide'},svg);

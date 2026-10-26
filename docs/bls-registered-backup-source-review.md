@@ -4,6 +4,8 @@ Reviewed October 25, 2026, Toronto local date. The user requested the free regis
 
 ## Source, scope and conditions
 
+The fresh-window primitive and weekly checker described here remain unchanged. The later [unemployment/CPI historical extension](unemployment-cpi-debt-history.md) adds a separate bounded registered bootstrap and retention wrapper for 13 existing outputs; its explicit scope supersedes this milestone's ten-year retention limit for those measurements only.
+
 The primary remains the exact unregistered JSON POST `https://api.bls.gov/publicAPI/v1/timeseries/data/`. The newly reviewed backup is the exact registered JSON POST `https://api.bls.gov/publicAPI/v2/timeseries/data/`, using the user's key in the request body's `registrationkey` field. No query-string authentication, other hosts, redirects, CSV proxies or independent provider are admitted.
 
 The [BLS FAQ](https://www.bls.gov/developers/api_faqs.htm) requires v2 registration, annual renewal, and documents 500 queries per day, 50 series per query and 20 years per registered query. This application retains its existing scope of **20 native series in one request for ten calendar years**. It does not add a longer-history promise, optional API calculations, indicators or catalog-derived definitions. The [v2 signatures](https://www.bls.gov/developers/api_signature_v2.htm) support the same series/year parameters and registered key.

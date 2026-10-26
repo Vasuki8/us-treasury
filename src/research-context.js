@@ -87,7 +87,7 @@ function capturedMeasurement(current,source,item,id,agency){
   termsUrl:item.termsUrl??source.termsUrl??item.licenseUrl??source.licenseUrl??'',
   sourceTitle:item.sourceTitle??source.sourceTitle??'',coverageNote:item.coverageNote??source.coverageNote??'',
   inputProvenanceScope:item.inputProvenanceScope??source.inputProvenanceScope,
-  fetchedAt:item.fetchedAt??source.fetchedAt,provenance:source.provenance,dataStatus:'captured-as-known',error:null};
+  fetchedAt:item.fetchedAt??source.fetchedAt,provenance:item.provenance??source.provenance,dataStatus:'captured-as-known',error:null};
 }
 
 /** Build explicitly scoped frozen inputs; never promise a mutable URL is a saved result. */

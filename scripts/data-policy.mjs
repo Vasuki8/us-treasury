@@ -1,3 +1,5 @@
+import {isDeepStrictEqual} from 'node:util';
+import {normalizeVintageTimestamp} from '../src/vintages.js';
 import {creditContextPolicies,matchesCreditContextFeed,assertCreditContextData,fomcCalendarPolicy,matchesFomcCalendarFeed,assertFomcCalendarData} from './credit-context-policy.mjs';
 import { easternFields } from './sources/calendar-utils.mjs';
 import { researchPolicies, matchesResearchFeed, assertResearchData } from './research-policy.mjs';
@@ -78,6 +80,26 @@ function matchesFeed(value, feed) {
     if(feed==='census-advance-retail')return endpoint==='https://www.census.gov/econ_getzippedfile/' && url.searchParams.get('programCode')==='MARTS';
   } catch { /* A malformed URL is never an approved feed. */ }
   return false;
+}
+
+function assertMeasurementProvenance(source,series,agency,id,feed){
+  if(!['treasury','fiscal'].includes(agency)||!Object.hasOwn(series,'provenance'))return;
+  const fail=()=>{throw new Error(`Unreviewed measurement receipt provenance for ${agency}/${id}`);};
+  const receipts=series.provenance;
+  if(!Array.isArray(receipts)||!receipts.length||!Array.isArray(source.provenance)||(series.sourceUrls!==undefined&&!Array.isArray(series.sourceUrls)))fail();
+  const urls=new Set([series.sourceUrl,...(series.sourceUrls??[])]),fields=new Set(['url','sha256','retrievedAt','lastModified']);
+  const timestamp=value=>{try{return normalizeVintageTimestamp(value);}catch{fail();}};
+  const sourceTime=timestamp(source.fetchedAt),retrievals=[];
+  for(const receipt of receipts){
+    if(!receipt||typeof receipt!=='object'||Array.isArray(receipt)||Object.keys(receipt).some(key=>!fields.has(key))
+      ||typeof receipt.url!=='string'||!urls.has(receipt.url)||!matchesFeed(receipt.url,feed)||!/^[a-f0-9]{64}$/.test(receipt.sha256)
+      ||(receipt.lastModified!==undefined&&receipt.lastModified!==null&&typeof receipt.lastModified!=='string')
+      ||!source.provenance.some(root=>isDeepStrictEqual(root,receipt)))fail();
+    const retrievedAt=timestamp(receipt.retrievedAt);
+    if(retrievedAt>sourceTime)fail();
+    retrievals.push(retrievedAt);
+  }
+  if([...urls].some(url=>!receipts.some(receipt=>receipt.url===url))||timestamp(series.fetchedAt)!==retrievals.sort().at(-1))fail();
 }
 
 export const calendarPolicies = {
@@ -237,6 +259,7 @@ export function assertCommercialData(snapshot) {
       const approvedIds=policy.series[id];
       if(!Array.isArray(series.sourceIds) || series.sourceIds.length!==approvedIds.length || !approvedIds.every((value,index)=>series.sourceIds[index]===value))throw new Error(`Unreviewed source identifier for ${agency}/${id}`);
       if(!matchesFeed(series.sourceUrl,policy.seriesFeeds?.[id]??policy.feed))throw new Error(`Unreviewed feed for ${agency}/${id}`);
+      assertMeasurementProvenance(source,series,agency,id,policy.seriesFeeds?.[id]??policy.feed);
       if(agency==='bls'&&series.sourceUrl===BLS_API_V2&&!source.provenance?.some(receipt=>receipt.url===series.sourceUrl&&/^[a-f0-9]{64}$/.test(receipt.sha256)))throw new Error(`Missing captured BLS provenance: ${id}`);
     }
     for(const item of source.provenance ?? []) {

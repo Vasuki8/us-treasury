@@ -60,6 +60,39 @@ test('scoped chart catalogs use supplied calculated values, evidence labels, key
   }
 });
 
+test('isolated historical debt values stay visible without joining gaps or marking continuous observations',()=>{
+  const publicDebt={...series.publicDebt,observations:[
+    {date:'1993-04-01',value:null},
+    {date:'1997-09-30',value:3.7896675468496},
+    {date:'1997-10-01',value:null},
+    {date:'1998-09-30',value:3.73386420655243},
+    {date:'1998-10-01',value:null},
+    {date:'2005-04-04',value:4.57},
+    {date:'2005-04-05',value:4.58},
+    {date:'2005-04-06',value:null},
+  ]};
+  const continuous={...publicDebt,id:'continuous',observations:publicDebt.observations.map((row,index)=>({...row,value:5+index}))};
+  const catalog={publicDebt,continuous},original=structuredClone(catalog);
+  for(const ids of ['publicDebt,continuous','continuous,publicDebt']){
+    withCharts([{series:ids}],{catalog},([container])=>{
+      const rendered=nodes(container),paths=rendered.filter(node=>node.tag==='path');
+      const sparseIndex=ids.startsWith('publicDebt')?0:1,sparsePath=paths[sparseIndex].attributes.d;
+      assert.equal((sparsePath.match(/M/g)??[]).length,3,'missing historical composition still breaks the line');
+      assert.equal((sparsePath.match(/L/g)??[]).length,1,'only the adjacent daily amounts form a line');
+      const markers=rendered.filter(node=>node.tag==='circle'&&node.attributes.class?.includes('isolated-point'));
+      assert.equal(markers.length,2,'both annual amounts need persistent markers; continuous observations do not');
+      const coordinates=[...sparsePath.matchAll(/[ML]([\d.]+) ([\d.]+)/g)];
+      for(const [index,marker]of markers.entries()){
+        assert.ok(Math.abs(Number(marker.attributes.cx)-Number(coordinates[index][1]))<.005);
+        assert.ok(Math.abs(Number(marker.attributes.cy)-Number(coordinates[index][2]))<.005);
+        assert.equal(marker.attributes.class.includes('secondary'),sparseIndex===1,'markers retain their series color in either order');
+        assert.equal(marker.attributes.visibility,undefined,'markers remain visible when the cursor rests on a missing date');
+      }
+      assert.deepEqual(catalog,original,'rendering leaves source observations and metadata intact');
+    });
+  }
+});
+
 test('scoped comparisons derive from the supplied catalog rather than the surrounding frozen catalog',()=>{
   withCharts([{chartCatalog:'current-account-gdp-history',comparison:'difference',panelId:'currentAccountToGdp'}],{
     catalog:{currentAccountToGdp:ratio('currentAccountToGdp',[['2025-01-01',10],['2025-10-01',20]])},

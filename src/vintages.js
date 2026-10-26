@@ -7,8 +7,8 @@ const seriesFields = ['sourceIds', 'sourceUrl', 'calculation', 'dataStatus', 'co
 // newly admitted and needs its originating program in replayed rights metadata.
 const housingSeriesFields = [...seriesFields, 'programName'];
 const advanceSeriesFields = [...seriesFields, 'publicationNote'];
-const seriesFieldsFor = source => source === 'beaIta' ? [...seriesFields,'comparisonClass','sourceUnit','publicationNote'] : source === 'macroContributions' ? [...seriesFields,'contributionScope','parentContribution'] : source === 'treasury' ? [...seriesFields,'fetchedAt'] : source === 'housing' ? housingSeriesFields : source === 'dolAdvance' ? advanceSeriesFields : seriesFields;
-const sourceFieldsFor = source => source === 'beaIta' ? [...sourceFields,'tableReleaseDate','nextReleaseDate'] : source === 'householdDebt' ? [...sourceFields,'methodology'] : sourceFields;
+const seriesFieldsFor = source => source === 'beaIta' ? [...seriesFields,'comparisonClass','sourceUnit','publicationNote'] : source === 'macroContributions' ? [...seriesFields,'contributionScope','parentContribution'] : ['treasury','fiscal'].includes(source) ? [...seriesFields,'fetchedAt','provenance'] : source === 'housing' ? housingSeriesFields : source === 'dolAdvance' ? advanceSeriesFields : seriesFields;
+const sourceFieldsFor = source => source === 'beaIta' ? [...sourceFields,'tableReleaseDate','nextReleaseDate'] : source === 'householdDebt' ? [...sourceFields,'methodology'] : source === 'bls' ? [...sourceFields,'historyProfile'] : sourceFields;
 const clone = value => JSON.parse(JSON.stringify(value));
 const own = (value, key) => Object.hasOwn(value, key);
 
@@ -65,7 +65,7 @@ function normalizedSource(source, id, seriesMetadata = {}, retained = null) {
     sourceId(key);
     if (!item || typeof item !== 'object') throw new Error('Invalid vintage series');
     const defaults = own(seriesMetadata, key) ? metadata(seriesMetadata[key] ?? {}, measurementFields) : {};
-    const fields=seriesFieldsFor(id).filter(field=>!(field==='fetchedAt'&&retained&&!own(retained.series[key]??{},field)));
+    const fields=seriesFieldsFor(id).filter(field=>!(['fetchedAt','provenance'].includes(field)&&retained&&!own(retained.series[key]??{},field)));
     if(fields.includes('fetchedAt')&&own(item,'fetchedAt')){
       const retrieved=timestamp(item.fetchedAt);
       if(retrieved>fetchedAt||!(source.provenance??[]).some(receipt=>timestamp(receipt.retrievedAt)===retrieved))throw new Error('Measurement retrieval timestamp has no actual capture provenance');

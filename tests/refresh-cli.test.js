@@ -38,6 +38,10 @@ async function withCliFixture(run) {
   try {
     await cp(path.join(root,'scripts'),path.join(directory,'scripts'),{recursive:true});
     await cp(path.join(root,'src'),path.join(directory,'src'),{recursive:true});
+    // CLI tests replace the provider boundary; history stitching has its own
+    // tests. Preserve the primitive's real parser/identifier exports for policy.
+    await cp(path.join(directory,'scripts','sources','bls.mjs'),path.join(directory,'scripts','sources','bls-original.mjs'));
+    await writeFile(path.join(directory,'scripts','sources','bls-history.mjs'),"import {collectBls} from './bls.mjs';\nimport {addMomentumSeries} from '../../src/momentum.js';\nexport async function collectBlsWithHistory(options){return addMomentumSeries(await collectBls(options));}\n");
     const destination=path.join(directory,'src','official-snapshot.js');
     const {snapshot:fixtureSnapshot}=await import(pathToFileURL(destination).href);
     const annual='https://www.bls.gov/schedule/2026/home.htm',captured='2026-10-20T12:00:00.000Z';
@@ -207,7 +211,7 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
     ['activity.mjs','collectActivity','activity',false],
     ['housing.mjs','collectHousing','housing',false],
     ...independentCalendars.map(row=>[...row,true]),
-  ])await writeFile(path.join(directory,'scripts','sources',filename),`${id==='dolAdvance'?"export * from './dol-advance-original.mjs';\n":id==='treasury'&&!calendar?"export * from './treasury-original.mjs';\n":''}import {snapshot} from '../../src/official-snapshot.js';\nimport {refreshedCapture} from './fixture-retrieval.mjs';\nexport async function ${exportName}(){${failOther&&id==='bea'&&!calendar?"throw new Error('BEA unavailable');":`return refreshedCapture(snapshot.${calendar?'calendar.':''}sources[${JSON.stringify(id)}]);`}}\n`);
+  ])await writeFile(path.join(directory,'scripts','sources',filename),`${id==='dolAdvance'?"export * from './dol-advance-original.mjs';\n":id==='treasury'&&!calendar?"export * from './treasury-original.mjs';\n":id==='bls'&&!calendar?"export * from './bls-original.mjs';\n":''}import {snapshot} from '../../src/official-snapshot.js';\nimport {refreshedCapture} from './fixture-retrieval.mjs';\nexport async function ${exportName}(){${failOther&&id==='bea'&&!calendar?"throw new Error('BEA unavailable');":`return refreshedCapture(snapshot.${calendar?'calendar.':''}sources[${JSON.stringify(id)}]);`}}\n`);
   await writeFile(path.join(directory,'blocked-bls.mjs'),`
     const NativeDate=Date;
     globalThis.Date=class extends NativeDate {
@@ -223,7 +227,7 @@ test('approved statistical service-failure mode publishes healthy captures while
   await withCliFixture(async({directory,destination})=>{
     const {snapshot:prior}=await import(`${pathToFileURL(destination).href}?statistics-cached-prior`);
     const attemptedAt=await blockedBlsFixture(directory);
-    await writeFile(path.join(directory,'scripts','sources','bls.mjs'),"import {OfficialSourceHttpError} from './http.mjs';\nexport async function collectBls(){throw new OfficialSourceHttpError(503,'https://api.bls.gov/publicAPI/v1/timeseries/data/');}\n");
+    await writeFile(path.join(directory,'scripts','sources','bls.mjs'),"export * from './bls-original.mjs';\nimport {OfficialSourceHttpError} from './http.mjs';\nexport async function collectBls(){throw new OfficialSourceHttpError(503,'https://api.bls.gov/publicAPI/v1/timeseries/data/');}\n");
     const result=await execute(process.execPath,['--import','./blocked-bls.mjs','scripts/refresh-data.mjs','--allow-cached-bls'],{cwd:directory,timeout:publicationTimeout});
     const {snapshot:published}=await import(`${pathToFileURL(destination).href}?statistics-cached-published`);
     assert.equal(published.sources.bls.status,'error');

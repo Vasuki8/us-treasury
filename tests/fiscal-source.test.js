@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { parseFiscalTables, parseFiscalDebt, collectFiscal } from '../scripts/sources/fiscal.mjs';
 
 const amount = n => String(n * 1e9);
@@ -83,6 +84,27 @@ test('keeps debt held by public distinct from gross debt and validates their sum
   assert.throws(() => parseFiscalDebt(payload), /debt|reconcil/i);
 });
 
+test('historical unpublished composition stays missing while gross debt and sparse reported amounts retain precision', () => {
+  const payload = { data: [
+    { record_date: '1993-04-01', debt_held_public_amt: 'null', intragov_hold_amt: 'null', tot_pub_debt_out_amt: '4225873987843.44' },
+    { record_date: '1993-04-02', debt_held_public_amt: '0.00', intragov_hold_amt: '0.00', tot_pub_debt_out_amt: '4233931445349.25' },
+    { record_date: '1997-09-30', debt_held_public_amt: '3789667546849.60', intragov_hold_amt: '1623478464547.74', tot_pub_debt_out_amt: '5413146011397.34' },
+    { record_date: '2005-03-30', debt_held_public_amt: 'null', intragov_hold_amt: 'null', tot_pub_debt_out_amt: '7786606686259.96' },
+    { record_date: '2005-03-31', debt_held_public_amt: '4572715640119.20', intragov_hold_amt: '3204223407550.94', tot_pub_debt_out_amt: '7776939047670.14' },
+  ] };
+  const result = parseFiscalDebt(payload);
+  assert.deepEqual(result.observations.map(row => row.value), [null, null, 3.7896675468496, null, 4.5727156401192]);
+  assert.equal(result.debtBreakdown[0].grossDebt, 4.22587398784344);
+  assert.equal(result.debtBreakdown[0].publicDebt, null);
+  assert.equal(result.debtBreakdown[0].intragovernmentalDebt, null);
+  assert.equal(result.debtBreakdown[0].reconciliation, 'composition-not-published');
+  assert.equal(result.debtBreakdown[1].sourceValues.debt_held_public_amt, '0.00');
+  assert.equal(result.observations[2].sourceValue, '3789667546849.60');
+  assert.ok(result.observations.every(row => row.publishedAt === null));
+  assert.equal(result.warnings.length, 0, 'documented missing historical composition is not an accounting anomaly');
+  assert.throws(() => parseFiscalDebt({ data: [{ ...payload.data[0], record_date: '2005-04-04' }] }), /invalid|missing/i, 'unexpected missing modern composition still fails closed');
+});
+
 test('public debt preserves more than 100 actual dates for quarter-end nominal-GDP context',()=>{
   const data=Array.from({length:400},(_,i)=>({record_date:new Date(Date.UTC(2025,0,i+1)).toISOString().slice(0,10),debt_held_public_amt:'30000000000000',intragov_hold_amt:'7000000000000',tot_pub_debt_out_amt:'37000000000000'}));
   const result=parseFiscalDebt({data},'2026-06-30');
@@ -105,10 +127,11 @@ test('history collection quarantines source debt-accounting anomalies with raw e
 
 test('collector uses only exact approved official endpoints, retains hashes and rejects redirects', async () => {
   const fixture = tables(); const requested = [];
+  const debtPayload = { data: [{ record_date: '2026-09-30', debt_held_public_amt: '30000000000000', intragov_hold_amt: '7000000000000', tot_pub_debt_out_amt: '37000000000000' }], meta: { count: 1, 'total-count': 1, 'total-pages': 1 }, links: { next: null } };
   const fetchImpl = async url => {
     requested.push(url);
     const path = new URL(url).pathname;
-    const payload = path.endsWith('mts_table_9') ? fixture.table9 : path.endsWith('mts_table_2') ? fixture.table2 : path.endsWith('mts_receipts_outlays_deficit_surplus') ? fixture.unitCheck : { data: [{ record_date: '2026-09-30', debt_held_public_amt: '30000000000000', intragov_hold_amt: '7000000000000', tot_pub_debt_out_amt: '37000000000000' }] };
+    const payload = path.endsWith('mts_table_9') ? fixture.table9 : path.endsWith('mts_table_2') ? fixture.table2 : path.endsWith('mts_receipts_outlays_deficit_surplus') ? fixture.unitCheck : debtPayload;
     return new Response(JSON.stringify(payload), { status: 200 });
   };
   const result = await collectFiscal({ fetchImpl, now: new Date('2026-10-21T20:00:00Z') });
@@ -118,6 +141,36 @@ test('collector uses only exact approved official endpoints, retains hashes and 
   assert.ok(result.provenance.every(x => /^[a-f0-9]{64}$/.test(x.sha256)));
   assert.equal(result.series.receipts.observations[0].value, 500);
   assert.equal(result.series.publicDebt.observations[0].value, 30);
+  const debtReceipt = result.provenance.find(row => row.url === result.series.publicDebt.sourceUrl);
+  assert.deepEqual(result.series.publicDebt.provenance, [debtReceipt], 'monthly receipts stay at source level');
+  assert.equal(result.series.publicDebt.provenance[0].sha256, createHash('sha256').update(JSON.stringify(debtPayload)).digest('hex'));
+  assert.equal(result.series.publicDebt.fetchedAt, debtReceipt.retrievedAt);
+  assert.ok(result.series.publicDebt.observations.every(row => !('provenance' in row) && !('sourceUrl' in row)));
   assert.ok(result.warnings.some(x => /revis/i.test(x)));
   await assert.rejects(() => collectFiscal({ now: new Date('2026-10-21T20:00:00Z'), fetchImpl: async () => Object.defineProperty(new Response('{}'), 'redirected', { value: true }) }), /redirect|source URL/i);
+});
+
+test('fiscal collection requests full debt coverage and rejects incomplete history before publishing composition', async () => {
+  const fixture = tables();
+  const data = [
+    { record_date: '1993-04-01', debt_held_public_amt: 'null', intragov_hold_amt: 'null', tot_pub_debt_out_amt: '4225873987843.44' },
+    { record_date: '1997-09-30', debt_held_public_amt: '3789667546849.60', intragov_hold_amt: '1623478464547.74', tot_pub_debt_out_amt: '5413146011397.34' },
+    { record_date: '2026-10-20', debt_held_public_amt: '32566198492042.62', intragov_hold_amt: '7873347523996.46', tot_pub_debt_out_amt: '40439546016039.08' },
+  ];
+  const fetchImpl = incomplete => async url => {
+    const target = new URL(url), path = target.pathname;
+    let payload = path.endsWith('mts_table_9') ? fixture.table9 : path.endsWith('mts_table_2') ? fixture.table2 : path.endsWith('mts_receipts_outlays_deficit_surplus') ? fixture.unitCheck : null;
+    if (!payload) {
+      assert.equal(target.searchParams.get('filter'), 'record_date:gte:1993-04-01,record_date:lte:2026-10-21');
+      payload = { data, meta: { count: 3, 'total-count': 3, 'total-pages': incomplete ? 2 : 1 }, links: { next: null } };
+    }
+    return new Response(JSON.stringify(payload));
+  };
+  const result = await collectFiscal({ now: new Date('2026-10-21T20:00:00Z'), fetchImpl: fetchImpl(false) });
+  assert.deepEqual(result.series.publicDebt.observations.map(row => row.date), ['1993-04-01', '1997-09-30', '2026-10-20']);
+  assert.equal(result.series.publicDebt.observations[0].value, null);
+  assert.equal(result.fiscal.debtBreakdown[0].grossDebt, 4.22587398784344);
+  assert.equal(result.series.publicDebt.observations.at(-1).value, 32.56619849204262);
+  assert.equal(result.provenance.find(row => row.url.includes('debt_to_penny')).url, result.series.publicDebt.sourceUrl);
+  await assert.rejects(() => collectFiscal({ now: new Date('2026-10-21T20:00:00Z'), fetchImpl: fetchImpl(true) }), /debt.*(pagin|page|count|metadata|bound)/i);
 });
