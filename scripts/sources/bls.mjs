@@ -114,9 +114,9 @@ function parseBlsSeries(payload,ids) {
 
 export function parseBls(payload) {return parseBlsSeries(payload,BLS_IDS);}
 
-/** The historical extension admits only these existing native CPI/CPS inputs. */
+/** The historical extension admits only the reviewed native CPI and labor inputs. */
 export function parseBlsHistory(payload,nativeIds) {
-  const allowed=['LNS14000000','CUUR0000SA0','CUUR0000SA0L1E','CUSR0000SA0','CUSR0000SA0L1E'];
+  const allowed=['LNS14000000','CUUR0000SA0','CUUR0000SA0L1E','CUSR0000SA0','CUSR0000SA0L1E','CES0000000001','LNS11300000','LNS12300000','LNS13327709'];
   if(!Array.isArray(nativeIds)||!nativeIds.length||new Set(nativeIds).size!==nativeIds.length||nativeIds.some(code=>!allowed.includes(code)))throw new Error('Invalid BLS historical input scope');
   return parseBlsSeries(payload,Object.fromEntries(Object.entries(BLS_IDS).filter(([,code])=>nativeIds.includes(code))));
 }

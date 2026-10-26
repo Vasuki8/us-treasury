@@ -2,24 +2,31 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {collectBls,parseBlsHistory,summarizeApiResponse,BLS_IDS,BLS_DEPTH_IDS} from './bls.mjs';
 import {OfficialSourceHttpError,requestText} from './http.mjs';
 import {BLS_API_V2} from '../bls-api-policy.mjs';
-import {BLS_HISTORY_STARTS,BLS_HISTORY_CODES,BLS_HISTORY_OUTPUTS,BLS_HISTORY_PROFILE,hasBlsHistory,blsReceiptKey,assertBlsHistoryData} from '../bls-history-policy.mjs';
+import {BLS_LABOR_HISTORY_PROFILE,blsHistoryDefinition,blsReceiptKey,assertBlsHistoryData} from '../bls-history-policy.mjs';
 import {addMomentumSeries} from '../../src/momentum.js';
 
-const historyIds=new Set(BLS_HISTORY_OUTPUTS);
 const nativeIds=[...new Set([...Object.values(BLS_IDS),...Object.values(BLS_DEPTH_IDS)])];
 const coverageNote='Official unemployment and CPI history retained from the actual dated BLS API captures identified on each observation. Recent updates refresh a ten-calendar-year window with its first year reserved as calculation context; older observations retain their original retrieval receipts. Exact CPI inputs come from the same response, with matching overlapping values checked before stitching. Historical publication timestamps are unknown; this is revised statistical history, not a reconstruction of first releases.';
+const laborCoverageNote=coverageNote.replace('unemployment and CPI','core labor').replace('Exact CPI inputs','Exact labor inputs');
+function noteFor(definition,id){
+ if(definition.profile.version===1)return coverageNote;
+ if(id===undefined)return coverageNote.replace('unemployment and CPI','unemployment, CPI and core labor');
+ if(['payrollLevel','payroll','payrollAverage3m'].includes(id))return laborCoverageNote+' CES counts jobs rather than unique people; payroll levels can be benchmark-revised.';
+ if(['participation','employmentPopulation','underemployment'].includes(id))return laborCoverageNote+' CPS measures people; the 1994 survey redesign and population controls affect comparability. No artificial step adjustment is applied.'+(id==='underemployment'?' U-6 reference history begins in 1994; regular publication began in 1996, so its first historical month does not establish an original publication date.':'');
+ return coverageNote;
+}
 function containsKey(value,key){
  if(typeof value==='string')return value.includes(key)||value.includes(encodeURIComponent(key));
  return value&&typeof value==='object'&&Object.entries(value).some(([name,item])=>containsKey(name,key)||containsKey(item,key));
 }
 const receiptWithScope=(receipt,startYear,endYear,seriesIds)=>({...receipt,startYear,endYear,seriesIds});
-function annotated(source){
+function annotated(source,definition){
  const receipt=source.provenance[0];
- const series=Object.fromEntries(Object.entries(source.series).map(([id,value])=>[id,historyIds.has(id)?{...value,inputProvenanceScope:'observation-source-urls',coverageNote,observations:value.observations.map(row=>({...row,sourceUrl:receipt.url,retrievedAt:receipt.retrievedAt,sourceSha256:receipt.sha256}))}:value]));
+ const series=Object.fromEntries(Object.entries(source.series).map(([id,value])=>[id,definition.outputs.includes(id)?{...value,inputProvenanceScope:'observation-source-urls',coverageNote:noteFor(definition,id),observations:value.observations.map(row=>({...row,sourceUrl:receipt.url,retrievedAt:receipt.retrievedAt,sourceSha256:receipt.sha256}))}:value]));
  return addMomentumSeries({...source,series});
 }
 
-async function collectWindow({fetchImpl,now,apiKey,pause,maxAttempts,startYear,endYear,seriesIds}){
+async function collectWindow({fetchImpl,now,apiKey,pause,maxAttempts,startYear,endYear,seriesIds,definition}){
  let stage='transport',payload=null;
  try{
   const request=await requestText(BLS_API_V2,{method:'POST',maxAttempts,sleepImpl:pause,headers:{'Content-Type':'application/json'},body:JSON.stringify({seriesid:seriesIds,startyear:String(startYear),endyear:String(endYear),registrationkey:apiKey}),fetchImpl:async(url,options)=>{
@@ -43,10 +50,10 @@ async function collectWindow({fetchImpl,now,apiKey,pause,maxAttempts,startYear,e
   stage='usable';
   for(const [id,value]of Object.entries(series)){
    value.sourceUrl=BLS_API_V2;value.observations=value.observations.filter(row=>row.date<=cutoff);
-   if(!value.observations.length||BLS_HISTORY_STARTS[id]&&!value.observations.some(row=>Number.isFinite(row.value)))throw new Error('Missing BLS history observations');
+   if(!value.observations.length||definition.starts[id]&&!value.observations.some(row=>Number.isFinite(row.value)))throw new Error('Missing BLS history observations');
   }
   const {text:_text,...receipt}=request;
-  return annotated({id:'bls',fetchedAt:receipt.retrievedAt,provenance:[receiptWithScope(receipt,startYear,endYear,seriesIds)],series,warnings:[]});
+  return annotated({id:'bls',fetchedAt:receipt.retrievedAt,provenance:[receiptWithScope(receipt,startYear,endYear,seriesIds)],series,warnings:[]},definition);
  }catch(error){
   const http=error instanceof OfficialSourceHttpError&&error.requestedUrl===BLS_API_V2&&error.url===BLS_API_V2&&!error.redirected&&Number.isInteger(error.status)&&error.status>=100&&error.status<=599;
   const diagnostics={startYear,endYear,stage,httpStatus:http?error.status:null,apiSummary:payload&&stage!=='credential-echo'?summarizeApiResponse(payload,apiKey):null};
@@ -62,17 +69,17 @@ async function collectWindow({fetchImpl,now,apiKey,pause,maxAttempts,startYear,e
  }
 }
 
-function assertContext(previous,current,year){
- for(const id of Object.keys(BLS_HISTORY_CODES)){
+function assertContext(previous,current,year,definition){
+ for(const id of Object.keys(definition.codes)){
   if(!previous.series?.[id])continue;
   const rows=source=>(source.series?.[id]?.observations??[]).filter(row=>row.date.startsWith(`${year}-`));
   const before=rows(previous),after=rows(current),byDate=new Map(after.map(row=>[row.date,row.value]));
   if(!before.length||before.length!==after.length||before.some(row=>!byDate.has(row.date)||byDate.get(row.date)!==row.value))throw new Error('BLS historical overlap context changed or lost coverage');
  }
 }
-function stitch(previous,current,contextYear){
+function stitch(previous,current,contextYear,definition){
  const series={...current.series},boundary=`${contextYear+1}-01-01`;
- for(const id of BLS_HISTORY_OUTPUTS){
+ for(const id of definition.outputs){
   const before=previous.series?.[id],after=current.series?.[id];
   if(!before)continue;
   series[id]={...(after??before),observations:[...before.observations.filter(row=>row.date<boundary),...(after?.observations??[]).filter(row=>row.date>=boundary)]};
@@ -80,14 +87,15 @@ function stitch(previous,current,contextYear){
  return {...current,series,provenance:[...previous.provenance,...current.provenance]};
 }
 async function backfill(options){
+ const {definition}=options;
  let retained=null;
- for(let startYear=1913;startYear<=options.now.getUTCFullYear();startYear+=19){
+ for(let startYear=Math.min(...Object.values(definition.starts).map(date=>Number(date.slice(0,4))));startYear<=options.now.getUTCFullYear();startYear+=19){
   const endYear=Math.min(startYear+19,options.now.getUTCFullYear());
   // The API emits one advisory per pre-birth year. Request only actual coverage
   // instead of weakening advisory validation or manufacturing missing periods.
   const groups=new Map();
-  for(const [id,code]of Object.entries(BLS_HISTORY_CODES)){
-   const effectiveStart=Math.max(startYear,Number(BLS_HISTORY_STARTS[id].slice(0,4)));
+  for(const [id,code]of Object.entries(definition.codes)){
+   const effectiveStart=Math.max(startYear,Number(definition.starts[id].slice(0,4)));
    if(effectiveStart>endYear)continue;
    if(!groups.has(effectiveStart))groups.set(effectiveStart,[]);
    groups.get(effectiveStart).push(code);
@@ -98,41 +106,42 @@ async function backfill(options){
    parts.push(await collectWindow({...options,startYear:effectiveStart,endYear,seriesIds}));
   }
   const current={id:'bls',fetchedAt:parts.map(part=>part.fetchedAt).sort().at(-1),series:Object.assign({},...parts.map(part=>part.series)),provenance:parts.flatMap(part=>part.provenance),warnings:[]};
-  if(retained){assertContext(retained,current,startYear);retained=stitch(retained,current,startYear);}else retained=current;
+  if(retained){assertContext(retained,current,startYear,definition);retained=stitch(retained,current,startYear,definition);}else retained=current;
   if(endYear===options.now.getUTCFullYear())break;
  }
  return retained;
 }
-function retainCoverage(previous,current){
- for(const id of BLS_HISTORY_OUTPUTS){
+function retainCoverage(previous,current,definition){
+ for(const id of definition.outputs){
   const before=previous?.series?.[id]?.observations??[],after=current.series[id]?.observations??[],dates=new Set(after.map(row=>row.date));
   const latest=rows=>rows.findLast(row=>Number.isFinite(row.value))?.date??'';
   if(before.some(row=>!dates.has(row.date))||latest(after)<latest(before))throw new Error('BLS historical refresh regressed retained coverage');
  }
 }
-function finish(fresh,historical,previous){
+function finish(fresh,historical,previous,definition){
  const series={...fresh.series};
- for(const id of BLS_HISTORY_OUTPUTS)series[id]=historical.series[id];
- const references=new Set(BLS_HISTORY_OUTPUTS.flatMap(id=>series[id].observations.map(row=>blsReceiptKey({url:row.sourceUrl,retrievedAt:row.retrievedAt,sha256:row.sourceSha256}))));
- // The unchanged 18 other outputs still reference this full-family response.
+ for(const id of definition.outputs)series[id]=historical.series[id];
+ const references=new Set(definition.outputs.flatMap(id=>series[id].observations.map(row=>blsReceiptKey({url:row.sourceUrl,retrievedAt:row.retrievedAt,sha256:row.sourceSha256}))));
+ // The other outputs still reference this full-family response.
  for(const receipt of fresh.provenance)references.add(blsReceiptKey(receipt));
  const provenance=[...new Map([...fresh.provenance,...historical.provenance].filter(receipt=>references.has(blsReceiptKey(receipt))).map(receipt=>[blsReceiptKey(receipt),receipt])).values()];
- const source=addMomentumSeries({...fresh,fetchedAt:provenance.map(receipt=>receipt.retrievedAt).sort().at(-1),series,provenance,historyProfile:BLS_HISTORY_PROFILE,coverageNote});
- for(const id of BLS_HISTORY_OUTPUTS)source.series[id].coverageNote=coverageNote;
- retainCoverage(previous,source);assertBlsHistoryData(source);return source;
+ const source=addMomentumSeries({...fresh,fetchedAt:provenance.map(receipt=>receipt.retrievedAt).sort().at(-1),series,provenance,historyProfile:definition.profile,coverageNote:noteFor(definition)});
+ for(const id of definition.outputs)source.series[id].coverageNote=noteFor(definition,id);
+ retainCoverage(previous,source,definition);assertBlsHistoryData(source);return source;
 }
 
 /** Bootstrap once with the private registered key; routine v1/v2 stays one window. */
 export async function collectBlsWithHistory({fetchImpl=globalThis.fetch,now=new Date(),apiKey=process.env.BLS_API_KEY,pause=delay,previous,maxAttempts=process.env.SOURCE_RETRY_ATTEMPTS==='3'?3:1}={}){
- if(previous?.historyProfile!==undefined&&!hasBlsHistory(previous))throw new Error('Unrecognized BLS historical profile; retained history was not replaced');
- const key=typeof apiKey==='string'?apiKey.trim():'',options={fetchImpl,now,apiKey:key,pause,maxAttempts};
+ const previousDefinition=blsHistoryDefinition(previous);
+ if(previous?.historyProfile!==undefined&&!previousDefinition)throw new Error('Unrecognized BLS historical profile; retained history was not replaced');
+ const key=typeof apiKey==='string'?apiKey.trim():'',definition=key?blsHistoryDefinition({historyProfile:BLS_LABOR_HISTORY_PROFILE}):previousDefinition,options={fetchImpl,now,apiKey:key,pause,maxAttempts,definition};
  const fresh=await collectBls({...options,previous});
- if(!hasBlsHistory(previous)&&!key)return addMomentumSeries(fresh);
+ if(!definition)return addMomentumSeries(fresh);
  const year=now.getUTCFullYear();fresh.provenance=fresh.provenance.map(receipt=>receiptWithScope(receipt,year-9,year,nativeIds));
- const current=annotated(fresh);
- if(!hasBlsHistory(previous))return finish(current,await backfill(options),previous);
- assertBlsHistoryData(previous);
- try{assertContext(previous,current,year-9);}
- catch(error){if(!key)throw error;return finish(current,await backfill(options),previous);}
- return finish(current,stitch(previous,current,year-9),previous);
+ const current=annotated(fresh,definition);
+ if(previousDefinition)assertBlsHistoryData(previous);
+ if(!previousDefinition||previousDefinition.profile.version!==definition.profile.version)return finish(current,await backfill(options),previous,definition);
+ try{assertContext(previous,current,year-9,definition);}
+ catch(error){if(!key)throw error;return finish(current,await backfill(options),previous,definition);}
+ return finish(current,stitch(previous,current,year-9,definition),previous,definition);
 }

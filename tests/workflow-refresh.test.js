@@ -7,9 +7,9 @@ import vm from 'node:vm';
 // contexts. Actual job execution is also verified in Actions after publication.
 const workflow = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
 const jobs = Object.fromEntries([...workflow.slice(workflow.indexOf('\njobs:')).matchAll(/^  ([\w-]+):\r?\n([\s\S]*?)(?=^  [\w-]+:\r?$|(?![\s\S]))/gm)].map(match => [match[1], match[2]]));
-function context(event = 'push', { ref = 'refs/heads/main', force = false, checkSources = false, cancelled = false, check = 'success', required = 'true', refresh = 'success', verify = 'success', target = '' } = {}) {
+function context(event = 'push', { ref = 'refs/heads/main', force = false, scope = 'all', checkSources = false, cancelled = false, check = 'success', required = 'true', refresh = 'success', verify = 'success', target = '' } = {}) {
   return {
-    github: { event_name: event, ref }, inputs: { refresh_data: force, check_sources: checkSources }, vars: { DEPLOY_TARGET: target },
+    github: { event_name: event, ref }, inputs: { refresh_data: force, refresh_scope: scope, check_sources: checkSources }, vars: { DEPLOY_TARGET: target },
     needs: { refresh_check: { result: check, outputs: { required } }, refresh: { result: refresh }, verify: { result: verify } },
     cancelled: () => cancelled,
   };
@@ -47,6 +47,17 @@ test('refresh downloads run only after a successful due check', () => {
   for (const options of [{ required: 'false' }, { check: 'failure' }, { check: 'skipped' }, { check: 'cancelled' }, { cancelled: true }]) {
     assert.equal(eligible('refresh', context('push', options)), false, JSON.stringify(options));
   }
+});
+
+test('core labor bootstrap explicitly selects only BLS while automatic and all-source modes retain their scope',()=>{
+ const command=jobs.refresh_check.match(/^        run: (.+)$/m)?.[1];
+ assert.ok(command);
+ const render=data=>command.replace(/\$\{\{([\s\S]*?)\}\}/g,(_,expression)=>String(vm.runInNewContext(expression,data,{timeout:1000})));
+ const labor=render(context('workflow_dispatch',{force:true,scope:'core-labor'}));
+ assert.match(labor,/ --force --sources=bls$/);
+ assert.doesNotMatch(labor,/treasury|fiscal/);
+ assert.match(render(context('workflow_dispatch',{force:true,scope:'unemployment-cpi-debt'})),/ --force --sources=bls,treasury,fiscal$/);
+ for(const data of [context('push',{scope:'core-labor'}),context('schedule',{scope:'core-labor'}),context('workflow_dispatch',{scope:'core-labor'}),context('workflow_dispatch',{force:true,scope:'all'})])assert.doesNotMatch(render(data),/--sources=/);
 });
 
 test('failed refresh planning or collection blocks verification and deployment', () => {

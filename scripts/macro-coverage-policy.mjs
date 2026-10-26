@@ -2,7 +2,7 @@
 // reviews, docs/data-sources.md, and docs/macro-coverage-source-review.md.
 import {NY_FED_TERMS_URL,NY_FED_DATA_NOTICE,NY_FED_REFERENCE_RATE_NOTICE,NY_FED_PRODUCT_NOTICE} from '../src/market-functioning.js';
 import {matchesBlsApiFeed} from './bls-api-policy.mjs';
-import {assertBlsHistoryData,hasBlsHistory,BLS_HISTORY_OUTPUTS} from './bls-history-policy.mjs';
+import {assertBlsHistoryData,blsHistoryDefinition} from './bls-history-policy.mjs';
 import {assertDolRevisedHistoryData,hasDolRevisedHistory,matchesDolRevisedFeed} from './dol-revised-policy.mjs';
 
 const reviewedOn='2026-10-22';
@@ -121,6 +121,7 @@ export function assertMacroCoverageData(snapshot){
   assertDolRevisedHistoryData(snapshot.sources?.dol);
   const newProviders=new Set(['policyRates','activity','housing']);
   for(const [agency,source]of Object.entries(snapshot.sources??{})){
+    const blsHistory=agency==='bls'?blsHistoryDefinition(source):undefined;
     const policies=macroCoveragePolicies.filter(policy=>policy.agency===agency);
     if(!policies.length)continue;
     const entries=Object.entries(source.series??{});
@@ -140,7 +141,7 @@ export function assertMacroCoverageData(snapshot){
       for(const url of item.sourceUrls??[])if(!matchesSourceFeed(url,feed,source)||!inputs.has(url))throw new Error(`Unreviewed supporting source feed for ${agency}/${id}`);
       assertNewMetadata(agency,id,item,source);
       for(const row of item.observations??[]){
-        if((Object.hasOwn(row,'sourceUrl')||Object.hasOwn(row,'sourceUrls'))&&!(agency==='bls'&&hasBlsHistory(source)&&BLS_HISTORY_OUTPUTS.includes(id))&&!(agency==='dol'&&hasDolRevisedHistory(source)))throw new Error(`Unreviewed per-observation source override for ${agency}/${id}`);
+        if((Object.hasOwn(row,'sourceUrl')||Object.hasOwn(row,'sourceUrls'))&&!blsHistory?.outputs.includes(id)&&!(agency==='dol'&&hasDolRevisedHistory(source)))throw new Error(`Unreviewed per-observation source override for ${agency}/${id}`);
         if(newProviders.has(agency)&&row.publishedAt!==null)throw new Error(`Unreviewed historical publication source timing for ${agency}/${id}`);
       }
     }

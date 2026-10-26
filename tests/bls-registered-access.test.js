@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {snapshot} from '../src/official-snapshot.js';
 import {OfficialSourceHttpError} from '../scripts/sources/http.mjs';
-import {BLS_HISTORY_PROFILE} from '../scripts/bls-history-policy.mjs';
+import {assertCommercialData} from '../scripts/data-policy.mjs';
 import {currentBlsSource} from './helpers/bls-current-source.js';
 
 let checkRegisteredBlsAccess;
@@ -29,14 +29,9 @@ test('complete registered source passes admission and coverage without mutating 
 });
 
 test('registered fresh-window fixture discards retained historical profile and row receipts without mutating previous history',async()=>{
- const previous=structuredClone(snapshot.sources.bls);previous.historyProfile=structuredClone(BLS_HISTORY_PROFILE);
- const oldReceipt={url:endpoint,sha256:'b'.repeat(64),retrievedAt:'2026-01-01T00:00:00.000Z',lastModified:null};previous.provenance.push(oldReceipt);
- for(const [id,date]of Object.entries({unrate:'1948-01-01',cpiIndex:'1913-01-01',cpiCoreIndex:'1957-01-01',cpiSaIndex:'1947-01-01',cpiCoreSaIndex:'1957-01-01'})){
-  const series=previous.series[id];
-  if(series.observations[0].date>date)series.observations.unshift({date,value:100,sourceValue:'100',publishedAt:null,footnotes:[]});
-  series.inputProvenanceScope='observation-source-urls';
-  for(const row of series.observations)Object.assign(row,{sourceUrl:endpoint,sourceSha256:oldReceipt.sha256,retrievedAt:oldReceipt.retrievedAt});
- }
+ const previous=structuredClone(snapshot.sources.bls);
+ assert.ok(previous.historyProfile,'the real retained source contains the active historical profile');
+ assert.doesNotThrow(()=>assertCommercialData({sources:{bls:previous}}),'the retained source must be a valid historical capture before conversion');
  const before=structuredClone(previous),fresh=fixture(previous),start=`${now.getUTCFullYear()-9}-01-01`;
  assert.equal(fresh.historyProfile,undefined);assert.equal(fresh.provenance.length,1);
  for(const series of Object.values(fresh.series))for(const row of series.observations){assert.ok(row.date>=start);assert.equal(Object.hasOwn(row,'sourceUrl'),false);assert.equal(Object.hasOwn(row,'sourceSha256'),false);assert.equal(Object.hasOwn(row,'retrievedAt'),false);}

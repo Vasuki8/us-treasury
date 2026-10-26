@@ -21,6 +21,7 @@ on:
         options:
           - all
           - unemployment-cpi-debt
+          - core-labor
         default: all
   schedule:
     # After Treasury's usual 18:00 Eastern availability in both EST and EDT.
@@ -146,7 +147,7 @@ jobs:
       - name: Check all registered daily capture outcomes
         id: check
         # Only this explicit manual option forces a repeat of a completed run.
-        run: node scripts/retry-command.mjs -- node scripts/check-release-refresh.mjs ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_data && '--force' || '' }} ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_data && inputs.refresh_scope == 'unemployment-cpi-debt' && '--sources=bls,treasury,fiscal' || '' }}
+        run: node scripts/retry-command.mjs -- node scripts/check-release-refresh.mjs ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_data && '--force' || '' }} ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_data && (inputs.refresh_scope == 'core-labor' && '--sources=bls' || inputs.refresh_scope == 'unemployment-cpi-debt' && '--sources=bls,treasury,fiscal') || '' }}
 
   refresh:
     name: Refresh official data and calendars
