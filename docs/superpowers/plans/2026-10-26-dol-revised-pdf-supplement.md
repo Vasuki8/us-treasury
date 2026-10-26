@@ -54,5 +54,5 @@ Files: update `scripts/refresh-data.mjs`, `src/vintages.js`; add integration reg
 - [x] Preserve the new profile/publication note in replay without changing old capture identity; test actual scoped CSV and portable package round trips.
 - [x] Wire only DOL to the wrapper with previous DOL state; keep the base primitive and advance collector unchanged.
 - [x] Capture actual revised data through the reviewed CLI; verify expected new dates/counts, all old rows/captures, and independent review.
-- [ ] Run full tests/build/smoke, publish through existing trusted CI, verify both runtimes, live assets and alert outcomes.
-- [ ] Record actual capture/deployment evidence and synchronize the primary checkout.
+- [x] Run full tests/build/smoke, publish through existing trusted CI, verify both runtimes, live assets and alert outcomes.
+- [x] Record actual capture/deployment evidence and synchronize the primary checkout.
