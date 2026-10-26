@@ -1,4 +1,5 @@
 import { requestText } from './http.mjs';
+import {setTimeout as delay} from 'node:timers/promises';
 
 const endpoint = 'https://oui.doleta.gov/unemploy/wkclaims/report.asp';
 const MAX_XML_BYTES = 2 * 1024 * 1024;
@@ -107,11 +108,12 @@ export function parseDol(xml) {
   return { observations: trimMissing(observations), continuedObservations: trimMissing(continuedObservations), reportDate, warnings };
 }
 
-export async function collectDol({ fetchImpl = globalThis.fetch, now = new Date() } = {}) {
+export async function collectDol({ fetchImpl = globalThis.fetch, now = new Date(), maxAttempts=process.env.SOURCE_RETRY_ATTEMPTS==='3'?3:1, pause=delay } = {}) {
   const year = now.getUTCFullYear();
   const cutoff = now.toISOString().slice(0, 10);
   const body = new URLSearchParams({ level: 'us', strtdate: String(historyStartYear), enddate: String(year), filetype: 'xml', submit: 'Submit' }).toString();
-  const response = await requestText(endpoint, { fetchImpl, method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body, maxBytes: MAX_XML_BYTES });
+  // This POST only exports data; explicitly opt it into the bounded read policy.
+  const response = await requestText(endpoint, { fetchImpl, method: 'POST', maxAttempts, sleepImpl:pause, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body, maxBytes: MAX_XML_BYTES });
   const parsed = parseDol(response.text);
   const withinCoverage = row => row.date >= `${historyStartYear}-01-01` && row.date <= cutoff;
   const observations = trimMissing(parsed.observations.filter(withinCoverage));

@@ -37,6 +37,21 @@ function fixtureFetch(text) {
   };
 }
 
+test('read-only DOL export POST explicitly retries transient failures with the identical query',async()=>{
+ const calls=[],waits=[];let attempts=0;
+ const source=await dol().collectDol({now:new Date('2026-10-21T12:00:00Z'),maxAttempts:3,pause:async ms=>waits.push(ms),fetchImpl:async(url,options)=>{
+  calls.push({url,method:options.method,body:options.body});attempts++;
+  return attempts<3?new Response('temporarily unavailable',{status:503}):fixtureFetch(xml([week('10/17/2026')]))(url,options);
+ }});
+ assert.equal(attempts,3);assert.deepEqual(waits,[5000,30000]);assert.ok(calls.every(call=>JSON.stringify(call)===JSON.stringify(calls[0])));assert.equal(source.series.claims.observations.at(-1).value,198);
+});
+
+test('DOL retry exhaustion stays failed and an unrecognized successful response remains terminal',async()=>{
+ let attempts=0;
+ await assert.rejects(dol().collectDol({maxAttempts:3,pause:async()=>{},fetchImpl:async()=>{attempts++;return new Response('unavailable',{status:503});}}),/HTTP.*503/);assert.equal(attempts,3);
+ attempts=0;await assert.rejects(dol().collectDol({maxAttempts:3,pause:async()=>assert.fail('schema errors cannot retry'),fetchImpl:async()=>{attempts++;return new Response('<html>Invalid export</html>');}}),/schema/);assert.equal(attempts,1);
+});
+
 test('DOL preserves week-ending periods and raw counts while converting SA initial claims to thousands', () => {
   const result = dol().parseDol(xml([week('09/19/2026'), week('09/05/2026', '0'), week('09/12/2026', '1,234')]));
   assert.deepEqual(result.observations, [
