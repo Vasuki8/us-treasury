@@ -31,6 +31,8 @@ The capture audit compares every existing overlap date/value, unchanged source f
 
 The complete test run passed 1,683 tests. After final replay fixes, 84 affected coverage, provenance, replay and package regression tests passed. Static build and HTTP smoke verification passed for all 163 assets, including every source-history bundle. Independent economist/investor and engineering reviews found no remaining blocking issue. Legacy generic and captured-by CSV comparisons passed byte-for-byte. Styles, app navigation, layout components and colors are unchanged.
 
+Published code commit `dc3f614` passed **1,688 tests on both Node 22 and Node 24**, plus both hosted builds and HTTP smoke checks. [GitHub run 40262352243](https://github.com/Vasuki8/us-treasury/actions/runs/40262352243) deployed Pages successfully. Exact live verification then matched all **163 assets** to the local build at https://vasuki8.github.io/us-treasury/. No source-wide refresh or credentials were needed for deployment: only the three selected backfill families were captured, and current original receipts remain explicit. This final evidence update changes documentation only.
+
 ## Deferred scope
 
 Nominal-only Treasury history before 2003, debt history before 2017 and longer BLS windows require separate merge/paging/provenance treatment. Retail already retains the full admitted history from 1992. No new debt, labor, CPI, term-premium or auction-tail source is introduced by this delivery.

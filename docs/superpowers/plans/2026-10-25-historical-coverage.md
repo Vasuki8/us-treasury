@@ -16,7 +16,7 @@
 - [x] Activity: retain official production history from 1919 and utilization from 1967, test early observations, missing values, cutoff and units. Files: scripts/sources/activity.mjs and tests/activity.test.js.
 - [x] Housing: retain starts from 1959, permits from 1960 and completions from 1968, test independent starts, native precision, missing values and cutoff. Files: scripts/sources/housing.mjs and tests/housing.test.js.
 - [x] Integration: update current coverage documentation and stale current calendar claims; capture only the three changed source families through the existing publisher; verify receipts, overlap, archive integrity and downstream coverage/export paths.
-- [ ] Run full tests, build and HTTP smoke checks; obtain independent economist/investor and implementation review; publish using the established main/Pages workflow and verify live assets.
+- [x] Run full tests, build and HTTP smoke checks; obtain independent economist/investor and implementation review; publish using the established main/Pages workflow and verify live assets. Final published code: dc3f614; both hosted Node 22/24 runs passed 1,688 tests; all 163 live assets matched the local build. Evidence: https://github.com/Vasuki8/us-treasury/actions/runs/40262352243.
 
 **Ruling:** Start Treasury in 2003, when both real and nominal feeds exist. Nominal-only 1990 coverage, debt backfill and longer BLS histories are later increments because they require different provenance, merge or paging treatment. Daily Treasury collection remains two requests at a time; annual response bounds and existing transient retries remain in force.
 
