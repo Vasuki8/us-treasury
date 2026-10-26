@@ -42,10 +42,11 @@ async function bootstrap(options={}){
 test('automatic registered bootstrap retains official starts and exact chunk-seam calculations without changing the full parser',async()=>{
  const {source,service}=await bootstrap();
  assert.equal(Object.keys(source.series).length,31);assert.equal(source.historyProfile.version,1);
- assert.equal(service.calls.length,7);assert.equal(service.calls[0].url,V1);
+ assert.equal(service.calls.length,10);assert.equal(service.calls[0].url,V1);
  assert.equal(Object.hasOwn(service.calls[0].body,'registrationkey'),false);
- assert.deepEqual(service.calls.slice(1).map(call=>[call.body.startyear,call.body.endyear]),[['1913','1932'],['1932','1951'],['1951','1970'],['1970','1989'],['1989','2008'],['2008','2026']]);
- for(const call of service.calls.slice(1)){assert.equal(call.url,V2);assert.equal(call.body.registrationkey,KEY);assert.equal(call.redirect,'manual');assert.ok(call.body.seriesid.length<=5);}
+ assert.deepEqual(service.calls.slice(1).map(call=>[call.body.startyear,call.body.endyear]),[['1913','1932'],['1932','1951'],['1947','1951'],['1948','1951'],['1951','1970'],['1957','1970'],['1970','1989'],['1989','2008'],['2008','2026']]);
+ assert.deepEqual(service.calls.slice(1).map(call=>call.body.seriesid),[['CUUR0000SA0'],['CUUR0000SA0'],['CUSR0000SA0'],['LNS14000000'],['LNS14000000','CUUR0000SA0','CUSR0000SA0'],['CUUR0000SA0L1E','CUSR0000SA0L1E'],['LNS14000000','CUUR0000SA0','CUUR0000SA0L1E','CUSR0000SA0','CUSR0000SA0L1E'],['LNS14000000','CUUR0000SA0','CUUR0000SA0L1E','CUSR0000SA0','CUSR0000SA0L1E'],['LNS14000000','CUUR0000SA0','CUUR0000SA0L1E','CUSR0000SA0','CUSR0000SA0L1E']]);
+ for(const call of service.calls.slice(1)){assert.equal(call.url,V2);assert.equal(call.body.registrationkey,KEY);assert.equal(call.redirect,'manual');assert.ok(call.body.seriesid.length<=5);for(const code of call.body.seriesid)assert.ok(Number(call.body.startyear)>=born[code]);}
  for(const [id,date]of Object.entries({unrate:'1948-01-01',cpiIndex:'1913-01-01',cpiCoreIndex:'1957-01-01',cpiSaIndex:'1947-01-01',cpiCoreSaIndex:'1957-01-01'}))assert.equal(source.series[id].observations[0].date,date);
  assert.equal(source.series.cpi.observations.find(row=>row.date==='1913-12-01').value,null);
  assert.ok(Number.isFinite(source.series.cpi.observations.find(row=>row.date==='1914-01-01').value));
@@ -76,7 +77,7 @@ test('routine v1 to v2 to v1 refreshes keep historical dates, receipts and conte
 test('changed retained context triggers one full registered backfill and fails closed without a key',async()=>{
  const {source}=await bootstrap();const service=server({change:(code,y)=>y===2017?2:0});
  const before=structuredClone(source);const next=await history.collectBlsWithHistory({previous:source,now:NOW,apiKey:KEY,pause:async()=>{},fetchImpl:service.fetchImpl});
- assert.equal(service.calls.length,7);assert.deepEqual(source,before);assert.equal(next.series.cpiIndex.observations[0].date,'1913-01-01');
+ assert.equal(service.calls.length,10);assert.deepEqual(source,before);assert.equal(next.series.cpiIndex.observations[0].date,'1913-01-01');
  assert.doesNotThrow(()=>assertCommercialData({sources:{bls:next}}));
  const denied=server({change:(code,y)=>y===2017?2:0});await assert.rejects(history.collectBlsWithHistory({previous:source,now:NOW,apiKey:'',fetchImpl:denied.fetchImpl}),/context|overlap/i);assert.equal(denied.calls.length,1);
 });

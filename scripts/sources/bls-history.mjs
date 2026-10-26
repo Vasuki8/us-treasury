@@ -19,8 +19,7 @@ function annotated(source){
  return addMomentumSeries({...source,series});
 }
 
-async function collectWindow({fetchImpl,now,apiKey,pause,maxAttempts,startYear,endYear}){
- const seriesIds=Object.entries(BLS_HISTORY_CODES).filter(([id])=>Number(BLS_HISTORY_STARTS[id].slice(0,4))<=endYear).map(([,code])=>code);
+async function collectWindow({fetchImpl,now,apiKey,pause,maxAttempts,startYear,endYear,seriesIds}){
  let stage='transport',payload=null;
  try{
   const request=await requestText(BLS_API_V2,{method:'POST',maxAttempts,sleepImpl:pause,headers:{'Content-Type':'application/json'},body:JSON.stringify({seriesid:seriesIds,startyear:String(startYear),endyear:String(endYear),registrationkey:apiKey}),fetchImpl:async(url,options)=>{
@@ -84,8 +83,21 @@ async function backfill(options){
  let retained=null;
  for(let startYear=1913;startYear<=options.now.getUTCFullYear();startYear+=19){
   const endYear=Math.min(startYear+19,options.now.getUTCFullYear());
-  await options.pause(1000);
-  const current=await collectWindow({...options,startYear,endYear});
+  // The API emits one advisory per pre-birth year. Request only actual coverage
+  // instead of weakening advisory validation or manufacturing missing periods.
+  const groups=new Map();
+  for(const [id,code]of Object.entries(BLS_HISTORY_CODES)){
+   const effectiveStart=Math.max(startYear,Number(BLS_HISTORY_STARTS[id].slice(0,4)));
+   if(effectiveStart>endYear)continue;
+   if(!groups.has(effectiveStart))groups.set(effectiveStart,[]);
+   groups.get(effectiveStart).push(code);
+  }
+  const parts=[];
+  for(const [effectiveStart,seriesIds]of [...groups].sort(([a],[b])=>a-b)){
+   await options.pause(1000);
+   parts.push(await collectWindow({...options,startYear:effectiveStart,endYear,seriesIds}));
+  }
+  const current={id:'bls',fetchedAt:parts.map(part=>part.fetchedAt).sort().at(-1),series:Object.assign({},...parts.map(part=>part.series)),provenance:parts.flatMap(part=>part.provenance),warnings:[]};
   if(retained){assertContext(retained,current,startYear);retained=stitch(retained,current,startYear);}else retained=current;
   if(endYear===options.now.getUTCFullYear())break;
  }
