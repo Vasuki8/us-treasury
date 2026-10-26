@@ -113,3 +113,23 @@ test('SOMA historical CSV distinguishes pre-issuance FRNs from unavailable holdi
   assert.equal(missing.find(row=>row.series_code==='SOMA:tips-inflation-compensation').value,'1');
   assert.ok(soma.filter(row=>row.period>='2026-01-01').every(row=>!row.methodology.includes('FRN field')));
 });
+
+test('supplemental SOMA CSV periods carry only their actual aggregate receipt and explain the retained API blank',()=>{
+  const data=source(),alternate='https://www.newyorkfed.org/medialibrary/Interactives/markets/soma-interactive/soma-data/total-portfolio-summary.json';
+  const receipt={url:alternate,retrievedAt:'2026-10-22T02:39:15.990Z',sha256:'c'.repeat(64)};
+  data.provenance.push(receipt);
+  data.soma.history.unshift(
+    {date:'2014-02-05',principal:24,inflationCompensation:1,adjustedPrincipal:25,sourceUrl:alternate,frnStatus:'alternate-source',primaryFrn:null,components:{bills:4,notesbonds:18,tips:2,frn:0,tipsInflationCompensation:1}},
+    {date:'2014-02-12',principal:25,inflationCompensation:1,adjustedPrincipal:26,sourceUrl:alternate,frnStatus:'alternate-source',primaryFrn:null,components:{bills:4,notesbonds:19,tips:2,frn:0,tipsInflationCompensation:1}},
+  );
+  const original=JSON.stringify(data),output=rows(api().ownershipCsv(data));
+  for(const row of output.filter(row=>row.period.startsWith('2014-'))){
+    assert.equal(row.source_url,alternate);assert.equal(row.retrieved_at,receipt.retrievedAt);assert.deepEqual(JSON.parse(row.provenance),[receipt]);
+    assert.match(row.methodology,/official.*aggregate|aggregate.*official/i);assert.match(row.methodology,/FRN.*zero|FRN.*0/i);assert.match(row.methodology,/API.*blank.*null/i);assert.doesNotMatch(row.methodology,/API.*publish.*(?:zero|0)/i);
+    assert.equal(row.release_date,'');assert.match(row.release_date_basis,/unknown/i);assert.equal(row.attribution,notice);assert.equal(row.terms_url,terms);
+  }
+  const changed=output.find(row=>row.period==='2014-02-12'&&row.series_code==='SOMA:treasury-adjusted-par');
+  assert.equal(changed.change_from_exact_prior,'1');assert.equal(changed.prior_period,'2014-02-05');
+  for(const row of output.filter(row=>row.dataset==='SOMA Holdings'&&row.period.startsWith('2026-'))){assert.equal(row.source_url,data.provenance[1].url);assert.deepEqual(JSON.parse(row.provenance),[data.provenance[1]]);assert.doesNotMatch(row.methodology,/official.*aggregate|API.*blank/i);}
+  assert.equal(JSON.stringify(data),original);
+});

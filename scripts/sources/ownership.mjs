@@ -1,10 +1,12 @@
 import { parseCsv, requestBytes, requestText } from './http.mjs';
 import { extractZipEntry } from './zip.mjs';
 import { decodeHtmlText } from './calendar-utils.mjs';
+import { SOMA_2014_GAP_URL, SOMA_2014_GAP_DATES, SOMA_2014_GAP_NOTE } from '../../src/ownership.js';
 
 export const Z1_URL = 'https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip';
 export const Z1_RELEASE_URL = 'https://www.federalreserve.gov/releases/z1/default.htm';
 export const SOMA_URL = 'https://markets.newyorkfed.org/api/soma/summary.json';
+export const SOMA_GAP_URL = SOMA_2014_GAP_URL;
 export const SOMA_TERMS_URL = 'https://www.newyorkfed.org/privacy/termsofuse.html';
 const CODES = [
   ['LM153061105.Q','Households and nonprofit organizations'],['LM103061103.Q','Nonfinancial corporate business'],
@@ -27,7 +29,7 @@ const sum = values => values.reduce((total, value) => total + value, 0);
 const FRN_FIRST_ISSUE = '2014-01-31';
 const FRN_NOT_ISSUED = 'Treasury FRNs were not yet issued before 2014-01-31. The blank source FRN field remains null and the not-yet-existing instrument is excluded from this calculated Treasury sum.';
 const FRN_UNAVAILABLE = 'The source FRN field is blank after Treasury FRN issuance began; FRN holdings and calculated Treasury principal/adjusted principal are unavailable, not zero.';
-const SOMA_COVERAGE = 'Full native SOMA weekly history retains actual posted dates. Blank FRN inputs remain null: before first issuance on 2014-01-31 the instrument is excluded with an explicit qualification; from that date a blank FRN makes Treasury totals unavailable. TIPS inflation compensation remains separately reported. Original historical publication times are unknown.';
+const SOMA_COVERAGE = 'Full native SOMA weekly history retains actual posted dates and primary API blanks as null. Before FRN issuance on 2014-01-31 the instrument is explicitly excluded. Exactly 15 approved 2014 gaps use matched official visualization FRN zeros with separate receipts; other post-issuance blanks remain unavailable. TIPS compensation is separate. Original publication times are unknown.';
 function number(raw, { missing = false } = {}) {
   if (missing && ['ND','NA','N/A','',null,undefined].includes(raw)) return null;
   if (raw === null || raw === undefined || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(String(raw)) || !Number.isFinite(Number(raw))) fail('missing or invalid numeric holding');
@@ -128,19 +130,35 @@ export async function collectOwnership({ fetchImpl=globalThis.fetch, now=new Dat
   if (metadata.period!==z1.asOf || metadata.releaseDate>now.toISOString().slice(0,10)) fail('Z1 release quarter mismatch or future release');
   z1.releaseDate=metadata.releaseDate;
   const soma=parseSomaOwnership(JSON.parse(somaResponse.text),{now});
+  const gaps=soma.history.filter(row=>row.frnStatus==='unavailable'&&SOMA_2014_GAP_DATES.includes(row.date));
+  let gapResponse;
+  if(gaps.length){
+    gapResponse=await requestText(SOMA_GAP_URL,{fetchImpl,maxBytes:2*1024*1024});
+    const supplemental=parseSomaOwnership(JSON.parse(gapResponse.text),{now});
+    const replacements=new Map();
+    for(const primary of gaps){
+      const matched=supplemental.history.find(row=>row.date===primary.date);
+      if(!matched||matched.components.frn!==0||['bills','notesbonds','tips','tipsInflationCompensation'].some(key=>matched.components[key]!==primary.components[key]))fail(`SOMA supplemental evidence mismatch at ${primary.date}`);
+      replacements.set(primary.date,{...matched,frnStatus:'alternate-source',primaryFrn:null,sourceUrl:SOMA_GAP_URL});
+    }
+    soma.history=soma.history.map(row=>replacements.get(row.date)??row);
+    for(const key of ['principal','inflationCompensation','adjustedPrincipal'])soma[key]=soma.history.at(-1)[key];
+    if(!soma.history.some(row=>row.frnStatus==='unavailable'))soma.warnings=soma.warnings.filter(warning=>warning!==FRN_UNAVAILABLE);
+  }
   const attribution=`© ${now.getUTCFullYear()} Federal Reserve Bank of New York. Content from the New York Fed subject to the Terms of Use at newyorkfed.org.`;
   const redistributionNotice='SOMA Holdings content must remain available under the same permissions, conditions and restrictions in the New York Fed Terms of Use. Retain source attribution and terms link. Treasury-only aggregation and inclusion of TIPS inflation compensation are Meridian calculations, not New York Fed modifications or endorsement.';
   Object.assign(soma,{title:'SOMA Holdings',attribution,termsUrl:SOMA_TERMS_URL,redistributionNotice});
   const z1Receipt={sourceUrl:archive.url,sourceSha256:archive.sha256,retrievedAt:archive.retrievedAt};
   const somaReceipt={sourceUrl:somaResponse.url,sourceSha256:somaResponse.sha256,retrievedAt:somaResponse.retrievedAt};
+  const gapReceipt=gapResponse?{sourceUrl:gapResponse.url,sourceSha256:gapResponse.sha256,retrievedAt:gapResponse.retrievedAt}:null;
   const coverageNote='Full native Z.1 history: annual year-end observations in 1945–1951; quarterly from 1952. Unreported quarters and missing values are not filled. Current revised vintage; historical original publication dates are unknown.';
   const fedMethodNote='Central-bank stocks use the historical H.4.1 source basis before 2012:Q1 and fair-value reports from 2012:Q1; no historical revaluation is synthesized.';
   const series={};
   for (const [id,code] of [['foreignTreasuryHoldings','LM263061105.Q'],['fedTreasuryHoldings','LM713061103.Q']]) {
     series[id]={observations:z1.history.map(row=>{const value=row.sectors.find(item=>item.code===code).value;return {date:row.date,value:value===null?null:value/1000,publishedAt:null,...z1Receipt};}),sourceUrl:Z1_URL,sourceIds:[code],dataStatus:'official',inputProvenanceScope:'observation-source-urls',calculation:'Official Z.1 quarter-end sector position in USD millions / 1e6; reported source valuation, not seasonally adjusted',coverageNote:code==='LM713061103.Q'?`${coverageNote} ${fedMethodNote}`:coverageNote,attribution:'Source: Board of Governors of the Federal Reserve System, Financial Accounts of the United States (Z.1), F3.2.s Treasury securities.'};
   }
-  series.somaTreasuryHoldings={observations:soma.history.map(row=>({date:row.date,value:row.adjustedPrincipal===null?null:row.adjustedPrincipal/1000,publishedAt:null,...somaReceipt,...(row.frnStatus?{footnotes:[row.frnStatus==='not-issued'?FRN_NOT_ISSUED:FRN_UNAVAILABLE]}:{})})),sourceUrl:SOMA_URL,sourceTitle:'SOMA Holdings',sourceIds:['SOMA:treasury-adjusted-par'],dataStatus:'calculated',inputProvenanceScope:'observation-source-urls',calculation:'Sum SOMA bills + notesbonds + frn + tips + tipsInflationCompensation in USD / 1e12; excludes agency debt, MBS and CMBS. Before first FRN issuance on 2014-01-31, a blank FRN input remains null and the not-yet-existing instrument is excluded; later blank FRNs make the sum unavailable.',coverageNote:SOMA_COVERAGE,attribution,termsUrl:SOMA_TERMS_URL,redistributionNotice};
-  const responses=[archive,page,somaResponse];
+  series.somaTreasuryHoldings={observations:soma.history.map(row=>({date:row.date,value:row.adjustedPrincipal===null?null:row.adjustedPrincipal/1000,publishedAt:null,...(row.sourceUrl===SOMA_GAP_URL?gapReceipt:somaReceipt),...(row.frnStatus?{footnotes:[row.frnStatus==='alternate-source'?SOMA_2014_GAP_NOTE:row.frnStatus==='not-issued'?FRN_NOT_ISSUED:FRN_UNAVAILABLE]}:{})})),sourceUrl:SOMA_URL,...(gapResponse?{sourceUrls:[SOMA_URL,SOMA_GAP_URL]}:{}),sourceTitle:'SOMA Holdings',sourceIds:['SOMA:treasury-adjusted-par'],dataStatus:'calculated',inputProvenanceScope:'observation-source-urls',calculation:'Sum SOMA bills + notesbonds + frn + tips + tipsInflationCompensation in USD / 1e12; excludes agency debt, MBS and CMBS. Before first FRN issuance on 2014-01-31, a blank FRN is excluded with qualification. Exactly 15 approved 2014 gaps use matched official visualization components; other later blanks remain unavailable.',coverageNote:SOMA_COVERAGE,attribution,termsUrl:SOMA_TERMS_URL,redistributionNotice};
+  const responses=[archive,page,somaResponse,...(gapResponse?[gapResponse]:[])];
   return {id:'ownership',fetchedAt:responses.map(response=>response.retrievedAt).sort().at(-1),series,z1,soma,attribution,termsUrl:SOMA_TERMS_URL,redistributionNotice,
     provenance:responses.map(({bytes,text,...metadata})=>metadata),warnings:[...z1.warnings,...soma.warnings],
     limitations:[

@@ -24,3 +24,7 @@ export function summarizeOwnership(source) {
       'Changes are changes in reported positions; they do not establish purchases, sales or causal effects on yields.',
     ]};
 }
+
+export const SOMA_2014_GAP_URL='https://www.newyorkfed.org/medialibrary/Interactives/markets/soma-interactive/soma-data/total-portfolio-summary.json';
+export const SOMA_2014_GAP_DATES=Object.freeze(['2014-02-05','2014-02-12','2014-02-19','2014-02-26','2014-03-05','2014-03-12','2014-03-19','2014-03-26','2014-04-02','2014-04-09','2014-04-16','2014-04-23','2014-04-30','2014-05-07','2014-05-14']);
+export const SOMA_2014_GAP_NOTE='Official New York Fed SOMA visualization aggregate reports FRN zero; the primary API field is blank and retained as null. This date uses matched visualization Treasury components, not an imputed API observation.';

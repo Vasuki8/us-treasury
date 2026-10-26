@@ -25,12 +25,13 @@ const soma = () => ({soma:{summary:[
   {asOfDate:'2026-10-07',bills:'100000000000',notesbonds:'200000000000',tips:'30000000000',frn:'10000000000',tipsInflationCompensation:'5000000000',mbs:'999999999999',agencies:'8888888888',total:'1348888888887'},
   {asOfDate:'2026-10-14',bills:'110000000000',notesbonds:'200000000000',tips:'30000000000',frn:'10000000000',tipsInflationCompensation:'6000000000',mbs:'999999999999',agencies:'8888888888',total:'1358888888887'},
 ]}});
-function fixtures({z1csv=csv(),dict=dictionary(),somaData=soma(),page='<h2>Release Date: September 11, 2026 2026:Q2 Release</h2>',calls=[]}={}) {
+function fixtures({z1csv=csv(),dict=dictionary(),somaData=soma(),gapData=null,page='<h2>Release Date: September 11, 2026 2026:Q2 Release</h2>',calls=[]}={}) {
   return async url => {
     calls.push(url);
     if (url===api().Z1_URL) return new Response(zipFixture([{name:'csv/F3_2_s.csv',text:z1csv},{name:'data_dictionary/F3_2_s.txt',text:dict}]));
     if (url===api().Z1_RELEASE_URL) return new Response(page);
     if (url===api().SOMA_URL) return new Response(JSON.stringify(somaData));
+    if (url===api().SOMA_GAP_URL) return new Response(JSON.stringify(gapData));
     throw new Error(`Unexpected official ownership URL ${url}`);
   };
 }
@@ -193,7 +194,7 @@ test('SOMA validates malformed old inputs beyond the former retention boundary a
 });
 
 test('SOMA long-history observations retain numerical-feed receipts, null totals and FRN interpretation footnotes', async()=>{
-  const row=soma().soma.summary[0],somaData={soma:{summary:[{...row,asOfDate:'2003-07-09',frn:''},{...row,asOfDate:'2014-02-05',frn:''},...soma().soma.summary]}};
+  const row=soma().soma.summary[0],somaData={soma:{summary:[{...row,asOfDate:'2003-07-09',frn:''},{...row,asOfDate:'2014-01-31',frn:''},...soma().soma.summary]}};
   const source=await api().collectOwnership({now,fetchImpl:fixtures({somaData})}),item=source.series.somaTreasuryHoldings;
   const [pre,unknown]=item.observations;
   assert.equal(pre.value,0.335);assert.equal(unknown.value,null);
@@ -207,6 +208,66 @@ test('SOMA long-history observations retain numerical-feed receipts, null totals
     assert.equal(observation.sourceSha256,receipt.sha256);
     assert.equal(observation.retrievedAt,receipt.retrievedAt);
     assert.equal(observation.publishedAt,null);
+  }
+});
+
+const gapDates=['2014-02-05','2014-02-12','2014-02-19','2014-02-26','2014-03-05','2014-03-12','2014-03-19','2014-03-26','2014-04-02','2014-04-09','2014-04-16','2014-04-23','2014-04-30','2014-05-07','2014-05-14'];
+function gapInputs(){
+  const row=soma().soma.summary[0];
+  return {
+    somaData:{soma:{summary:[{...row,asOfDate:'2003-07-09',frn:''},...gapDates.map(asOfDate=>({...row,asOfDate,frn:''})),...soma().soma.summary]}},
+    gapData:{soma:{summary:gapDates.map(asOfDate=>({...row,asOfDate,frn:'0'}))}},
+  };
+}
+
+test('SOMA recovers exactly the 15 approved gaps from explicit matched visualization zeros and its own receipts',async()=>{
+  const inputs=gapInputs(),original=JSON.stringify(inputs),calls=[];
+  const source=await api().collectOwnership({now,fetchImpl:fixtures({...inputs,calls})});
+  assert.equal(calls.filter(url=>url===api().SOMA_GAP_URL).length,1);
+  const receipt=source.provenance.find(row=>row.url===api().SOMA_GAP_URL);
+  assert.equal(receipt.sha256,createHash('sha256').update(JSON.stringify(inputs.gapData)).digest('hex'));
+  assert.deepEqual(source.series.somaTreasuryHoldings.sourceUrls,[api().SOMA_URL,api().SOMA_GAP_URL]);
+  for(const date of gapDates){
+    const row=source.soma.history.find(row=>row.date===date),observation=source.series.somaTreasuryHoldings.observations.find(row=>row.date===date);
+    assert.equal(row.frnStatus,'alternate-source');assert.equal(row.primaryFrn,null);
+    assert.equal(row.sourceUrl,api().SOMA_GAP_URL);assert.equal(row.components.frn,0);
+    assert.equal(row.principal,330);assert.equal(row.adjustedPrincipal,335);assert.equal(observation.value,0.335);
+    assert.equal(observation.sourceUrl,receipt.url);assert.equal(observation.sourceSha256,receipt.sha256);
+    assert.equal(observation.retrievedAt,receipt.retrievedAt);assert.equal(observation.publishedAt,null);
+    assert.match(observation.footnotes.join(' '),/visualization.*zero.*API.*blank/i);
+  }
+  assert.equal(source.soma.history[0].components.frn,null);
+  assert.equal(source.soma.history[0].frnStatus,'not-issued');
+  assert.equal(source.soma.adjustedPrincipal,356);
+  assert.ok(!source.warnings.some(text=>/FRN.*unavailable/i.test(text)));
+  assert.equal(JSON.stringify(inputs),original);
+});
+
+test('SOMA supplemental gaps reject mismatched, missing, duplicate, invalid or nonzero evidence',async()=>{
+  for(const mutate of [
+    input=>{input.gapData.soma.summary.shift();},
+    input=>{input.gapData.soma.summary.push({...input.gapData.soma.summary[0]});},
+    input=>{input.gapData.soma.summary[0].asOfDate='2014-02-30';},
+    input=>{input.gapData.soma.summary[0].frn='1';},
+    input=>{input.gapData.soma.summary[0].frn='';},
+    input=>{input.gapData.soma.summary[0].bills='100000000001';},
+    input=>{input.gapData.soma.summary[0].tipsInflationCompensation='5000000001';},
+    input=>{delete input.gapData.soma.summary[0].notesbonds;},
+    input=>{input.gapData={soma:{summary:[]}};},
+  ]){
+    const inputs=gapInputs();mutate(inputs);
+    await assert.rejects(api().collectOwnership({now,fetchImpl:fixtures(inputs)}),/SOMA|ownership|date|missing|numeric|evidence/i);
+  }
+  const inputs=gapInputs(),fetchImpl=fixtures(inputs);
+  await assert.rejects(api().collectOwnership({now,fetchImpl:url=>url===api().SOMA_GAP_URL?Promise.resolve(new Response('Unavailable',{status:503})):fetchImpl(url)}),/503/);
+});
+
+test('SOMA never invokes supplemental normalization outside the exact approved missing dates or over a primary number',async()=>{
+  for(const [asOfDate,frn,expected]of [['2014-05-15','',null],['2014-01-31','',null],['2014-02-05','2',335.000000002]]){
+    const row={...soma().soma.summary[0],asOfDate,frn},calls=[];
+    const source=await api().collectOwnership({now,fetchImpl:fixtures({somaData:{soma:{summary:[row,...soma().soma.summary]}},calls})});
+    assert.equal(source.soma.history[0].adjustedPrincipal,expected);
+    assert.equal(calls.length,3);assert.ok(!Object.hasOwn(source.series.somaTreasuryHoldings,'sourceUrls'));
   }
 });
 

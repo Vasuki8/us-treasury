@@ -17,8 +17,10 @@ function fixture(){
  // This fixture exercises registered capture lineage. Supplementary sector
  // tables and their real full-history parsing are checked separately.
  delete old.z1;delete old.soma;
+ old.provenance=old.provenance.filter(receipt=>[zip,page,soma].includes(receipt.url));
+ old.fetchedAt=old.provenance.map(receipt=>receipt.retrievedAt).sort().at(-1);
  for(const [index,id]of ids.entries()){
-  const item=old.series[id];delete item.inputProvenanceScope;
+  const item=old.series[id];delete item.inputProvenanceScope;delete item.sourceUrls;
   item.observations=item.observations.slice(index===2?-104:-36).map(({date,value,publishedAt})=>({date,value,publishedAt}));
  }
  const at=new Date(Date.parse(old.fetchedAt)+60000).toISOString();

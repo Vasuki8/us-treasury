@@ -2,6 +2,7 @@
 // docs/yields-source-review.md. This does not license unrelated agency content.
 import {marketPolicies,matchesMarketFeed,assertMarketData} from './market-policy.mjs';
 import {normalizeVintageTimestamp} from '../src/vintages.js';
+import {SOMA_2014_GAP_URL,SOMA_2014_GAP_DATES} from '../src/ownership.js';
 const fiscalBase='https://api.fiscaldata.treasury.gov/services/api/fiscal_service/';
 const fiscalPaths=['v1/accounting/mts/mts_table_9','v1/accounting/mts/mts_table_2','v1/accounting/mts/mts_receipts_outlays_deficit_surplus','v2/accounting/od/debt_to_penny'];
 const fiscalDerived=['budgetDeficit','primaryDeficit','receiptsTtm','outlaysTtm','netInterestTtm','primaryDeficitTtm','interestRevenueRatio'];
@@ -48,7 +49,7 @@ export function matchesResearchFeed(value,feed){
     if(feed==='bea-contributions')return url.href==='https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt';
     if(feed==='fed-z1')return !url.search&&['https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip','https://www.federalreserve.gov/releases/z1/default.htm'].includes(url.href);
     if(feed==='fed-z1-values')return url.href==='https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip';
-    if(feed==='nyfed-soma')return url.href==='https://markets.newyorkfed.org/api/soma/summary.json';
+    if(feed==='nyfed-soma')return ['https://markets.newyorkfed.org/api/soma/summary.json',SOMA_2014_GAP_URL].includes(url.href);
     if(feed==='treasury-mts-fiscal')return fiscalPaths.some(part=>url.origin+url.pathname===fiscalBase+part);
     if(feed==='fiscal-public-debt')return url.origin+url.pathname===fiscalBase+fiscalPaths[3];
     if(feed==='fiscal-table9')return url.origin+url.pathname===fiscalBase+fiscalPaths[0];
@@ -66,9 +67,16 @@ export function matchesResearchFeed(value,feed){
 function assertOwnershipObservationReceipts(source){
   if(!source)return;
   const fail=()=>{throw new Error('Invalid ownership observation source provenance');};
+  let supplementalUsed=false;
   for(const [id,item]of Object.entries(source.series??{})){
     const rows=item.observations??[];
     if(!Array.isArray(rows))fail();
+    const alternate=rows.some(row=>row.sourceUrl===SOMA_2014_GAP_URL);
+    if(item.sourceUrl===SOMA_2014_GAP_URL)fail();
+    if(alternate){
+      if(id!=='somaTreasuryHoldings'||!Array.isArray(item.sourceUrls)||item.sourceUrls.length!==2||item.sourceUrls[0]!==item.sourceUrl||item.sourceUrls[1]!==SOMA_2014_GAP_URL||new Set(rows.map(row=>row.date)).size!==rows.length)fail();
+      supplementalUsed=true;
+    }else if(item.sourceUrls?.includes?.(SOMA_2014_GAP_URL))fail();
     if(item.inputProvenanceScope!=='observation-source-urls'){
       if(rows.some(row=>['sourceUrl','sourceUrls','sourceSha256','retrievedAt','inputProvenance'].some(key=>Object.hasOwn(row,key))))fail();
       continue; // Earlier immutable ownership captures use the original receipt scope.
@@ -77,11 +85,14 @@ function assertOwnershipObservationReceipts(source){
     if(!expected||item.sourceUrl!==expected||!rows.length||!Array.isArray(source.provenance))fail();
     let sourceTime;try{sourceTime=normalizeVintageTimestamp(source.fetchedAt);}catch{fail();}
     for(const row of rows){
-      if(row.sourceUrl!==expected||Object.hasOwn(row,'sourceUrls')||Object.hasOwn(row,'inputProvenance')||typeof row.sourceSha256!=='string'||!/^[a-f0-9]{64}$/.test(row.sourceSha256)||typeof row.retrievedAt!=='string'||row.publishedAt!==null)fail();
+      const supplemental=row.sourceUrl===SOMA_2014_GAP_URL;
+      if(supplemental&&(!SOMA_2014_GAP_DATES.includes(row.date)||typeof row.value!=='number'||!Number.isFinite(row.value)))fail();
+      if((row.sourceUrl!==expected&&!supplemental)||Object.hasOwn(row,'sourceUrls')||Object.hasOwn(row,'inputProvenance')||typeof row.sourceSha256!=='string'||!/^[a-f0-9]{64}$/.test(row.sourceSha256)||typeof row.retrievedAt!=='string'||row.publishedAt!==null)fail();
       let retrievedAt;try{retrievedAt=normalizeVintageTimestamp(row.retrievedAt);}catch{fail();}
-      if(retrievedAt>sourceTime||source.provenance.filter(receipt=>receipt.url===expected&&receipt.sha256===row.sourceSha256&&receipt.retrievedAt===row.retrievedAt).length!==1)fail();
+      if(retrievedAt>sourceTime||source.provenance.filter(receipt=>receipt.url===row.sourceUrl&&receipt.sha256===row.sourceSha256&&receipt.retrievedAt===row.retrievedAt).length!==1)fail();
     }
   }
+  if(!supplementalUsed&&source.provenance?.some(receipt=>receipt.url===SOMA_2014_GAP_URL))fail();
 }
 export function assertResearchData(snapshot){
   assertMarketData(snapshot.sources?.marketFunctioning);

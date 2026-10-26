@@ -36,6 +36,7 @@ export function ownershipPage(source=dataStatus.sources.ownership) {
 }
 
 const COLUMNS=['dataset','series_code','holder','period','value','unit','source_unit','valuation','change_from_exact_prior','prior_period','observation_type','data_status','source_name','source_title','source_url','retrieved_at','release_date','vintage_release_date','release_date_basis','methodology','attribution','terms_url','redistribution_notice','limitations','provenance'];
+import {SOMA_2014_GAP_NOTE} from './ownership.js';
 export function ownershipCsv(source,{z1Periods,somaPeriods}={}) {
   if(z1Periods!==undefined&&(!Number.isSafeInteger(z1Periods)||z1Periods<1))throw new RangeError('Z.1 CSV period count must be a positive integer.');
   if(somaPeriods!==undefined&&(!Number.isSafeInteger(somaPeriods)||somaPeriods<1))throw new RangeError('SOMA CSV period count must be a positive integer.');
@@ -57,12 +58,14 @@ export function ownershipCsv(source,{z1Periods,somaPeriods}={}) {
     const common={...base,dataset:'SOMA Holdings',source_unit:'USD',source_name:'Federal Reserve Bank of New York',source_title:'SOMA Holdings',source_url:somaCapture?.url??SOMA_URL,retrieved_at:somaCapture?.retrievedAt??source.fetchedAt,release_date:null,vintage_release_date:null,release_date_basis:'Actual historical publication dates are unknown; period is the explicitly posted as-of date.',attribution:soma.attribution??source.attribution,terms_url:soma.termsUrl??source.termsUrl??TERMS,redistribution_notice:soma.redistributionNotice??source.redistributionNotice,provenance:JSON.stringify((source.provenance??[]).filter(item=>item.url===SOMA_URL))};
     for(const period of somaPeriods===undefined?soma.history:soma.history.slice(-somaPeriods)){
       const priorDate=new Date(Date.parse(`${period.date}T00:00:00Z`)-7*86400000).toISOString().slice(0,10),prior=soma.history.find(item=>item.date===priorDate);
-      const frnNote=period.frnStatus==='not-issued'?' FRNs were not yet issued before 2014-01-31; the source blank is retained as null and excluded from the sum of then-existing Treasury classes.':period.frnStatus==='unavailable'?' The FRN field is unavailable after issuance; Treasury principal and adjusted principal remain unavailable, not zero.':'';
+      const sourceUrl=period.sourceUrl??SOMA_URL,periodProvenance=(source.provenance??[]).filter(item=>item.url===sourceUrl),periodCapture=periodProvenance[0];
+      const periodSource={source_url:sourceUrl,retrieved_at:periodCapture?.retrievedAt??source.fetchedAt,provenance:JSON.stringify(periodProvenance)};
+      const frnNote=period.frnStatus==='not-issued'?' FRNs were not yet issued before 2014-01-31; the source blank is retained as null and excluded from the sum of then-existing Treasury classes.':period.frnStatus==='unavailable'?' The FRN field is unavailable after issuance; Treasury principal and adjusted principal remain unavailable, not zero.':period.frnStatus==='alternate-source'?` ${SOMA_2014_GAP_NOTE}`:'';
       for(const [key,code,label,kind,methodology] of [
         ['principal','SOMA:treasury-par','Treasury principal','Calculated metric','Meridian sum of official bills + notesbonds + frn + tips in USD / 1e9; excludes agency debt, MBS and CMBS.'],
         ['inflationCompensation','SOMA:tips-inflation-compensation','Accrued TIPS inflation compensation','Official observation','Official tipsInflationCompensation in USD / 1e9.'],
         ['adjustedPrincipal','SOMA:treasury-adjusted-par','Adjusted Treasury principal','Calculated metric','Meridian sum of Treasury par plus reported TIPS inflation compensation in USD / 1e9; this modification is not attributed to the New York Fed.'],
-      ])rows.push({...common,series_code:code,holder:label,period:period.date,value:period[key],valuation:key==='principal'?'Par':key==='inflationCompensation'?'Accrued inflation adjustment':'Par plus accrued TIPS inflation compensation',change_from_exact_prior:finite(period[key])&&finite(prior?.[key])?period[key]-prior[key]:null,prior_period:prior?.date,observation_type:kind,methodology:methodology+frnNote});
+      ])rows.push({...common,...periodSource,series_code:code,holder:label,period:period.date,value:period[key],valuation:key==='principal'?'Par':key==='inflationCompensation'?'Accrued inflation adjustment':'Par plus accrued TIPS inflation compensation',change_from_exact_prior:finite(period[key])&&finite(prior?.[key])?period[key]-prior[key]:null,prior_period:prior?.date,observation_type:kind,methodology:methodology+frnNote});
     }
   }
   return tabularCsv(COLUMNS,rows.map(row=>COLUMNS.map(key=>row[key])));
