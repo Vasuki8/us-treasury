@@ -24,6 +24,10 @@ const TOTALS = ['FL313161105.Q','FL893061105.Q','LM903061103.Q'];
 const fail = detail => { throw new Error(`Official ownership data: ${detail}`); };
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 const sum = values => values.reduce((total, value) => total + value, 0);
+const FRN_FIRST_ISSUE = '2014-01-31';
+const FRN_NOT_ISSUED = 'Treasury FRNs were not yet issued before 2014-01-31. The blank source FRN field remains null and the not-yet-existing instrument is excluded from this calculated Treasury sum.';
+const FRN_UNAVAILABLE = 'The source FRN field is blank after Treasury FRN issuance began; FRN holdings and calculated Treasury principal/adjusted principal are unavailable, not zero.';
+const SOMA_COVERAGE = 'Full native SOMA weekly history retains actual posted dates. Blank FRN inputs remain null: before first issuance on 2014-01-31 the instrument is excluded with an explicit qualification; from that date a blank FRN makes Treasury totals unavailable. TIPS inflation compensation remains separately reported. Original historical publication times are unknown.';
 function number(raw, { missing = false } = {}) {
   if (missing && ['ND','NA','N/A','',null,undefined].includes(raw)) return null;
   if (raw === null || raw === undefined || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(String(raw)) || !Number.isFinite(Number(raw))) fail('missing or invalid numeric holding');
@@ -86,16 +90,19 @@ export function parseSomaOwnership(payload, { now = new Date() } = {}) {
     const period=date(row.asOfDate);
     if (seen.has(period)) fail('duplicate SOMA date');
     seen.add(period);return {period,row};
-  }).filter(({period})=>period<=cutoff).sort((a,b)=>a.period.localeCompare(b.period)).slice(-104);
+  }).filter(({period})=>period<=cutoff).sort((a,b)=>a.period.localeCompare(b.period));
   if (!eligible.length) fail('no SOMA observations');
   const history=eligible.map(({period,row})=>{
-    const components=Object.fromEntries(['bills','notesbonds','tips','frn','tipsInflationCompensation'].map(key=>[key,number(row[key])/1e9]));
+    const components=Object.fromEntries(['bills','notesbonds','tips','frn','tipsInflationCompensation'].map(key=>[key,key==='frn'&&row[key]===''?null:number(row[key])/1e9]));
     if (['bills','notesbonds','tips','frn'].some(key=>components[key]<0)) fail('negative SOMA principal');
-    const principal=sum(['bills','notesbonds','tips','frn'].map(key=>components[key]));
-    return {date:period,principal,inflationCompensation:components.tipsInflationCompensation,adjustedPrincipal:principal+components.tipsInflationCompensation,components};
+    const frnStatus=components.frn===null?(period<FRN_FIRST_ISSUE?'not-issued':'unavailable'):null;
+    const principal=frnStatus==='unavailable'?null:sum(['bills','notesbonds','tips','frn'].filter(key=>components[key]!==null).map(key=>components[key]));
+    return {date:period,principal,inflationCompensation:components.tipsInflationCompensation,adjustedPrincipal:principal===null?null:principal+components.tipsInflationCompensation,components,...(frnStatus?{frnStatus}:{})};
   });
   const latest=history.at(-1);
-  const warnings=history.filter(row=>new Date(`${row.date}T00:00:00Z`).getUTCDay()!==3).map(row=>`SOMA explicitly posted exception date ${row.date}; usual Wednesday timing is not substituted for that observation.`);
+  const exceptions=history.filter(row=>new Date(`${row.date}T00:00:00Z`).getUTCDay()!==3).map(row=>row.date);
+  const warnings=exceptions.length?[`SOMA explicitly posted exception dates ${exceptions.join(', ')}; usual Wednesday timing is not substituted for those observations.`]:[];
+  if(history.some(row=>row.frnStatus==='unavailable'))warnings.push(FRN_UNAVAILABLE);
   return {asOf:latest.date,unit:'USD billions',principal:latest.principal,inflationCompensation:latest.inflationCompensation,adjustedPrincipal:latest.adjustedPrincipal,history,warnings};
 }
 
@@ -132,7 +139,7 @@ export async function collectOwnership({ fetchImpl=globalThis.fetch, now=new Dat
   for (const [id,code] of [['foreignTreasuryHoldings','LM263061105.Q'],['fedTreasuryHoldings','LM713061103.Q']]) {
     series[id]={observations:z1.history.map(row=>{const value=row.sectors.find(item=>item.code===code).value;return {date:row.date,value:value===null?null:value/1000,publishedAt:null,...z1Receipt};}),sourceUrl:Z1_URL,sourceIds:[code],dataStatus:'official',inputProvenanceScope:'observation-source-urls',calculation:'Official Z.1 quarter-end sector position in USD millions / 1e6; reported source valuation, not seasonally adjusted',coverageNote:code==='LM713061103.Q'?`${coverageNote} ${fedMethodNote}`:coverageNote,attribution:'Source: Board of Governors of the Federal Reserve System, Financial Accounts of the United States (Z.1), F3.2.s Treasury securities.'};
   }
-  series.somaTreasuryHoldings={observations:soma.history.map(row=>({date:row.date,value:row.adjustedPrincipal/1000,publishedAt:null,...somaReceipt})),sourceUrl:SOMA_URL,sourceTitle:'SOMA Holdings',sourceIds:['SOMA:treasury-adjusted-par'],dataStatus:'calculated',inputProvenanceScope:'observation-source-urls',calculation:'Sum SOMA bills + notesbonds + frn + tips + tipsInflationCompensation in USD / 1e12; excludes agency debt, MBS and CMBS',attribution,termsUrl:SOMA_TERMS_URL,redistributionNotice};
+  series.somaTreasuryHoldings={observations:soma.history.map(row=>({date:row.date,value:row.adjustedPrincipal===null?null:row.adjustedPrincipal/1000,publishedAt:null,...somaReceipt,...(row.frnStatus?{footnotes:[row.frnStatus==='not-issued'?FRN_NOT_ISSUED:FRN_UNAVAILABLE]}:{})})),sourceUrl:SOMA_URL,sourceTitle:'SOMA Holdings',sourceIds:['SOMA:treasury-adjusted-par'],dataStatus:'calculated',inputProvenanceScope:'observation-source-urls',calculation:'Sum SOMA bills + notesbonds + frn + tips + tipsInflationCompensation in USD / 1e12; excludes agency debt, MBS and CMBS. Before first FRN issuance on 2014-01-31, a blank FRN input remains null and the not-yet-existing instrument is excluded; later blank FRNs make the sum unavailable.',coverageNote:SOMA_COVERAGE,attribution,termsUrl:SOMA_TERMS_URL,redistributionNotice};
   const responses=[archive,page,somaResponse];
   return {id:'ownership',fetchedAt:responses.map(response=>response.retrievedAt).sort().at(-1),series,z1,soma,attribution,termsUrl:SOMA_TERMS_URL,redistributionNotice,
     provenance:responses.map(({bytes,text,...metadata})=>metadata),warnings:[...z1.warnings,...soma.warnings],
@@ -144,6 +151,7 @@ export async function collectOwnership({ fetchImpl=globalThis.fetch, now=new Dat
       'Z.1 current-release data can revise earlier quarters. This capture records the current release date and retrieval provenance; original historical release dates and uncaptured vintages remain unknown.',
       coverageNote,
       fedMethodNote,
+      SOMA_COVERAGE,
       'Household holdings are an official residual and can be negative; dealer and hedge-fund positions retain their net definitions. Published historical zeros are retained source values, not proof of unchanged sector reporting coverage or measured absence of holdings.',
     ]};
 }

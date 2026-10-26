@@ -83,3 +83,33 @@ test('ownership CSV scopes numerical and release receipts to each dataset',()=>{
 test('ownership CSV rejects an invalid period count instead of silently exporting a different scope',()=>{
   for(const z1Periods of [0,-1,1.5,NaN,Infinity,'36'])assert.throws(()=>api().ownershipCsv(source(),{z1Periods}),/period count/i);
 });
+
+test('SOMA CSV scope retains exact preceding-week comparisons outside its exported observations',()=>{
+  const data=source(),original=JSON.stringify(data),output=rows(api().ownershipCsv(data,{somaPeriods:1}));
+  const soma=output.filter(row=>row.dataset==='SOMA Holdings');
+  assert.equal(soma.length,3);assert.ok(soma.every(row=>row.period==='2026-10-14'&&row.prior_period==='2026-10-07'));
+  assert.equal(soma.find(row=>row.series_code==='SOMA:treasury-adjusted-par').change_from_exact_prior,'-1');
+  assert.equal(output.filter(row=>row.dataset==='Z.1').length,11);
+  assert.equal(rows(api().ownershipCsv(data)).filter(row=>row.dataset==='SOMA Holdings').length,6);
+  for(const somaPeriods of [0,-1,1.5,NaN,Infinity,'104'])assert.throws(()=>api().ownershipCsv(data,{somaPeriods}),/period count/i);
+  data.soma.history[0].date='2026-10-06';
+  const gap=rows(api().ownershipCsv(data,{somaPeriods:1})).find(row=>row.series_code==='SOMA:treasury-adjusted-par');
+  assert.equal(gap.prior_period,'');assert.equal(gap.change_from_exact_prior,'');
+  data.soma.history[0].date='2026-10-07';assert.equal(JSON.stringify(data),original);
+});
+
+test('SOMA historical CSV distinguishes pre-issuance FRNs from unavailable holdings without inventing observed zeros',()=>{
+  const data=source();
+  data.soma.history.unshift(
+    {date:'2014-01-22',principal:24,inflationCompensation:1,adjustedPrincipal:25,frnStatus:'not-issued',components:{bills:4,notesbonds:18,tips:2,frn:null,tipsInflationCompensation:1}},
+    {date:'2014-02-05',principal:null,inflationCompensation:1,adjustedPrincipal:null,frnStatus:'unavailable',components:{bills:4,notesbonds:18,tips:2,frn:null,tipsInflationCompensation:1}},
+  );
+  const soma=rows(api().ownershipCsv(data)).filter(row=>row.dataset==='SOMA Holdings');
+  for(const row of soma.filter(row=>row.period==='2014-01-22'))assert.match(row.methodology,/FRN.*not.*issued.*blank.*null.*excluded/i);
+  const missing=soma.filter(row=>row.period==='2014-02-05');
+  for(const row of missing)assert.match(row.methodology,/FRN.*unavailable.*not.*zero/i);
+  assert.equal(missing.find(row=>row.series_code==='SOMA:treasury-par').value,'');
+  assert.equal(missing.find(row=>row.series_code==='SOMA:treasury-adjusted-par').value,'');
+  assert.equal(missing.find(row=>row.series_code==='SOMA:tips-inflation-compensation').value,'1');
+  assert.ok(soma.filter(row=>row.period>='2026-01-01').every(row=>!row.methodology.includes('FRN field')));
+});

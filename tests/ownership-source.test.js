@@ -122,7 +122,7 @@ test('SOMA sums only Treasury categories and separately identifies TIPS inflatio
 
 test('SOMA refuses missing components, duplicate/invalid dates and manufactured zeros', () => {
   for(const alter of [
-    data=>{data.soma.summary[0].frn='';},
+    data=>{delete data.soma.summary[0].frn;},
     data=>{data.soma.summary[0].tipsInflationCompensation=null;},
     data=>{data.soma.summary[1].asOfDate='2026-10-07';},
     data=>{data.soma.summary[1].asOfDate='2026-02-30';},
@@ -138,15 +138,76 @@ test('SOMA retains explicitly published holiday exception dates instead of inven
   assert.ok(parsed.warnings.some(text=>/exception|Wednesday/i.test(text)));
 });
 
-test('SOMA still retains only 104 eligible observations while Z1 expands', () => {
+test('SOMA retains all native eligible observations rather than only the latest 104', () => {
   const row=soma().soma.summary[0],start=Date.parse('2024-01-03T00:00:00Z');
   const summary=Array.from({length:110},(_,index)=>({...row,asOfDate:new Date(start+index*7*86400000).toISOString().slice(0,10)}));
   summary.push({...row,asOfDate:'2027-01-06'});
   const parsed=api().parseSomaOwnership({soma:{summary}},{now});
-  assert.equal(parsed.history.length,104);
-  assert.equal(parsed.history[0].date,'2024-02-14');
+  assert.equal(parsed.history.length,110);
+  assert.equal(parsed.history[0].date,'2024-01-03');
   assert.equal(parsed.history.at(-1).date,'2026-02-04');
   assert.ok(parsed.history.every(row=>row.adjustedPrincipal===345));
+});
+
+test('SOMA preserves blank FRN inputs and qualifies pre-issuance exclusion without creating observed zeros', () => {
+  const row=soma().soma.summary[0];
+  const summary=['2003-07-09','2014-01-29','2014-01-31','2014-05-14'].map(asOfDate=>({...row,asOfDate,frn:''}));
+  summary.push({...row,asOfDate:'2014-05-21',frn:'0'});
+  const parsed=api().parseSomaOwnership({soma:{summary}},{now});
+  assert.equal(parsed.history.length,5);
+  for(const item of parsed.history.slice(0,2)){
+    assert.equal(item.components.frn,null);
+    assert.equal(item.frnStatus,'not-issued');
+    assert.equal(item.principal,330);
+    assert.equal(item.inflationCompensation,5);
+    assert.equal(item.adjustedPrincipal,335);
+  }
+  for(const item of parsed.history.slice(2,4)){
+    assert.equal(item.components.frn,null);
+    assert.equal(item.frnStatus,'unavailable');
+    assert.equal(item.principal,null);
+    assert.equal(item.adjustedPrincipal,null);
+    assert.equal(item.inflationCompensation,5);
+  }
+  assert.equal(parsed.history.at(-1).components.frn,0);
+  assert.equal(parsed.history.at(-1).adjustedPrincipal,335);
+  assert.ok(!Object.hasOwn(parsed.history.at(-1),'frnStatus'));
+  assert.match(parsed.warnings.join(' '),/FRN.*unavailable|unavailable.*FRN/i);
+  const currentMissing=api().parseSomaOwnership({soma:{summary:[{...row,frn:''}]}},{now});
+  assert.equal(currentMissing.principal,null);
+  assert.equal(currentMissing.adjustedPrincipal,null);
+  assert.equal(currentMissing.history[0].frnStatus,'unavailable');
+});
+
+test('SOMA validates malformed old inputs beyond the former retention boundary and rejects invalid FRN tokens', () => {
+  const row=soma().soma.summary[0],start=Date.parse('2003-07-09T00:00:00Z');
+  const summary=Array.from({length:110},(_,index)=>({...row,asOfDate:new Date(start+index*7*86400000).toISOString().slice(0,10),frn:'0'}));
+  summary[0].tips='bad';
+  assert.throws(()=>api().parseSomaOwnership({soma:{summary}},{now}),/missing|invalid/i);
+  for(const frn of [null,undefined,'ND','N/A',' ','oops','-1']){
+    assert.throws(()=>api().parseSomaOwnership({soma:{summary:[{...row,asOfDate:'2003-07-09',frn}]}},{now}),/negative|missing|invalid/i);
+  }
+  const signed=api().parseSomaOwnership({soma:{summary:[{...row,frn:'0',tipsInflationCompensation:'-5000000000'}]}},{now});
+  assert.equal(signed.inflationCompensation,-5);
+  assert.equal(signed.adjustedPrincipal,325);
+});
+
+test('SOMA long-history observations retain numerical-feed receipts, null totals and FRN interpretation footnotes', async()=>{
+  const row=soma().soma.summary[0],somaData={soma:{summary:[{...row,asOfDate:'2003-07-09',frn:''},{...row,asOfDate:'2014-02-05',frn:''},...soma().soma.summary]}};
+  const source=await api().collectOwnership({now,fetchImpl:fixtures({somaData})}),item=source.series.somaTreasuryHoldings;
+  const [pre,unknown]=item.observations;
+  assert.equal(pre.value,0.335);assert.equal(unknown.value,null);
+  assert.match(pre.footnotes.join(' '),/not.*issued|before.*issuance/i);
+  assert.match(unknown.footnotes.join(' '),/FRN.*unavailable|unavailable.*FRN/i);
+  assert.match(item.coverageNote,/2014-01-31/);
+  assert.match(item.coverageNote,/blank.*null|missing.*null/i);
+  const receipt=source.provenance.find(row=>row.url===api().SOMA_URL);
+  for(const observation of item.observations){
+    assert.equal(observation.sourceUrl,api().SOMA_URL);
+    assert.equal(observation.sourceSha256,receipt.sha256);
+    assert.equal(observation.retrievedAt,receipt.retrievedAt);
+    assert.equal(observation.publishedAt,null);
+  }
 });
 
 test('ownership collector captures exact feed provenance and carries NYFed redistribution conditions in series metadata', async () => {
