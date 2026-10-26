@@ -1,6 +1,6 @@
 # Unemployment, CPI and federal debt historical coverage
 
-Reviewed October 25, 2026 in Toronto. The user requested longer unemployment, CPI and federal debt histories while preserving the current UI and colors. This extends existing measurements and already admitted API endpoints; it introduces no new provider, credentials, indicator, dependency or publication-vintage claim.
+Reviewed October 25–26, 2026 in Toronto. The user requested longer unemployment, CPI and federal debt histories while preserving the current UI and colors. This extends existing measurements and already admitted API endpoints; it introduces no new provider, credentials, indicator, dependency or publication-vintage claim.
 
 ## BLS scope and interpretation
 
@@ -42,4 +42,28 @@ Tests cover bootstrap seams, current nulls, primary/backup transitions, year rol
 
 Local verification passed 1,710 complete-suite tests, followed by 36 fresh archive/admission/registered-check regressions. Static build and HTTP smoke checks passed all 163 assets. Independent review confirmed the original 149 captures remain exact within the 153-capture local state, with normal debt packages round-tripping and sparse observations visible. An initial five-failure CLI run exposed outdated provider mocks; the fixture boundary was corrected without removing its publication assertions, then all ten CLI tests and the complete suite passed. Registered-check fixtures rebuild a genuine fresh-window shape so a longer previous state cannot masquerade as the single-request primitive.
 
-Live registered BLS coverage and final deployment evidence are recorded after the trusted cloud capture; configuring a key and passing fixtures alone do not establish a successful historical capture.
+## Verified official capture
+
+The trusted [cloud refresh](https://github.com/Vasuki8/us-treasury/actions/runs/40270839985) captured BLS at `2026-10-26T04:47:39.751Z` and published the admitted snapshot as `555b475a6e1b8e2852c0044213d9976b4b3e23a2`. Its ten genuine BLS receipts comprise one current-family v1 response and nine registered historical v2 responses. No key was read or stored locally. All series end in September 2026:
+
+| Native measurement | Dated monthly rows | Usable numeric rows | First reference month |
+| --- | ---: | ---: | --- |
+| Unemployment | 945 | 944 | January 1948 |
+| Headline CPI index, NSA | 1,365 | 1,364 | January 1913 |
+| Headline CPI index, SA | 957 | 956 | January 1947 |
+| Core CPI index, NSA | 837 | 836 | January 1957 |
+| Core CPI index, SA | 837 | 836 | January 1957 |
+
+October 2025 remains source-missing in all five inputs. Annual, monthly and momentum calculations retain the resulting unavailable comparisons. There are no fabricated values for that month or for initial comparison periods. First usable annual headline/core rates are January 1914/January 1958; first usable monthly headline/core rates are February 1947/February 1957.
+
+Independent verification recomputed every CPI rate/momentum and its baseline, with no errors across 888 seam-period checks. All 13 extended outputs preserve the complete monthly reference grid and every previously retained date. The other 18 BLS observation arrays, source identifiers, calculations and endpoint metadata are exact matches to the pre-cloud state.
+
+The resulting archive has 156 captures. Both the original 149-capture prefix at `c002f57` and the 153-capture pre-cloud prefix at `4b4c761` remain identical, including hydrated objects and replay. Gross/public debt and debt breakdown retain all 2,462 original overlapping rows without property changes, adding 5,957 earlier dates. All 8,419 fiscal gross raw amounts match the standalone Treasury series; all 5,460 usable compositions reconcile within USD 1. The 2,958 documented historical gaps and the single existing accounting quarantine remain null.
+
+Actual All-history charts and CSV retain every requested row for unemployment, headline/core CPI and debt. All 13 individual BLS All-history packages round-trip byte-for-byte, and a four-series full-history unemployment/headline CPI/core CPI/monthly CPI comparison does so at 8,865,271 bytes, below the existing 12 MiB cap. Early custom CPI/public-debt packages and normal one-year gross/public-debt packages also round-trip with identical CSV. All four actual published-CPI packages preserve their publication evidence without live API capture leakage. The fresh-window primitive reconstructed from actual source values passes the unchanged weekly registered checker for all 31 outputs with one receipt. All debt CSV can still be exported separately; larger portable packages continue to enforce the existing size cap without truncating history.
+
+The refreshed-data job passed all 1,715 tests, build and the 163-asset HTTP smoke check before publication. The same snapshot then passed all 1,715 tests independently on Node 22 and Node 24, with both builds and 163-asset smoke checks succeeding. GitHub Pages deployed successfully at `2026-10-26T05:03:35Z`. A separate HTTPS check confirmed the [live application](https://vasuki8.github.io/us-treasury/) matches the exact local tested build across all 163 assets, including the source-history bundles. No stylesheet, theme token, layout or navigation file changed.
+
+The existing cloud maintenance workflow reported recovery for refresh/publication and deployment; only the separate DOL source incident remained open at the final check. The scheduled follow-up refresh guard also completed successfully. Evidence-only documentation follows the verified data commit; it does not alter the deployed application.
+
+The manual historical capture selected only BLS, Treasury and fiscal sources. Automatic/default all-source selection is unchanged. A separate DOL national feed returned HTML instead of its admitted XML and remains tracked by the existing [DOL failure alert](https://github.com/Vasuki8/us-treasury/issues/4); its older captured readings are preserved. This successful historical delivery does not establish DOL recovery.
