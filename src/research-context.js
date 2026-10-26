@@ -152,7 +152,10 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
   context.attachments=[attachment('yield-curve-overlays.csv',yieldCurvesCsv(sources.yields,state))];
  }
  if(state.page==='auctions')context.attachments=[attachment('auction-results.csv',auctionsCsv(sources.auctions,{securityType:state.auctionType,auctionId:state.auctionId})),attachment('auction-peers.csv',auctionsCsv(sources.auctions,{securityType:state.auctionType,auctionId:state.auctionId,benchmark:true}))];
- if(state.page==='ownership')context.attachments=[attachment('debt-ownership.csv',ownershipCsv(sources.ownership))];
+ if(state.page==='ownership'){
+  context.attachments=[attachment('debt-ownership.csv',ownershipCsv(sources.ownership,{z1Periods:36}))];
+  context.scope='Complete ownership source and full selected-series inputs are retained. The supplementary CSV contains the last 36 Z.1 observations matching the ownership page chart, with exact prior-quarter changes calculated from the full history, plus all retained SOMA observations. Ordinary Ownership CSV downloads retain all source periods. Current revised history and actual retrieval receipts do not reconstruct original publication vintages.';
+ }
  if(state.page==='macro')context.attachments=[attachment('macro-contributions.csv',macroContributionsCsv(sources.macroContributions))];
  if(state.page==='market'){
   context.attachments=[attachment('market-functioning.csv',marketFunctioningCsv(sources.marketFunctioning))];

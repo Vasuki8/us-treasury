@@ -46,3 +46,40 @@ test('every SOMA CSV row carries required attribution, title, terms and derivati
   assert.ok(soma.some(row=>row.series_code==='SOMA:tips-inflation-compensation'&&row.observation_type==='Official observation'));
   assert.equal(rows(api().ownershipCsv(undefined)).length,0);
 });
+
+test('scoped ownership CSV keeps the exact prior quarter outside its exported periods and all SOMA rows',()=>{
+  const data=source(),original=JSON.stringify(data),output=rows(api().ownershipCsv(data,{z1Periods:1}));
+  const z1=output.filter(row=>row.dataset==='Z.1');
+  assert.deepEqual([...new Set(z1.map(row=>row.period))],['2026-06-30']);
+  const fed=z1.find(row=>row.series_code==='LM713061103.Q');
+  assert.equal(fed.change_from_exact_prior,'1');assert.equal(fed.prior_period,'2026-03-31');
+  assert.equal(output.filter(row=>row.dataset==='SOMA Holdings').length,6);
+  assert.deepEqual([...new Set(rows(api().ownershipCsv(data)).filter(row=>row.dataset==='Z.1').map(row=>row.period))],['2026-03-31','2026-06-30']);
+  assert.equal(JSON.stringify(data),original);
+});
+
+test('ownership CSV keeps annual gaps, historical valuation qualifications and source limitations',()=>{
+  const data=source();
+  data.z1.history[0].date='1945-12-31';data.z1.history[1].date='1946-12-31';data.z1.asOf='1946-12-31';
+  data.z1.history[1].sectors[0].valuation='reported historical H.4.1 source basis (before 2012:Q1 fair-value methodology)';
+  data.limitations.push('Annual-end observations before 1952; quarterly from 1952. Central-bank historical source methods differ before 2012:Q1.');
+  const output=rows(api().ownershipCsv(data,{z1Periods:1})),fed=output.find(row=>row.series_code==='LM713061103.Q');
+  assert.equal(fed.change_from_exact_prior,'');assert.equal(fed.prior_period,'');
+  assert.match(fed.valuation,/H\.4\.1/);assert.match(fed.limitations,/Annual-end.*1952/);
+  assert.doesNotMatch(fed.methodology,/LM market values/);
+});
+
+test('ownership CSV scopes numerical and release receipts to each dataset',()=>{
+  const data=source(),release={url:'https://www.federalreserve.gov/releases/z1/default.htm',retrievedAt:'2026-10-22T02:39:16.050Z',sha256:'c'.repeat(64)};
+  data.provenance.splice(1,0,release);
+  const output=rows(api().ownershipCsv(data));
+  for(const row of output){
+    const expected=row.dataset==='Z.1'?[data.provenance[0],release]:[data.provenance[2]];
+    assert.deepEqual(JSON.parse(row.provenance),expected);
+    assert.equal(row.retrieved_at,row.dataset==='Z.1'?'2026-10-22T02:39:16.095Z':'2026-10-22T02:39:15.864Z');
+  }
+});
+
+test('ownership CSV rejects an invalid period count instead of silently exporting a different scope',()=>{
+  for(const z1Periods of [0,-1,1.5,NaN,Infinity,'36'])assert.throws(()=>api().ownershipCsv(source(),{z1Periods}),/period count/i);
+});

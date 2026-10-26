@@ -63,12 +63,12 @@ export function parseZ1Ownership(text, dictionary, { now = new Date() } = {}) {
     const period = quarter(row[0]);
     if (dates.has(period)) fail('duplicate Z1 quarter');
     dates.add(period); return { period, row };
-  }).filter(({period}) => period <= cutoff).sort((a,b) => a.period.localeCompare(b.period)).slice(-36);
+  }).filter(({period}) => period <= cutoff).sort((a,b) => a.period.localeCompare(b.period));
   if (!allRows.length) fail('no Z1 observations');
   const warnings=[];
   const history=allRows.map(({period,row}) => {
     const get = code => { const value = number(row[header.indexOf(code)],{missing:true}); return value === null ? null : value/1000; };
-    const sectors=CODES.map(([code,label]) => ({code,label,value:get(code),valuation:code.startsWith('LM')?'market value':'reported non-market basis',sourceDescription:definitions.get(code)[1]}));
+    const sectors=CODES.map(([code,label]) => ({code,label,value:get(code),valuation:code==='LM713061103.Q'&&period<'2012-03-31'?'reported historical H.4.1 source basis (before 2012:Q1 fair-value methodology)':code.startsWith('LM')?'market value':'reported non-market basis',sourceDescription:definitions.get(code)[1]}));
     const [liabilities,assets,valuationDiscrepancy]=TOTALS.map(get);
     const complete=[liabilities,assets,valuationDiscrepancy,...sectors.map(row=>row.value)].every(finite);
     if (complete && (Math.abs(sum(sectors.map(row=>row.value))-assets)>0.025 || Math.abs(liabilities-assets-valuationDiscrepancy)>0.025)) fail(`Z1 reconciliation at ${period}`);
@@ -124,19 +124,26 @@ export async function collectOwnership({ fetchImpl=globalThis.fetch, now=new Dat
   const attribution=`© ${now.getUTCFullYear()} Federal Reserve Bank of New York. Content from the New York Fed subject to the Terms of Use at newyorkfed.org.`;
   const redistributionNotice='SOMA Holdings content must remain available under the same permissions, conditions and restrictions in the New York Fed Terms of Use. Retain source attribution and terms link. Treasury-only aggregation and inclusion of TIPS inflation compensation are Meridian calculations, not New York Fed modifications or endorsement.';
   Object.assign(soma,{title:'SOMA Holdings',attribution,termsUrl:SOMA_TERMS_URL,redistributionNotice});
+  const z1Receipt={sourceUrl:archive.url,sourceSha256:archive.sha256,retrievedAt:archive.retrievedAt};
+  const somaReceipt={sourceUrl:somaResponse.url,sourceSha256:somaResponse.sha256,retrievedAt:somaResponse.retrievedAt};
+  const coverageNote='Full native Z.1 history: annual year-end observations in 1945–1951; quarterly from 1952. Unreported quarters and missing values are not filled. Current revised vintage; historical original publication dates are unknown.';
+  const fedMethodNote='Central-bank stocks use the historical H.4.1 source basis before 2012:Q1 and fair-value reports from 2012:Q1; no historical revaluation is synthesized.';
   const series={};
   for (const [id,code] of [['foreignTreasuryHoldings','LM263061105.Q'],['fedTreasuryHoldings','LM713061103.Q']]) {
-    series[id]={observations:z1.history.map(row=>{const value=row.sectors.find(item=>item.code===code).value;return {date:row.date,value:value===null?null:value/1000,publishedAt:null};}),sourceUrl:Z1_URL,sourceIds:[code],dataStatus:'official',calculation:'Official Z.1 quarter-end sector position in USD millions / 1e6; market valuation, not seasonally adjusted',attribution:'Source: Board of Governors of the Federal Reserve System, Financial Accounts of the United States (Z.1), F3.2.s Treasury securities.'};
+    series[id]={observations:z1.history.map(row=>{const value=row.sectors.find(item=>item.code===code).value;return {date:row.date,value:value===null?null:value/1000,publishedAt:null,...z1Receipt};}),sourceUrl:Z1_URL,sourceIds:[code],dataStatus:'official',inputProvenanceScope:'observation-source-urls',calculation:'Official Z.1 quarter-end sector position in USD millions / 1e6; reported source valuation, not seasonally adjusted',coverageNote:code==='LM713061103.Q'?`${coverageNote} ${fedMethodNote}`:coverageNote,attribution:'Source: Board of Governors of the Federal Reserve System, Financial Accounts of the United States (Z.1), F3.2.s Treasury securities.'};
   }
-  series.somaTreasuryHoldings={observations:soma.history.map(row=>({date:row.date,value:row.adjustedPrincipal/1000,publishedAt:null})),sourceUrl:SOMA_URL,sourceTitle:'SOMA Holdings',sourceIds:['SOMA:treasury-adjusted-par'],dataStatus:'calculated',calculation:'Sum SOMA bills + notesbonds + frn + tips + tipsInflationCompensation in USD / 1e12; excludes agency debt, MBS and CMBS',attribution,termsUrl:SOMA_TERMS_URL,redistributionNotice};
+  series.somaTreasuryHoldings={observations:soma.history.map(row=>({date:row.date,value:row.adjustedPrincipal/1000,publishedAt:null,...somaReceipt})),sourceUrl:SOMA_URL,sourceTitle:'SOMA Holdings',sourceIds:['SOMA:treasury-adjusted-par'],dataStatus:'calculated',inputProvenanceScope:'observation-source-urls',calculation:'Sum SOMA bills + notesbonds + frn + tips + tipsInflationCompensation in USD / 1e12; excludes agency debt, MBS and CMBS',attribution,termsUrl:SOMA_TERMS_URL,redistributionNotice};
   const responses=[archive,page,somaResponse];
   return {id:'ownership',fetchedAt:responses.map(response=>response.retrievedAt).sort().at(-1),series,z1,soma,attribution,termsUrl:SOMA_TERMS_URL,redistributionNotice,
     provenance:responses.map(({bytes,text,...metadata})=>metadata),warnings:[...z1.warnings,...soma.warnings],
     limitations:[
-      'Z.1 sectors are quarter-end positions. LM series are market values; FL sector positions retain their reported non-market basis. The instrument valuation discrepancy reconciles reported assets and liabilities; neither is substituted for MSPD par debt.',
+      'Z.1 sectors are quarter-end positions. LM source series carry market-value classifications, with the pre-2012 central-bank source basis qualified by period; FL sector positions retain their reported non-market basis. The instrument valuation discrepancy reconciles reported assets and liabilities; neither is substituted for MSPD par debt.',
       'SOMA is a separately dated weekly Wednesday Treasury par measure with TIPS inflation compensation shown separately. It is not added to quarterly Z.1 central-bank market-value holdings.',
       'Holdings changes can reflect valuation, maturities, reclassifications, reporting revisions and transactions. Position changes are not automatically purchases or sales.',
       'TIC country holdings are not ingested pending a source-specific commercial reuse review. Z.1 rest-of-world holdings provide aggregate foreign coverage. TIC country figures can reflect custodial locations rather than ultimate owners.',
       'Z.1 current-release data can revise earlier quarters. This capture records the current release date and retrieval provenance; original historical release dates and uncaptured vintages remain unknown.',
+      coverageNote,
+      fedMethodNote,
+      'Household holdings are an official residual and can be negative; dealer and hedge-fund positions retain their net definitions. Published historical zeros are retained source values, not proof of unchanged sector reporting coverage or measured absence of holdings.',
     ]};
 }

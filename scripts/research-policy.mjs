@@ -1,6 +1,7 @@
 // Dataset-specific admissions. Evidence: docs/fiscal-source-review.md,
 // docs/yields-source-review.md. This does not license unrelated agency content.
 import {marketPolicies,matchesMarketFeed,assertMarketData} from './market-policy.mjs';
+import {normalizeVintageTimestamp} from '../src/vintages.js';
 const fiscalBase='https://api.fiscaldata.treasury.gov/services/api/fiscal_service/';
 const fiscalPaths=['v1/accounting/mts/mts_table_9','v1/accounting/mts/mts_table_2','v1/accounting/mts/mts_receipts_outlays_deficit_surplus','v2/accounting/od/debt_to_penny'];
 const fiscalDerived=['budgetDeficit','primaryDeficit','receiptsTtm','outlaysTtm','netInterestTtm','primaryDeficitTtm','interestRevenueRatio'];
@@ -62,8 +63,29 @@ export function matchesResearchFeed(value,feed){
   }catch{/* Unreviewed URLs remain rejected. */}
   return false;
 }
+function assertOwnershipObservationReceipts(source){
+  if(!source)return;
+  const fail=()=>{throw new Error('Invalid ownership observation source provenance');};
+  for(const [id,item]of Object.entries(source.series??{})){
+    const rows=item.observations??[];
+    if(!Array.isArray(rows))fail();
+    if(item.inputProvenanceScope!=='observation-source-urls'){
+      if(rows.some(row=>['sourceUrl','sourceUrls','sourceSha256','retrievedAt','inputProvenance'].some(key=>Object.hasOwn(row,key))))fail();
+      continue; // Earlier immutable ownership captures use the original receipt scope.
+    }
+    const expected=id==='somaTreasuryHoldings'?'https://markets.newyorkfed.org/api/soma/summary.json':['foreignTreasuryHoldings','fedTreasuryHoldings'].includes(id)?'https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip':null;
+    if(!expected||item.sourceUrl!==expected||!rows.length||!Array.isArray(source.provenance))fail();
+    let sourceTime;try{sourceTime=normalizeVintageTimestamp(source.fetchedAt);}catch{fail();}
+    for(const row of rows){
+      if(row.sourceUrl!==expected||Object.hasOwn(row,'sourceUrls')||Object.hasOwn(row,'inputProvenance')||typeof row.sourceSha256!=='string'||!/^[a-f0-9]{64}$/.test(row.sourceSha256)||typeof row.retrievedAt!=='string'||row.publishedAt!==null)fail();
+      let retrievedAt;try{retrievedAt=normalizeVintageTimestamp(row.retrievedAt);}catch{fail();}
+      if(retrievedAt>sourceTime||source.provenance.filter(receipt=>receipt.url===expected&&receipt.sha256===row.sourceSha256&&receipt.retrievedAt===row.retrievedAt).length!==1)fail();
+    }
+  }
+}
 export function assertResearchData(snapshot){
   assertMarketData(snapshot.sources?.marketFunctioning);
+  assertOwnershipObservationReceipts(snapshot.sources?.ownership);
   if((snapshot.sources?.macroContributions?.cpiCategoryEffects?.observations??[]).length)throw new Error('CPI effects observations require separate source admission');
   const contributionSource=snapshot.sources?.macroContributions;
   const subcomponents={gdpFixedInvestmentContribution:'gdpInvestmentContribution',gdpInventoriesContribution:'gdpInvestmentContribution',gdpConsumptionGoodsContribution:'gdpConsumptionContribution',gdpConsumptionServicesContribution:'gdpConsumptionContribution'};

@@ -36,14 +36,16 @@ export function ownershipPage(source=dataStatus.sources.ownership) {
 }
 
 const COLUMNS=['dataset','series_code','holder','period','value','unit','source_unit','valuation','change_from_exact_prior','prior_period','observation_type','data_status','source_name','source_title','source_url','retrieved_at','release_date','vintage_release_date','release_date_basis','methodology','attribution','terms_url','redistribution_notice','limitations','provenance'];
-export function ownershipCsv(source) {
+export function ownershipCsv(source,{z1Periods}={}) {
+  if(z1Periods!==undefined&&(!Number.isSafeInteger(z1Periods)||z1Periods<1))throw new RangeError('Z.1 CSV period count must be a positive integer.');
   if(!source?.z1?.history?.length)return tabularCsv(COLUMNS,[]);
-  const rows=[],provenance=JSON.stringify(source.provenance??[]),status=source.status==='ok'?'captured':'cached';
+  const rows=[],status=source.status==='ok'?'captured':'cached';
   const fed=capture(source,'/z1/current/z1_csv_files.zip'),somaCapture=capture(source,'/api/soma/summary.json');
-  const base={unit:'USD billions',data_status:status,limitations:(source.limitations??[]).join('\n'),provenance};
+  const base={unit:'USD billions',data_status:status,limitations:(source.limitations??[]).join('\n')};
+  const z1Provenance=(source.provenance??[]).filter(item=>item.url===FED_URL||item.url==='https://www.federalreserve.gov/releases/z1/default.htm');
   const z1=source.z1;
-  const z1Base={...base,dataset:'Z.1',source_unit:'USD millions',source_name:'Board of Governors of the Federal Reserve System',source_title:'Financial Accounts of the United States, F3.2.s Treasury securities',source_url:fed?.url??FED_URL,retrieved_at:fed?.retrievedAt??source.fetchedAt,vintage_release_date:z1.releaseDate,release_date_basis:'Current Z.1 vintage release date. Historical original publication dates are unknown.',attribution:'Source: Board of Governors of the Federal Reserve System, Financial Accounts of the United States (Z.1).',methodology:'Official reported position in USD millions / 1000. LM market values and FL reported non-market bases are kept distinct; changes are positions, not purchases or sales.'};
-  for(const period of z1.history){
+  const z1Base={...base,dataset:'Z.1',source_unit:'USD millions',source_name:'Board of Governors of the Federal Reserve System',source_title:'Financial Accounts of the United States, F3.2.s Treasury securities',source_url:fed?.url??FED_URL,retrieved_at:fed?.retrievedAt??source.fetchedAt,vintage_release_date:z1.releaseDate,release_date_basis:'Current Z.1 vintage release date. Historical original publication dates are unknown.',attribution:'Source: Board of Governors of the Federal Reserve System, Financial Accounts of the United States (Z.1).',methodology:'Official reported position in USD millions / 1000. Per-period reported valuation bases and historical-method qualifications are preserved; changes are positions, not purchases or sales.',provenance:JSON.stringify(z1Provenance)};
+  for(const period of z1Periods===undefined?z1.history:z1.history.slice(-z1Periods)){
     const parsed=new Date(`${period.date}T00:00:00Z`),priorDate=new Date(Date.UTC(parsed.getUTCFullYear(),parsed.getUTCMonth()-2,0)).toISOString().slice(0,10),prior=z1.history.find(item=>item.date===priorDate);
     const common={...z1Base,period:period.date,release_date:period.date===z1.asOf?z1.releaseDate:null};
     for(const sector of period.sectors??[]){const previous=prior?.sectors?.find(item=>item.code===sector.code)?.value;rows.push({...common,series_code:sector.code,holder:sector.label,value:sector.value,valuation:sector.valuation,change_from_exact_prior:finite(sector.value)&&finite(previous)?sector.value-previous:null,prior_period:prior?.date,observation_type:'Official observation'});}
@@ -51,7 +53,7 @@ export function ownershipCsv(source) {
   }
   const soma=source.soma;
   if(soma?.history?.length){
-    const common={...base,dataset:'SOMA Holdings',source_unit:'USD',source_name:'Federal Reserve Bank of New York',source_title:'SOMA Holdings',source_url:somaCapture?.url??SOMA_URL,retrieved_at:somaCapture?.retrievedAt??source.fetchedAt,release_date:null,vintage_release_date:null,release_date_basis:'Actual historical publication dates are unknown; period is the explicitly posted as-of date.',attribution:soma.attribution??source.attribution,terms_url:soma.termsUrl??source.termsUrl??TERMS,redistribution_notice:soma.redistributionNotice??source.redistributionNotice};
+    const common={...base,dataset:'SOMA Holdings',source_unit:'USD',source_name:'Federal Reserve Bank of New York',source_title:'SOMA Holdings',source_url:somaCapture?.url??SOMA_URL,retrieved_at:somaCapture?.retrievedAt??source.fetchedAt,release_date:null,vintage_release_date:null,release_date_basis:'Actual historical publication dates are unknown; period is the explicitly posted as-of date.',attribution:soma.attribution??source.attribution,terms_url:soma.termsUrl??source.termsUrl??TERMS,redistribution_notice:soma.redistributionNotice??source.redistributionNotice,provenance:JSON.stringify((source.provenance??[]).filter(item=>item.url===SOMA_URL))};
     for(const period of soma.history){
       const priorDate=new Date(Date.parse(`${period.date}T00:00:00Z`)-7*86400000).toISOString().slice(0,10),prior=soma.history.find(item=>item.date===priorDate);
       for(const [key,code,label,kind,methodology] of [
