@@ -95,3 +95,8 @@ test('endpoint clipping by an explicit domain is rejected and bands survive with
  const input={series:{sofr:{observations:[row('2026-01-01',null,1,2,3,4),row('2026-02-01',null,2,3,4,5)]}}};
  rendered(input,{preset:'all'},({all})=>{assert.equal(all.filter(node=>node.attributes.class?.includes('funding-band')&&node.attributes.d).length,2);assert.match(all.find(node=>node.className==='chart-readout').textContent,/Median —.*p1 2.00%/);});
 });
+
+test('historical funding readouts retain raw revision flags and source footnote meanings',()=>{
+ const input={series:{effr:{observations:[row('2020-03-02',1.59,1.5,1.58,1.6,1.65,{revisionIndicator:'r',footnoteId:1,footnotes:['Reduced reported volume.']})]}}};
+ rendered(input,{preset:'all'},({all,key})=>{key('Home');const readout=all.find(node=>node.className==='chart-readout');assert.match(readout.textContent,/Revision flag r.*Footnote 1.*Reduced reported volume/);},{id:'effr'});
+});

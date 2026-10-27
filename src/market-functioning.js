@@ -3,6 +3,18 @@ export const NY_FED_DATA_NOTICE = '© 2026 Federal Reserve Bank of New York. Con
 export const NY_FED_REFERENCE_RATE_NOTICE = 'The SOFR and EFFR data are subject to the Terms of Use posted at newyorkfed.org. The New York Fed is not responsible for publication of the SOFR and EFFR data by Meridian, does not endorse any particular republication, and has no liability for your use.';
 export const NY_FED_PRODUCT_NOTICE = 'Meridian is not affiliated with the New York Fed. The New York Fed does not sanction, endorse, or recommend any products or services offered by Meridian.';
 export const MARKET_FUNCTIONING_LIMITATION = 'These are partial indicators from different markets and reporting periods, not a definitive liquidity or default-risk score. Dealer data cover primary dealers rather than the whole market, may be revised, and are not audited by the New York Fed. Suppressed values remain missing. Fails can persist across days and involve both a delivery and a receipt; they are not unique defaults.';
+export const FUNDING_RATE_STARTS = Object.freeze({sofr:'2018-04-02',effr:'2016-03-01'});
+
+/** Published viewer footnotes; an identifier is not a publication timestamp. */
+export function fundingRateFootnotes(type,footnoteId,revisionIndicator) {
+  if (!['SOFR','EFFR'].includes(type) || !['','Y','r'].includes(revisionIndicator) || footnoteId !== undefined && ![1,2,3].includes(footnoteId)) throw new Error('Unreviewed New York Fed rate footnote or revision indicator');
+  const notes=[];
+  if (revisionIndicator) notes.push(`Source revision indicator ${revisionIndicator}: Revised.`);
+  if (footnoteId === 1) notes.push('Rate was calculated with reduced volume.');
+  if (footnoteId === 2) notes.push(`Rate was calculated using ${type === 'SOFR' ? 'survey' : 'brokered'} data; percentile statistics were not published.`);
+  if (footnoteId === 3) notes.push("Because of insufficient current data, the published rate is a republication of the prior day's rate; percentile and volume statistics were not published.");
+  return notes;
+}
 export const DEALER_METRICS = Object.freeze({
   dealerNetTreasury:{key:'PDPOSGST-TOT',measure:'Wednesday net position stock at fair value'},
   dealerRepo:{key:'PDSORA-UTSETTOT',measure:'Wednesday repurchase financing outstanding'},
@@ -28,7 +40,8 @@ export function fundingRateDifference(sofr = [], effr = []) {
   const secured = index(sofr), unsecured = index(effr);
   return [...new Set([...secured.keys(),...unsecured.keys()])].sort().map(date => {
     const left = secured.get(date), right = unsecured.get(date);
-    return {date,value:finite(left?.value) && finite(right?.value) ? clean((left.value-right.value)*100) : null,publishedAt:null,revisionIndicator:left?.revisionIndicator === 'Y' || right?.revisionIndicator === 'Y' ? 'Y' : ''};
+    const footnotes = [['SOFR',left],['EFFR',right]].flatMap(([type,input]) => (input?.footnotes??[]).map(note => `${type}: ${note}`));
+    return {date,value:finite(left?.value) && finite(right?.value) ? clean((left.value-right.value)*100) : null,publishedAt:null,revisionIndicator:left?.revisionIndicator === 'Y' || right?.revisionIndicator === 'Y' ? 'Y' : left?.revisionIndicator === 'r' || right?.revisionIndicator === 'r' ? 'r' : '',...(footnotes.length ? {footnotes} : {})};
   });
 }
 

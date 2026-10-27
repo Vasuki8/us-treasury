@@ -4,6 +4,8 @@ import {isIsoDate}from'./date-window.js';
 import {defaults}from'./router.js';
 import {viewRange}from'./workspace-context.js';
 import {MAX_CURRENT_ACCOUNT_GDP_HISTORY_QUARTERS,currentAccountGdpQuarterSpan}from'./current-account-gdp.js';
+import {DEALER_METRICS}from'./market-functioning.js';
+import {generatedFundingCsv}from'./market-functioning-page.js';
 import {canonicalJson,deepFreeze,researchJsonCopy,researchByteLength,researchId,researchName,researchTimestamp,MAX_RESEARCH_JSON_BYTES}from'./research-workspaces.js';
 
 const verified=new WeakSet(),classes=new Set(['level','count','amount','rate','growth','contribution','balance','change','unknown']);
@@ -106,6 +108,51 @@ function validateCurrentAccountInputs(source,{label='current-account inputs',ser
   }
  }
 }
+function validateFundingContext(context){
+ const profile=context.fundingDistributions;
+ if(!object(profile)||![1,2].includes(profile.version)||Object.keys(profile).some(key=>!(profile.version===1?['version','range']:['version','range','csvMode']).includes(key)))fail('funding distribution profile version');
+ validateRange(profile.range);
+ if(profile.version===1)return;
+ if(profile.csvMode!=='generated-full-retained-v1')fail('funding distribution generated CSV method');
+ if(context.attachments?.some(file=>file?.name?.toLowerCase()==='market-functioning.csv'))fail('funding generated CSV conflicts with a stored copy');
+ const source=context.moduleSources?.marketFunctioning,ids=new Set([...Object.keys(DEALER_METRICS),'sofr','effr','sofrEffrSpread']);
+ const invalid=detail=>fail(`funding retained market inputs: ${detail}`);
+ const text=(value,fields)=>{for(const key of fields)if(value[key]!=null&&typeof value[key]!=='string')invalid(`${key} must be text`);};
+ const strings=(value,key)=>{if(value[key]!==undefined&&(!Array.isArray(value[key])||value[key].some(item=>typeof item!=='string')))invalid(`${key} must be an array of text`);};
+ const urls=value=>{
+  strings(value,'sourceUrls');
+  for(const url of [value.sourceUrl,value.licenseUrl,...(value.sourceUrls??[])].filter(Boolean))checkedUrl(url);
+ };
+ const metadata=['measure','observationType','calculation','coverageNote','sourceNotice','licenseUrl','sourceTitle','sourceUrl'];
+ if(!object(source)||!object(source.series)||Object.keys(source.series).length!==ids.size||[...ids].some(id=>!Object.hasOwn(source.series,id)))invalid('complete frozen source required');
+ text(source,[...metadata,'fetchedAt','lastAttemptAt']);urls(source);
+ if(source.status!==undefined&&!['ok','error','unavailable'].includes(source.status))invalid('capture status');
+ if(source.provenance!==undefined){
+  if(!Array.isArray(source.provenance)||source.provenance.length>1000||source.provenance.some(receipt=>!object(receipt)))invalid('bounded source receipts required');
+  for(const receipt of source.provenance){text(receipt,['url','retrievedAt','sha256','lastModified']);if(receipt.url)checkedUrl(receipt.url);}
+ }
+ for(const [id,item]of Object.entries(source.series)){
+  if(!ids.has(id)||!object(item))invalid('unknown or malformed series');
+  text(item,metadata);urls(item);strings(item,'sourceIds');
+  if(!Array.isArray(item.observations)||!item.observations.length||item.observations.length>50000)invalid('nonempty bounded observations required');
+  let previous='';
+  for(const row of item.observations){
+   if(!object(row)||!isIsoDate(row.date)||row.date<=previous)invalid('ordered unique observation dates required');
+   previous=row.date;
+   for(const key of ['value','volumeInBillions','percentile1','percentile25','percentile75','percentile99'])if(row[key]!==undefined&&row[key]!==null&&(typeof row[key]!=='number'||!Number.isFinite(row[key])))invalid('finite or null observations required');
+   if(row.value===undefined)invalid('observation value required');
+   text(row,['revisionIndicator','sourceValue','publishedAt','sourceUrl']);urls(row);strings(row,'footnotes');
+   if(row.footnoteId!==undefined&&(!Number.isInteger(row.footnoteId)||row.footnoteId<1||row.footnoteId>3))invalid('source footnote identifier');
+   if(row.percentileSourceValues!==undefined){
+    const fields=['percentile1','percentile25','percentile75','percentile99'],raw=row.percentileSourceValues;
+    if(id!=='sofr'||row.footnoteId!==2||!object(raw)||Object.keys(raw).length!==4||fields.some(key=>raw[key]!=='NA'||row[key]!==null))invalid('source NA percentile evidence');
+   }
+  }
+ }
+ // Count encoded rows without retaining them. Repeated receipts or notices must
+ // not amplify a small import into unbounded work when the user downloads it.
+ generatedFundingCsv(source,{validateOnly:true});
+}
 function validateContext(context){
  if(!object(context))fail('context must be data');
  if(context.currentAccountInputs!==undefined)validateCurrentAccountInputs(context.currentAccountInputs);
@@ -185,6 +232,7 @@ function validateContext(context){
    names.add(file.name);safeCsv(file.content);
   }
  }
+ if(context.fundingDistributions!==undefined)validateFundingContext(context);
 }
 function selection(state,catalog){
  const ids=state.selected;
@@ -252,6 +300,18 @@ export async function importResearchPackage(text){
 }
 export function exportResearchPackage(pkg){return canonicalJson(branded(pkg));}
 export function researchPackageCsv(pkg){return branded(pkg).csv;}
+export function researchPackageAttachments(pkg){
+ const context=branded(pkg).context,files=(context.attachments??[]).map(({name,type})=>({name,type,generated:false}));
+ if(context.fundingDistributions?.version===2)files.push({name:'market-functioning.csv',type:'text/csv',generated:true});
+ return files;
+}
+/** Resolve the existing specialist-download action from validated frozen inputs. */
+export function researchPackageAttachment(pkg,index){
+ branded(pkg);
+ if(!Number.isInteger(index)||index<0)fail('frozen attachment unavailable');
+ const descriptor=researchPackageAttachments(pkg)[index];if(!descriptor)fail('frozen attachment unavailable');
+ return descriptor.generated?{name:descriptor.name,type:descriptor.type,content:generatedFundingCsv(pkg.context.moduleSources.marketFunctioning)}:pkg.context.attachments[index];
+}
 export function packagePanels(pkg){
  branded(pkg);return deepFreeze(pkg.panels.map(({seriesId,...panel})=>({...panel,series:pkg.catalog[seriesId]})));
 }

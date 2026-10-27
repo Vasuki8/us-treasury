@@ -4,7 +4,7 @@ import * as contexts from '../src/research-context.js';
 import {parseRoute} from '../src/router.js';
 import {series,dataStatus,releases} from '../src/data.js';
 import {publicationArchive} from '../src/publication-archive.js';
-import {createResearchPackage,exportResearchPackage,importResearchPackage} from '../src/research-packages.js';
+import {createResearchPackage,exportResearchPackage,importResearchPackage,researchPackageAttachment} from '../src/research-packages.js';
 import {buildCoverageInventory} from '../src/coverage-inventory.js';
 import {researchPage} from '../src/research-page.js';
 import {renderPage} from '../src/pages.js';
@@ -28,13 +28,13 @@ test('the actual market page dispatch passes its selected window to every fundin
  for(const chart of charts){assert.match(chart,/2026-09-01/);assert.match(chart,/2026-10-22/);assert.match(chart,/custom/);}
 });
 
-test('funding freeze retains the exact selected range, source percentiles and original specialist CSV',async()=>{
+test('funding freeze retains the exact selected range, complete source percentiles and generated full specialist CSV',async()=>{
  const args=contexts.buildPinContext(parseRoute('#/market?window=custom&start=2026-09-01&end=2026-10-22'));
- assert.deepEqual(args.context.fundingDistributions,{version:1,range:{preset:'custom',startDate:'2026-09-01',endDate:'2026-10-22'}});
- const original=args.context.attachments.find(x=>x.name==='market-functioning.csv').content;
- const pkg=await createResearchPackage({name:'Funding distributions',...args}),restored=await importResearchPackage(exportResearchPackage(pkg));
+ assert.deepEqual(args.context.fundingDistributions,{version:2,range:{preset:'custom',startDate:'2026-09-01',endDate:'2026-10-22'},csvMode:'generated-full-retained-v1'});
+ assert.equal(args.context.attachments.some(x=>x.name==='market-functioning.csv'),false);
+ const pkg=await createResearchPackage({name:'Funding distributions',...args}),original=researchPackageAttachment(pkg,0).content,restored=await importResearchPackage(exportResearchPackage(pkg));
  assert.deepEqual(restored.context.moduleSources.marketFunctioning.series.sofr.observations,args.context.moduleSources.marketFunctioning.series.sofr.observations);
- assert.equal(restored.context.attachments.find(x=>x.name==='market-functioning.csv').content,original);
+ assert.equal(researchPackageAttachment(restored,0).content,original);
  const html=researchPage(parseRoute('#/research?view=packages&package='+pkg.id),{library:{packages:[restored]}});
  assert.match(html,/FROZEN SOFR RATE DISTRIBUTION/);assert.match(html,/data-chart-catalog="funding"/);
 });

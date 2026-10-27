@@ -176,6 +176,8 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
         }
         const volume=observation?.volumeInBillions;
         span.append(` · Volume ${finite(volume)?`$${volume.toLocaleString('en-US',{maximumFractionDigits:12})}B`:'—'} (USD billions) · Revision flag ${observation?.revisionIndicator||'not supplied'}`);
+        if(observation?.footnoteId!=null)span.append(` · Footnote ${observation.footnoteId}`);
+        if(!isRoundedSourceObservation(observation))for(const note of observation?.footnotes??[])span.append(` · ${note}`);
       }
       const coverage=observationCoverageLabel(observation);if(coverage)span.append(` · ${coverage}`);
       if(isRoundedSourceObservation(observation))for(const note of observation.footnotes??[])span.append(` · ${note}`);

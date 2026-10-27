@@ -34,6 +34,19 @@ test('bank delinquency ratios keep loan-dollar denominators and reject chargeoff
   for(const text of [del().replace('CHGDEL="DEL"','CHGDEL="CHG"'),del().replace('SIZE="ALL"','SIZE="TOP100"'),del().replace('SA="SA"','SA="NSA"'),del().replace('2.85','101')])assert.throws(()=>source.parseLoanDelinquencyXml(text,{now}),/Board|metadata|percentage|numeric/i);
 });
 
+test('bank delinquency retains the native 1991 ratios and their unchanged post-2000 overlap',async()=>{
+  const xml=del().replace(obs('2026-06-30','2.85'),obs('1991-03-31','5.26')+obs('2000-03-31','4.43')+obs('2026-06-30','2.85'))
+    .replace(obs('2026-06-30','1.86'),obs('1991-03-31','3.10')+obs('2000-03-31','1.95')+obs('2026-06-30','1.86'));
+  const parsed=source.parseLoanDelinquencyXml(xml,{now});
+  assert.deepEqual(parsed.bankCardDelinquency.observations.map(row=>[row.date,row.value,row.sourceValue]),[['1991-03-31',5.26,'5.26'],['2000-03-31',4.43,'4.43'],['2026-06-30',2.85,'2.85']]);
+  assert.deepEqual(parsed.bankMortgageDelinquency.observations.map(row=>[row.date,row.value,row.sourceValue]),[['1991-03-31',3.1,'3.10'],['2000-03-31',1.95,'1.95'],['2026-06-30',1.86,'1.86']]);
+  assert.match(parsed.bankCardDelinquency.coverageNote,/from 1991/);
+  const loanDelinquency=await source.collectLoanDelinquency({now,fetchImpl:async()=>new Response(zipFixture([{name:'CHGDEL_data.xml',text:xml}]))});
+  assert.doesNotThrow(()=>assertCreditContextData({sources:{loanDelinquency}}));
+  const early=structuredClone(loanDelinquency);early.series.bankCardDelinquency.observations.unshift({date:'1990-12-31',value:5.26,sourceValue:'5.26',publishedAt:null});
+  assert.throws(()=>assertCreditContextData({sources:{loanDelinquency:early}}),/date|credit/i);
+});
+
 test('household collectors preserve distinct source contracts, rates, provenance and export definitions',async()=>{
   assert.equal(typeof source.collectHouseholdDebt,'function');assert.equal(typeof source.collectLoanDelinquency,'function');
   const householdDebt=await source.collectHouseholdDebt({now,fetchImpl:async url=>{assert.equal(url,'https://www.federalreserve.gov/releases/dsr/data/FRB_dsr_xml.zip');return new Response(zipFixture([{name:'DSR_data.xml',text:dsr()}]));}});

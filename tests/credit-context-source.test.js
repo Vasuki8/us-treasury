@@ -11,7 +11,7 @@ function h8(){return frame('H8',[
   series('BG="CB" CATEGORY="A" CURRENCY="USD" FREQ="19" H8_UNITS="LEVEL" ITEM="1020" SA="SA" SERIES_NAME="B1020NCBA" UNIT="Currency" UNIT_MULT="1000000"',obs('2026-10-07','14182513.2')),
   series('BG="CB" CATEGORY="L" CURRENCY="USD" FREQ="19" H8_UNITS="LEVEL" ITEM="1058" SA="SA" SERIES_NAME="B1058NCBA" UNIT="Currency" UNIT_MULT="1000000"',obs('2026-10-07','19771474.9')),
 ].join(''));}
-function sloos(){return frame('SLOOS',[['CILG','DEMAND','SUBLPDCILD_N.Q','16.1'],['CILG','STND','SUBLPDCILS_N.Q','0.0'],['CISM','DEMAND','SUBLPDCISD_N.Q','-3.6'],['CISM','STND','SUBLPDCISS_N.Q','1.8']].map(([loan,measure,code,value])=>series(`BANKSIZE="ALL" CURRENCY="NA" FREQ="162" LOANTYPE="${loan}" MEASURE="${measure}" PANEL="DOM" SERIES_NAME="${code}" TERMS="NA" UNIT="Percentage" UNIT_MULT="1"`,obs('2026-09-30',value))).join(''));}
+function sloos(history={}){return frame('SLOOS',[['CILG','DEMAND','SUBLPDCILD_N.Q','16.1'],['CILG','STND','SUBLPDCILS_N.Q','0.0'],['CISM','DEMAND','SUBLPDCISD_N.Q','-3.6'],['CISM','STND','SUBLPDCISS_N.Q','1.8']].map(([loan,measure,code,value])=>series(`BANKSIZE="ALL" CURRENCY="NA" FREQ="162" LOANTYPE="${loan}" MEASURE="${measure}" PANEL="DOM" SERIES_NAME="${code}" TERMS="NA" UNIT="Percentage" UNIT_MULT="1"`,(history[code]??[['2026-09-30',value]]).map(([date,amount])=>obs(date,amount)).join(''))).join(''));}
 function h41(){return frame('H41',[
   ['RESPPMA_N.WW','ASSET','TA','TA','TOTC','6753604'],['RESH4R_N.WW','LIABCAP','OFDRB','RBFRB','TOT','2969522'],['RESPPLLDT_N.WW','LIABCAP','LIAB','DEPUSTG','TOT','945153'],
 ].map(([code,category,subcategory,component,distribution,value])=>series(`SERIES_NAME="${code}" FREQ="19" CATEGORY="${category}" SUBCATEGORY="${subcategory}" COMPONENT="${component}" DISTRIBUTION="${distribution}" SERIESTYPE="L" UNIT="Currency" UNIT_MULT="1000000" CURRENCY="USD"`,obs('2026-10-21',value))).join(''));}
@@ -24,6 +24,16 @@ test('H8 parser preserves all-bank weekly SA stocks and scales source millions t
   assert.equal(result.bankLoans.observations[0].sourceValue,'14182513.2');
   assert.equal(result.bankLoans.observations[0].publishedAt,null);
   assert.equal(result.bankLoans.frequency,'Weekly');assert.equal(result.bankLoans.adjustment,'Seasonally adjusted');
+});
+
+test('H8 extends to the 1990 cycle while excluding earlier official rows and preserving source precision',()=>{
+  // Exact selected rows from the admitted H8 XML retrieved 2026-10-27.
+  const xml=h8().replace(obs('2026-10-07','14182513.2'),obs('1989-12-27','1966111.1')+obs('1990-01-03','1964414.6')+obs('2000-01-05','3371816.0'))
+    .replace(obs('2026-10-07','19771474.9'),obs('1989-12-27','2243828.7')+obs('1990-01-03','2252871.9')+obs('2000-01-05','3466173.4'));
+  const parsed=source().parseBankCreditXml(xml,{now});
+  assert.deepEqual(parsed.bankLoans.observations,[{date:'1990-01-03',value:1964.4146,sourceValue:'1964414.6',publishedAt:null},{date:'2000-01-05',value:3371.816,sourceValue:'3371816.0',publishedAt:null}]);
+  assert.deepEqual(parsed.bankDeposits.observations,[{date:'1990-01-03',value:2252.8719,sourceValue:'2252871.9',publishedAt:null},{date:'2000-01-05',value:3466.1734,sourceValue:'3466173.4',publishedAt:null}]);
+  assert.match(parsed.bankLoans.coverageNote,/from 1990/);
 });
 
 test('Board parser rejects changed units, populations, frequency, duplicate dates and invalid week dates',()=>{
@@ -42,6 +52,21 @@ test('SLOOS keeps signed net percentages and native source quarter labels withou
   assert.match(result.ciStandardsLarge.coverageNote,/quarter.*label|label.*quarter/i);
   assert.throws(()=>source().parseLendingSurveyXml(sloos().replace('16.1','100.1'),{now}),/numeric|percentage|Board/i);
   assert.throws(()=>source().parseLendingSurveyXml(sloos().replaceAll('2026-09-30','2026-09-29'),{now}),/quarter|date|Board/i);
+});
+
+test('SLOOS retains independent native standards and demand inceptions with exact survey labels',()=>{
+  // The quarterly source starts standards earlier than demand; no common start is filled.
+  const xml=sloos({
+    'SUBLPDCILS_N.Q':[['1990-06-30','54.4'],['2000-03-31','10.9']],
+    'SUBLPDCISS_N.Q':[['1990-06-30','52.7'],['2000-03-31','9.4']],
+    'SUBLPDCILD_N.Q':[['1991-12-31','-33.3'],['2000-03-31','9.1']],
+    'SUBLPDCISD_N.Q':[['1991-12-31','-25.4'],['2000-03-31','-1.9']],
+  });
+  const parsed=source().parseLendingSurveyXml(xml,{now});
+  assert.deepEqual(parsed.ciStandardsLarge.observations,[{date:'1990-04-01',value:54.4,sourceValue:'54.4',publishedAt:null,sourcePeriodLabel:'1990-06-30'},{date:'2000-01-01',value:10.9,sourceValue:'10.9',publishedAt:null,sourcePeriodLabel:'2000-03-31'}]);
+  assert.deepEqual(parsed.ciDemandLarge.observations,[{date:'1991-10-01',value:-33.3,sourceValue:'-33.3',publishedAt:null,sourcePeriodLabel:'1991-12-31'},{date:'2000-01-01',value:9.1,sourceValue:'9.1',publishedAt:null,sourcePeriodLabel:'2000-03-31'}]);
+  assert.equal(parsed.ciStandardsSmall.observations[0].value,52.7);assert.equal(parsed.ciDemandSmall.observations[0].value,-25.4);
+  assert.match(parsed.ciStandardsLarge.coverageNote,/1990.*1991/);
 });
 
 test('SLOOS already-released July survey remains current in August despite its September quarter-end source label',()=>{

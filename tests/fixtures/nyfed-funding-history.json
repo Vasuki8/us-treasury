@@ -1,0 +1,197 @@
+{
+  "receipts": {
+    "sofr": {
+      "url": "https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=2018-04-02&endDate=2026-10-26",
+      "sha256": "674a51573729b0a2c9f6751bbeca888a5ec13ad377684db0a442a6688bd99f02",
+      "retrievedAt": "2026-10-27T03:36:31.326Z",
+      "lastModified": null
+    },
+    "effr": {
+      "url": "https://markets.newyorkfed.org/api/rates/unsecured/effr/search.json?startDate=2016-03-01&endDate=2026-10-26",
+      "sha256": "846ffb0256e9a2bceb070027f977d58ffa01f721509c0f90f7e92b870caa841a",
+      "retrievedAt": "2026-10-27T03:36:31.249Z",
+      "lastModified": null
+    }
+  },
+  "sofr": {
+    "refRates": [
+      {
+        "effectiveDate": "2026-10-23",
+        "type": "SOFR",
+        "percentRate": 3.92,
+        "percentPercentile1": 3.85,
+        "percentPercentile25": 3.9,
+        "percentPercentile75": 3.97,
+        "percentPercentile99": 4,
+        "volumeInBillions": 3065,
+        "revisionIndicator": ""
+      },
+      {
+        "effectiveDate": "2021-08-05",
+        "type": "SOFR",
+        "percentRate": 0.05,
+        "percentPercentile1": "NA",
+        "percentPercentile25": "NA",
+        "percentPercentile75": "NA",
+        "percentPercentile99": "NA",
+        "volumeInBillions": 901,
+        "revisionIndicator": "",
+        "footnoteId": 2
+      },
+      {
+        "effectiveDate": "2020-03-16",
+        "type": "SOFR",
+        "percentRate": 0.26,
+        "percentPercentile1": 0.2,
+        "percentPercentile25": 0.23,
+        "percentPercentile75": 0.35,
+        "percentPercentile99": 2,
+        "volumeInBillions": 1306,
+        "revisionIndicator": ""
+      },
+      {
+        "effectiveDate": "2019-09-17",
+        "type": "SOFR",
+        "percentRate": 5.25,
+        "percentPercentile1": 2.25,
+        "percentPercentile25": 5,
+        "percentPercentile75": 5.85,
+        "percentPercentile99": 9,
+        "volumeInBillions": 1177,
+        "revisionIndicator": ""
+      },
+      {
+        "effectiveDate": "2019-05-31",
+        "type": "SOFR",
+        "percentRate": 2.49,
+        "percentPercentile1": "NA",
+        "percentPercentile25": "NA",
+        "percentPercentile75": "NA",
+        "percentPercentile99": "NA",
+        "volumeInBillions": 1136,
+        "revisionIndicator": "",
+        "footnoteId": 2
+      },
+      {
+        "effectiveDate": "2018-04-02",
+        "type": "SOFR",
+        "percentRate": 1.8,
+        "percentPercentile1": 1.25,
+        "percentPercentile25": 1.77,
+        "percentPercentile75": 1.89,
+        "percentPercentile99": 2.25,
+        "volumeInBillions": 849,
+        "revisionIndicator": ""
+      }
+    ]
+  },
+  "effr": {
+    "refRates": [
+      {
+        "effectiveDate": "2026-10-23",
+        "type": "EFFR",
+        "percentRate": 3.88,
+        "percentPercentile1": 3.85,
+        "percentPercentile25": 3.87,
+        "percentPercentile75": 3.89,
+        "percentPercentile99": 3.95,
+        "targetRateFrom": 3.75,
+        "targetRateTo": 4,
+        "volumeInBillions": 109,
+        "revisionIndicator": ""
+      },
+      {
+        "effectiveDate": "2023-07-25",
+        "type": "EFFR",
+        "percentRate": 5.08,
+        "percentPercentile1": 5.05,
+        "percentPercentile25": 5.07,
+        "percentPercentile75": 5.08,
+        "percentPercentile99": 5.4,
+        "targetRateFrom": 5,
+        "targetRateTo": 5.25,
+        "volumeInBillions": 89,
+        "revisionIndicator": "",
+        "footnoteId": 1
+      },
+      {
+        "effectiveDate": "2019-09-17",
+        "type": "EFFR",
+        "percentRate": 2.3,
+        "percentPercentile1": 2.05,
+        "percentPercentile25": 2.15,
+        "percentPercentile75": 2.5,
+        "percentPercentile99": 4,
+        "targetRateFrom": 2,
+        "targetRateTo": 2.25,
+        "volumeInBillions": 61,
+        "revisionIndicator": ""
+      },
+      {
+        "effectiveDate": "2018-04-02",
+        "type": "EFFR",
+        "percentRate": 1.68,
+        "percentPercentile1": 1.65,
+        "percentPercentile25": 1.68,
+        "percentPercentile75": 1.69,
+        "percentPercentile99": 1.81,
+        "targetRateFrom": 1.5,
+        "targetRateTo": 1.75,
+        "volumeInBillions": 89,
+        "revisionIndicator": ""
+      },
+      {
+        "effectiveDate": "2017-05-31",
+        "type": "EFFR",
+        "percentRate": 0.83,
+        "percentPercentile1": 0.81,
+        "percentPercentile25": 0.82,
+        "percentPercentile75": 0.83,
+        "percentPercentile99": 1.05,
+        "targetRateFrom": 0.75,
+        "targetRateTo": 1,
+        "volumeInBillions": 79,
+        "revisionIndicator": "r"
+      },
+      {
+        "effectiveDate": "2016-03-01",
+        "type": "EFFR",
+        "percentRate": 0.36,
+        "percentPercentile1": 0.34,
+        "percentPercentile25": 0.36,
+        "percentPercentile75": 0.37,
+        "percentPercentile99": 0.5,
+        "targetRateFrom": 0.25,
+        "targetRateTo": 0.5,
+        "volumeInBillions": 76,
+        "revisionIndicator": ""
+      }
+    ]
+  },
+  "holidayEffr": {
+    "effectiveDate": "2018-12-05",
+    "type": "EFFR",
+    "percentRate": 2.2,
+    "percentPercentile1": 2.17,
+    "percentPercentile25": 2.19,
+    "percentPercentile75": 2.2,
+    "percentPercentile99": 2.35,
+    "targetRateFrom": 2,
+    "targetRateTo": 2.25,
+    "volumeInBillions": 66,
+    "revisionIndicator": ""
+  },
+  "surveyEffr": {
+    "effectiveDate": "2019-05-31",
+    "type": "EFFR",
+    "percentRate": 2.4,
+    "percentPercentile1": 2.3,
+    "percentPercentile25": 2.38,
+    "percentPercentile75": 2.4,
+    "percentPercentile99": 2.58,
+    "targetRateFrom": 2.25,
+    "targetRateTo": 2.5,
+    "volumeInBillions": 65,
+    "revisionIndicator": ""
+  }
+}

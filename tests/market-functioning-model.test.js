@@ -24,3 +24,15 @@ test('weekly indicator changes require the exact prior week and never replace su
   assert.ok(rows.every(row=>row.unit==='USD billions'));
   assert.deepEqual(market().dealerWeeklyChanges({}),[]);
 });
+
+test('a source r revision marker survives an exact-date calculated funding difference',()=>{
+ const rows=market().fundingRateDifference([{date:'2026-10-20',value:3.9}],[{date:'2026-10-20',value:3.88,revisionIndicator:'r'}]);
+ assert.equal(rows[0].value,2);assert.equal(rows[0].revisionIndicator,'r');
+});
+
+test('calculated spread retains market-labelled input notes without turning missing bands into missing medians',()=>{
+ const left={date:'2019-05-31',value:2.49,percentile1:null,footnotes:['Rate was calculated using survey data; percentile statistics were not published.']};
+ const rows=market().fundingRateDifference([left],[{date:'2019-05-31',value:2.4}]);
+ assert.equal(rows[0].value,9);assert.deepEqual(rows[0].footnotes,['SOFR: Rate was calculated using survey data; percentile statistics were not published.']);
+ assert.deepEqual(left.footnotes,['Rate was calculated using survey data; percentile statistics were not published.']);
+});

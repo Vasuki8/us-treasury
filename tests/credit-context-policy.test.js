@@ -17,6 +17,27 @@ test('policy admits exact credited Board H8 data and rejects changed units, scop
   assert.equal(creditContextRegistry.bankLoans.periodType,'stock');assert.equal(creditContextRegistry.onRrpAccepted.periodType,'operation');
 });
 
+test('H8 admission accepts the 1990 retention boundary and preserves legacy captures without admitting earlier history',()=>{
+  const api=rules(),legacy=fixture(),before=JSON.stringify(legacy);
+  assert.doesNotThrow(()=>api.assertCreditContextData(legacy));assert.equal(JSON.stringify(legacy),before);
+  const expanded=fixture();
+  expanded.sources.bankCredit.series.bankLoans.observations.unshift({date:'1990-01-03',value:1964.4146,sourceValue:'1964414.6',publishedAt:null});
+  expanded.sources.bankCredit.series.bankDeposits.observations.unshift({date:'1990-01-03',value:2252.8719,sourceValue:'2252871.9',publishedAt:null});
+  assert.doesNotThrow(()=>api.assertCreditContextData(expanded));
+  const early=structuredClone(expanded);early.sources.bankCredit.series.bankLoans.observations[0].date='1989-12-27';
+  assert.throws(()=>api.assertCreditContextData(early),/date|credit/i);
+});
+
+test('SLOOS admission accepts independently dated 1990 standards and 1991 demand without changing legacy labels',()=>{
+  const url='https://www.federalreserve.gov/releases/sloos/data/FRB_SLOOS_xml.zip',title='Senior Loan Officer Opinion Survey on Bank Lending Practices';
+  const first={ciStandardsLarge:['1990-04-01','1990-06-30','54.4'],ciStandardsSmall:['1990-04-01','1990-06-30','52.7'],ciDemandLarge:['1991-10-01','1991-12-31','-33.3'],ciDemandSmall:['1991-10-01','1991-12-31','-25.4']};
+  const series=Object.fromEntries(Object.entries(first).map(([id,[date,sourcePeriodLabel,sourceValue]])=>{const definition=creditContextRegistry[id];return [id,{sourceIds:[definition.code],sourceUrl:url,sourceTitle:title,unit:definition.unit,frequency:definition.frequency,adjustment:definition.adjustment,observationType:'official',licenseUrl:'https://www.federalreserve.gov/disclaimer.htm',attribution:`Source: Board of Governors of the Federal Reserve System, ${title}.`,dateConvention:'source-quarter-start-label',observations:[{date,value:Number(sourceValue),sourceValue,publishedAt:null,sourcePeriodLabel}]}];}));
+  const source={id:'lendingSurvey',fetchedAt:'2026-10-27T03:36:53.830Z',provenance:[{url,sha256:'d0777da3d40816e2db6abdb6b362a2d0e513401933d7577ca4164220d68693cc',retrievedAt:'2026-10-27T03:36:53.830Z',filename:'SLOOS_data.xml'}],series};
+  assert.doesNotThrow(()=>rules().assertCreditContextData({sources:{lendingSurvey:source}}));
+  const early=structuredClone(source);Object.assign(early.series.ciStandardsLarge.observations[0],{date:'1989-10-01',sourcePeriodLabel:'1989-12-31'});
+  assert.throws(()=>rules().assertCreditContextData({sources:{lendingSurvey:early}}),/date|credit/i);
+});
+
 test('feed policy rejects unreviewed query variants, hosts, suffixes and fragments',()=>{
   const api=rules();assert.equal(api.matchesCreditContextFeed(h8,'board-h8-credit'),true);
   assert.equal(api.matchesCreditContextFeed(h8+'?x=1','board-h8-credit'),false);

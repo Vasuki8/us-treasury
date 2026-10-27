@@ -1,0 +1,47 @@
+# Funding and credit history expansion
+
+The user selected longer funding and credit histories while preserving the current UI and colors. Baseline: `ff22954`, 213 immutable captures, 136 registered measurements and 129,988 retained observations. Economist/investor review prioritized independent funding regimes and earlier credit cycles. Source and package probes are retained under ignored `tmp/funding-credit-history/`.
+
+## Reviewed scope
+
+| Existing measurement | New retained first date | Current observations |
+| --- | --- | ---: |
+| SOFR median, published volume and percentile fields | 2018-04-02 | 2,139 |
+| Modern transaction-based median EFFR, volume and percentiles | 2016-03-01 | 2,676 |
+| Exact-date SOFR minus EFFR | 2018-04-02 | 2,151, including 12 unmatched-date nulls |
+| H.8 all-commercial-bank loans and deposits | 1990-01-03 | 1,920 each |
+| Domestic-bank C&I SLOOS standards, large/middle-market and small firms | Canonical 1990-04-01 | 146 each |
+| Corresponding SLOOS demand | Canonical 1991-10-01 | 140 each |
+| Bank card and residential-mortgage delinquency | 1991-03-31 | 142 each |
+
+The funding APIs are independent of the dealer SBN2024 structural break, which had incorrectly limited their retained history to July 2024. [New York Fed methodology](https://www.newyorkfed.org/markets/reference-rates/additional-information-about-reference-rates) establishes the modern EFFR boundary and first SOFR publication on April 3, 2018 for effective date April 2. Earlier mean-based EFFR and modeled SOFR proxies are not spliced into current median labels. Source percentiles describe transaction-rate distributions rather than uncertainty intervals. Conditional New York Fed redistribution notices, original titles and reference-rate disclaimers remain attached.
+
+The exact previously admitted Board XML files and series identifiers supply the credit backfill. H.8 retains its estimated, seasonally adjusted Wednesday stock basis; these are not lending flows or the Board's separately break-adjusted growth rates. SLOOS quarter-start labels retain their original quarter-end source labels and do not establish actual survey or publication dates. Bank delinquency remains the matching bank-loan-dollar population and accounting basis. Board source credit and methodology limitations remain explicit. See the [credit-policy review](credit-policy-context-source-review.md), [household-credit review](household-credit-source-review.md) and [market-functioning review](market-functioning-source-review.md).
+
+## Genuine boundaries and missing statistics
+
+H.4.1's three selected series already cover their native December 18, 2002 start; current-methodology household debt-service ratios already cover March 2005. Neither is spliced to a different historical measurement. Dealer data remain SBN2024 from July 2024. ON RRP remains at its existing reviewed 2024 coverage: earlier missing clock fields, shifted regular-operation windows and an unnamed readiness test need a separate precise classifier review. The [December 2015 operating statement](https://www.newyorkfed.org/markets/opolicy/operating_policy_151216) supports a potential future regular-facility window, but does not alone classify every earlier result.
+
+The H.8 feed contains the selected stocks from 1973, but that full extension makes the existing Credit All research package exceed 12 MiB. The coherent 1990/1991 slice adds earlier credit-cycle context while preserving working All packages. No source or storage cap is raised, and no dates are invented to produce a common start.
+
+SOFR's four percentile fields are published as literal `NA` on May 31, 2019 and August 5, 2021. The new capture retains their raw `percentileSourceValues`, null numeric bands, source footnote ID and survey-data explanation, together with the published median and volume. EFFR's `r` revision indicator and reduced-volume footnote are retained unchanged. Source footnote definitions come from the official viewers and [reference-rate information](https://www.newyorkfed.org/markets/reference-rates/additional-information-about-reference-rates); unknown or contradictory markers fail admission. Contingency notes follow their exact-date inputs into the calculated median spread. Missing percentiles do not suppress a valid published median or generate replacement endpoints.
+
+September 17, 2019 independently reconciles **SOFR 5.25%, EFFR 2.30%, spread 295 basis points**. May 31, 2019 retains its published medians **2.49% / 2.40%** and calculated **9 bp** spread while showing the SOFR contingency note. Unmatched holiday effective dates remain null, and no publication time is inferred from a reference date or retrieval clock.
+
+## Complete saved inputs and generated CSV
+
+The expanded full market source fits within existing research-package limits, but its duplicate specialist CSV exceeds the 8 MiB stored-attachment cap. New market snapshots use explicit `fundingDistributions` version 2 with `csvMode: generated-full-retained-v1`. They retain the complete frozen source and all eight full series, omit duplicated CSV content, and generate the specialist CSV through the existing download action using those frozen inputs. The selected chart window does not trim that CSV or its source.
+
+The generated format has stable ordering and canonical provenance JSON, preserves optional footnote/raw-NA evidence, and is bounded at 32 MiB before output retention. This output-work guard does not raise the 12 MiB package or 8 MiB stored-attachment limits. Unknown modes, conflicting generated/stored copies, incomplete full-source profiles and amplification attempts fail explicitly. Version-1 snapshots keep their original stored CSV attachment and exact bytes. No live catalog or source fetch is used to regenerate a frozen export.
+
+Actual acceptance default/All/custom funding packages measure **3,856,836 / 10,240,567 / 2,720,110 bytes**. Their complete generated specialist CSV measures **21,669,275 bytes**, independent of the chart window, and regenerates byte-identically after import. Credit All measures **11,486,461 bytes**, below the unchanged package cap. Existing page layout, navigation, CSS and colors are preserved; source-coverage and missing-statistic notes use existing UI components.
+
+## Final capture and review
+
+Strict capture succeeded on October 27, 2026: bank credit **03:55:19.904Z**, SLOOS **03:55:19.543Z**, delinquency **03:55:19.604Z**, and market functioning **03:55:20.351Z**. The archive now contains **217 captures**. Initial acceptance confirms the original 213 descriptors and compressed Git bytes are exact, all 19 other source objects and calendars/releases are unchanged, and every retained numeric/raw-source overlap matches. Added registered rows are exactly **1,260 credit plus 5,232 funding**, of which nine new unmatched funding-date rows are null rather than invented spreads.
+
+Independent review reproduced a duplicate-input admission gap: supplemental funding rows could contradict the displayed/exported rates and hide a contingency note from the spread. The corrected check compares all overlapping observation evidence canonically and gives displayed rows precedence; supplemental rows can support genuinely absent scoped dates. Normalized replay without duplicate supplemental arrays remains valid. An additional version-2 package regression requires all eight nonempty series rather than accepting a partial source that claims full retention.
+
+Acceptance verifies all **129,988 prior rows across 136 measurements** retain their numeric/raw-source fields. All 213 original descriptors, compressed Git bytes and decoded captures are exact; the original cutoff replays exactly and `src/vintages.js` is unchanged. Current and normalized sources pass admission; re-registering the current source state is idempotent. Six genuine older packages retain exact JSON, primary CSV and stored-attachment bytes. Nine actual new packages preserve complete inputs and round-trip exactly, including Credit default/All, H.8 and SLOOS individual All views, an H.8/H.4.1 comparison, and all three funding windows. Stored 8 MiB and generated 32 MiB overflow guards and branded-export input checks pass. The complete generated CSV has 7,566 data rows and SHA-256 `5396dbb27b71aea90981a5459d4cb050ebb9984dab195b0b466b4e9d56be0701`. Details are retained in `tmp/funding-credit-history/actual-acceptance/{core-results,package-results,guard-results}.json`.
+
+The rebuilt application passes all 163 asset checks. Full release and live verification results will be recorded after the final checks.

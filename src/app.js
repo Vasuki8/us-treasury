@@ -39,7 +39,7 @@ import {watchDisclosureCharts} from './page-hierarchy.js';
 import {coverageFamilies} from './macro-registry.js';
 import {exactIndicatorMatch} from './global-search.js';
 import {createWorkspace,openWorkspace,MAX_RESEARCH_JSON_BYTES} from './research-workspaces.js';
-import {createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv} from './research-packages.js';
+import {createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,researchPackageAttachment} from './research-packages.js';
 import {createResearchLibrary} from './research-library.js';
 import {buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin,buildCpiPublicationPin,buildGdpMatrixPin} from './research-context.js';
 import {captureChanges,changesCsv,readChangeCheckpoint,writeChangeCheckpoint} from './capture-changes.js';
@@ -208,7 +208,7 @@ function renderCurrentChartsIn(container){
   ...currentAccountGdpComparisonChartCatalog(dataStatus.sources),
   ...currentAccountGdpContributionsChartCatalog(dataStatus.sources,{effects:true,componentEffects:true}),
  }:{};
- if(pkg?.context.fundingDistributions?.version===1)chartCatalogs.funding=fundingChartCatalog(pkg.context.moduleSources?.marketFunctioning??{},{frozen:true});
+ if([1,2].includes(pkg?.context.fundingDistributions?.version))chartCatalogs.funding=fundingChartCatalog(pkg.context.moduleSources?.marketFunctioning??{},{frozen:true});
  else if(!pkg&&state.page==='market')chartCatalogs.funding=fundingChartCatalog(dataStatus.sources.marketFunctioning);
  renderCharts(container,{...(pkg?{catalog:pkg.catalog}:{}),chartCatalogs});
 }
@@ -376,7 +376,7 @@ async function handleResearchAction(d){
   else if('exportFrozenCurrentAccountGdpBalanceEffects' in d){const pkg=researchLibrary.getPackage(d.exportFrozenCurrentAccountGdpBalanceEffects),context=pkg?.context.currentAccountGdpBalanceEffects,inputs=context&&pkg.context[context.inputContext];if(!context||!inputs)throw new Error('Frozen balance/GDP effect inputs unavailable.');downloadCsv(currentAccountGdpBalanceEffectsCsv(inputs.sources,context.range),`meridian-frozen-${pkg.id}-balance-gdp-effects.csv`,'Balance/GDP effect CSV reconstructed from recorded BEA inputs, symmetric method and window; current data were not substituted.');}
   else if('exportFrozenCurrentAccountGdpComponentEffects' in d){const pkg=researchLibrary.getPackage(d.exportFrozenCurrentAccountGdpComponentEffects),context=pkg?.context.currentAccountGdpComponentEffects,inputs=context&&pkg.context[context.inputContext];if(!context||!inputs)throw new Error('Frozen component effect inputs unavailable.');downloadCsv(currentAccountGdpComponentEffectsCsv(inputs.sources,context.range,context.measure),`meridian-frozen-${pkg.id}-component-effects.csv`,'Selected component effect CSV reconstructed from recorded BEA inputs, component, symmetric method and window; current data were not substituted.');}
   else if('exportFrozenCurrentAccountGdpAllComponentEffects' in d){const pkg=researchLibrary.getPackage(d.exportFrozenCurrentAccountGdpAllComponentEffects),context=pkg?.context.currentAccountGdpAllComponentEffects,inputs=context&&pkg.context[context.inputContext];if(!context||!inputs)throw new Error('Frozen all-component effect inputs unavailable.');downloadCsv(currentAccountGdpBalanceEffectsCsv(inputs.sources,context.range),`meridian-frozen-${pkg.id}-all-component-effects.csv`,'All-component effect CSV reconstructed from recorded BEA inputs, symmetric method and window; current data were not substituted.');}
-  else if('packageAttachment' in d){const pkg=currentPackage(),file=pkg?.context.attachments?.[Number(d.packageAttachment)];if(!file)throw new Error('Frozen attachment unavailable.');downloadCsv(file.content,file.name,'Original frozen specialist export downloaded with its captured inputs and assumptions.');}
+  else if('packageAttachment' in d){const pkg=currentPackage();if(!pkg)throw new Error('Frozen attachment unavailable.');const file=researchPackageAttachment(pkg,Number(d.packageAttachment));downloadCsv(file.content,file.name,pkg.context.fundingDistributions?.version===2&&file.name==='market-functioning.csv'?'Full-retained specialist CSV generated from recorded frozen inputs and method.':'Original frozen specialist export downloaded with its captured inputs and assumptions.');}
   else if('enableChanges' in d||'disableChanges' in d||'markChanges' in d){
     changeCheckpoint={...changeCheckpoint,enabled:'enableChanges' in d?true:'disableChanges' in d?false:changeCheckpoint.enabled,...('disableChanges' in d?{}:{since:dataStatus.generatedAt,snapshotAt:dataStatus.generatedAt})};
     const durable=writeChangeCheckpoint(storage,changeCheckpoint);changeCheckpoint.storageAvailable=durable;

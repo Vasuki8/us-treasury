@@ -1,6 +1,6 @@
 import { requestText } from './http.mjs';
 import { easternFields } from './calendar-utils.mjs';
-import { DEALER_METRICS, NY_FED_TERMS_URL, NY_FED_DATA_NOTICE, NY_FED_REFERENCE_RATE_NOTICE, NY_FED_PRODUCT_NOTICE, MARKET_FUNCTIONING_LIMITATION, fundingRateDifference } from '../../src/market-functioning.js';
+import { DEALER_METRICS, NY_FED_TERMS_URL, NY_FED_DATA_NOTICE, NY_FED_REFERENCE_RATE_NOTICE, NY_FED_PRODUCT_NOTICE, MARKET_FUNCTIONING_LIMITATION, FUNDING_RATE_STARTS, fundingRateFootnotes, fundingRateDifference } from '../../src/market-functioning.js';
 
 const origin = 'https://markets.newyorkfed.org';
 const breakId = 'SBN2024', coverageStart = '2024-07-03';
@@ -57,16 +57,26 @@ export function parseReferenceRates(payload,type) {
   return payload.refRates.map(row => {
     if (row.type !== type) throw new Error('Unexpected New York Fed reference-rate type');
     const date = dateKey(row.effectiveDate);
+    if (date < FUNDING_RATE_STARTS[type.toLowerCase()]) throw new Error('New York Fed rate predates reviewed inception or methodology coverage');
     if (seen.has(date)) throw new Error('Duplicate New York Fed reference-rate date');
     seen.add(date);
-    if (!['','Y'].includes(row.revisionIndicator)) throw new Error('Unreviewed New York Fed rate revision indicator');
+    const footnoteId = [undefined,null,''].includes(row.footnoteId) ? undefined : row.footnoteId;
+    const footnotes = fundingRateFootnotes(type,footnoteId,row.revisionIndicator);
     const value = rateNumber(row.percentRate);
-    return {date,value,publishedAt:null,sourceValue:value === null ? 'null' : String(row.percentRate),revisionIndicator:row.revisionIndicator,volumeInBillions:rateNumber(row.volumeInBillions,{nonnegative:true}),percentile1:rateNumber(row.percentPercentile1),percentile25:rateNumber(row.percentPercentile25),percentile75:rateNumber(row.percentPercentile75),percentile99:rateNumber(row.percentPercentile99)};
+    const volumeInBillions = rateNumber(row.volumeInBillions,{nonnegative:true});
+    const percentiles = Object.fromEntries([1,25,75,99].map(percentile => {
+      const raw = row[`percentPercentile${percentile}`];
+      return [`percentile${percentile}`,raw === 'NA' && type === 'SOFR' && footnoteId === 2 ? null : rateNumber(raw)];
+    }));
+    const percentileSourceValues = Object.fromEntries([1,25,75,99].filter(percentile => row[`percentPercentile${percentile}`] === 'NA').map(percentile => [`percentile${percentile}`,'NA']));
+    if ([2,3].includes(footnoteId) && Object.values(percentiles).some(value => value !== null) || footnoteId === 3 && volumeInBillions !== null) throw new Error('New York Fed rate statistics contradict the source contingency footnote');
+    if (Object.keys(percentileSourceValues).length && Object.keys(percentileSourceValues).length !== 4) throw new Error('Incomplete New York Fed survey percentile missing markers');
+    return {date,value,publishedAt:null,sourceValue:value === null ? 'null' : String(row.percentRate),revisionIndicator:row.revisionIndicator,volumeInBillions,...percentiles,...(Object.keys(percentileSourceValues).length ? {percentileSourceValues} : {}),...(footnoteId === undefined ? {} : {footnoteId}),...(footnotes.length ? {footnotes} : {})};
   }).sort((a,b) => a.date.localeCompare(b.date));
 }
 
 function referenceUrl(type,endDate) {
-  return `${origin}/api/rates/${type === 'SOFR' ? 'secured/sofr' : 'unsecured/effr'}/search.json?startDate=${coverageStart}&endDate=${endDate}`;
+  return `${origin}/api/rates/${type === 'SOFR' ? 'secured/sofr' : 'unsecured/effr'}/search.json?startDate=${FUNDING_RATE_STARTS[type.toLowerCase()]}&endDate=${endDate}`;
 }
 
 async function capture(url,fetchImpl) {
@@ -89,13 +99,13 @@ export async function collectMarketFunctioning({fetchImpl=globalThis.fetch,now=n
   const parsed = parseDealerStatistics(JSON.parse(dealer.text));
   for (const series of Object.values(parsed.series)) series.observations = series.observations.filter(row => row.date <= coverageEnd);
   const dealerHistory = parsed.dealerHistory.filter(row => row.date <= coverageEnd);
-  const fundingRates = {sofr:parseReferenceRates(JSON.parse(sofr.text),'SOFR').filter(row => row.date >= coverageStart && row.date <= coverageEnd),effr:parseReferenceRates(JSON.parse(effr.text),'EFFR').filter(row => row.date >= coverageStart && row.date <= coverageEnd)};
+  const fundingRates = {sofr:parseReferenceRates(JSON.parse(sofr.text),'SOFR').filter(row => row.date <= coverageEnd),effr:parseReferenceRates(JSON.parse(effr.text),'EFFR').filter(row => row.date <= coverageEnd)};
   if (!dealerHistory.length || Object.values(parsed.series).some(series => !series.observations.some(row => finite(row.value))) || Object.values(fundingRates).some(rows => !rows.some(row => finite(row.value)))) throw new Error('No usable New York Fed observations inside capture coverage');
   const provenance = [breaks,dealer,sofr,effr].map(({text,...metadata}) => metadata);
   const series = {
     ...parsed.series,
-    ...Object.fromEntries(['sofr','effr'].map(id => [id,{observations:fundingRates[id],sourceIds:[`${id.toUpperCase()}:percentRate`],sourceUrl:id === 'sofr' ? sofrUrl : effrUrl,sourceTitle:rateTitles[id],calculation:'Published New York Fed reference rate, percent. Date is the underlying effective business day, not a verified release timestamp. Revisions retain the published revision indicator.',observationType:'official',dataStatus:'official',sourceNotice:rateNotice,licenseUrl:NY_FED_TERMS_URL,coverageNote:'Daily volume-weighted median reference rates for distinct funding markets. Source contingencies and revisions may apply. No missing dates are filled.'}])),
-    sofrEffrSpread:{observations:fundingRateDifference(fundingRates.sofr,fundingRates.effr),sourceIds:['SOFR:percentRate','EFFR:percentRate'],sourceUrl:sofrUrl,sourceUrls:[sofrUrl,effrUrl],sourceTitle:`${rateTitles.sofr}; ${rateTitles.effr}`,calculation:'100 × (SOFR − EFFR) for the identical effective date, basis points. Meridian calculation across two distinct funding markets; not an exact credit-risk or liquidity decomposition.',observationType:'calculated',dataStatus:'calculated',sourceNotice:`${rateNotice} The SOFR−EFFR difference is a Meridian calculation.`,licenseUrl:NY_FED_TERMS_URL,coverageNote:MARKET_FUNCTIONING_LIMITATION},
+    ...Object.fromEntries(['sofr','effr'].map(id => [id,{observations:fundingRates[id],sourceIds:[`${id.toUpperCase()}:percentRate`],sourceUrl:id === 'sofr' ? sofrUrl : effrUrl,sourceTitle:rateTitles[id],calculation:'Published New York Fed reference rate, percent. Date is the underlying effective business day, not a verified release timestamp. Revisions retain the published revision indicator.',observationType:'official',dataStatus:'official',sourceNotice:rateNotice,licenseUrl:NY_FED_TERMS_URL,coverageNote:`${id === 'sofr' ? 'SOFR begins 2018-04-02, its first effective date; first published 2018-04-03. Earlier indicative rates are excluded.' : 'EFFR begins 2016-03-01 under the current transaction-based volume-weighted median methodology. Earlier mean-based EFFR is excluded.'} Published distribution endpoints are transaction-rate percentiles, not uncertainty intervals. Volume is USD billions. Source contingency footnotes and raw revision indicators (r or Y meaning Revised) are retained. Missing percentiles remain null; no missing dates are filled.`}])),
+    sofrEffrSpread:{observations:fundingRateDifference(fundingRates.sofr,fundingRates.effr).filter(row => row.date >= FUNDING_RATE_STARTS.sofr),sourceIds:['SOFR:percentRate','EFFR:percentRate'],sourceUrl:sofrUrl,sourceUrls:[sofrUrl,effrUrl],sourceTitle:`${rateTitles.sofr}; ${rateTitles.effr}`,calculation:'100 × (SOFR − EFFR) for the identical effective date, basis points, from SOFR inception on 2018-04-02. Unmatched effective dates remain null. Meridian calculation across two distinct funding markets; not an exact credit-risk or liquidity decomposition.',observationType:'calculated',dataStatus:'calculated',sourceNotice:`${rateNotice} The SOFR−EFFR difference is a Meridian calculation.`,licenseUrl:NY_FED_TERMS_URL,coverageNote:MARKET_FUNCTIONING_LIMITATION},
   };
   return {id:'marketFunctioning',fetchedAt:provenance.map(row => row.retrievedAt).sort().at(-1),series,dealerHistory,fundingRates,coverageStart,coverageEnd,structuralBreak:breakId,coverageNote:MARKET_FUNCTIONING_LIMITATION,sourceNotice:rateNotice,licenseUrl:NY_FED_TERMS_URL,provenance,warnings:['Primary-dealer values marked * by the source are suppressed and remain missing; no older value is substituted.','Daily funding rates and weekly dealer indicators have distinct periods and coverage.']};
 }

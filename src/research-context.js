@@ -16,7 +16,6 @@ import {H15_TREASURY_CMT_URL} from './yields.js';
 import {auctionsCsv} from './auctions-page.js';
 import {ownershipCsv} from './ownership-page.js';
 import {macroContributionsCsv} from './macro-page.js';
-import {marketFunctioningCsv} from './market-functioning-page.js';
 import {fiscalFinancingCsv} from './research-exports.js';
 import {selectPublicationHistory,publicationCsv,publicationContext} from './publication-history.js';
 import {periodLabel,transformSeries,resolveDateWindow,windowObservations,BLS_DATA_NOTICE} from './model.js';
@@ -164,9 +163,8 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
  }
  if(state.page==='macro')context.attachments=[attachment('macro-contributions.csv',macroContributionsCsv(sources.macroContributions))];
  if(state.page==='market'){
-  context.attachments=[attachment('market-functioning.csv',marketFunctioningCsv(sources.marketFunctioning))];
-  context.fundingDistributions={version:1,range:viewRange(state)};
-  context.scope='Primary registered measurements plus the full recorded market-functioning source. Funding distribution panels retain their exact date window, published median/percentile/volume fields and source notices. The original specialist CSV remains full retained scope.';
+  context.fundingDistributions={version:2,range:viewRange(state),csvMode:'generated-full-retained-v1'};
+  context.scope='Primary registered measurements plus the complete full-retained market-functioning source, independent of the selected window. Funding distribution panels retain their exact date window, published median/percentile/volume fields and source notices. The specialist CSV is generated on download from these frozen inputs with the versioned generated full-retained CSV method; duplicated CSV content is not stored.';
  }
  if(state.page==='calendar'){
   const scope=calendarScope(state,{events,catalog,now}),event=scope.selected;
