@@ -1,6 +1,6 @@
 import { supportingDetails } from './page-hierarchy.js';
 import { registry } from './registry.js';
-import { formatValue, tabularCsv, BLS_DATA_NOTICE, observationCapture } from './model.js';
+import { formatValue, tabularCsv, BLS_DATA_NOTICE, observationCapture, isRoundedSourceObservation, roundedSourceCsvHeaders, roundedSourceCsvCells } from './model.js';
 import { asKnownOn, revisionHistory, normalizeVintageTimestamp, vintageMeasurementsComparable } from './vintages.js';
 import { heading, button, panel, table, emptyState, escapeHtml as esc } from './ui.js';
 
@@ -121,7 +121,7 @@ export function vintagesPage(state = {}, vintages, historyState = { status:vinta
   const knownRows = available.map(({ sourceId, source, series, observation, first }) => {
     const captured = capturedMetadata(metadata, source, series), initial = capturedMetadata(metadata, first?.source, first?.series);
     const comparable = vintageMeasurementsComparable(initial, captured);
-    return `<tr><th scope="row">${esc(observation.date)}</th><td class="num">${esc(displayValue(initial, first?.value))}<span class="table-code muted">${esc(initial.unit)}</span></td><td class="num">${esc(displayValue(captured, observation.value))}<span class="table-code muted">${esc(captured.unit)}</span></td><td>${esc(first?.capturedAt ?? 'Unknown')}</td><td>${esc(source.fetchedAt)}<span class="table-code muted">Measurement receipt: ${esc(observation.retrievedAt??series.fetchedAt??source.fetchedAt)}</span></td><td>${esc(observation.publishedAt ?? 'Unknown')}</td><td>${esc(sourceId)}</td><td>${esc(comparisonNote(comparable))}</td></tr>`;
+    return `<tr><th scope="row">${esc(observation.date)}</th><td class="num">${esc(displayValue(initial, first?.value))}<span class="table-code muted">${esc(initial.unit)}</span></td><td class="num">${esc(displayValue(captured, observation.value))}<span class="table-code muted">${esc(captured.unit)}</span>${isRoundedSourceObservation(observation)?`<span class="table-code muted">${esc((observation.footnotes??[]).join('; '))}</span>`:''}</td><td>${esc(first?.capturedAt ?? 'Unknown')}</td><td>${esc(source.fetchedAt)}<span class="table-code muted">Measurement receipt: ${esc(observation.retrievedAt??series.fetchedAt??source.fetchedAt)}</span></td><td>${esc(observation.publishedAt ?? 'Unknown')}</td><td>${esc(sourceId)}</td><td>${esc(comparisonNote(comparable))}</td></tr>`;
   }).join('');
   const changeRows = (result?.changeContexts ?? []).map(({ source, series, item, change }) => {
     const captured = capturedMetadata(metadata, source, series), previous = capturedMetadata(metadata, null, change.previousMetadata);
@@ -150,27 +150,29 @@ export function vintagesCsv(vintages, { cutoff: requestedCutoff, seriesId = 'gdp
   const headers = ['row_type', 'series_id', 'series_name', 'source_id', 'period', 'value', 'unit', 'cutoff_utc', 'first_captured_at', 'first_captured_value', 'last_captured_at', 'previous_value', 'change_captured_at', 'change_reason', 'release_date', 'retrieved_at', 'observation_type', 'data_status', 'source_url', 'source_series', 'calculation', 'coverage_note', 'provenance_sha256', 'limitations', 'value_status', 'source_notice', 'frequency', 'adjustment', 'definition', 'captured_data_status', 'source_urls', 'license_url', 'terms_url', 'attribution', 'source_title', 'redistribution_notice', 'provenance_urls','first_captured_unit','previous_value_unit','latest_captured_unit','latest_captured_value','first_captured_metadata_json','previous_value_metadata_json','latest_captured_metadata_json','measurement_comparable','measurement_comparison_note','previous_captured_at'];
   if (!vintages?.captures?.length && requestedCutoff === undefined) return tabularCsv(headers, []);
   const cutoff = normalizedCutoff(requestedCutoff, vintages), result = view(vintages, cutoff, seriesId), metadata = registry[seriesId];
+  const includeRounded=[...result.observations,...result.changeContexts].some(({observation})=>isRoundedSourceObservation(observation));
+  if(includeRounded)headers.push('source_value',...roundedSourceCsvHeaders,'source_notes','capture_provenance_json');
   const columns = (source, series, observation, value) => {
     const captured = capturedMetadata(metadata, source, series), rights = capturedRights(captured, source, series, observation);
     const inputProvenanceScope=series?.inputProvenanceScope??source?.inputProvenanceScope;
-    const capture=inputProvenanceScope==='observation-source-urls'?observationCapture({...series,inputProvenanceScope,provenance:series?.provenance??source?.provenance??[],fetchedAt:series?.fetchedAt??source?.fetchedAt},observation):null;
+    const capture=inputProvenanceScope==='observation-source-urls'||isRoundedSourceObservation(observation)?observationCapture({...series,inputProvenanceScope,provenance:series?.provenance??source?.provenance??[],fetchedAt:series?.fetchedAt??source?.fetchedAt},observation):null;
     const provenance=capture?.provenance??series?.provenance??source?.provenance??[];
     return {
-      captured,retrievedAt:capture?.retrievedAt,
+      captured,retrievedAt:capture?.retrievedAt,rounded:includeRounded?[observation?.sourceValue,...roundedSourceCsvCells(observation),(observation?.footnotes??[]).join('; '),JSON.stringify(provenance)]:[],
       common: [captured.observationType ?? 'official', 'captured-as-known', rights.sourceUrl, (series?.sourceIds ?? []).join('; '), series?.calculation ?? '', series?.coverageNote ?? source?.coverageNote ?? '', provenance.map(item => item.sha256).filter(Boolean).join('; '), limitation],
       extra: [finite(value) ? 'observed numeric value' : 'explicit missing value', rights.sourceNotice, captured.frequency, captured.adjustment, captured.definition, series?.dataStatus ?? captured.observationType ?? 'official', capture?joined(provenance.map(item=>item.url)):rights.sourceUrls.join('; '), rights.licenseUrls.join('; '), rights.termsUrls.join('; '), rights.attribution, rights.sourceTitle, rights.redistributionNotice, joined(provenance.map(item => item.url))],
     };
   };
   const rows = result.observations.map(({ sourceId, source, series, observation, first }) => {
-    const { captured, common, extra, retrievedAt } = columns(source, series, observation, observation.value);
+    const { captured, common, extra, retrievedAt, rounded } = columns(source, series, observation, observation.value);
     const initial = capturedMetadata(metadata, first?.source, first?.series), comparable = vintageMeasurementsComparable(initial, captured);
-    return ['as-known-observation', seriesId, captured.name, sourceId, observation.date, observation.value, captured.unit, cutoff, first?.capturedAt, first?.value, source.fetchedAt, null, null, '', observation.publishedAt ?? null, retrievedAt??observation.retrievedAt??series.fetchedAt??source.fetchedAt, ...common, ...extra,initial.unit,null,captured.unit,observation.value,JSON.stringify(measurementDetails(initial)),null,JSON.stringify(measurementDetails(captured)),comparable,comparisonNote(comparable),null];
+    return ['as-known-observation', seriesId, captured.name, sourceId, observation.date, observation.value, captured.unit, cutoff, first?.capturedAt, first?.value, source.fetchedAt, null, null, '', observation.publishedAt ?? null, retrievedAt??observation.retrievedAt??series.fetchedAt??source.fetchedAt, ...common, ...extra,initial.unit,null,captured.unit,observation.value,JSON.stringify(measurementDetails(initial)),null,JSON.stringify(measurementDetails(captured)),comparable,comparisonNote(comparable),null,...rounded];
   });
   for (const { sourceId, source, series, observation, item, change } of result.changeContexts) {
-    const { captured, common, extra, retrievedAt } = columns(source, series, observation, change.value);
+    const { captured, common, extra, retrievedAt, rounded } = columns(source, series, observation, change.value);
     const initial = capturedMetadata(metadata, null, item.firstMetadata), previous = capturedMetadata(metadata, null, change.previousMetadata), latest = capturedMetadata(metadata, null, item.latestMetadata);
     const comparable = change.measurementComparable !== false && vintageMeasurementsComparable(previous, captured);
-    rows.push(['observed-value-change', seriesId, captured.name, sourceId, item.date, change.value, captured.unit, cutoff, item.firstCaptured.capturedAt, item.firstCaptured.value, item.latest.capturedAt, change.previousValue, change.capturedAt, change.reason, observation?.publishedAt ?? null, retrievedAt??observation?.retrievedAt??series.fetchedAt??change.capturedAt, ...common, ...extra,initial.unit,previous.unit,latest.unit,item.latest.value,JSON.stringify(measurementDetails(initial)),JSON.stringify(measurementDetails(previous)),JSON.stringify(measurementDetails(latest)),comparable,comparisonNote(comparable),change.previousCapturedAt]);
+    rows.push(['observed-value-change', seriesId, captured.name, sourceId, item.date, change.value, captured.unit, cutoff, item.firstCaptured.capturedAt, item.firstCaptured.value, item.latest.capturedAt, change.previousValue, change.capturedAt, change.reason, observation?.publishedAt ?? null, retrievedAt??observation?.retrievedAt??series.fetchedAt??change.capturedAt, ...common, ...extra,initial.unit,previous.unit,latest.unit,item.latest.value,JSON.stringify(measurementDetails(initial)),JSON.stringify(measurementDetails(previous)),JSON.stringify(measurementDetails(latest)),comparable,comparisonNote(comparable),change.previousCapturedAt,...rounded]);
   }
   return tabularCsv(headers, rows);
 }

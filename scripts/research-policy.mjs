@@ -5,6 +5,7 @@ import {normalizeVintageTimestamp} from '../src/vintages.js';
 import {SOMA_2014_GAP_URL,SOMA_2014_GAP_DATES} from '../src/ownership.js';
 import {H15_TREASURY_CMT_URL,H15_3M_GAP_DATES} from '../src/yields.js';
 import {isDeepStrictEqual} from 'node:util';
+import {DTS_DEBT_URL} from '../src/debt-fallback.js';
 const fiscalBase='https://api.fiscaldata.treasury.gov/services/api/fiscal_service/';
 const fiscalPaths=['v1/accounting/mts/mts_table_9','v1/accounting/mts/mts_table_2','v1/accounting/mts/mts_receipts_outlays_deficit_surplus','v2/accounting/od/debt_to_penny'];
 const fiscalDerived=['budgetDeficit','primaryDeficit','receiptsTtm','outlaysTtm','netInterestTtm','primaryDeficitTtm','interestRevenueRatio'];
@@ -49,6 +50,7 @@ export const researchPolicies=[...marketPolicies,{
  series:{gdpTotalContribution:['A191RL'],gdpConsumptionContribution:['DPCERY'],gdpInvestmentContribution:['A006RY'],gdpGovernmentContribution:['A822RY'],gdpExportsContribution:['A020RY'],gdpImportsContribution:['A021RY'],gdpFixedInvestmentContribution:['A007RY'],gdpInventoriesContribution:['A014RY'],gdpConsumptionGoodsContribution:['DGDSRY'],gdpConsumptionServicesContribution:['DSERRY']},
 }];
 export function matchesResearchFeed(value,feed){
+  if(value===DTS_DEBT_URL&&['treasury-mts-fiscal','fiscal-public-debt'].includes(feed))return true;
   if(matchesMarketFeed(value,feed))return true;
   if(feed==='fed-h15-treasury-cmt-supplement')return value===H15_TREASURY_CMT_URL;
   try{

@@ -189,6 +189,13 @@ export function observationCapture(series,observation){
   return {provenance,retrievedAt:observation.retrievedAt??latest};
 }
 
+export const isRoundedSourceObservation=row=>row?.reconciliation==='official-rounded-fallback';
+export const roundedSourceCsvHeaders=['source_unit','source_precision_usd','source_series_id','source_sha256','reconciliation','reconciliation_residual_usd','primary_source_values_json','fallback_source_values_json','rounded_source_inputs_json'];
+export function roundedSourceCsvCells(row,inputs=[row]){
+  const rounded=inputs.filter(isRoundedSourceObservation);
+  return [row?.sourceUnit,row?.sourcePrecisionUSD,row?.sourceSeriesId,row?.sourceSha256,row?.reconciliation,row?.reconciliationResidualUSD,row?.primarySourceValues?JSON.stringify(row.primarySourceValues):null,row?.fallbackSourceValues?JSON.stringify(row.fallbackSourceValues):null,rounded.length?JSON.stringify(rounded):null];
+}
+
 /** Export exactly the displayed observations; missing numeric cells remain blank. */
 export function toCsv(ids, { transform = 'level', range = 12, comparison = 'native', catalog = series, maxBytes = Infinity } = {}) {
   const result = compareSeries(ids, comparison, range, catalog);
@@ -199,28 +206,31 @@ export function toCsv(ids, { transform = 'level', range = 12, comparison = 'nati
   const panels = comparison !== 'native' ? result.panels : result.panels.map((panel) => transformSeries(panel.series, transform, range, result.window));
   if(maxBytes!==Infinity&&(!Number.isSafeInteger(maxBytes)||maxBytes<0))throw new RangeError('CSV byte limit must be a nonnegative integer.');
   const includeInputs=panels.some(panel=>panel.observations.some(row=>row.inputDates||row.inputValues||row.sourcePeriodLabel));
+  const includeRounded=panels.some(panel=>panel.series.observations.some(isRoundedSourceObservation));
   const rows=[],encoder=maxBytes===Infinity?null:new TextEncoder();let bytes=0;
   const append=row=>{const line=row.map((cell,index)=>csvCell(cell,index===15||index===17)).join(',')+'\r\n';if(encoder&&(bytes+=encoder.encode(line).byteLength)>maxBytes)throw new RangeError('CSV byte limit exceeded.');rows.push(line);};
-  append(['series_id', 'name', 'date', 'value', 'unit', 'frequency', 'adjustment', 'source', 'publication_date', 'transform', 'data_status','retrieved_at','source_url','source_series','calculation','source_value','source_baseline_date','source_baseline_value','index_baseline_date','index_baseline_value','source_notice','coverage_note','observation_type','source_urls','license_url','attribution','source_title','partial','auction_count','pending_count','revision_indicator','source_notes','suppressed','measure','capture_provenance_json','comparison_mode','comparison_baseline_date','comparison_baseline_value','comparison_formula','window_preset','window_start_date','window_end_date','window_label',...(includeInputs?['source_period_label','input_dates_json','input_values_json','date_convention']:[])]);
+  append(['series_id', 'name', 'date', 'value', 'unit', 'frequency', 'adjustment', 'source', 'publication_date', 'transform', 'data_status','retrieved_at','source_url','source_series','calculation','source_value','source_baseline_date','source_baseline_value','index_baseline_date','index_baseline_value','source_notice','coverage_note','observation_type','source_urls','license_url','attribution','source_title','partial','auction_count','pending_count','revision_indicator','source_notes','suppressed','measure','capture_provenance_json','comparison_mode','comparison_baseline_date','comparison_baseline_value','comparison_formula','window_preset','window_start_date','window_end_date','window_label',...(includeInputs?['source_period_label','input_dates_json','input_values_json','date_convention']:[]),...(includeRounded?roundedSourceCsvHeaders:[])]);
   for (const panel of panels) {
     const s = panel.series;
     const publications = new Map(s.observations.map((o) => [o.date, o.publishedAt]));
     const scoped=s.inputProvenanceScope==='observation-source-urls';
-    const previous=scoped&&transform==='change'?new Map(s.observations.map((row,index)=>[row.date,s.observations[index-1]])):null;
-    const baseline=scoped&&comparison!=='native'?s.observations.find(row=>row.date===panel.baselineDate):null;
+    const originals=includeRounded?new Map(s.observations.map(row=>[row.date,row])):null;
+    const previous=(scoped||includeRounded)&&transform==='change'?new Map(s.observations.map((row,index)=>[row.date,s.observations[index-1]])):null;
+    const baseline=(scoped||includeRounded)&&comparison!=='native'?s.observations.find(row=>row.date===panel.baselineDate):null;
     for (const observation of panel.observations) {
       let capture=observationCapture(s,observation);
       let sourceUrls=scoped?(observation.sourceUrls??[observation.sourceUrl].filter(Boolean)):(observation.sourceUrls??s.sourceUrls??[]);
       const input=previous?.get(observation.date)??baseline;
-      if(input){
+      if(input&&(scoped||isRoundedSourceObservation(input)||isRoundedSourceObservation(observation))){
         const evidence=[...capture.provenance,...observationCapture(s,input).provenance];
         if(evidence.some(receipt=>typeof receipt.url!=='string'||!/^[a-f\d]{64}$/.test(receipt.sha256??'')||!Number.isFinite(Date.parse(receipt.retrievedAt))))throw new Error('Incomplete transformed observation capture provenance');
         const provenance=[...new Map(evidence.map(receipt=>[JSON.stringify([receipt.url,receipt.sha256,receipt.retrievedAt]),receipt])).values()];
         capture={provenance,retrievedAt:provenance.reduce((left,right)=>Date.parse(left.retrievedAt)>=Date.parse(right.retrievedAt)?left:right).retrievedAt};
         sourceUrls=[...new Set(provenance.map(receipt=>receipt.url))];
       }
+      const notes=[...(observation.footnotes??[]),...(input?.date!==observation.date&&isRoundedSourceObservation(input)?(input.footnotes??[]).map(note=>`Input ${input.date}: ${note}`):[])];
       append([s.id, s.name, observation.date, observation.value, panel.unit, s.frequency, s.adjustment,
-        s.source.name, publications.get(observation.date), comparison !== 'native' ? comparison : transform, s.dataStatus||'unknown',capture.retrievedAt,observation.sourceUrl||s.sourceUrl||s.source.url,(s.source.seriesIds||[]).join('; '),s.calculation,observation.sourceValue,observation.baseDate|| (observation.yearAgoSourceValue!=null?`${Number(observation.date.slice(0,4))-1}${observation.date.slice(4)}`:null),observation.baseValue??observation.yearAgoSourceValue,comparison === 'indexed' ? panel.baselineDate : null,comparison === 'indexed' ? panel.baselineValue : null,s.agency === 'bls' ? BLS_DATA_NOTICE : s.sourceNotice??'',s.coverageNote,s.observationType??'official',sourceUrls.join('; '),s.licenseUrl,s.attribution,s.sourceTitle,observation.partial,observation.auctionCount,observation.pendingCount,observation.revisionIndicator,(observation.footnotes??[]).join('; '),observation.suppressed,s.measure,JSON.stringify(capture.provenance),comparison,panel.baselineDate,panel.baselineValue,panel.formula,panel.window.preset,panel.window.startDate,panel.window.endDate,panel.window.label,...(includeInputs?[observation.sourcePeriodLabel??null,observation.inputDates?JSON.stringify(observation.inputDates):null,observation.inputValues?JSON.stringify(observation.inputValues):null,s.dateConvention??null]:[])]);
+        s.source.name, publications.get(observation.date), comparison !== 'native' ? comparison : transform, s.dataStatus||'unknown',capture.retrievedAt,observation.sourceUrl||s.sourceUrl||s.source.url,(s.source.seriesIds||[]).join('; '),s.calculation,observation.sourceValue,observation.baseDate|| (observation.yearAgoSourceValue!=null?`${Number(observation.date.slice(0,4))-1}${observation.date.slice(4)}`:null),observation.baseValue??observation.yearAgoSourceValue,comparison === 'indexed' ? panel.baselineDate : null,comparison === 'indexed' ? panel.baselineValue : null,s.agency === 'bls' ? BLS_DATA_NOTICE : s.sourceNotice??'',s.coverageNote,s.observationType??'official',sourceUrls.join('; '),s.licenseUrl,s.attribution,s.sourceTitle,observation.partial,observation.auctionCount,observation.pendingCount,observation.revisionIndicator,notes.join('; '),observation.suppressed,s.measure,JSON.stringify(capture.provenance),comparison,panel.baselineDate,panel.baselineValue,panel.formula,panel.window.preset,panel.window.startDate,panel.window.endDate,panel.window.label,...(includeInputs?[observation.sourcePeriodLabel??null,observation.inputDates?JSON.stringify(observation.inputDates):null,observation.inputValues?JSON.stringify(observation.inputValues):null,s.dateConvention??null]:[]),...(includeRounded?roundedSourceCsvCells(observation,[originals.get(observation.date),...(input&&input.date!==observation.date?[input]:[])]):[])]);
     }
   }
   return rows.join('');

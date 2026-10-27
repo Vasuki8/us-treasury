@@ -57,13 +57,13 @@ function safeCsv(text,maxBytes=8*1024*1024){
  if(quoted)fail('unterminated CSV quote');if(row.length||cell||!/[\r\n]$/.test(text)){check();rows.push(row);}return rows;
 }
 function matchingCsv(actual,expected){
- const rows=safeCsv(actual,MAX_RESEARCH_JSON_BYTES),computed=safeCsv(expected,MAX_RESEARCH_JSON_BYTES),provenance=computed[0].indexOf('capture_provenance_json');
+ const rows=safeCsv(actual,MAX_RESEARCH_JSON_BYTES),computed=safeCsv(expected,MAX_RESEARCH_JSON_BYTES),jsonColumns=new Set(['capture_provenance_json','primary_source_values_json','fallback_source_values_json','rounded_source_inputs_json'].map(header=>computed[0].indexOf(header)));
  if(rows.length!==computed.length)return false;
  return rows.every((row,index)=>row.length===computed[index].length&&row.every((cell,column)=>{
   if(cell===computed[index][column])return true;
-  if(!index||column!==provenance)return false;
+  if(!index||!jsonColumns.has(column))return false;
   // Canonical package JSON sorts object keys. Preserve the original exported
-  // bytes, while proving this one JSON-valued cell has identical source data.
+  // bytes, while proving JSON-valued cells have identical source data.
   try{return canonicalJson(researchJsonCopy(JSON.parse(cell)))===canonicalJson(JSON.parse(computed[index][column]));}catch{return false;}
  }));
 }

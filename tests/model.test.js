@@ -149,7 +149,7 @@ test('captured official measures reconcile with their retained source values and
       if(o.value===null)continue;
       const raw=Number(String(o.sourceValue).replaceAll(',',''));
       let expected=raw;
-      if(['debt','publicDebt'].includes(id))expected=raw/1e12;
+      if(['debt','publicDebt'].includes(id))expected=raw/(o.sourceUnit==='USD millions'?1e6:1e12);
       else if(['receipts','outlays','netInterest'].includes(id))expected=raw/1e9;
       else if(['openings','claims'].includes(id))expected=raw/1000;
       else if(id==='payroll')expected=raw-Number(o.baseValue);

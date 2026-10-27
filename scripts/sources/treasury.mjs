@@ -1,5 +1,7 @@
 import { parseCsv, requestText } from './http.mjs';
 import { DEBT_HISTORY_START, debtHistoryUrl, requireCompleteDebtHistory } from './treasury-debt.mjs';
+import { collectDebtFallback } from './debt-fallback.mjs';
+import { DTS_DEBT_URL, DTS_DEBT_VALUES, DTS_DEBT_NOTE, isDtsDebtFallbackRow, debtFallbackMetadata } from '../../src/debt-fallback.js';
 
 const TENORS = [
   ['1M', 1 / 12, ['1 Mo']],
@@ -63,15 +65,21 @@ function requireUsable(observations, name) {
   return observations;
 }
 
-export function parseDebt(payload) {
+export function parseDebt(payload, { debtFallback = null, primaryReceipt = null, quarantineSourceResiduals = false } = {}) {
   if (!payload || !Array.isArray(payload.data)) throw new Error('Invalid Treasury debt response: expected a data array');
   const observations = payload.data.map(row => {
     const dollars = nullableNumber(row.tot_pub_debt_out_amt);
+    const publicDebt = nullableNumber(row.debt_held_public_amt), intragovernmentalDebt = nullableNumber(row.intragov_hold_amt);
+    const unavailable = row.record_date < '2005-04-04' && publicDebt === 0 && intragovernmentalDebt === 0;
+    const residual = dollars === null || publicDebt === null || intragovernmentalDebt === null || unavailable ? null : Number((dollars - publicDebt - intragovernmentalDebt).toFixed(2));
+    const invalid = quarantineSourceResiduals && residual !== null && Math.abs(residual) > 1;
+    const fallback = debtFallback && isDtsDebtFallbackRow(row);
     return {
       date: isoDate(row.record_date),
-      value: dollars === null ? null : dollars / 1e12,
+      value: fallback ? Number(DTS_DEBT_VALUES.tot_pub_debt_out_amt) / 1e6 : dollars === null || invalid ? null : dollars / 1e12,
       publishedAt: null,
       sourceValue: row.tot_pub_debt_out_amt === null || row.tot_pub_debt_out_amt === undefined ? 'null' : String(row.tot_pub_debt_out_amt),
+      ...(fallback ? debtFallbackMetadata('tot_pub_debt_out_amt', debtFallback, primaryReceipt) : invalid ? { reconciliation: 'source-residual-quarantined', reconciliationResidualUSD: residual, primarySourceValues: { debt_held_public_amt: String(row.debt_held_public_amt), intragov_hold_amt: String(row.intragov_hold_amt), tot_pub_debt_out_amt: String(row.tot_pub_debt_out_amt) } } : {}),
     };
   });
   return requireUsable(sortedUnique(observations), 'debt');
@@ -152,7 +160,7 @@ export async function collectTreasury({ fetchImpl = globalThis.fetch, now = new 
   const cutoff = now.toISOString().slice(0, 10);
   const year = now.getUTCFullYear();
   const sourceUrl = yieldUrl(year);
-  const debtUrl = debtHistoryUrl('record_date,tot_pub_debt_out_amt', cutoff);
+  const debtUrl = debtHistoryUrl('record_date,debt_held_public_amt,intragov_hold_amt,tot_pub_debt_out_amt', cutoff);
   const [debtResponse, currentYieldResponse] = await Promise.all([
     requestText(debtUrl, { fetchImpl: async (url, options) => {
       const response = await fetchImpl(url, options);
@@ -164,7 +172,11 @@ export async function collectTreasury({ fetchImpl = globalThis.fetch, now = new 
   const responses = [debtResponse, currentYieldResponse];
   const debtPayload=JSON.parse(debtResponse.text);
   requireCompleteDebtHistory(debtPayload);
-  const debt = requireUsable(parseDebt(debtPayload).filter(row => row.date <= cutoff && row.date >= DEBT_HISTORY_START), 'debt');
+  const { text: _debtText, ...debtProvenance } = debtResponse;
+  const debtFallback = await collectDebtFallback(debtPayload, { cutoff, fetchImpl });
+  const debtReceipts = [debtProvenance, ...(debtFallback ? [debtFallback] : [])];
+  if (debtFallback) responses.push(debtFallback);
+  const debt = requireUsable(parseDebt(debtPayload, { debtFallback, primaryReceipt: debtProvenance, quarantineSourceResiduals: true }).filter(row => row.date <= cutoff && row.date >= DEBT_HISTORY_START), 'debt');
   let rows = parseYieldRows(currentYieldResponse.text).filter(row => row.date <= cutoff);
   const tenYearIndex = TENORS.findIndex(([tenor]) => tenor === '10Y');
   if (rows.filter(row => row.rates[tenYearIndex] !== null).length < 36) {
@@ -173,20 +185,20 @@ export async function collectTreasury({ fetchImpl = globalThis.fetch, now = new 
     rows = sortedUnique([...parseYieldRows(previousYieldResponse.text), ...rows]).filter(row => row.date <= cutoff);
   }
   const curve = buildYieldResult(rows);
-  const { text: _debtText, ...debtProvenance } = debtResponse;
   return {
     id: 'treasury',
     fetchedAt: responses.map(response => response.retrievedAt).sort().at(-1),
     series: {
       debt: {
         observations: debt,
-        fetchedAt: debtResponse.retrievedAt,
-        provenance: [debtProvenance],
-        calculation: 'USD dollars / 1e12',
+        fetchedAt: debtReceipts.map(item => item.retrievedAt).sort().at(-1),
+        provenance: debtReceipts,
+        calculation: 'USD dollars / 1e12' + (debtFallback ? '; 2025-08-04 official DTS USD millions / 1e6, reported at USD 1,000,000 precision' : ''),
         sourceUrl: debtUrl,
+        ...(debtFallback ? { sourceUrls: [debtUrl, DTS_DEBT_URL] } : {}),
         sourceIds: ['tot_pub_debt_out_amt'],
         dataStatus: 'official',
-        coverageNote:'Official daily gross debt history from 1 April 1993 through the capture cutoff. Actual record dates only; weekends and missing dates are not filled. Current published history captured at its actual retrieval date, not historical first releases. The complete history must fit the reviewed 10,000-row single-page bound or collection fails.',
+        coverageNote:'Official daily gross debt history from 1 April 1993 through the capture cutoff. Actual record dates only; weekends and missing dates are not filled. Current published history captured at its actual retrieval date, not historical first releases. The complete history must fit the reviewed 10,000-row single-page bound or collection fails.' + (debtFallback ? ` ${DTS_DEBT_NOTE}` : ''),
       },
       yield: {
         observations: curve.observations,
@@ -200,6 +212,6 @@ export async function collectTreasury({ fetchImpl = globalThis.fetch, now = new 
     curveDate: curve.curveDate,
     previousCurveDate: curve.previousCurveDate,
     provenance: responses.map(({ text, ...metadata }) => metadata),
-    warnings: [],
+    warnings: [...(debtFallback ? [DTS_DEBT_NOTE] : []), ...debt.filter(row => row.reconciliation === 'source-residual-quarantined').map(row => `Debt for ${row.date} is unavailable: published gross debt does not reconcile with public plus intragovernmental debt. Raw amounts and residual are retained.`)],
   };
 }

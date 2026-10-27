@@ -12,6 +12,8 @@ import {beaItaPolicy,matchesBeaItaFeed,assertBeaItaData} from './bea-ita-policy.
 import {matchesNyFedBlsCalendarFeed,assertNyFedBlsCalendar} from './bls-alternate-policy.mjs';
 import {BLS_API_V2,matchesBlsApiFeed} from './bls-api-policy.mjs';
 import {hasDolRevisedHistory,matchesDolRevisedFeed} from './dol-revised-policy.mjs';
+import {DTS_DEBT_URL} from '../src/debt-fallback.js';
+import {assertDebtFallbackData} from './debt-fallback-policy.mjs';
 
 // Dataset-specific commercial reuse review. Evidence and limitations: docs/data-sources.md.
 // An official-looking hostname alone does not establish reuse rights.
@@ -63,6 +65,7 @@ export const dataPolicies = [
 ];
 
 function matchesFeed(value, feed) {
+  if(value===DTS_DEBT_URL&&feed==='treasury-debt')return true;
   if(feed==='bls-api')return matchesBlsApiFeed(value);
   if(matchesBeaItaFeed(value,feed))return true;
   if(matchesCreditContextFeed(value,feed))return true;
@@ -239,6 +242,7 @@ function assertCalendarData(snapshot) {
 
 /** Stop publication or snapshot replacement when data exceed the reviewed scope. */
 export function assertCommercialData(snapshot) {
+  assertDebtFallbackData(snapshot);
   assertBeaItaData(snapshot);
   assertCreditContextData(snapshot);
   assertEconomicDepthData(snapshot);

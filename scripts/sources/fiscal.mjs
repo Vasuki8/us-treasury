@@ -1,5 +1,7 @@
 import { requestText } from './http.mjs';
 import { DEBT_HISTORY_START, debtHistoryUrl, requireCompleteDebtHistory } from './treasury-debt.mjs';
+import { collectDebtFallback } from './debt-fallback.mjs';
+import { DTS_DEBT_URL, DTS_DEBT_VALUES, DTS_DEBT_NOTE, isDtsDebtFallbackRow, debtFallbackMetadata } from '../../src/debt-fallback.js';
 
 const base = 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/';
 const endpoints = {
@@ -112,7 +114,7 @@ export function parseFiscalTables({ table9, table2, unitCheck, cutoff = '9999-12
   return { series, monthly, coverageStart: monthly[0].date, coverageEnd: latest.date, historyNote, unitCheck: { periodEnd: latest.periodEnd, tableAmountUnit: 'USD dollars', checkAmountUnit: 'USD millions', roundingToleranceUSD: 500001 } };
 }
 
-export function parseFiscalDebt(payload, cutoff = '9999-12-31', {quarantineSourceResiduals=false}={}) {
+export function parseFiscalDebt(payload, cutoff = '9999-12-31', {quarantineSourceResiduals=false, debtFallback=null, primaryReceipt=null}={}) {
   date(cutoff);
   const seen = new Set(), observations = [], debtBreakdown = [], warnings=[];
   const selected = rows(payload).filter(row => date(row.record_date) <= cutoff && row.record_date >= DEBT_HISTORY_START).sort((a, b) => b.record_date.localeCompare(a.record_date));
@@ -127,6 +129,14 @@ export function parseFiscalDebt(payload, cutoff = '9999-12-31', {quarantineSourc
     const unavailable = recordDate < '2005-04-04' && ((publicDebt === null && intragovernmentalDebt === null) || (publicDebt === 0 && intragovernmentalDebt === 0));
     if (grossDebt === null || grossDebt < 0 || (!unavailable && [publicDebt, intragovernmentalDebt].some(value => value === null || value < 0))) throw new Error('Missing or invalid fiscal debt amount');
     const residual=unavailable?null:Number((grossDebt-publicDebt-intragovernmentalDebt).toFixed(2)),invalid=residual!==null&&Math.abs(residual)>1;
+    const fallback = debtFallback && isDtsDebtFallbackRow(row);
+    if (fallback) {
+      const metadata = debtFallbackMetadata('debt_held_public_amt', debtFallback, primaryReceipt);
+      observations.push({ date: recordDate, value: Number(DTS_DEBT_VALUES.debt_held_public_amt) / 1e6, ...metadata });
+      debtBreakdown.push({ date: recordDate, publicDebt: Number(DTS_DEBT_VALUES.debt_held_public_amt) / 1e6, intragovernmentalDebt: Number(DTS_DEBT_VALUES.intragov_hold_amt) / 1e6, grossDebt: Number(DTS_DEBT_VALUES.tot_pub_debt_out_amt) / 1e6, sourceValues: { debt_held_public_amt: String(row.debt_held_public_amt), intragov_hold_amt: String(row.intragov_hold_amt), tot_pub_debt_out_amt: String(row.tot_pub_debt_out_amt) }, ...metadata });
+      warnings.push(DTS_DEBT_NOTE);
+      continue;
+    }
     if(invalid&&!quarantineSourceResiduals)close(grossDebt,publicDebt+intragovernmentalDebt,'Gross debt does not reconcile with public and intragovernmental debt');
     const quality=unavailable?{reconciliation:'composition-not-published'}:invalid?{reconciliation:'source-residual-quarantined',reconciliationResidualUSD:residual}:{};
     if(invalid)warnings.push(`Debt composition for ${recordDate} is unavailable: published gross debt differs from public plus intragovernmental debt by USD ${Math.abs(residual).toLocaleString('en-US')}. Raw amounts are retained; no balancing adjustment or replacement date is used.`);
@@ -160,11 +170,16 @@ export async function collectFiscal({ fetchImpl = globalThis.fetch, now = new Da
   }));
   const payloads = Object.fromEntries(captures.map(([key, response]) => [key, JSON.parse(response.text)]));
   requireCompleteDebtHistory(payloads.debt);
-  const fiscal = parseFiscalTables({ ...payloads, cutoff }), debt = parseFiscalDebt(payloads.debt, cutoff,{quarantineSourceResiduals:true});
+  const debtFallback = await collectDebtFallback(payloads.debt, { cutoff, fetchImpl });
+  const primaryReceipt = captures.find(([key]) => key === 'debt')[1];
+  const { text: _debtText, ...primaryProvenance } = primaryReceipt;
+  const fiscal = parseFiscalTables({ ...payloads, cutoff }), debt = parseFiscalDebt(payloads.debt, cutoff,{quarantineSourceResiduals:true, debtFallback, primaryReceipt: primaryProvenance});
   for (const series of Object.values(fiscal.series)) series.sourceUrl = requested.table9;
   const provenance = captures.map(([, { text: _text, ...metadata }]) => metadata);
+  if (debtFallback) provenance.push(debtFallback);
   const debtProvenance = provenance.find(item => item.url === requested.debt);
+  const debtReceipts = [debtProvenance, ...(debtFallback ? [debtFallback] : [])];
   const warnings = [historyNote,...debt.warnings];
   if (fiscal.monthly.some(month => month.financingReconciliation === 'source-residual')) warnings.push('Some published financing rows do not reconcile to the budget deficit. Their reported amounts are retained with an explicit calculated financing residual.');
-  return { id: 'fiscal', fetchedAt: provenance.map(item => item.retrievedAt).sort().at(-1), series: { ...fiscal.series, publicDebt: { observations: debt.observations, fetchedAt: debtProvenance.retrievedAt, provenance: [debtProvenance], calculation: 'Debt held by the public USD dollars / 1e12; excludes intragovernmental holdings; actual debt record dates from 1 April 1993. Composition is annual from September 1997 through September 2001, monthly through March 2005, and daily from 4 April 2005; unpublished historical composition remains null, including source zero placeholders. No filled weekends or missing dates.', sourceUrl: requested.debt, sourceIds: ['debt_held_public_amt'], dataStatus: 'official' } }, monthly: fiscal.monthly, coverageStart: fiscal.coverageStart, coverageEnd: fiscal.coverageEnd, coverageNote: historyNote, fiscal: { debtBreakdown: debt.debtBreakdown, historyNote, unitCheck: fiscal.unitCheck, methodology: 'Deficit (positive) = outlays - receipts. Financing bridge: deficit = borrowing from the public + reduction of operating cash + other financing + calculated source residual. Monthly actuals, not fiscal-year-to-date or budget estimates. Net interest is the published budget function, not gross Treasury interest expense. Borrowing flow and debt stock changes have distinct accounting scope.' }, provenance, warnings };
+  return { id: 'fiscal', fetchedAt: provenance.map(item => item.retrievedAt).sort().at(-1), series: { ...fiscal.series, publicDebt: { observations: debt.observations, fetchedAt: debtReceipts.map(item => item.retrievedAt).sort().at(-1), provenance: debtReceipts, calculation: 'Debt held by the public USD dollars / 1e12; excludes intragovernmental holdings; actual debt record dates from 1 April 1993. Composition is annual from September 1997 through September 2001, monthly through March 2005, and daily from 4 April 2005; unpublished historical composition remains null, including source zero placeholders. No filled weekends or missing dates.' + (debtFallback ? ' 2025-08-04 official DTS USD millions / 1e6, reported at USD 1,000,000 precision.' : ''), sourceUrl: requested.debt, ...(debtFallback ? { sourceUrls: [requested.debt, DTS_DEBT_URL], coverageNote: DTS_DEBT_NOTE } : {}), sourceIds: ['debt_held_public_amt'], dataStatus: 'official' } }, monthly: fiscal.monthly, coverageStart: fiscal.coverageStart, coverageEnd: fiscal.coverageEnd, coverageNote: historyNote, fiscal: { debtBreakdown: debt.debtBreakdown, historyNote, unitCheck: fiscal.unitCheck, methodology: 'Deficit (positive) = outlays - receipts. Financing bridge: deficit = borrowing from the public + reduction of operating cash + other financing + calculated source residual. Monthly actuals, not fiscal-year-to-date or budget estimates. Net interest is the published budget function, not gross Treasury interest expense. Borrowing flow and debt stock changes have distinct accounting scope.' }, provenance, warnings };
 }

@@ -1,5 +1,5 @@
 import { yieldCurve, dataStatus } from './data.js';
-import { getSeries, compareSeries, transformSeries, formatValue, periodLabel, observationCoverageLabel } from './model.js';
+import { getSeries, compareSeries, transformSeries, formatValue, periodLabel, observationCoverageLabel, isRoundedSourceObservation } from './model.js';
 import { selectCurveOverlays, NOMINAL_YIELD_TENORS } from './yields.js';
 import {createLinkedCursor} from './comparison-cursor.js';
 import {resolveDateWindow} from './date-window.js';
@@ -178,6 +178,7 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
         span.append(` · Volume ${finite(volume)?`$${volume.toLocaleString('en-US',{maximumFractionDigits:12})}B`:'—'} (USD billions) · Revision flag ${observation?.revisionIndicator||'not supplied'}`);
       }
       const coverage=observationCoverageLabel(observation);if(coverage)span.append(` · ${coverage}`);
+      if(isRoundedSourceObservation(observation))for(const note of observation.footnotes??[])span.append(` · ${note}`);
       if(!observation)span.append(' · no observation on this reference date');
       else if(!finite(value))span.append(' · source value unavailable');
       readout.append(span);

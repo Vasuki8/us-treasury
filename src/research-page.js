@@ -1,6 +1,6 @@
 import { supportingDetails } from './page-hierarchy.js';
 import {heading,panel,button,table,emptyState,chart,escapeHtml as esc} from './ui.js';
-import {formatValue,periodLabel} from './model.js';
+import {formatValue,periodLabel,isRoundedSourceObservation} from './model.js';
 import {packagePanels} from './research-packages.js';
 import {selectPublicationHistory,publicationContext} from './publication-history.js';
 import {publicationExplanation} from './publication-explanation-view.js';
@@ -75,7 +75,7 @@ function frozenDeliveryViews(pkg){
 function frozenViewer(pkg){
  const panels=pkg.context.coverageInventory||pkg.context.gdpRevisionMatrix?[]:packagePanels(pkg).filter(item=>!pkg.context.fundingDistributions||item.series.id!=='sofr'),range=pkg.request.range;
  const histories=panels.map(item=>{
-  const s=item.series,rows=item.observations.slice(0,50).map(row=>`<tr><th scope="row">${esc(row.date)}</th><td class="num">${esc(row.value===null?'—':pkg.request.transform==='change'||pkg.request.comparison!=='native'?`${row.value} ${item.unit}`:formatValue(s,row.value))}</td></tr>`).join('');
+  const s=item.series,rows=item.observations.slice(0,50).map(row=>`<tr><th scope="row">${esc(row.date)}</th><td class="num">${esc(row.value===null?'—':pkg.request.transform==='change'||pkg.request.comparison!=='native'?`${row.value} ${item.unit}`:formatValue(s,row.value))}${isRoundedSourceObservation(row)?`<span class="table-code muted">${esc((row.footnotes??[]).join('; '))}</span>`:''}</td></tr>`).join('');
   return panel('',s.name,chart(pkg.request.ids,{range,transform:pkg.request.transform,comparison:pkg.request.comparison,panelId:s.id,cursorGroup:'frozen-package',height:180})+`<p class="panel-note">Frozen ${esc(s.frequency)} · ${esc(item.unit)} · ${esc(s.adjustment)}. ${esc(item.formula??s.calculation??'')} ${item.baselineDate?`Baseline: ${esc(item.baselineDate)} / ${esc(item.baselineValue)}.`:''}</p>${supportingDetails(`research:package:${pkg.id}:series:${s.id}`, 'Frozen definition & source', `<p>${esc(s.definition)}</p><p class="panel-note">Retrieval: ${esc(s.fetchedAt??'Unavailable')}. ${sourceAnchor(s.sourceUrl??s.source?.url)} · Source IDs: ${esc(s.source?.seriesIds?.join('; ')??'Unavailable')}.</p>`)}${supportingDetails(`research:package:${pkg.id}:observations:${s.id}`, `Frozen table · first ${Math.min(50,item.observations.length)} of ${item.observations.length} displayed observations`, table(['REFERENCE DATE','FROZEN VALUE'],rows,'Frozen displayed observations; complete data in CSV and JSON'), {className:'frozen-observations'})}`,'',s.sourceNotice??'');
  }).join('');
  const attachments=pkg.context.attachments??[];
