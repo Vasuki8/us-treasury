@@ -84,4 +84,3 @@ test('unavailable GDP and retained source failures remain explicit and escaped',
  assert.match(page,/Year-over-year attribution unavailable\./);
  assert.match(page,/Monthly financing unavailable\./);
 });
-
