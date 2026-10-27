@@ -40,5 +40,16 @@ The normal local snapshot replacement encountered a Windows file-sharing lock. T
 - Desktop and 390-pixel mobile browser checks covered oldest/newest paging, deep historical selection, table focus/scroll, frozen-result creation and session-only storage messaging. No document horizontal overflow was observed.
 - A real downloaded Bill CSV contains 4,514 rows and exactly matches the generated frozen source. Its SHA-256, excluding the UTF-8 BOM, is `67fb1262e630f56cf94ac99443972f1f1b86d6e734f503912d0983ee9ca32ea0`.
 - The full-source generated CSV contains all 6,274 records and is 14,953,180 bytes. Every row's response receipt was checked. Four genuine legacy packages preserve exact JSON, main CSV and specialist-attachment bytes.
+- A final-capture repeat verified default, All, Bill and historical frozen results through JSON import and exact regenerated attachments. Representative portable default/All packages measure 6,545,065 / 7,769,213 bytes, with the full 6,430,263-byte source retained; all four cases report session-only storage explicitly.
 
-Cloud tests, automatic source checks, deployment and final live verification are pending at this documentation checkpoint.
+## Cloud release
+
+Implementation commit: `b880a276d364881203fa9bc51fa3a9fd757e9ee3`. [Release workflow 40573137031](https://github.com/Vasuki8/us-treasury/actions/runs/40573137031) checks that exact commit with data refresh disabled, all-source checks enabled and both supported Node versions.
+
+The all-source check passed for all **23 statistics collectors and seven calendar collectors**. This includes the expanded auction query and both Census feeds. Publication-evidence upkeep also passed. These checks do not replace the admitted snapshot or manufacture new publication evidence.
+
+Both Node 22 and Node 24 completed **1,887 tests with zero failures**, built successfully and passed the **163-asset** smoke check. GitHub Pages deployment succeeded. The subsequent public-site check matched all 163 assets exactly to the local tested build. The live deep link selected the April 7, 2008 bill on page 105 of 105; Newest returned to page 1, preserving all 6,274 matching records. The browser reported no console warnings or errors in this check.
+
+[Alert follow-up 40575377844](https://github.com/Vasuki8/us-treasury/actions/runs/40575377844) succeeded, verified 30 sources and daily update health, created zero new alerts and updated seven existing incident records. There were no open repository issues after the follow-up. Registered BLS backup health and the existing annual renewal schedule also remained healthy.
+
+The implementation is published at [Auction demand](https://vasuki8.github.io/us-treasury/#/auctions). The final evidence documentation is a separate commit with no application or data changes.

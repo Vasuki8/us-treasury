@@ -22,10 +22,12 @@
 - [x] Root model/access/admission: first write and observe failing regressions for June2009 peer eras, selected-record table paging/bookmarks, wrong/dangling receipt indices and wrong page URLs/date ranges. Implement only in src/auctions.js, upper auctionsPage, scripts/research-policy.mjs and focused tests. Existing app/router auctionId behavior should suffice.
 - [x] Frozen compatibility: genuine four baseline fixtures, explicit auctionExports v1, bounded generated files and all input/selection/monthly reconciliation/legacy/brand/amplification guards. Owner auction_frozen_exports; files lower auctions CSV, research context/packages/page and tests. Exact old bytes, current filtered scope and full-source round trips required; session-only quota must preserve durable bytes.
 - [x] Capture and acceptance: strict auctions-only refresh, archive prefix and other-source equality, current/normalized replay and exact index receipts, actual full-scale source/package/generated CSV measurements, selected 2008/2009/2020/current comparisons and independent economist/engineering verdicts.
-- [ ] Release: full local and Node22/24 suites, build/assets, browser desktop/mobile older-record access and saved downloads, existing GitHub all-source checks and deployment, final live asset match, update evidence and synchronize checkouts.
+- [x] Release: full local and Node22/24 suites, build/assets, browser desktop/mobile older-record access and saved downloads, existing GitHub all-source checks and deployment, final live asset match, update evidence and synchronize checkouts.
 
 ## Ledger
 
 - Ruling: April7 starts the coherent current-system source; January-March's 57 missing-field records are excluded rather than labeling a wider schema as uniform. Existing April partial handling preserves the actual coverage.
 - Ruling: one same-era peer set is simpler and safer than separate metric-specific populations; the cost is fewer amount/BTC peers near June2009, with visible actual sample sizes.
 - Ruling: actual per-row receipt indices and generated specialist attachments keep complete history usable within existing caps; old saved results are unaffected. Full new portable snapshots remain session-only under the unchanged browser quota.
+
+- Release evidence: implementation b880a276d364881203fa9bc51fa3a9fd757e9ee3; workflow 40573137031 passed 1,887 tests on Node22 and Node24, both builds/163-asset smoke checks and Pages deployment. Public asset match and earliest-record/newest-page navigation passed. Alert follow-up 40575377844 verified 30 sources, created zero alerts, updated seven existing records and left no open issues. See docs/auction-history-expansion.md.
