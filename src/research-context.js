@@ -13,7 +13,7 @@ import {vintagesCsv,normalizedCutoff} from './vintages-page.js';
 import {refinancingCsv} from './refinancing-page.js';
 import {yieldCurvesCsv,yieldOverlayDates} from './yields-page.js';
 import {H15_TREASURY_CMT_URL} from './yields.js';
-import {auctionsCsv} from './auctions-page.js';
+import {auctionSelection} from './auctions-page.js';
 import {ownershipCsv} from './ownership-page.js';
 import {macroContributionsCsv} from './macro-page.js';
 import {fiscalFinancingCsv} from './research-exports.js';
@@ -156,7 +156,11 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
   Object.assign(context,{moduleSources:retained.moduleSources,scope:retained.scope,yieldAnalysisWindow:retained.window,yieldOverlayDates:retained.overlayDates,yieldCurrentReadings:retained.currentReadings});
   context.attachments=[attachment('yield-curve-overlays.csv',yieldCurvesCsv(sources.yields,state))];
  }
- if(state.page==='auctions')context.attachments=[attachment('auction-results.csv',auctionsCsv(sources.auctions,{securityType:state.auctionType,auctionId:state.auctionId})),attachment('auction-peers.csv',auctionsCsv(sources.auctions,{securityType:state.auctionType,auctionId:state.auctionId,benchmark:true}))];
+ if(state.page==='auctions'){
+  const {type,selected}=auctionSelection(sources.auctions,state.auctionType,state.auctionId);
+  context.auctionExports={version:1,securityType:type,auctionId:selected?.id??'',csvMode:'generated-full-retained-v1'};
+  context.scope='Complete auction source, original response receipts and monthly offering inputs are retained independently of the selected security filter and analysis window. Both specialist CSVs are generated from these frozen inputs with the recorded security type, selected auction and versioned method; duplicated CSV content is not stored. Explicit response-page lineage resolves each row to its actual capture receipt. Retrieval does not reconstruct historical publication vintages.';
+ }
  if(state.page==='ownership'){
   context.attachments=[attachment('debt-ownership.csv',ownershipCsv(sources.ownership,{z1Periods:36,somaPeriods:104}))];
   context.scope='Complete ownership source and full selected-series inputs are retained. The supplementary CSV contains the last 36 Z.1 observations matching the ownership page chart and last 104 SOMA observations, with exact prior-quarter and prior-week changes calculated from the full histories. The SOMA page chart retains its existing 36-observation view. Ordinary Ownership CSV downloads retain all source periods. Current revised history and actual retrieval receipts do not reconstruct original publication vintages.';

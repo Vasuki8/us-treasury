@@ -62,3 +62,21 @@ test('auction CSV rows include the capture query URLs, response hashes and retri
     for(const values of rows)assert.deepEqual(JSON.parse(values[column]),source.provenance);
   }
 });
+
+test('historical auction selection opens its 60-row page and existing auction links navigate all history',()=>{
+  const source=fixture();source.auctions=Array.from({length:181},(_,index)=>row(`history-${index}`,new Date(Date.UTC(2020,0,index+1)).toISOString().slice(0,10)));
+  const latest=ui().auctionsPage({},source);
+  assert.match(latest,/History page 1 of 4/);
+  assert.ok(latest.includes('id="auction-history" tabindex="-1"'),'paging target must be focusable');
+  assert.ok(latest.includes('data-auction-history-page'),'paging controls must identify table navigation');
+  assert.match(latest,/data-auction-id="history-120"[^>]*>OLDER/);
+  assert.match(latest,/data-auction-id="history-0"[^>]*>OLDEST/);
+  assert.doesNotMatch(latest,/aria-pressed="true"[^>]*>2020-01-11/);
+  const historical=ui().auctionsPage({auctionId:'history-10'},source);
+  assert.match(historical,/History page 3 of 4/);
+  assert.match(historical,/data-auction-id="history-10"[^>]*aria-pressed="true"/);
+  assert.match(historical,/data-auction-id="history-120"[^>]*>NEWER/);
+  assert.match(historical,/data-auction-id="history-180"[^>]*>NEWEST/);
+  assert.match(ui().auctionsPage({auctionId:'history-0'},source),/History page 4 of 4/);
+  assert.equal(parseCsv(ui().auctionsCsv(source,{auctionId:'history-10'})).length,182,'CSV keeps every matching record independently of the displayed page');
+});

@@ -6,6 +6,7 @@ import {SOMA_2014_GAP_URL,SOMA_2014_GAP_DATES} from '../src/ownership.js';
 import {H15_TREASURY_CMT_URL,H15_3M_GAP_DATES} from '../src/yields.js';
 import {isDeepStrictEqual} from 'node:util';
 import {DTS_DEBT_URL} from '../src/debt-fallback.js';
+import {isIsoDate} from '../src/date-window.js';
 const fiscalBase='https://api.fiscaldata.treasury.gov/services/api/fiscal_service/';
 const fiscalPaths=['v1/accounting/mts/mts_table_9','v1/accounting/mts/mts_table_2','v1/accounting/mts/mts_receipts_outlays_deficit_surplus','v2/accounting/od/debt_to_penny'];
 const fiscalDerived=['budgetDeficit','primaryDeficit','receiptsTtm','outlaysTtm','netInterestTtm','primaryDeficitTtm','interestRevenueRatio'];
@@ -165,7 +166,24 @@ export function assertResearchData(snapshot){
     }
     if(captured.has(H15_TREASURY_CMT_URL)!==used||supplements.size&&!used)fail();
   }
-  for(const row of snapshot.sources?.auctions?.auctions??[]){
+  const auctionSource=snapshot.sources?.auctions,indexedAuctions=auctionSource?.inputProvenanceScope==='auction-response-page-v1';
+  const auctionProvenanceFailure=()=>{throw new Error('Invalid auction response-page provenance');};
+  if(auctionSource?.inputProvenanceScope!==undefined&&!indexedAuctions)auctionProvenanceFailure();
+  const receiptCounts=[];
+  if(indexedAuctions){
+    if(!isIsoDate(auctionSource.coverageStart)||!isIsoDate(auctionSource.coverageEnd)||auctionSource.coverageStart<'2008-04-07'||auctionSource.coverageStart>auctionSource.coverageEnd||!Array.isArray(auctionSource.provenance)||!auctionSource.provenance.length||auctionSource.provenance.length>10)auctionProvenanceFailure();
+    const fields='record_date,security_type,security_term,original_security_term,auction_date,issue_date,maturity_date,announcemt_date,bid_to_cover_ratio,cash_management_bill_cmb,reopening,floating_rate,inflation_index_security,offering_amt,comp_accepted,primary_dealer_accepted,direct_bidder_accepted,indirect_bidder_accepted,total_accepted,soma_accepted,high_yield,high_discnt_rate,high_discnt_margin,xml_filenm_comp_results';
+    for(const [index,receipt] of auctionSource.provenance.entries()){
+      let url;try{url=new URL(receipt?.url);}catch{auctionProvenanceFailure();}
+      if(!matchesResearchFeed(url.href,'treasury-auctions')||url.username||url.password||url.hash||[...url.searchParams.keys()].length!==5||url.searchParams.get('fields')!==fields||url.searchParams.get('filter')!==`auction_date:gte:${auctionSource.coverageStart},auction_date:lte:${auctionSource.coverageEnd}`||url.searchParams.get('sort')!=='auction_date,security_type,security_term,maturity_date'||url.searchParams.get('page[size]')!=='2000'||url.searchParams.get('page[number]')!==String(index+1))auctionProvenanceFailure();
+      receiptCounts.push(0);
+    }
+  }
+  for(const row of auctionSource?.auctions??[]){
     if(Object.hasOwn(row,'cusip')||Object.hasOwn(row,'tail')||row.publishedAt!==null||!['Bill','Note','Bond','FRN','TIPS'].includes(row.securityType))throw new Error('Unreviewed auction identifier, tail, publication time or instrument');
+    if(indexedAuctions){
+      const index=row.sourceReceiptIndex;
+      if(!Number.isInteger(index)||index<0||index>=receiptCounts.length||!isIsoDate(row.auctionDate)||row.auctionDate<auctionSource.coverageStart||row.auctionDate>auctionSource.coverageEnd||++receiptCounts[index]>2000)auctionProvenanceFailure();
+    }else if(Object.hasOwn(row,'sourceReceiptIndex'))auctionProvenanceFailure();
   }
 }

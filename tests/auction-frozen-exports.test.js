@@ -1,0 +1,147 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {gunzipSync} from 'node:zlib';
+import {createHash} from 'node:crypto';
+import {series,dataStatus} from '../src/data.js';
+import {parseRoute} from '../src/router.js';
+import {buildPinContext} from '../src/research-context.js';
+import * as packages from '../src/research-packages.js';
+import * as view from '../src/auctions-page.js';
+import {canonicalJson} from '../src/research-workspaces.js';
+import {researchPage} from '../src/research-page.js';
+import {parseCsv} from '../scripts/sources/http.mjs';
+import {aggregateAuctionOfferings} from '../src/auctions.js';
+import {createResearchLibrary} from '../src/research-library.js';
+
+const directory=new URL('./fixtures/auction-frozen-baseline/',import.meta.url);
+const manifest=JSON.parse(await readFile(new URL('manifest.json',directory),'utf8'));
+const baseline=Object.fromEntries(await Promise.all(Object.keys(manifest.packages).map(async name=>[name,gunzipSync(await readFile(new URL(name+'.json.gz',directory))).toString('utf8')])));
+const hash=text=>createHash('sha256').update(text).digest('hex');
+function source(){
+ const input=JSON.parse(baseline.default).context.moduleSources.auctions;
+ input.inputProvenanceScope='auction-response-page-v1';
+ input.provenance.push({...input.provenance[0],url:'https://example.gov/page-2',sha256:'b'.repeat(64)});
+ input.auctions=input.auctions.slice(0,4).map((row,index)=>({...row,sourceReceiptIndex:index%2}));
+ input.series.auctionOfferingMonthly.observations=aggregateAuctionOfferings(input.auctions,{startDate:input.coverageStart,endDate:input.coverageEnd});
+ return input;
+}
+function args(input=source(),route='#/auctions?window=all'){
+ const item=input.series.auctionOfferingMonthly;
+ const catalog={...series,auctionOfferingMonthly:{...series.auctionOfferingMonthly,...item,provenance:input.provenance,fetchedAt:input.fetchedAt}};
+ return buildPinContext(parseRoute(route),{catalog,sources:{...dataStatus.sources,auctions:input}});
+}
+const create=options=>packages.createResearchPackage({id:'auction-frozen',name:'Frozen auction',now:'2026-10-27T12:00:00.000Z',...args(),...options});
+function rehash(value){delete value.checksum;value.checksum={algorithm:'SHA-256',value:hash(canonicalJson(value))};return JSON.stringify(value);}
+
+test('four genuine baseline auction packages retain exact JSON, primary CSV and both stored exports',async()=>{
+ for(const [name,text]of Object.entries(baseline)){
+  const expected=manifest.packages[name],pkg=await packages.importResearchPackage(text);
+  assert.equal(hash(packages.exportResearchPackage(pkg)),expected.jsonSha256);
+  assert.equal(packages.exportResearchPackage(pkg),text);
+  assert.equal(hash(packages.researchPackageCsv(pkg)),expected.primaryCsvSha256);
+  assert.deepEqual(packages.researchPackageAttachments(pkg),expected.attachments.map(file=>({name:file.name,type:'text/csv',generated:false})));
+  for(const [index,file]of expected.attachments.entries())assert.equal(hash(packages.researchPackageAttachment(pkg,index).content),file.sha256);
+  assert.equal(hash(view.auctionsCsv(pkg.context.moduleSources.auctions,{securityType:pkg.workspace.auctionType,auctionId:pkg.workspace.auctionId})),expected.attachments[0].sha256);
+  assert.equal(hash(view.auctionsCsv(pkg.context.moduleSources.auctions,{securityType:pkg.workspace.auctionType,auctionId:pkg.workspace.auctionId,benchmark:true})),expected.attachments[1].sha256);
+ }
+});
+
+test('auction CSV resolves the actual indexed page receipt only for explicitly opted-in sources',()=>{
+ const input=source(),[headers,...rows]=parseCsv(view.auctionsCsv(input));
+ const idColumn=headers.indexOf('auction_id'),receiptsColumn=headers.indexOf('capture_provenance_json');
+ for(const row of rows){const auction=input.auctions.find(item=>item.id===row[idColumn]);assert.deepEqual(JSON.parse(row[receiptsColumn]),[input.provenance[auction.sourceReceiptIndex]]);}
+ delete input.inputProvenanceScope;
+ assert.throws(()=>view.auctionsCsv(input),/receipt|scope/i);
+ for(const row of input.auctions)delete row.sourceReceiptIndex;
+ for(const row of parseCsv(view.auctionsCsv(input)).slice(1))assert.deepEqual(JSON.parse(row[receiptsColumn]),input.provenance);
+ input.inputProvenanceScope='auction-response-page-v1';input.auctions[0].sourceReceiptIndex=4;
+ assert.throws(()=>view.auctionsCsv(input),/receipt/i);
+});
+
+test('new auction profiles retain complete inputs and expose both generated exports through the existing attachment action',async()=>{
+ const input=source(),options=args(input),profile=options.context.auctionExports;
+ assert.equal(profile?.version,1);assert.equal(profile.csvMode,'generated-full-retained-v1');assert.equal(profile.securityType,'All');
+ assert.ok(input.auctions.some(row=>row.id===profile.auctionId));assert.deepEqual(options.context.attachments,[]);
+ const pkg=await create(options),json=packages.exportResearchPackage(pkg),restored=await packages.importResearchPackage(json);
+ assert.equal(packages.exportResearchPackage(restored),json);assert.deepEqual(restored.context.moduleSources.auctions,JSON.parse(canonicalJson(input)));
+ assert.deepEqual(packages.researchPackageAttachments(restored),['auction-results.csv','auction-peers.csv'].map(name=>({name,type:'text/csv',generated:true})));
+ for(const index of [0,1]){
+  const file=packages.researchPackageAttachment(restored,index);
+  assert.equal(file.content,packages.researchPackageAttachment(pkg,index).content);
+  const records=parseCsv(file.content);assert.equal(records.length,index===0?input.auctions.length+1:2);
+ }
+ const html=researchPage(parseRoute('#/research?view=packages&package='+pkg.id),{library:{packages:[restored]}});
+ assert.match(html,/data-package-attachment="0"/);assert.match(html,/data-package-attachment="1"/);assert.match(html,/generated.*frozen inputs/i);
+ assert.match(html,/Both auction specialist CSVs are generated/);
+ assert.throws(()=>packages.researchPackageAttachment({...restored},0),/validated/i);
+ assert.throws(()=>packages.researchPackageAttachment(restored,2),/unavailable/i);
+ const prior=dataStatus.sources.auctions;dataStatus.sources.auctions={auctions:[]};
+ try{assert.equal(packages.researchPackageAttachment(restored,0).content,packages.researchPackageAttachment(pkg,0).content);}finally{dataStatus.sources.auctions=prior;}
+});
+
+test('new auction import rejects unsupported profiles, missing inputs, malformed lineage and conflicting copies',async()=>{
+ const json=packages.exportResearchPackage(await create());
+ for(const change of [
+  value=>{value.context.auctionExports.version=2;},
+  value=>{value.context.auctionExports.csvMode='fetch-current';},
+  value=>{value.context.auctionExports.securityType='Equity';},
+  value=>{value.context.auctionExports.auctionId='missing';},
+  value=>{delete value.context.moduleSources.auctions;},
+  value=>{value.context.moduleSources.auctions.auctions=[];},
+  value=>{value.context.moduleSources.auctions.auctions[1].id=value.context.moduleSources.auctions.auctions[0].id;},
+  value=>{value.context.moduleSources.auctions.auctions[0].competitiveAccepted='10';},
+  value=>{value.context.moduleSources.auctions.auctions[0].auctionDate='2026-02-30';},
+  value=>{value.context.moduleSources.auctions.auctions[0].sourceUrl='javascript:alert(1)';},
+  value=>{delete value.context.moduleSources.auctions.auctions[0].sourceReceiptIndex;},
+  value=>{value.context.moduleSources.auctions.auctions[0].sourceReceiptIndex=.5;},
+  value=>{value.context.moduleSources.auctions.auctions[0].sourceReceiptIndex=99;},
+  value=>{value.context.moduleSources.auctions.provenance=[];},
+  value=>{delete value.context.moduleSources.auctions.inputProvenanceScope;},
+  value=>{value.context.moduleSources.auctions.series.auctionOfferingMonthly.observations.pop();},
+  value=>{value.context.moduleSources.auctions.series.auctionOfferingMonthly.observations[0].value=0;},
+  value=>{value.context.moduleSources.auctions.series.auctionOfferingMonthly.observations[0].auctionCount=0;},
+  value=>{delete value.context.moduleSources.auctions.series.auctionOfferingMonthly.observations[0].partial;},
+  value=>{value.context.moduleSources.auctions.series.auctionOfferingMonthly.observations[0].publishedAt='2024-10-01';},
+  value=>{value.context.attachments=[{name:'auction-results.csv',type:'text/csv',content:'x\r\n1\r\n'}];},
+ ]){const value=JSON.parse(json);change(value);await assert.rejects(packages.importResearchPackage(rehash(value)),/auction|receipt|source URL/i);}
+});
+
+test('retained-scale default, All, Bill and 2008-selected packages preserve full inputs within unchanged limits',async()=>{
+ const input=dataStatus.sources.auctions;
+ assert.ok(input.auctions.length>6000,'exercise the complete admitted history');assert.equal(input.coverageStart,'2008-04-07');
+ const first=input.auctions[0],routes=['#/auctions','#/auctions?window=all','#/auctions?type=Bill','#/auctions?window=all&auction='+first.id];
+ for(const [index,route]of routes.entries()){
+  const options=args(input,route),pkg=await create({...options,id:'auction-retained-'+index}),text=packages.exportResearchPackage(pkg),restored=await packages.importResearchPackage(text);
+  assert.ok(Buffer.byteLength(text)<=12*1024*1024);assert.equal(packages.exportResearchPackage(restored),text);
+  assert.equal(canonicalJson(restored.context.moduleSources.auctions),canonicalJson(input));
+  assert.equal(restored.catalog.auctionOfferingMonthly.observations.length,input.series.auctionOfferingMonthly.observations.length);
+  assert.equal(packages.researchPackageCsv(restored),packages.researchPackageCsv(pkg));
+  for(const fileIndex of [0,1]){
+   const file=packages.researchPackageAttachment(restored,fileIndex);
+   assert.ok(Buffer.byteLength(file.content)<=32*1024*1024);assert.equal(file.content,packages.researchPackageAttachment(pkg,fileIndex).content);
+   if(fileIndex===0)assert.equal(parseCsv(file.content).length,input.auctions.filter(row=>options.context.auctionExports.securityType==='All'||row.securityType===options.context.auctionExports.securityType).length+1);
+  }
+  let stored=null;const storage={getItem:()=>stored,setItem:(_key,value)=>{stored=value;}},library=await createResearchLibrary(storage,{locks:{request:async(_name,_options,callback)=>callback()}});
+  const result=await library.pinPackage(pkg);assert.equal(result.persisted,false);assert.equal(result.reason,'quota');assert.equal(stored,null);assert.match(library.getState().warning,/session-only/);
+ }
+});
+
+test('generated auction CSV enforces the unchanged 32 MiB amplification bound and stored CSV keeps its 8 MiB cap',async()=>{
+ assert.equal(view.MAX_GENERATED_AUCTIONS_CSV_BYTES,32*1024*1024);
+ const input=source();input.coverageNote='x'.repeat(9*1024*1024);
+ assert.throws(()=>view.generatedAuctionsCsv(input,{validateOnly:true}),/CSV byte limit/i);
+ await assert.rejects(create({context:{attachments:[{name:'too-big.csv',type:'text/csv',content:'x\r\n'+'x'.repeat(8*1024*1024)}]}}),/CSV byte limit/i);
+ const value=JSON.parse(packages.exportResearchPackage(await create()));
+ value.context.moduleSources.auctions.coverageNote='x'.repeat(9*1024*1024);
+ assert.ok(Buffer.byteLength(rehash(value))<12*1024*1024);
+ await assert.rejects(packages.importResearchPackage(rehash(value)),/CSV byte limit/i);
+});
+
+test('generated auction CSV neutralizes control-prefixed formulas and absent profiles never invent attachments',async()=>{
+ const input=source();input.coverageNote='\u0001=HYPERLINK("https://example.gov")';
+ const pkg=await create(args(input)),[headers,...rows]=parseCsv(packages.researchPackageAttachment(pkg,0).content);
+ assert.ok(rows[0][headers.indexOf('coverage_note')].startsWith("'\u0001="));
+ const options=args();delete options.context.auctionExports;
+ assert.deepEqual(packages.researchPackageAttachments(await create(options)),[]);
+});

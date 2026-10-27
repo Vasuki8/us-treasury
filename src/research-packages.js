@@ -6,6 +6,8 @@ import {viewRange}from'./workspace-context.js';
 import {MAX_CURRENT_ACCOUNT_GDP_HISTORY_QUARTERS,currentAccountGdpQuarterSpan}from'./current-account-gdp.js';
 import {DEALER_METRICS}from'./market-functioning.js';
 import {generatedFundingCsv}from'./market-functioning-page.js';
+import {generatedAuctionsCsv}from'./auctions-page.js';
+import {aggregateAuctionOfferings}from'./auctions.js';
 import {canonicalJson,deepFreeze,researchJsonCopy,researchByteLength,researchId,researchName,researchTimestamp,MAX_RESEARCH_JSON_BYTES}from'./research-workspaces.js';
 
 const verified=new WeakSet(),classes=new Set(['level','count','amount','rate','growth','contribution','balance','change','unknown']);
@@ -153,6 +155,58 @@ function validateFundingContext(context){
  // not amplify a small import into unbounded work when the user downloads it.
  generatedFundingCsv(source,{validateOnly:true});
 }
+function validateAuctionContext(context){
+ const profile=context.auctionExports,types=['All','Bill','Note','Bond','FRN','TIPS'];
+ const invalid=detail=>fail(`auction retained inputs: ${detail}`);
+ if(!object(profile)||profile.version!==1||Object.keys(profile).length!==4||['version','securityType','auctionId','csvMode'].some(key=>!Object.hasOwn(profile,key))||!types.includes(profile.securityType)||typeof profile.auctionId!=='string'||profile.csvMode!=='generated-full-retained-v1')invalid('unsupported export profile');
+ if(context.attachments?.some(file=>['auction-results.csv','auction-peers.csv'].includes(file?.name?.toLowerCase())))invalid('generated CSV conflicts with a stored copy');
+ const source=context.moduleSources?.auctions;
+ if(!object(source)||!Array.isArray(source.auctions)||!source.auctions.length||source.auctions.length>10000)invalid('complete bounded auction source required');
+ const text=(item,fields)=>{for(const field of fields)if(item[field]!=null&&typeof item[field]!=='string')invalid(`${field} must be text`);};
+ text(source,['id','status','fetchedAt','lastAttemptAt','error','coverageNote','inputProvenanceScope']);
+ if(source.status!==undefined&&!['ok','error','unavailable'].includes(source.status))invalid('capture status');
+ if(!isIsoDate(source.coverageStart)||!isIsoDate(source.coverageEnd)||source.coverageStart>source.coverageEnd)invalid('coverage dates');
+ if(source.inputProvenanceScope!==undefined&&source.inputProvenanceScope!=='auction-response-page-v1')invalid('unsupported receipt scope');
+ if(!Array.isArray(source.provenance)||!source.provenance.length||source.provenance.length>10||source.provenance.some(receipt=>!object(receipt)))invalid('bounded response receipts required');
+ for(const receipt of source.provenance){
+  text(receipt,['url','sha256','retrievedAt','lastModified']);
+  if(typeof receipt.url!=='string'||typeof receipt.sha256!=='string'||!/^[a-f0-9]{64}$/.test(receipt.sha256)||typeof receipt.retrievedAt!=='string')invalid('response receipt evidence');
+  checkedUrl(receipt.url);
+ }
+ const ids=new Set();let previous='';
+ for(const row of source.auctions){
+  if(!object(row)||typeof row.id!=='string'||!row.id||ids.has(row.id)||!types.slice(1).includes(row.securityType)||typeof row.securityTerm!=='string'||!row.securityTerm||!['results','announced'].includes(row.status))invalid('auction identity or instrument');
+  ids.add(row.id);
+  for(const key of ['auctionDate','announcementDate','issueDate','maturityDate','sourceRecordDate'])if(!isIsoDate(row[key]))invalid('auction dates');
+  const ordered=`${row.auctionDate}|${row.id}`;
+  if(ordered<=previous||row.auctionDate<source.coverageStart||row.auctionDate>source.coverageEnd)invalid('ordered unique auction dates within coverage required');
+  previous=ordered;
+  text(row,['originalTerm','sourceUrl','resultUrl']);
+  if(typeof row.sourceUrl!=='string')invalid('auction source URL');
+  for(const url of [row.sourceUrl,row.resultUrl].filter(Boolean))checkedUrl(url);
+  for(const key of ['reopening','cashManagement'])if(row[key]!==null&&typeof row[key]!=='boolean')invalid('auction class flags');
+  for(const key of ['offeringAmount','competitiveAccepted','totalAccepted','somaAccepted','primaryDealerAccepted','directAccepted','indirectAccepted','bidToCover','highYield','highDiscountRate','highDiscountMargin'])if(row[key]!==null&&(typeof row[key]!=='number'||!Number.isFinite(row[key])))invalid('finite or null auction amounts');
+  if(row.publishedAt!==null)invalid('unknown publication instant must remain null');
+  if(source.inputProvenanceScope==='auction-response-page-v1'&&(!Number.isInteger(row.sourceReceiptIndex)||row.sourceReceiptIndex<0||row.sourceReceiptIndex>=source.provenance.length))invalid('response receipt index');
+  if(source.inputProvenanceScope!=='auction-response-page-v1'&&Object.hasOwn(row,'sourceReceiptIndex'))invalid('response receipt indices require the explicit capture scope');
+ }
+ if(!source.auctions.some(row=>row.id===profile.auctionId&&(profile.securityType==='All'||row.securityType===profile.securityType))){
+  if(profile.auctionId!==''||source.auctions.some(row=>profile.securityType==='All'||row.securityType===profile.securityType))invalid('selected auction does not match the retained filter');
+ }
+ const monthly=source.series?.auctionOfferingMonthly;
+ if(!object(monthly)||!Array.isArray(monthly.observations)||!monthly.observations.length||monthly.observations.length>1200)invalid('complete monthly offering inputs required');
+ previous='';
+ for(const row of monthly.observations){
+  if(!object(row)||!isIsoDate(row.date)||!row.date.endsWith('-01')||row.date<=previous||row.value!==null&&(typeof row.value!=='number'||!Number.isFinite(row.value)))invalid('ordered monthly offering observations');
+  previous=row.date;
+ }
+ const fields=['date','value','auctionCount','pendingCount','partial','publishedAt'],facts=row=>Object.fromEntries(fields.map(key=>[key,row[key]]));
+ const expected=aggregateAuctionOfferings(source.auctions,{startDate:source.coverageStart,endDate:source.coverageEnd});
+ if(canonicalJson(monthly.observations.map(facts))!==canonicalJson(expected.map(facts)))invalid('monthly offering inputs do not match the complete retained auction history');
+ // Count encoded rows without storing duplicate CSV strings or allowing a small
+ // imported source note to amplify into an unbounded generated download.
+ for(const benchmark of [false,true])generatedAuctionsCsv(source,{securityType:profile.securityType,auctionId:profile.auctionId,benchmark,validateOnly:true});
+}
 function validateContext(context){
  if(!object(context))fail('context must be data');
  if(context.currentAccountInputs!==undefined)validateCurrentAccountInputs(context.currentAccountInputs);
@@ -233,6 +287,7 @@ function validateContext(context){
   }
  }
  if(context.fundingDistributions!==undefined)validateFundingContext(context);
+ if(context.auctionExports!==undefined)validateAuctionContext(context);
 }
 function selection(state,catalog){
  const ids=state.selected;
@@ -303,6 +358,7 @@ export function researchPackageCsv(pkg){return branded(pkg).csv;}
 export function researchPackageAttachments(pkg){
  const context=branded(pkg).context,files=(context.attachments??[]).map(({name,type})=>({name,type,generated:false}));
  if(context.fundingDistributions?.version===2)files.push({name:'market-functioning.csv',type:'text/csv',generated:true});
+ if(context.auctionExports?.version===1)for(const name of ['auction-results.csv','auction-peers.csv'])files.push({name,type:'text/csv',generated:true});
  return files;
 }
 /** Resolve the existing specialist-download action from validated frozen inputs. */
@@ -310,7 +366,10 @@ export function researchPackageAttachment(pkg,index){
  branded(pkg);
  if(!Number.isInteger(index)||index<0)fail('frozen attachment unavailable');
  const descriptor=researchPackageAttachments(pkg)[index];if(!descriptor)fail('frozen attachment unavailable');
- return descriptor.generated?{name:descriptor.name,type:descriptor.type,content:generatedFundingCsv(pkg.context.moduleSources.marketFunctioning)}:pkg.context.attachments[index];
+ if(!descriptor.generated)return pkg.context.attachments[index];
+ const profile=pkg.context.auctionExports;
+ const content=descriptor.name==='market-functioning.csv'?generatedFundingCsv(pkg.context.moduleSources.marketFunctioning):generatedAuctionsCsv(pkg.context.moduleSources.auctions,{securityType:profile.securityType,auctionId:profile.auctionId,benchmark:descriptor.name==='auction-peers.csv'});
+ return {name:descriptor.name,type:descriptor.type,content};
 }
 export function packagePanels(pkg){
  branded(pkg);return deepFreeze(pkg.panels.map(({seriesId,...panel})=>({...panel,series:pkg.catalog[seriesId]})));

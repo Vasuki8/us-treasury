@@ -24,7 +24,7 @@ export function auctionAllocations(auction = {}) {
 
 function comparisonKey(auction) {
   if (!auction?.originalTerm || typeof auction.reopening !== 'boolean' || typeof auction.cashManagement !== 'boolean') return null;
-  return [auction.securityType,auction.originalTerm,auction.reopening,auction.cashManagement,auction.securityType === 'Bill' ? auction.securityTerm : ''].join('|');
+  return [auction.auctionDate < '2009-06-01' ? 'pre-2009-rule' : 'post-2009-rule',auction.securityType,auction.originalTerm,auction.reopening,auction.cashManagement,auction.securityType === 'Bill' ? auction.securityTerm : ''].join('|');
 }
 
 function median(values) {
@@ -56,7 +56,7 @@ export function benchmarkAuction(source, id, {limit = 12} = {}) {
   }));
   return {
     auction, peers, sampleSize:peers.length, metrics,
-    basis:'Prior results with the same instrument, original term, reopening and cash-management class; bills also match the auctioned remaining term. No same-day auction enters the benchmark.',
+    basis:'Prior results with the same instrument, original term, reopening and cash-management class; bills also match the auctioned remaining term. Peers stay on the same side of the June 1, 2009 bidder-reporting rule change. No same-day auction enters the benchmark.',
   };
 }
 

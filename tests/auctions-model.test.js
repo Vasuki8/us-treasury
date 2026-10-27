@@ -55,6 +55,19 @@ test('bill benchmarks match the auctioned remaining term as well as the original
   assert.equal(auctions().benchmarkAuction(source,'bill').sampleSize,0);
 });
 
+test('auction benchmarks keep all metrics within the June 1 2009 bidder-reporting era',()=>{
+  const source={auctions:[record('legacy','2009-05-29',{bidToCover:9,offeringAmount:90e9}),record('boundary','2009-06-01',{bidToCover:2,offeringAmount:20e9}),record('post','2009-06-15',{bidToCover:4,offeringAmount:40e9}),record('selected','2009-07-01',{bidToCover:5,offeringAmount:50e9})]};
+  const boundary=auctions().benchmarkAuction(source,'boundary');
+  assert.equal(boundary.sampleSize,0);assert.equal(boundary.metrics.indirectShare.median,null);assert.equal(boundary.metrics.bidToCover.median,null);
+  const selected=auctions().benchmarkAuction(source,'selected');
+  assert.deepEqual(selected.peers.map(row=>row.id),['post','boundary']);
+  assert.equal(selected.metrics.bidToCover.median,3);assert.equal(selected.metrics.offeringAmount.median,30e9);
+  assert.equal(selected.metrics.indirectShare.sampleSize,2);
+  assert.match(selected.basis,/2009/);
+  source.auctions.unshift(record('older-legacy','2009-04-01',{bidToCover:3}));
+  assert.deepEqual(auctions().benchmarkAuction(source,'legacy').peers.map(row=>row.id),['older-legacy']);
+});
+
 test('monthly offering totals are flows by auction date, mark pending/current months and preserve missing amounts/months',()=>{
   const source=[record('sep','2026-09-30',{offeringAmount:10e9,issueDate:'2026-10-02'}),record('oct1','2026-10-01',{offeringAmount:20e9}),
     record('oct2','2026-10-07',{offeringAmount:30e9}),record('pending','2026-10-21',{status:'announced',bidToCover:null,offeringAmount:99e9})];

@@ -3,6 +3,7 @@ import { easternFields } from './calendar-utils.mjs';
 import { aggregateAuctionOfferings, auctionAllocations } from '../../src/auctions.js';
 
 export const AUCTIONS_ENDPOINT = 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query';
+const coverageStart = '2008-04-07', maxPages = 10;
 const fields = ['record_date','security_type','security_term','original_security_term','auction_date','issue_date','maturity_date','announcemt_date','bid_to_cover_ratio','cash_management_bill_cmb','reopening','floating_rate','inflation_index_security','offering_amt','comp_accepted','primary_dealer_accepted','direct_bidder_accepted','indirect_bidder_accepted','total_accepted','soma_accepted','high_yield','high_discnt_rate','high_discnt_margin','xml_filenm_comp_results'];
 const missing = value => value === null || value === undefined || String(value).trim() === '' || String(value).trim().toLowerCase() === 'null';
 
@@ -36,10 +37,11 @@ function term(value,required=false) {
 }
 
 /** Only normalized federal auction facts are retained. No CUSIP identifiers or raw response bodies. */
-export function parseAuctions(payload,{sourceUrl=AUCTIONS_ENDPOINT}={}) {
+export function parseAuctions(payload,{sourceUrl=AUCTIONS_ENDPOINT,receiptIndices}={}) {
   if (!payload || !Array.isArray(payload.data)) throw new Error('Invalid Treasury auction response');
+  if (receiptIndices !== undefined && (!Array.isArray(receiptIndices) || receiptIndices.length !== payload.data.length || Array.from(receiptIndices).some(index => !Number.isInteger(index) || index < 0 || index >= maxPages))) throw new Error('Invalid Treasury auction receipt indices');
   const seen = new Set();
-  return payload.data.map(row => {
+  return payload.data.map((row,index) => {
     const floating = flag(row.floating_rate), indexed = flag(row.inflation_index_security), baseType = row.security_type;
     if (!['Bill','Note','Bond'].includes(baseType) || floating === null || indexed === null || (floating && indexed) || (baseType === 'Bill' && (floating || indexed)) || (floating && baseType !== 'Note')) throw new Error('Unrecognized Treasury auction instrument');
     const securityType = floating ? 'FRN' : indexed ? 'TIPS' : baseType;
@@ -57,6 +59,7 @@ export function parseAuctions(payload,{sourceUrl=AUCTIONS_ENDPOINT}={}) {
       highYield:number(row.high_yield,{signed:true}),highDiscountRate:number(row.high_discnt_rate,{signed:true}),highDiscountMargin:number(row.high_discnt_margin,{signed:true}),
       resultUrl:filename ? `https://www.treasurydirect.gov/xml/${filename}` : null,sourceUrl,
     };
+    if (receiptIndices !== undefined) result.sourceReceiptIndex = receiptIndices[index];
     result.status = result.bidToCover === null ? 'announced' : 'results';
     result.allocations = auctionAllocations(result);
     return result;
@@ -75,27 +78,27 @@ function pageUrl(startDate,endDate,page) {
 export async function collectAuctions({fetchImpl=globalThis.fetch,now=new Date()}={}) {
   if (!(now instanceof Date) || !Number.isFinite(now.getTime())) throw new Error('Invalid Treasury auction capture date');
   const endDate = easternFields(now.toISOString()).date;
-  const start = new Date(`${endDate.slice(0,7)}-01T00:00:00Z`);start.setUTCFullYear(start.getUTCFullYear()-2);
-  const startDate = start.toISOString().slice(0,10), sourceUrl = pageUrl(startDate,endDate,1);
-  const responses = [], rawRows = [];
+  const startDate = coverageStart, sourceUrl = pageUrl(startDate,endDate,1);
+  const responses = [], rawRows = [], receiptIndices = [];
   let expectedPages = null, expectedCount = null;
   for (let page=1;page <= (expectedPages ?? 1);page++) {
     const response = await requestText(pageUrl(startDate,endDate,page),{fetchImpl,maxBytes:6*1024*1024});
     const payload = JSON.parse(response.text), meta = payload?.meta;
-    if (!Array.isArray(payload?.data) || !Number.isInteger(meta?.count) || meta.count !== payload.data.length || !Number.isInteger(meta['total-pages']) || meta['total-pages'] < 1 || meta['total-pages'] > 10 || !Number.isInteger(meta['total-count']) || meta['total-count'] < 1 || meta['total-count'] > 10000) throw new Error('Invalid or unbounded Treasury auction page metadata');
+    if (!Array.isArray(payload?.data) || !Number.isInteger(meta?.count) || meta.count !== payload.data.length || !Number.isInteger(meta['total-pages']) || meta['total-pages'] < 1 || meta['total-pages'] > maxPages || !Number.isInteger(meta['total-count']) || meta['total-count'] < 1 || meta['total-count'] > 10000) throw new Error('Invalid or unbounded Treasury auction page metadata');
     if (expectedPages !== null && (meta['total-pages'] !== expectedPages || meta['total-count'] !== expectedCount)) throw new Error('Treasury auction pagination count changed during capture');
     expectedPages = meta['total-pages'];expectedCount = meta['total-count'];
+    receiptIndices.push(...payload.data.map(() => responses.length));
     responses.push(response);rawRows.push(...payload.data);
   }
   if (rawRows.length !== expectedCount) throw new Error('Incomplete Treasury auction response count');
-  const auctions = parseAuctions({data:rawRows});
+  const auctions = parseAuctions({data:rawRows},{receiptIndices});
   if (auctions.some(row => row.auctionDate < startDate || row.auctionDate > endDate)) throw new Error('Treasury auction dates fall outside requested coverage');
   const results = auctions.filter(row => row.status === 'results');
   if (!results.length) throw new Error('No usable Treasury auction results');
   const pendingCount = auctions.length-results.length, incompleteAllocations = results.filter(row => row.allocations.status !== 'complete').length;
   return {
-    id:'auctions',fetchedAt:responses.map(row => row.retrievedAt).sort().at(-1),coverageStart:startDate,coverageEnd:endDate,lastResultsDate:results.at(-1).auctionDate,pendingCount,
-    coverageNote:'Two complete years plus the current month of Treasury auction records. Rows without reported bid-to-cover remain awaiting results even after the scheduled date. Source record dates may be issue dates; exact historical result release timestamps are not established. Offering totals are face amounts of auctions with reported results, include rollovers, and are not net borrowing or cash proceeds. Current and incomplete months are partial.',
+    id:'auctions',inputProvenanceScope:'auction-response-page-v1',fetchedAt:responses.map(row => row.retrievedAt).sort().at(-1),coverageStart:startDate,coverageEnd:endDate,lastResultsDate:results.at(-1).auctionDate,pendingCount,
+    coverageNote:'Treasury auction records since April 7, 2008, when Treasury introduced NTAAPS. April 2008 is partial; May 2008 is the first fully covered month. Bidder benchmarks stay within the same era before or after the June 1, 2009 reporting-rule change. Rows without reported bid-to-cover remain awaiting results even after the scheduled date. Source record dates may be issue dates; exact historical result release timestamps are not established. Offering totals are face amounts of auctions with reported results, include rollovers, and are not net borrowing or cash proceeds. Current and incomplete months are partial.',
     series:{auctionOfferingMonthly:{
       observations:aggregateAuctionOfferings(auctions,{startDate,endDate}),sourceUrl,sourceIds:['offering_amt','auction_date','bid_to_cover_ratio'],observationType:'calculated',dataStatus:'calculated',
       calculation:'Sum offering_amt / 1e9 by auction_date calendar month, restricted to rows with a published non-null bid_to_cover_ratio. USD billions of face offering amounts; not accepted awards, net borrowing, or proceeds. Missing amounts/months remain null; current or awaiting-result periods are marked partial.',
