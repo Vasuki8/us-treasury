@@ -1,0 +1,13 @@
+# Census collection and alert evidence reliability
+
+User request: fix Census housing and retail source checks and alert-report verification so automatic updates work reliably, keeping the current UI and colors. Baseline `904bc57` has 1,862 passing tests and 217 immutable captures.
+
+Keep the same official economic measurements, native dates, units, retained history, attribution, source limits and existing failure retention. An unavailable endpoint must never count as successful data collection. Do not buy services, create accounts, infer values or change UI/CSS. Prefer the exact approved Census bulk files through a verified official route over a new API or source methodology. API access now requires a registered key, so an unregistered API cannot silently become the backup.
+
+Investigation establishes two report artifacts after a source-job rerun. Their IDs are not chronological; selecting the greatest ID or accepting any readable old report can falsely infer recovery. Bind the selected report and its checkedAt to the actual completed source job's time window, rejecting missing, ambiguous, mismatched or unsafe evidence. Preserve bounded downloads, trusted-run checks, exact schema and credential separation.
+
+Census housing returned HTTP 520; that status is currently excluded from retries. Retail timed out after bounded requests. First probe the exact official file routes and compare genuine returned data before changing routing. Retry only recognized transient transport failures; schema, redirect, size and content errors must fail normally. Keep bounded attempts and waits. The precise smallest route/retry fix will be recorded from the probe evidence.
+
+Probe decision: both approved bulk endpoints returned HTTP 200 with complete bounded ZIP files and unchanged definitions. Keep those routes. Add HTTP520 to the existing transient transport statuses so trusted collection can use its already configured three attempts and existing 5/30-second backoff. Do not increase attempts, timeouts, byte caps or wait budgets. Existing retail timeout handling remains valid; no replacement parser or keyed API is needed. Cloudflare documents 520 as an empty, unknown or unexpected origin response: https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-520/ .
+
+Verify failing regressions before fixes, independent review, affected-source live collection and admission, complete suite/build checks, cloud source checks and alert recovery. Publish through the existing workflow and verify live assets. Record any external source limitation honestly.

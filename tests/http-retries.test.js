@@ -31,6 +31,24 @@ test('only final accepted response bytes and retrieval metadata are returned aft
  assert.doesNotMatch(JSON.stringify(result),/unavailable/);
 });
 
+test('Census HTTP 520 retries within the existing attempt budget and never accepts a redirected failure',async()=>{
+ for(const sourceUrl of ['https://www.census.gov/econ_getzippedfile/?programCode=MARTS','https://www.census.gov/econ_getzippedfile/?programCode=RESCONST']){
+  await configured('3',async()=>{
+   const pauses=[];let calls=0;
+   const accepted=await requestBytes(sourceUrl,{fetchImpl:async()=>++calls<3?new Response('edge failure',{status:520}):new Response('official file'),sleepImpl:async ms=>pauses.push(ms)});
+   assert.equal(calls,3);assert.deepEqual(pauses,[5000,30000]);
+   assert.equal(accepted.bytes.toString('utf8'),'official file');assert.equal(accepted.url,sourceUrl);
+   assert.equal(accepted.sha256,createHash('sha256').update('official file').digest('hex'));
+   calls=0;
+   await assert.rejects(requestBytes(sourceUrl,{fetchImpl:async()=>{calls++;return new Response('still unavailable',{status:520});},sleepImpl:async()=>{}}),error=>error instanceof OfficialSourceHttpError&&error.status===520);
+   assert.equal(calls,3,'exhausted source attempts must remain a failure');
+   calls=0;
+   await assert.rejects(requestBytes(sourceUrl,{fetchImpl:async()=>{calls++;const response=new Response('',{status:520});Object.defineProperties(response,{url:{value:'https://other.test/file'},redirected:{value:true}});return response;},sleepImpl:async()=>assert.fail('redirected edge errors must not retry')}),/520/);
+   assert.equal(calls,1);
+  });
+ }
+});
+
 test('explicit POST attempts and status subset preserve caller-controlled fallback behavior',async()=>{
  let calls=0;
  await assert.rejects(requestBytes(url,{method:'POST',maxAttempts:3,retryStatuses:[408,429,500,502,504],fetchImpl:async()=>{calls++;return new Response('primary failure',{status:503});},sleepImpl:async()=>assert.fail('excluded503 must immediately reach caller fallback')}),/503/);

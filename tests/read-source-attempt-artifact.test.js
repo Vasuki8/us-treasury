@@ -5,13 +5,14 @@ import {zipFixture} from './helpers/zip.mjs';
 
 const now=new Date('2026-10-25T22:05:00Z'), token='private-token-canary';
 const run={id:101,path:'.github/workflows/ci.yml',head_branch:'main',head_repository:{full_name:'Vasuki8/us-treasury'},event:'schedule',status:'completed',created_at:'2026-10-25T22:00:00Z',updated_at:'2026-10-25T22:02:00Z'};
+const job={id:201,run_id:101,name:'Refresh official data and calendars',status:'completed',conclusion:'success',started_at:'2026-10-25T22:00:30Z',completed_at:run.updated_at};
 const report=()=>({schemaVersion:1,checkedAt:'2026-10-25T22:01:00.000Z',sources:[{id:'data:bea',status:'ok',fetchedAt:'2026-10-25T22:01:01.000Z',lastAttemptAt:'2026-10-25T22:01:00.000Z',httpStatus:null,cached:false}]});
 const archive=value=>zipFixture([{name:'source-attempt-status.json',text:JSON.stringify(value)}]);
 function fixture({value=report(),artifacts,bytes=archive(value),fetchImpl}={}){
  const calls=[];
- const items=artifacts??[{id:55,name:'official-refresh-status',size_in_bytes:bytes.length,expired:false,workflow_run:{id:101}}];
+ const items=artifacts??[{id:55,name:'official-refresh-status',size_in_bytes:bytes.length,expired:false,created_at:'2026-10-25T22:01:50Z',workflow_run:{id:101}}];
  const api=async(method,path)=>{calls.push({method,path});return {artifacts:items};};
- return {calls,options:{api,token,run,artifactName:'official-refresh-status',now,fetchImpl:fetchImpl??(async()=>new Response(bytes))}};
+ return {calls,options:{api,token,run,job,artifactName:'official-refresh-status',now,fetchImpl:fetchImpl??(async()=>new Response(bytes))}};
 }
 const safeError=error=>error.message==='Source attempt artifact could not be verified.'&&!error.message.includes(token);
 
@@ -56,7 +57,7 @@ test('redirect allowlist rejects unknown hosts, HTTP, embedded credentials and u
 
 test('metadata, compressed streaming and inflated-entry limits prevent oversized reads',async()=>{
  let downloads=0;
- const large=fixture({artifacts:[{id:55,name:'official-refresh-status',size_in_bytes:262145,expired:false}],fetchImpl:async()=>{downloads++;return new Response('');}});
+ const large=fixture({artifacts:[{id:55,name:'official-refresh-status',size_in_bytes:262145,expired:false,created_at:'2026-10-25T22:01:50Z'}],fetchImpl:async()=>{downloads++;return new Response('');}});
  await assert.rejects(readSourceAttemptArtifact(large.options),safeError);assert.equal(downloads,0);
  const streaming=fixture({fetchImpl:async()=>new Response(new ReadableStream({start(controller){controller.enqueue(new Uint8Array(140000));controller.enqueue(new Uint8Array(140000));controller.close();}}))});
  await assert.rejects(readSourceAttemptArtifact(streaming.options),safeError);
@@ -84,14 +85,55 @@ test('reports are bound to trusted completed main runs and their actual time win
  assert.deepEqual(await readSourceAttemptArtifact(fixture({value}).options),value,'one-minute upper clock tolerance is admitted');
 });
 
+test('a source-job rerun selects its upload even when the older artifact has a greater ID',async()=>{
+ const retryRun={...run,id:40449744686,created_at:'2026-10-27T04:26:27Z',updated_at:'2026-10-27T04:46:36Z'},retryJob={...job,id:122014070795,run_id:retryRun.id,name:'Check all official sources without publishing',conclusion:'failure',started_at:'2026-10-27T04:42:22Z',completed_at:'2026-10-27T04:46:35Z'};
+ const value={schemaVersion:1,checkedAt:'2026-10-27T04:42:30.000Z',sources:[{id:'data:census',status:'error',fetchedAt:null,lastAttemptAt:'2026-10-27T04:42:30.000Z',httpStatus:520,cached:false}]},bytes=archive(value);
+ const older={id:12710440122,name:'official-source-check-status',size_in_bytes:bytes.length,expired:false,created_at:'2026-10-27T04:28:28Z',workflow_run:{id:retryRun.id}},current={...older,id:12710069547,created_at:'2026-10-27T04:46:33Z'};
+ for(const artifacts of [[older,current],[current,older]]){
+  const downloads=[],f=fixture({artifacts,fetchImpl:async url=>{downloads.push(url);return new Response(bytes);}});
+  assert.deepEqual(await readSourceAttemptArtifact({...f.options,run:retryRun,job:retryJob,artifactName:'official-source-check-status',now:new Date('2026-10-27T04:47:00Z')}),value);
+  assert.deepEqual(downloads,['https://api.github.com/repos/Vasuki8/us-treasury/actions/artifacts/12710069547/zip']);
+ }
+});
+
+test('a missing current-job upload never falls back to an older report',async()=>{
+ const bytes=archive(report()),older={id:99,name:'official-refresh-status',size_in_bytes:bytes.length,expired:false,created_at:'2026-10-25T22:00:10Z',workflow_run:{id:101}};
+ for(const artifacts of [[older],[older,{...older,id:55,expired:true,created_at:'2026-10-25T22:01:50Z'}],[{...older,created_at:'2026-10-25T22:02:01Z'}]]){
+  let downloads=0;const f=fixture({artifacts,fetchImpl:async()=>{downloads++;return new Response(bytes);}});
+  assert.equal(await readSourceAttemptArtifact(f.options),null);assert.equal(downloads,0);
+ }
+});
+
+test('multiple uploads in the same job window remain ambiguous',async()=>{
+ const item={id:55,name:'official-refresh-status',size_in_bytes:archive(report()).length,expired:false,created_at:'2026-10-25T22:01:50Z',workflow_run:{id:101}};
+ let downloads=0;const f=fixture({artifacts:[item,{...item,id:56,created_at:'2026-10-25T22:01:51Z'}],fetchImpl:async()=>{downloads++;return new Response(archive(report()));}});
+ await assert.rejects(readSourceAttemptArtifact(f.options),safeError);assert.equal(downloads,0);
+});
+
+test('job identity, role and completed execution window must match the trusted run',async()=>{
+ for(const changedJob of [undefined,{...job,id:0},{...job,run_id:102},{...job,name:'Check all official sources without publishing'},{...job,status:'in_progress'},{...job,conclusion:'skipped'},{...job,started_at:'invalid'},{...job,started_at:'2026-10-25T21:59:59Z'},{...job,started_at:'2026-10-25T22:02:01Z'},{...job,completed_at:null},{...job,completed_at:'2026-10-25T22:03:01Z'}]){
+  let downloads=0;const f=fixture({fetchImpl:async()=>{downloads++;return new Response(archive(report()));}});
+  await assert.rejects(readSourceAttemptArtifact({...f.options,job:changedJob}),safeError);assert.equal(downloads,0);
+ }
+});
+
+test('a report timestamp must belong to the selected job even within the workflow window',async()=>{
+ const selected={...job,started_at:'2026-10-25T22:01:00Z',completed_at:'2026-10-25T22:01:30Z'};
+ for(const checkedAt of ['2026-10-25T22:00:59.000Z','2026-10-25T22:02:31.000Z']){
+  const value=report();value.checkedAt=checkedAt;value.sources[0].lastAttemptAt=value.sources[0].fetchedAt=checkedAt;
+  const item={id:55,name:'official-refresh-status',size_in_bytes:archive(value).length,expired:false,created_at:'2026-10-25T22:01:20Z',workflow_run:{id:101}};
+  await assert.rejects(readSourceAttemptArtifact({...fixture({value,artifacts:[item]}).options,job:selected}),safeError);
+ }
+});
+
 test('download, API and JSON failures use a fixed safe error, without response bodies or signed URLs',async()=>{
  const fail=async()=>{throw new Error(`private upstream ${token}`);};
  await assert.rejects(readSourceAttemptArtifact({...fixture().options,api:fail}),safeError);
  await assert.rejects(readSourceAttemptArtifact(fixture({fetchImpl:fail}).options),safeError);
  await assert.rejects(readSourceAttemptArtifact(fixture({fetchImpl:async()=>new Response(`secret ${token}`,{status:403})}).options),safeError);
  await assert.rejects(readSourceAttemptArtifact({...fixture().options,artifactName:'unknown-private-name'}),safeError);
- const crossRun=fixture({artifacts:[{id:55,name:'official-refresh-status',size_in_bytes:100,expired:false,workflow_run:{id:102}}]});
+ const crossRun=fixture({artifacts:[{id:55,name:'official-refresh-status',size_in_bytes:100,expired:false,created_at:'2026-10-25T22:01:50Z',workflow_run:{id:102}}]});
  await assert.rejects(readSourceAttemptArtifact(crossRun.options),safeError);
- const invalidMetadata=fixture({artifacts:[{id:55,name:'official-refresh-status',size_in_bytes:100,expired:'private-invalid'}]});
+ const invalidMetadata=fixture({artifacts:[{id:55,name:'official-refresh-status',size_in_bytes:100,expired:'private-invalid',created_at:'2026-10-25T22:01:50Z'}]});
  await assert.rejects(readSourceAttemptArtifact(invalidMetadata.options),safeError);
 });

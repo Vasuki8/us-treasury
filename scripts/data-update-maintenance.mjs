@@ -45,7 +45,7 @@ export async function maintainDataUpdates({api,readReport,snapshot,now=new Date(
   for(const [role,name,artifactName]of [['refresh',names.refresh,'official-refresh-status'],['check',names.check,'official-source-check-status']]){
    const job=jobs.find(job=>job.name===name&&job.conclusion!=='skipped');if(!job)continue;
    let report=null;
-   try{const raw=await readReport({run,artifactName});if(raw)report=validateSourceAttemptReport(raw,{now});}catch{/* Treat absent/unreadable evidence as unverified; never copy arbitrary diagnostic text. */}
+   try{const raw=await readReport({run,job,artifactName});if(raw)report=validateSourceAttemptReport(raw,{now});}catch{/* Treat absent/unreadable evidence as unverified; never copy arbitrary diagnostic text. */}
    const completed=canonical(job.completed_at);
    if(completed&&completed<=now.toISOString()&&(!stages.has(`report:${role}`)||completed>stages.get(`report:${role}`).observedAt)&&job.steps?.some(step=>step.name==='Retain safe attempted-source status'))stages.set(`report:${role}`,{health:report?'ok':'unverified',runId:run.id,observedAt:completed});
    if(!report)continue;

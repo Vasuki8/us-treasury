@@ -125,6 +125,13 @@ test('direct triggering-run metadata wins over an older list copy',async()=>{
  let inspected=0;await execute(f,{api,triggerRunId:101,readReport:async({run})=>{inspected++;assert.equal(run.updated_at,fresh.updated_at);return null;}});assert.ok(inspected);
 });
 
+test('report verification receives the actual completed job for each collection role',async()=>{
+ const f=fixture(),refresh={...job('Refresh official data and calendars'),id:201,run_id:101,started_at:'2026-10-27T13:00:30Z',completed_at:'2026-10-27T13:04:00Z'},check={...job('Check all official sources without publishing','failure'),id:202,run_id:101,started_at:'2026-10-27T13:05:00Z',completed_at:'2026-10-27T13:09:00Z'};
+ f.jobs[101]=[refresh,check];const received=[];
+ await execute(f,{readReport:async options=>{received.push(options);return null;}});
+ assert.deepEqual(received,[{run:f.runs[0],job:refresh,artifactName:'official-refresh-status'},{run:f.runs[0],job:check,artifactName:'official-source-check-status'}]);
+});
+
 test('a delayed current deployment proof recovers a stale incident without repeated stale notifications',async()=>{
  const f=fixture();f.runs=[run(101,{created_at:'2026-10-26T13:00:00Z',updated_at:'2026-10-26T13:10:00Z'})];f.jobs[101]=[job('Deploy GitHub Pages')];
  await execute(f);const issue=find(f,'stage:deployment');assert.ok(issue);const count=f.writes.length;await execute(f);assert.equal(f.writes.length,count);

@@ -2,7 +2,7 @@ import {base,repository,listGithub} from './github-maintenance.mjs';
 import {validateSourceAttemptReport} from './source-attempt-report.mjs';
 import {extractZipEntry} from './sources/zip.mjs';
 
-const artifactNames=new Set(['official-refresh-status','official-source-check-status']);
+const artifactJobs=new Map([['official-refresh-status','Refresh official data and calendars'],['official-source-check-status','Check all official sources without publishing']]);
 const maxArchiveBytes=256*1024,maxReportBytes=64*1024;
 const reportKeys=['schemaVersion','checkedAt','sources'];
 const sourceKeys=['id','status','fetchedAt','lastAttemptAt','httpStatus','cached'];
@@ -34,13 +34,19 @@ async function boundedBytes(response){
 }
 
 /** Download one bounded data-only artifact; credentials never follow its signed redirect. */
-export async function readSourceAttemptArtifact({api,token,run,artifactName,now=new Date(),fetchImpl=fetch}){
+export async function readSourceAttemptArtifact({api,token,run,job,artifactName,now=new Date(),fetchImpl=fetch}){
  try{
-  if(!token||!artifactNames.has(artifactName)||!(now instanceof Date)||!Number.isFinite(+now)||!Number.isSafeInteger(run?.id)||run.id<=0||run.path!=='.github/workflows/ci.yml'||run.head_branch!=='main'||run.head_repository?.full_name!==repository||!['schedule','push','workflow_dispatch'].includes(run.event)||run.status!=='completed')fail();
+  if(!token||!artifactJobs.has(artifactName)||!(now instanceof Date)||!Number.isFinite(+now)||!Number.isSafeInteger(run?.id)||run.id<=0||run.path!=='.github/workflows/ci.yml'||run.head_branch!=='main'||run.head_repository?.full_name!==repository||!['schedule','push','workflow_dispatch'].includes(run.event)||run.status!=='completed')fail();
   const createdAt=Date.parse(run.created_at),updatedAt=Date.parse(run.updated_at);
   if(!Number.isFinite(createdAt)||!Number.isFinite(updatedAt)||updatedAt<createdAt||createdAt>+now)fail();
+  const startedAt=Date.parse(job?.started_at),completedAt=Date.parse(job?.completed_at);
+  if(!Number.isSafeInteger(job?.id)||job.id<=0||job.run_id!==run.id||job.name!==artifactJobs.get(artifactName)||job.status!=='completed'||job.conclusion==='skipped'||!Number.isFinite(startedAt)||!Number.isFinite(completedAt)||startedAt<createdAt||completedAt<startedAt||completedAt>updatedAt+60000||completedAt>+now)fail();
   const artifacts=await listGithub(api,`${base}/actions/runs/${run.id}/artifacts`,'artifacts');
-  const matches=artifacts.filter(item=>item?.name===artifactName&&item.expired!==true);
+  // Partial reruns retain earlier same-name uploads; IDs and list order are not clocks.
+  const matches=artifacts.filter(item=>item?.name===artifactName&&item.expired!==true).filter(item=>{
+   const uploadedAt=Date.parse(item.created_at);if(!Number.isFinite(uploadedAt))fail();
+   return uploadedAt>=startedAt&&uploadedAt<=completedAt;
+  });
   if(!matches.length)return null;
   if(matches.length!==1)fail();
   const artifact=matches[0];
@@ -59,7 +65,7 @@ export async function readSourceAttemptArtifact({api,token,run,artifactName,now=
   const raw=JSON.parse(extractZipEntry(await boundedBytes(response),'source-attempt-status.json',{maxOutputBytes:maxReportBytes,maxEntries:10}).toString('utf8'));
   if(!exactKeys(raw,reportKeys)||!Array.isArray(raw.sources)||!raw.sources.every(row=>exactKeys(row,sourceKeys)))fail();
   const report=validateSourceAttemptReport(raw,{now}),checkedAt=Date.parse(report.checkedAt);
-  if(checkedAt<createdAt||checkedAt>updatedAt+60000||checkedAt>+now)fail();
+  if(checkedAt<startedAt||checkedAt>completedAt+60000||checkedAt>+now)fail();
   return report;
  }catch{fail();}
 }
