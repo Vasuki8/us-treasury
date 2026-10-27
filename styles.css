@@ -842,3 +842,45 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
  .page-hierarchy .hierarchy-details>summary { min-height:44px; align-items:center; }
  .page-hierarchy .hierarchy-details>summary>small { flex-basis:100%; }
 }
+
+/* Reviewed fiscal layout: native readings and charts; existing theme tokens only. */
+.fiscal-workspace { container-type:inline-size; }
+.fiscal-workspace .fiscal-basis { margin-bottom:14px; }
+.fiscal-workspace .fiscal-basis .panel-note { padding:4px 0; border:0; }
+.fiscal-summary { display:grid; grid-template-columns:minmax(0,1fr) 205px; gap:18px; margin-bottom:16px; }
+.fiscal-summary h2 { margin-bottom:8px; }
+.koyfin-page .fiscal-workspace .fiscal-ttm .metrics { grid-template-columns:repeat(6,minmax(0,1fr)); gap:0; border-top:1px solid var(--border); border-left:1px solid var(--border); }
+.koyfin-page .fiscal-workspace .fiscal-ttm .metric { grid-column:span 2; border:0; border-right:1px solid var(--border); border-bottom:1px solid var(--border); border-radius:0; }
+.koyfin-page .fiscal-workspace .fiscal-ttm .metric:nth-child(n+4) { grid-column:span 3; }
+.koyfin-page .fiscal-workspace .metric-value { font-size:clamp(17px,5cqw,21px); }
+.fiscal-workspace .metric-basis { display:block; margin-top:4px; color:var(--muted); font-size:11px; overflow-wrap:anywhere; }
+.fiscal-reading-note { font-size:11px; line-height:1.5; color:var(--muted); }
+.fiscal-stock { border-left:1px solid var(--border); padding-left:18px; }
+.fiscal-stock h2 span { display:block; margin-top:4px; color:var(--muted); font-size:11px; font-weight:400; letter-spacing:0; }
+.koyfin-page .fiscal-workspace .fiscal-stock .metrics { grid-template-columns:minmax(0,1fr); }
+.koyfin-page .fiscal-workspace .fiscal-stock .metric { padding:0; background:transparent; border:0; border-radius:0; }
+.fiscal-workspace .fiscal-analysis { grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:16px; margin-bottom:16px; }
+.fiscal-contributor-note { display:block; margin-top:4px; color:var(--muted); font-size:11px; line-height:1.45; white-space:normal; overflow-wrap:anywhere; }
+.fiscal-contributors tbody tr:last-child>* { border-top:2px solid var(--border); font-weight:500; }
+.fiscal-workspace>.fiscal-gdp-context { margin-bottom:14px; }
+.fiscal-gdp-context>.table-wrap>table>thead>tr>th:first-child { width:42%; }
+.fiscal-gdp-context>.table-wrap>table>thead>tr>th:last-child { text-align:left; }
+.fiscal-gdp-context .fiscal-gdp-basis { font-size:11px; color:var(--muted); white-space:normal; }
+.fiscal-gdp-mobile-basis { display:none; margin-top:4px; font-size:11px; font-weight:400; color:var(--muted); white-space:normal; overflow-wrap:anywhere; }
+.fiscal-contributors tbody th,.fiscal-gdp-context tbody th { white-space:normal; overflow-wrap:anywhere; }
+.fiscal-gdp-context .fiscal-gdp-value { white-space:nowrap; }
+@container(max-width:850px) {
+ .fiscal-summary { grid-template-columns:minmax(0,1fr) 180px; gap:12px; }
+ .fiscal-stock { padding-left:12px; }
+ .fiscal-workspace .fiscal-analysis { grid-template-columns:minmax(0,1fr); }
+}
+@container(max-width:650px) {
+ .fiscal-summary { grid-template-columns:minmax(0,1fr); }
+ .fiscal-stock { border-left:0; border-top:1px solid var(--border); padding:12px 0 0; }
+ .fiscal-stock h2 { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+ .koyfin-page .fiscal-workspace .fiscal-ttm .metric { grid-column:span 3; }
+ .koyfin-page .fiscal-workspace .fiscal-ttm .metric:nth-child(3) { grid-column:span 6; }
+ .fiscal-gdp-context>.table-wrap>table>thead>tr>th:last-child,.fiscal-gdp-context .fiscal-gdp-basis { display:none; }
+ .fiscal-gdp-context>.table-wrap>table>thead>tr>th:first-child { width:70%; }
+ .fiscal-gdp-mobile-basis { display:block; }
+}

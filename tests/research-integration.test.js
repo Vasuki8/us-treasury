@@ -9,7 +9,7 @@ test('Fiscal pressure is a first-class route with existing detail/comparison/exp
   assert.equal(parseRoute('#/fiscal').page,'fiscal');
   assert.equal(routeFor({page:'fiscal'}),'#/fiscal');
   const html=renderPage({page:'fiscal'});
-  for(const label of ['FISCAL PRESSURE','WHAT CHANGED','WHAT CONTRIBUTED','WHY IT MATTERS','LIMITATIONS','gross debt','debt held by the public','net budget interest','cash balance'])assert.ok(html.toLowerCase().includes(label.toLowerCase()),label);
+  for(const label of ['FISCAL PRESSURE','SOURCE & BASIS','WHAT CONTRIBUTED','WHY IT MATTERS','LIMITATIONS','gross debt','debt held by the public','net budget interest','cash balance'])assert.ok(html.replaceAll('&amp;','&').toLowerCase().includes(label.toLowerCase()),label);
   assert.match(html,/data-compare=/);
   assert.match(html,/data-export-fiscal/);
 });

@@ -77,12 +77,12 @@ function compactChange(series,change){
  return `${label} ${formatChange(series)} vs ${change.priorPeriod}`;
 }
 
-export function metrics(ids) {
-  return `<section class="metrics" aria-label="Headline indicators">${ids.map(id => {
+export function metrics(ids,{label='Headline indicators',showBasis=false}={}) {
+  return `<section class="metrics" aria-label="${escapeHtml(label)}">${ids.map(id => {
     const series = getSeries(id);
     if (!series) return '';
     const observation = latest(series),change=measurementChange(series);
-    return `<a class="metric" href="#/series/${encodeURIComponent(id)}"${series.error ? ` title="${escapeHtml(series.error)}"` : ''}><span class="metric-name">${escapeHtml(series.short)}</span><strong class="metric-value">${escapeHtml(formatValue(series, observation?.value))}</strong><span class="metric-change" title="${escapeHtml(change.text)}">${escapeHtml(compactChange(series,change))}</span><span class="metric-period">${escapeHtml(observation ? periodLabel(series, observation.date) : 'Unavailable')}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span>${coverageBadge(series)}</a>`;
+    return `<a class="metric" href="#/series/${encodeURIComponent(id)}"${series.error ? ` title="${escapeHtml(series.error)}"` : ''}><span class="metric-name">${escapeHtml(series.short)}</span><strong class="metric-value">${escapeHtml(formatValue(series, observation?.value))}</strong><span class="metric-change" title="${escapeHtml(change.text)}">${escapeHtml(compactChange(series,change))}</span><span class="metric-period">${escapeHtml(observation ? periodLabel(series, observation.date) : 'Unavailable')}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span>${showBasis?`<span class="metric-basis">${escapeHtml(seriesStatus(series))} · ${escapeHtml(series.unit)}</span>`:''}${coverageBadge(series)}</a>`;
   }).join('')}</section>`;
 }
 
