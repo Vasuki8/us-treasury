@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createWorkspace,openWorkspace,MAX_RESEARCH_JSON_BYTES} from '../src/research-workspaces.js';
-import {createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv} from '../src/research-packages.js';
+import {createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,researchPackageAttachment} from '../src/research-packages.js';
 import {createResearchLibrary as createLibrary} from '../src/research-library.js';
 const createResearchLibrary=storage=>createLibrary(storage,{locks:{request:async(_name,_options,callback)=>callback()}});
 import {buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin,buildCpiPublicationPin,buildGdpMatrixPin} from '../src/research-context.js';
@@ -60,7 +60,7 @@ async function app(hash='#/series/gdp?window=all',{archive=publicationArchive,ex
  const env={createWorkspace,openWorkspace,createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,MAX_RESEARCH_JSON_BYTES,buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin,selectClaimsPublicationHistory,claimsPublicationCsv,claimsPublicationIds,normalizedCutoff,normalizeVintageTimestamp,researchLibrary,parseRoute,routeFor,updateWorkspaceSelection,dataStatus,series,getSeries,publicationArchive:archive,publicationState:{status:publicationStatus},publicationExplanations:explanations,explanationState:{status:explanationStatus},publicationExplanationsCsv,publicationCsv,selectPublicationHistory,periodLabel,changesCsv,writeChangeCheckpoint,storage,
   publicationController:{context:()=>({status:publicationStatus,archive})},state:{...parseRoute(hash),saved:[]},activeWorkspaceId:null,researchLabel:'',pinBusy:false,changeCheckpoint:{enabled:true,since:'2026-10-01T12:00:00.000Z',snapshotAt:'2026-10-01T12:00:00.000Z'},changeState:{status:'ready',history:{captures:[]}},historyController:{context:()=>({historyState:{status:'idle'}})},
   document:{getElementById:id=>inputs.get(id)},location,history,watchDisclosureCharts,main:{addEventListener:(name,callback,capture)=>{assert.equal(name,'toggle');assert.equal(capture,true);listeners.set(name,callback);}},window:{addEventListener:(name,callback)=>listeners.set(name,callback)},cancelAnimationFrame(){},requestAnimationFrame(callback){callback();return 1;},render(){},rememberWorkspace(){},announce:message=>announcements.push(message),renderCharts:(root,options)=>{chartRoots.push(root);chartCalls.push(options);},downloadCsv:(content,name)=>downloads.push({content,name}),downloadJson:pkg=>downloads.push({content:exportResearchPackage(pkg),name:'json'}),changesContext:()=>({status:'ready',rows:[]}),syncChanges(){}};
- Object.assign(env,{buildCpiPublicationPin,buildGdpMatrixPin,cpiPublicationIds,cpiPublicationCsv,selectCpiPublicationHistory,gdpRevisionMatrixCsv,buildCoverageInventory,coverageInventoryCsv,fundingChartCatalog});
+ Object.assign(env,{buildCpiPublicationPin,buildGdpMatrixPin,cpiPublicationIds,cpiPublicationCsv,selectCpiPublicationHistory,gdpRevisionMatrixCsv,buildCoverageInventory,coverageInventoryCsv,fundingChartCatalog,researchPackageAttachment});
  const change=/root\.addEventListener\('change',async event=>\{([^]*?)\n\}\);/.exec(source);assert.ok(change,'App change delegation must exist');
  const code=`let {${Object.keys(env).join(',')}}=env;\n`
   +section('function trackedChanges()','function syncPublications(')
@@ -161,6 +161,22 @@ test('pin and import actions dispatch original frozen JSON, CSV and attachments 
  await current.handleResearchAction({packageAttachment:'0'});assert.equal(current.downloads.at(-1).content,attached.context.attachments[0].content);assert.equal(current.downloads.at(-1).name,'original.csv');
  await current.changeHandler({target:{id:'research-import',files:[{size:MAX_RESEARCH_JSON_BYTES+1,text:()=>{throw Error('Oversize file must not be read');}}]}});
  assert.match(current.state().researchError,/12 MiB|limit/);assert.equal(current.researchLibrary.listPackages().length,2);
+});
+
+test('the actual funding attachment action downloads generated full frozen history and rejects detached or unavailable packages',async()=>{
+ const current=await app('#/market?window=custom&start=2019-09-01&end=2019-09-30');
+ await current.handleResearchAction({pinResult:''});const pkg=current.researchLibrary.getPackage(current.state().packageId);
+ assert.equal(pkg.context.fundingDistributions.version,2);assert.equal(pkg.context.attachments.length,0);
+ await current.handleResearchAction({packageAttachment:'0'});const file=current.downloads.at(-1);
+ assert.equal(file.name,'market-functioning.csv');assert.match(file.content,/,2016-03-01,/);assert.match(file.content,/,2018-04-02,/);
+ current.listeners.get('resize')();assert.deepEqual(current.chartCalls.at(-1).chartCatalogs.funding.catalog.effr.observations,pkg.context.moduleSources.marketFunctioning.series.effr.observations);
+ const before=current.downloads.length,getPackage=current.researchLibrary.getPackage;
+ current.researchLibrary.getPackage=()=>({...pkg});
+ await assert.rejects(current.handleResearchAction({packageAttachment:'0'}),/validated package/i);assert.equal(current.downloads.length,before);
+ current.researchLibrary.getPackage=()=>undefined;
+ await assert.rejects(current.handleResearchAction({packageAttachment:'0'}),/unavailable/i);assert.equal(current.downloads.length,before);
+ current.researchLibrary.getPackage=getPackage;
+ await assert.rejects(current.handleResearchAction({packageAttachment:'1'}),/unavailable/i);assert.equal(current.downloads.length,before);
 });
 
 test('the actual resize callback keeps the selected frozen catalog across navigation and returns to live charts elsewhere',async()=>{
