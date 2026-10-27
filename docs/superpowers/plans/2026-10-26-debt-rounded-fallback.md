@@ -24,4 +24,4 @@
 - [x] Admission task: add failing adversarial tests, narrow supplemental-feed admission and validate row units/precision/raw triple/hash/clocks; preserve old normalized sources and selected packages.
 - [x] Presentation task: expose note, original million string/unit/precision and row receipts in existing detail/CSV paths; regression-test round trips.
 - [x] Acceptance task: refresh only affected sources with genuine retrievals; prove old archive prefix exact, unchanged unrelated sources and only the intended historical numerical changes. Review independently.
-- [ ] Release task: complete focused/full tests, build checks, publish through existing workflow, verify cloud/live output; record evidence and update source review status.
+- [x] Release task: complete focused/full tests, build checks, publish through existing workflow, verify cloud/live output; record evidence and update source review status.
