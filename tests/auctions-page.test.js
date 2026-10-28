@@ -5,7 +5,7 @@ let page;
 try{page=await import('../src/auctions-page.js');}catch(error){if(error.code!=='ERR_MODULE_NOT_FOUND'||!error.message.includes('auctions-page.js'))throw error;}
 const ui=()=>{assert.ok(page,'The Graphite auction page must exist');return page;};
 const row=(id,date,changes={})=>({id,auctionDate:date,announcementDate:date,issueDate:'2026-10-30',maturityDate:'2036-08-15',sourceRecordDate:'2026-10-30',publishedAt:null,securityType:'Note',securityTerm:'9-Year 10-Month',originalTerm:'10-Year',reopening:true,cashManagement:false,status:'results',offeringAmount:39e9,competitiveAccepted:38e9,totalAccepted:40e9,somaAccepted:1e9,primaryDealerAccepted:7.6e9,directAccepted:3.8e9,indirectAccepted:26.6e9,bidToCover:2.5,highYield:5.1,highDiscountRate:null,highDiscountMargin:null,sourceUrl:'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query',resultUrl:'https://www.treasurydirect.gov/xml/R_20261007_1.xml',...changes});
-const fixture=()=>({status:'ok',fetchedAt:'2026-10-21T23:00:00Z',coverageStart:'2024-10-01',coverageEnd:'2026-10-21',coverageNote:'Reported auction facts.',auctions:[row('prior','2026-09-09',{bidToCover:2.4}),row('note','2026-10-07',{bidToCover:2.8}),row('tips','2026-10-08',{securityType:'TIPS'}),row('pending','2026-10-21',{securityType:'Bill',status:'announced',bidToCover:null,competitiveAccepted:null,primaryDealerAccepted:null,directAccepted:null,indirectAccepted:null})]});
+const fixture=()=>({status:'ok',fetchedAt:'2026-10-21T23:00:00Z',coverageStart:'2024-10-01',coverageEnd:'2026-10-21',coverageNote:'Reported auction facts.',auctions:[row('prior','2026-09-09',{bidToCover:2.4}),row('note','2026-10-07',{bidToCover:2.8}),row('tips','2026-10-08',{securityType:'TIPS'}),row('pending','2000-10-21',{securityType:'Bill',status:'announced',bidToCover:null,competitiveAccepted:null,primaryDealerAccepted:null,directAccepted:null,indirectAccepted:null,highYield:null,totalAccepted:null,somaAccepted:null,resultUrl:null})]});
 
 test('auction page filters and selection remain exact with accessible controls and competitive-award denominators',()=>{
   const html=ui().auctionsPage({auctionType:'Note',auctionId:'note'},fixture());
@@ -18,10 +18,10 @@ test('auction page filters and selection remain exact with accessible controls a
   assert.match(html,/data-export-auctions/);assert.match(html,/data-export-auction-benchmark/);
 });
 
-test('auction page exposes awaiting results, retained errors, empty filters and escaped text without substituting another instrument',()=>{
+test('auction page exposes elapsed results not retained, retained errors, empty filters and escaped text without substituting another instrument',()=>{
   const source=fixture();source.status='error';source.error='HTTP 503 <retry>';
   const html=ui().auctionsPage({auctionType:'Bill',auctionId:'pending'},source);
-  assert.match(html,/AWAITING RESULTS/);assert.match(html,/CACHED/);assert.match(html,/HTTP 503 &lt;retry&gt;/);assert.doesNotMatch(html,/<retry>/);
+  assert.match(html,/RESULTS NOT RETAINED/);assert.match(html,/Latest verified complete results/);assert.match(html,/CACHED/);assert.match(html,/HTTP 503 &lt;retry&gt;/);assert.doesNotMatch(html,/<retry>/);
   const empty=ui().auctionsPage({auctionType:'FRN'},source);assert.match(empty,/No auctions match/i);assert.doesNotMatch(empty,/data-auction-id="note"/);
 });
 

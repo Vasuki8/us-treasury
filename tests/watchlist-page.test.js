@@ -52,3 +52,14 @@ test('unavailable saved data shows explicit unavailability and escapes source er
     assert.doesNotMatch(output, /0 observations/);
   } finally { delete series[id]; }
 });
+
+test('named watchlists expose selection, names and portable settings controls',()=>{
+ const output=watchlistPage({saved:['sofr'],watchlists:[{id:'rates',name:'Rates <study>',saved:['sofr']},{id:'prices',name:'Prices',saved:['cpi']}],activeWatchlistId:'rates'});
+ for(const text of ['id="watchlist-active"','id="watchlist-name"','Rates &lt;study&gt;','data-create-watchlist','data-rename-watchlist','data-delete-watchlist','data-export-settings','id="research-settings-import"'])assert.ok(output.includes(text),text);
+});
+
+test('watchlist policy updates and related catalysts are distinct from the next data release',()=>{
+ const events=[{id:'decision',sourceId:'fomc',program:'fomc-decision',name:'FOMC decision',date:'2026-11-01',seriesId:'effr'},{id:'minutes',sourceId:'fomc',program:'fomc-minutes',name:'FOMC minutes',date:'2026-11-20',seriesId:'policyTargetUpper'}];
+ const output=watchlist.watchlistPage({saved:['effr','policyTargetUpper']},{events,now:new Date('2026-10-27T12:00:00Z')});
+ assert.match(output,/Next policy update/);assert.match(output,/Related catalyst/);assert.match(output,/Next release not in retained schedule/);assert.doesNotMatch(output,/Next release[^<]*FOMC minutes/);
+});

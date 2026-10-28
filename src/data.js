@@ -1,9 +1,14 @@
 import { snapshot } from './official-snapshot.js';
 import { registry } from './registry.js';
+import {economicEvidenceSources} from './economic-evidence-snapshot.js';
+import {treasuryAuctionCalendarSnapshot} from './treasury-auction-calendar-snapshot.js';
+import {treasuryAuctionEvents} from './treasury-auction-calendar.js';
+
+const runtimeSources={...economicEvidenceSources,...snapshot.sources};
 
 const publicationNote='The source feed does not provide historical publication timestamps. Retrieval time is shown separately; it is not a release date.';
 export const series=Object.fromEntries(Object.entries(registry).map(([id,metadata])=>{
-  const source=snapshot.sources[metadata.agency],official=source?.series?.[id];
+  const source=runtimeSources[metadata.agency],official=source?.series?.[id];
   const dataStatus=!official?'unavailable':source.status==='ok'?'official':'cached';
   return [id,{
     ...metadata,observationType:metadata.observationType??official?.observationType??'official',
@@ -12,8 +17,9 @@ export const series=Object.fromEntries(Object.entries(registry).map(([id,metadat
     measure:official?.measure??'',provenance:official?.provenance??source?.provenance??[],inputProvenanceScope:official?.inputProvenanceScope,calculation:official?.calculation||'',sourceUrl:official?.sourceUrl||metadata.source.url,sourceUrls:official?.sourceUrls??[],
     sourceNotice:official?.sourceNotice??official?.redistributionNotice??'',licenseUrl:official?.licenseUrl??official?.termsUrl??'',attribution:official?.attribution??'',sourceTitle:official?.sourceTitle??'',
     coverageNote:official?.coverageNote||source?.coverageNote||'',publicationNote:official?.publicationNote??publicationNote,
+    ...(['yield','nominalYield2','nominalYield3m','spread2s10s','spread3m10y','realYield10','inflationComp10'].includes(id)?{methodologyBreaks:snapshot.sources.yields?.methodologyBreaks??[]}:{}),
   }];
 }));
 export const yieldCurve=snapshot.sources.treasury?.yieldCurve||[];
-export const releases=snapshot.releases||[];
-export const dataStatus={...snapshot,curveDate:snapshot.sources.treasury?.curveDate||null,previousCurveDate:snapshot.sources.treasury?.previousCurveDate||null};
+export const releases=[...(snapshot.releases||[]),...treasuryAuctionEvents(treasuryAuctionCalendarSnapshot)];
+export const dataStatus={...snapshot,sources:runtimeSources,calendar:{...snapshot.calendar,sources:{...snapshot.calendar?.sources,'treasury-auctions':treasuryAuctionCalendarSnapshot}},curveDate:snapshot.sources.treasury?.curveDate||null,previousCurveDate:snapshot.sources.treasury?.previousCurveDate||null};

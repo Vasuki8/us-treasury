@@ -7,10 +7,11 @@ const frequencies = ['All frequencies', 'Daily', 'Weekly', 'Monthly', 'Quarterly
 export const defaults = {
   page: 'overview', seriesId: 'unrate', range: 12, transform: 'level', tab: 'data',
   query: '', topic: 'All topics', frequency: 'All frequencies', selected: ['unrate', 'cpi'],
-  exploreMode: 'catalog', comparison: 'native', calendarMonth: 'upcoming', day: 'all', calendarTopic: 'All topics',
+  exploreMode: 'catalog', comparison: 'native', alignment:'exact',calendarMonth: 'upcoming', day: 'all', calendarTopic: 'All topics',
   watchOnly: false, eventId: '',calendarView:'macro',externalView:'summary',
   refinancingHorizon:12,refinancingShock:100,
   yieldDateA:'',yieldDateB:'',
+  pceBaseIndex:'pceIndex',pceMonthlyRate:0.2,pceHorizonMonths:12,pceTargetAnnualRate:2,
   auctionType:'All',auctionId:'',
   vintageCutoff:null,vintageSeries:'gdp',
   window:'1y',startDate:'',endDate:'',returnTo:null,
@@ -78,6 +79,8 @@ export function parseRoute(hash = '') {
     const validCurveDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
     state.yieldDateA=validCurveDate(p.get('curveA'))?p.get('curveA'):'';
     state.yieldDateB=validCurveDate(p.get('curveB'))?p.get('curveB'):'';
+    state.pceBaseIndex=p.get('baseIndex')==='pceCoreIndex'?'pceCoreIndex':'pceIndex';
+    for(const [field,param]of [['pceMonthlyRate','assumedMonthly'],['pceHorizonMonths','horizonMonths'],['pceTargetAnnualRate','targetAnnual']])if(p.has(param))state[field]=p.get(param).trim()!==''?Number(p.get(param)):Number.NaN;
     state.refinancingHorizon=[3,12,24].includes(Number(p.get('horizon')))?Number(p.get('horizon')):12;
     state.refinancingShock=[25,50,100,200].includes(Number(p.get('shock')))?Number(p.get('shock')):100;
     state.range = p.get('range') === '6' ? 6 : 12;
@@ -92,6 +95,7 @@ export function parseRoute(hash = '') {
     if (p.has('selected')) state.selected = validIds(p.get('selected').split(','));
     state.exploreMode = ['compare','coverage'].includes(p.get('mode')) ? p.get('mode') : 'catalog';
     state.comparison = ['indexed','difference'].includes(p.get('comparison')) ? p.get('comparison') : 'native';
+    state.alignment=p.get('alignment')==='quarter'?'quarter':'exact';
     state.day = releases.some(event=>event.date===p.get('day')) ? p.get('day') : 'all';
     state.calendarMonth = releases.some(event => event.date.startsWith(p.get('month') + '-')) ? p.get('month') : !p.has('month') && state.day !== 'all' ? state.day.slice(0, 7) : 'upcoming';
     if (state.calendarMonth !== 'upcoming' && state.day !== 'all' && !state.day.startsWith(state.calendarMonth + '-')) state.day = 'all';
@@ -109,6 +113,7 @@ export function routeFor(input) {
   const state = { ...defaults, ...input };
   const path = {release:'/release',credit:'/credit',research:"/research",macroCoverage:'/economy',overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',watchlist:'/watchlist',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',macro:'/macro',vintages:'/vintages',market:'/market'}[state.page] || '/overview';
   const p = new URLSearchParams();
+  if(state.alignment==='quarter')p.set('alignment','quarter');
   if(['research','release'].includes(state.page)){
     p.set('view',state.researchView);if(state.packageId)p.set('package',state.packageId);
     if(state.changeSince)p.set('since',state.changeSince);if(state.changePage>1)p.set('changePage',String(state.changePage));
@@ -119,6 +124,10 @@ export function routeFor(input) {
   }
   if(state.page==='macroCoverage'){
     p.set('family',state.macroFamily);p.set('measure',state.macroMeasure);
+    if(state.macroFamily==='prices'){
+      if(state.pceBaseIndex==='pceCoreIndex')p.set('baseIndex',state.pceBaseIndex);
+      for(const [field,param]of [['pceMonthlyRate','assumedMonthly'],['pceHorizonMonths','horizonMonths'],['pceTargetAnnualRate','targetAnnual']])if(state[field]!==defaults[field])p.set(param,String(state[field]));
+    }
     if(state.macroFamily==='external'&&['trends','decomposition','methods'].includes(state.externalView))p.set('section',state.externalView);
   }
   if(state.page==='labor')p.set('measure',coverageFamilies.labor.ids.includes(state.macroMeasure)?state.macroMeasure:coverageFamilies.labor.defaultMeasure);

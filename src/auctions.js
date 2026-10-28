@@ -1,12 +1,36 @@
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 const nonnegative = value => finite(value) && value >= 0;
 const clean = value => Number(value.toFixed(10));
+const easternDate = new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'});
 
 function dateKey(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error('Invalid auction date');
   const parsed = new Date(`${value}T00:00:00Z`);
   if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0,10) !== value) throw new Error('Invalid auction date');
   return value;
+}
+
+/** Retained evidence is distinct from whether the scheduled Eastern date has passed. */
+export function auctionResultState(auction, {asOf = easternDate.format(new Date())} = {}) {
+  dateKey(asOf);dateKey(auction.auctionDate);
+  const allocation = auctionAllocations(auction);
+  const resultRate = auction.securityType === 'Bill' ? auction.highDiscountRate : auction.securityType === 'FRN' ? auction.highDiscountMargin : auction.highYield;
+  const resultEvidence = auction.status === 'results' || finite(auction.bidToCover) || finite(auction.competitiveAccepted) || finite(resultRate) || finite(auction.totalAccepted) || Boolean(auction.resultUrl);
+  if (resultEvidence) {
+    const complete = nonnegative(auction.bidToCover) && nonnegative(auction.offeringAmount) && finite(resultRate) && allocation.status === 'complete';
+    return {status:complete?'verified':'incomplete',label:complete?'VERIFIED RESULTS':'INCOMPLETE RESULTS',note:complete?'Reported result facts and competitive allocations are retained.':'Some result facts are retained; required rate, offering, ratio or reconciled competitive allocations are missing or incomplete.'};
+  }
+  if (auction.auctionDate < asOf) return {status:'missing',label:'RESULTS NOT RETAINED',note:'The scheduled auction date has elapsed, but this capture has no reported results. This does not establish that Treasury has not published them.'};
+  return {status:'announced',label:'ANNOUNCED · AWAITING RESULTS',note:auction.auctionDate === asOf?'Scheduled today; the auction and result release clocks are unknown.':'Future announced auction; no reported result is retained.'};
+}
+
+export function auctionResultCoverage(source, options = {}) {
+  const rows = source?.auctions ?? [];
+  const asOf=options.asOf??easternDate.format(new Date());
+  const states = rows.map(row => ({row,...auctionResultState(row,{asOf})}));
+  const latest = status => states.filter(row => row.status === status).map(({row}) => row.auctionDate).sort().at(-1) ?? null;
+  return {asOf,latestVerifiedDate:latest('verified'),latestReportedDate:rows.filter(row=>row.status==='results'&&finite(row.bidToCover)).map(row=>row.auctionDate).sort().at(-1)??null,
+    counts:Object.fromEntries(['verified','incomplete','missing','announced'].map(status=>[status,states.filter(row=>row.status===status).length]))};
 }
 
 /** Bidder classes are shares of competitive awards. They do not identify investor domicile. */

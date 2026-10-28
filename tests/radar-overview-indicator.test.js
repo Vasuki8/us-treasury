@@ -36,7 +36,7 @@ test('Overview keeps primary readings and supporting measurements individually i
 
 test('Overview leads with conditions, then catalysts and momentum, with research exceptions in supporting disclosures', () => {
   const html=overviewPage(state({saved:['unrate']}), {checkpoint:{enabled:true,since:'2026-10-20'},changes:{status:'ready',rows:[{seriesId:'unrate',kind:'value-change',period:'2026-09-01',capturedAt:'2026-10-22T12:00:00Z'}]}});
-  ordered(html,['ECONOMIC CONDITIONS','NEXT CATALYSTS','Published results · GDP, claims &amp; CPI','PCE INFLATION · MONTHLY','PAYROLL GAINS · 3-MONTH AVERAGE','Activity &amp; income','Weekly claims','My research','Following 1','Captured changes 1','Collection attention 0','Data &amp; methods','Source health, coverage and methodology']);
+  ordered(html,['ECONOMIC CONDITIONS','NEXT CATALYSTS','Published results · GDP, claims &amp; CPI','PCE INFLATION · MONTHLY','PAYROLL GAINS · 3-MONTH AVERAGE','Activity &amp; income','Weekly claims','My research','Following 1','Captured changes 1','Collection attention 0','Data &amp; methods','Collection failures and retained-source status are in Refresh details above']);
   assert.match(html,/retrieval update is not itself an official publication or market surprise/);
   assert.match(html,/Routine debt dates remain in the full calendar; schedules do not confirm results/);
   assert.match(html,/Observed value change between retrievals/);

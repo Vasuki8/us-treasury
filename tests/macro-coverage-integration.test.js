@@ -21,8 +21,8 @@ test('macro families register exact measurement metadata and comparison eligibil
 
 test('new collectors are required freshness targets even if their source objects disappear',()=>{
  const result=getFreshness({});
- for(const id of ['beaIta','policyRates','activity','housing'])assert.equal(result.entries.find(row=>row.id===`data:${id}`)?.status,'unavailable',id);
- assert.equal(result.entries.length,30);
+ for(const id of ['beaIta','policyRates','activity','housing','laborEvidence','pcePriceContributions'])assert.equal(result.entries.find(row=>row.id===`data:${id}`)?.status,'unavailable',id);
+ assert.equal(result.entries.length,32);
 });
 
 test('differences of price and activity indexes are explicitly index-point changes',()=>{

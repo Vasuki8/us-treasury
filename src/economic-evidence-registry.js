@@ -1,0 +1,5 @@
+import {laborEvidenceDefinitions,pceContributionDefinitions} from './economic-evidence-definitions.js';
+export const economicEvidenceRegistry={
+ ...Object.fromEntries(Object.entries(laborEvidenceDefinitions).map(([id,d])=>[id,{...d,short:d.name,topic:'Labor',agency:'laborEvidence',format:d.horizonMonths?'index':'number',comparisonClass:d.horizonMonths?'rate':'level',dateConvention:'month-start',source:{name:'U.S. Bureau of Labor Statistics, Current Employment Statistics',url:'https://www.bls.gov/ces/'}}])),
+ ...Object.fromEntries(Object.entries(pceContributionDefinitions).map(([id,d])=>[id,{...d,short:d.name,topic:'Inflation',agency:'pcePriceContributions',frequency:'Monthly',adjustment:'Seasonally adjusted',observationType:'official',format:d.contributionScope==='total'?'percent':'percentagePoints',comparisonClass:d.contributionScope==='total'?'growth':'contribution',dateConvention:'month-start',source:{name:'U.S. Bureau of Economic Analysis',url:'https://www.bea.gov/data/personal-consumption-expenditures-price-index'}}])),
+};

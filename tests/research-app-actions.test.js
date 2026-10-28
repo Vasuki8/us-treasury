@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createWorkspace,openWorkspace,MAX_RESEARCH_JSON_BYTES} from '../src/research-workspaces.js';
+import {parseResearchQuestion} from '../src/research-questions.js';
+import {buildPceBaseEffects} from '../src/pce-base-effects.js';
+import {pceScenarioOptions} from '../src/workspace-context.js';
 import {createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,researchPackageAttachment} from '../src/research-packages.js';
 import {createResearchLibrary as createLibrary} from '../src/research-library.js';
 const createResearchLibrary=storage=>createLibrary(storage,{locks:{request:async(_name,_options,callback)=>callback()}});
@@ -57,7 +60,7 @@ async function app(hash='#/series/gdp?window=all',{archive=publicationArchive,ex
  const values=new Map(),storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
  const researchLibrary=await createResearchLibrary(storage),inputs=new Map([['research-name',{value:'Handler research'}]]),downloads=[],chartCalls=[],chartRoots=[],listeners=new Map(),announcements=[];
  const location={hash},history={pushState:(_state,_title,route)=>{location.hash=route;},replaceState:(_state,_title,route)=>{location.hash=route;}};
- const env={createWorkspace,openWorkspace,createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,MAX_RESEARCH_JSON_BYTES,buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin,selectClaimsPublicationHistory,claimsPublicationCsv,claimsPublicationIds,normalizedCutoff,normalizeVintageTimestamp,researchLibrary,parseRoute,routeFor,updateWorkspaceSelection,dataStatus,series,getSeries,publicationArchive:archive,publicationState:{status:publicationStatus},publicationExplanations:explanations,explanationState:{status:explanationStatus},publicationExplanationsCsv,publicationCsv,selectPublicationHistory,periodLabel,changesCsv,writeChangeCheckpoint,storage,
+ const env={buildPceBaseEffects,pceScenarioOptions,parseResearchQuestion,createWorkspace,openWorkspace,createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,MAX_RESEARCH_JSON_BYTES,buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin,selectClaimsPublicationHistory,claimsPublicationCsv,claimsPublicationIds,normalizedCutoff,normalizeVintageTimestamp,researchLibrary,parseRoute,routeFor,updateWorkspaceSelection,dataStatus,series,getSeries,publicationArchive:archive,publicationState:{status:publicationStatus},publicationExplanations:explanations,explanationState:{status:explanationStatus},publicationExplanationsCsv,publicationCsv,selectPublicationHistory,periodLabel,changesCsv,writeChangeCheckpoint,storage,
   publicationController:{context:()=>({status:publicationStatus,archive})},state:{...parseRoute(hash),saved:[]},activeWorkspaceId:null,researchLabel:'',pinBusy:false,changeCheckpoint:{enabled:true,since:'2026-10-01T12:00:00.000Z',snapshotAt:'2026-10-01T12:00:00.000Z'},changeState:{status:'ready',history:{captures:[]}},historyController:{context:()=>({historyState:{status:'idle'}})},
   document:{getElementById:id=>inputs.get(id)},location,history,watchDisclosureCharts,main:{addEventListener:(name,callback,capture)=>{assert.equal(name,'toggle');assert.equal(capture,true);listeners.set(name,callback);}},window:{addEventListener:(name,callback)=>listeners.set(name,callback)},cancelAnimationFrame(){},requestAnimationFrame(callback){callback();return 1;},render(){},rememberWorkspace(){},announce:message=>announcements.push(message),renderCharts:(root,options)=>{chartRoots.push(root);chartCalls.push(options);},downloadCsv:(content,name)=>downloads.push({content,name}),downloadJson:pkg=>downloads.push({content:exportResearchPackage(pkg),name:'json'}),changesContext:()=>({status:'ready',rows:[]}),syncChanges(){}};
  Object.assign(env,{buildCpiPublicationPin,buildGdpMatrixPin,cpiPublicationIds,cpiPublicationCsv,selectCpiPublicationHistory,gdpRevisionMatrixCsv,buildCoverageInventory,coverageInventoryCsv,fundingChartCatalog,researchPackageAttachment});
@@ -66,9 +69,9 @@ async function app(hash='#/series/gdp?window=all',{archive=publicationArchive,ex
   +section('function trackedChanges()','function syncPublications(')
   +section('function currentPackage()','function researchActions()')
   +section('function navigate(',"window.addEventListener('hashchange'")
-  +section('function stored(',"root.addEventListener('click'")
+  +section('function applyPceAssumptions(',"root.addEventListener('click'")
   +section('let resizeFrame;','\nrender();')
-  +`;return {handleResearchAction,changeHandler:async event=>{${change[1]}},navigate,state:()=>state,workspaceId:()=>activeWorkspaceId,checkpoint:()=>changeCheckpoint};`;
+  +`;return {handleResearchAction,applyPceAssumptions,changeHandler:async event=>{${change[1]}},navigate,state:()=>state,workspaceId:()=>activeWorkspaceId,checkpoint:()=>changeCheckpoint};`;
  const handlers=new Function('env',code)(env);
  return {...handlers,researchLibrary,values,inputs,downloads,chartCalls,chartRoots,listeners,announcements,location};
 }
@@ -219,4 +222,31 @@ test('actual GDP matrix and coverage exports preserve their selected scope and f
  await current.handleResearchAction({exportGdpMatrix:''});assert.equal(current.downloads.length,1);assert.match(current.downloads[0].name,/revision-matrix/);
  await current.handleResearchAction({pinGdpMatrix:''});const pkg=current.researchLibrary.getPackage(current.state().packageId);assert.equal(pkg.context.gdpRevisionMatrix.cutoff,'2026-09-30');
  const coverage=await app('#/explore?mode=coverage&q=unemployment&topic=Labor');await coverage.handleResearchAction({exportCoverage:''});assert.equal(coverage.downloads.length,1);assert.match(coverage.downloads[0].content,/first_reference_date/);assert.doesNotMatch(coverage.downloads[0].content,/^cpi,/m);
+});
+
+
+test('question action freezes exactly the explicit evidence and later view updates preserve the question',async()=>{
+ const view=await app('#/series/yield?window=1y');
+ await view.handleResearchAction({saveWorkspace:''});
+ const prior=view.researchLibrary.listWorkspaces()[0];
+ const fields={hypothesis:'Does labor support a slower inflation hypothesis?',support:'unrate',contradict:'cpi','review-date':'2026-11-01','review-event':'','condition-series':'unrate','condition-op':'>=','condition-value':'4'};
+ for(const [name,value]of Object.entries(fields))view.inputs.set(`question-${name}-${prior.id}`,{value});
+ await view.handleResearchAction({saveQuestion:prior.id});
+ const saved=view.researchLibrary.getWorkspace(prior.id),baseline=view.researchLibrary.getPackage(saved.researchQuestion.baselinePackageId);
+ assert.deepEqual(baseline.request.ids,['unrate','cpi']);assert.equal(saved.state.seriesId,'yield');
+ assert.ok(baseline.catalog.unrate.observations.length>baseline.panels[0].observations.length,'full baseline inputs are retained, with bounded primary-window CSV');
+ assert.equal(baseline.request.range.preset,'1y');
+ await view.handleResearchAction({saveWorkspace:''});
+ assert.equal(view.researchLibrary.getWorkspace(prior.id).researchQuestion.baselinePackageId,baseline.id);
+});
+
+
+test('conditional assumptions apply together and blank/invalid inputs cannot silently replace the displayed path',async()=>{
+ const view=await app('#/economy?family=prices');
+ for(const [id,value]of Object.entries({'pce-base-index':'pceCoreIndex','pce-monthly-rate':'0.25','pce-horizon-months':'6','pce-target-annual':'2.1'}))view.inputs.set(id,{value});
+ view.applyPceAssumptions();
+ assert.equal(view.state().pceMonthlyRate,.25);assert.equal(view.state().pceHorizonMonths,6);assert.equal(view.state().pceTargetAnnualRate,2.1);assert.equal(view.state().pceBaseIndex,'pceCoreIndex');
+ assert.match(view.location.hash,/assumedMonthly=0.25/);
+ view.inputs.get('pce-monthly-rate').value='';assert.throws(()=>view.applyPceAssumptions(),/no value was substituted/);assert.equal(view.state().pceMonthlyRate,.25);
+ view.inputs.get('pce-monthly-rate').value='-100';assert.throws(()=>view.applyPceAssumptions(),/Invalid assumptions/);assert.equal(view.state().pceMonthlyRate,.25);
 });

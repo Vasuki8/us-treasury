@@ -1,66 +1,111 @@
 import {parseWorkspace,researchId,researchJsonCopy,researchByteLength,deepFreeze}from'./research-workspaces.js';
 import {importResearchPackage,exportResearchPackage}from'./research-packages.js';
+import {openResearchDatabase}from'./research-database.js';
 
 export const RESEARCH_LIBRARY_KEY='meridian.research-library.v1';
 export const RESEARCH_LIBRARY_LOCK='meridian.research-library.v1.write';
-const MAX_LIBRARY_BYTES=3*1024*1024,MAX_WORKSPACES=50,MAX_PACKAGES=20;
+const MAX_LIBRARY_BYTES=3*1024*1024,limits={workspaces:50,packages:20};
+const recordKey=(kind,id)=>`${kind}:${id}`;
+const encode=(kind,record)=>kind==='packages'?exportResearchPackage(record):JSON.stringify(record);
+const decode=(kind,text)=>kind==='packages'?importResearchPackage(text):parseWorkspace(JSON.parse(text));
+const reasonFor=error=>error?.name==='QuotaExceededError'?'quota':'unavailable';
 
-/** Exclusive same-origin locks serialize each bounded envelope comparison/write. */
-export async function createResearchLibrary(storage,{locks=globalThis.navigator?.locks}={}){
- let lockingAvailable=typeof locks?.request==='function';
- const lockingWarning='Browser storage locking is unavailable. Research changes are session-only; existing stored records were preserved. Download pinned JSON before reloading.';
- let workspaces=[],packages=[],storageAvailable=Boolean(storage),sessionOnly=!storage||!lockingAvailable,warning=storage&&!lockingAvailable?lockingWarning:'',durableText=null,storageConflict=false;
+/** IndexedDB owns normal records. The legacy envelope is retained as recovery data. */
+export async function createResearchLibrary(storage,{locks=globalThis.navigator?.locks,indexedDB=globalThis.indexedDB,...databaseOptions}={}){
+ let records={workspaces:[],packages:[]},durable={workspaces:[],packages:[]},durability={workspaces:{},packages:{}},known=new Map(),invalidKeys=new Set();
+ let storageAvailable=Boolean(storage),backend='session',durableText=null,storageConflict=false,database=null,databaseUnavailable=false,notice='',warning='';
+ const setStatus=(kind,id,status,reason=null)=>{durability[kind][id]={status,reason};};
+ const sessionOnly=()=>Object.values(durability).some(group=>Object.values(group).some(row=>row.status!=='durable'));
+ const describe=reason=>({quota:'Browser research storage is full or its storage limit was reached; this record is session-only.',conflict:'This research record changed in another tab. Local changes are session-only; the latest stored record was preserved.',unavailable:'Browser research storage is unavailable; this record is session-only.','locking-unavailable':'Browser storage locking is unavailable. Research changes are session-only; existing stored records were preserved.','invalid-record':'Stored research could not be validated; its bytes were preserved. This change is session-only.',limit:'The browser research record limit was reached; this record is session-only.'}[reason]??'Research changes are session-only.');
+ const updateWarning=reason=>{warning=reason?describe(reason):sessionOnly()?warning:'';};
+ // A malformed legacy envelope is never overwritten. IndexedDB can still hold
+ // independent new records; these original bytes remain available for recovery.
+ let legacyValid=true,legacy={workspaces:[],packages:[]};
  try{
-  const text=storage?.getItem(RESEARCH_LIBRARY_KEY)??null;durableText=text;
-  if(text){
-   if(researchByteLength(text)>MAX_LIBRARY_BYTES)throw Error('Research library exceeds its byte limit.');
-   const value=researchJsonCopy(JSON.parse(text),{maxBytes:MAX_LIBRARY_BYTES});
-   if(value.version!==1||Object.keys(value).some(key=>!['version','workspaces','packages'].includes(key))||!Array.isArray(value.workspaces)||!Array.isArray(value.packages)||value.workspaces.length>MAX_WORKSPACES||value.packages.length>MAX_PACKAGES)throw Error('Invalid research library.');
-   workspaces=value.workspaces.map(parseWorkspace);packages=await Promise.all(value.packages.map(pkg=>importResearchPackage(JSON.stringify(pkg))));
-   if(new Set(workspaces.map(row=>row.id)).size!==workspaces.length||new Set(packages.map(row=>row.id)).size!==packages.length)throw Error('Duplicate stored research ID.');
+  durableText=storage?.getItem(RESEARCH_LIBRARY_KEY)??null;
+  if(durableText){
+   const value=researchJsonCopy(JSON.parse(durableText),{maxBytes:MAX_LIBRARY_BYTES});
+   if(value.version!==1||Object.keys(value).some(key=>!['version','workspaces','packages'].includes(key))||Object.keys(limits).some(kind=>!Array.isArray(value[kind])||value[kind].length>limits[kind]))throw Error('Invalid research library.');
+   for(const kind of Object.keys(limits)){
+    const ids=new Set();
+    for(const input of value[kind]){const record=await decode(kind,JSON.stringify(input));if(ids.has(record.id))throw Error('Duplicate stored research ID.');ids.add(record.id);legacy[kind].push(record);}
+   }
   }
- }catch(error){workspaces=[];packages=[];storageAvailable=false;sessionOnly=true;warning='Stored research could not be validated. New work is session-only; existing stored bytes were preserved.';}
- const persistLocked=()=>{
-  if(!storageAvailable){sessionOnly=true;return{ok:true,persisted:false,reason:'unavailable'};}
+ }catch{legacyValid=false;legacy={workspaces:[],packages:[]};notice='Stored research could not be validated. Existing stored bytes were preserved.';}
+ if(indexedDB?.open){
+  try{database=await openResearchDatabase(indexedDB,databaseOptions);await database.read();backend='indexeddb';storageAvailable=true;}
+  catch{databaseUnavailable=true;notice=[notice,'The research database could not be opened. Legacy records remain readable; new changes are session-only.'].filter(Boolean).join(' ');}
+ }
+ if(database&&backend==='indexeddb'){
+  // A tombstone is a committed deletion, so migration must never resurrect it.
+  // Each legacy record migrates in its own transaction. A failed migration
+  // cannot poison other records or later independent saves.
+  for(const kind of Object.keys(limits))for(const record of legacy[kind]){
+   try{const result=await database.write({key:recordKey(kind,record.id),kind,id:record.id,text:encode(kind,record)},null,{migration:true,limit:limits[kind]});if(!result.persisted){records[kind].push(record);setStatus(kind,record.id,'session',result.reason);updateWarning(result.reason);}}
+   catch(error){const reason=reasonFor(error);records[kind].push(record);setStatus(kind,record.id,'session',reason);updateWarning(reason);}
+  }
   try{
-   // Keep a stale tab from replacing records written or removed elsewhere.
-   // A conflict remains session-only until a fresh library is opened.
-   if(storageConflict||(storage.getItem(RESEARCH_LIBRARY_KEY)??null)!==durableText){
-    storageConflict=true;sessionOnly=true;warning='Research library changed in another tab. Local changes are session-only; the latest stored records were preserved. Download pinned JSON before reloading.';
-    return{ok:true,persisted:false,reason:'conflict'};
+   for(const row of await database.read()){
+    try{
+     if(!row||!Object.hasOwn(limits,row.kind)||recordKey(row.kind,researchId(row.id))!==row.key||typeof row.revision!=='string'||!row.revision)throw Error('Invalid stored record.');
+     known.set(row.key,row.revision);
+     if(row.text===null){records[row.kind]=records[row.kind].filter(item=>item.id!==row.id);delete durability[row.kind][row.id];continue;}
+     const record=await decode(row.kind,row.text);if(record.id!==row.id)throw Error('Stored record ID mismatch.');
+     records[row.kind]=[...records[row.kind].filter(item=>item.id!==row.id),record];setStatus(row.kind,row.id,'durable');
+    }catch{if(typeof row?.key==='string')invalidKeys.add(row.key);notice=[notice,'A stored database record could not be validated; its bytes were preserved.'].filter(Boolean).join(' ');}
    }
-   const text=JSON.stringify({version:1,workspaces,packages});
-   if(researchByteLength(text)>MAX_LIBRARY_BYTES){sessionOnly=true;warning='Browser research storage limit reached; changes are session-only.';return{ok:true,persisted:false,reason:'quota'};}
-   storage.setItem(RESEARCH_LIBRARY_KEY,text);durableText=text;sessionOnly=false;warning='';return{ok:true,persisted:true,reason:null};
-  }catch(error){sessionOnly=true;const reason=error?.name==='QuotaExceededError'?'quota':'unavailable';if(reason==='unavailable')storageAvailable=false;warning=reason==='quota'?'Browser research storage is full; changes are session-only.':'Browser research storage is unavailable; changes are session-only.';return{ok:true,persisted:false,reason};}
+  }catch{notice=[notice,'Stored database records could not be read. New changes are session-only.'].filter(Boolean).join(' ');database=null;backend='session';storageAvailable=false;}
+ }else{
+  storageAvailable=Boolean(storage)&&legacyValid;backend=storageAvailable?'localstorage':'session';
+  records={workspaces:[...legacy.workspaces],packages:[...legacy.packages]};durable={workspaces:[...legacy.workspaces],packages:[...legacy.packages]};
+  for(const kind of Object.keys(limits))for(const record of records[kind])setStatus(kind,record.id,'durable');
+ }
+ const persist=async(kind,id,record)=>{
+  let result;
+  if(backend==='indexeddb'){
+   if(invalidKeys.has(recordKey(kind,id)))result={persisted:false,reason:'invalid-record'};
+   else try{
+    result=await database.write({key:recordKey(kind,id),kind,id,text:record?encode(kind,record):null},known.get(recordKey(kind,id))??null,{limit:limits[kind]});
+    if(result.persisted)known.set(recordKey(kind,id),result.record.revision);
+   }catch(error){result={persisted:false,reason:reasonFor(error)};}
+  }else if(!storageAvailable||backend==='session'||databaseUnavailable)result={persisted:false,reason:'unavailable'};
+  else if(typeof locks?.request!=='function')result={persisted:false,reason:'locking-unavailable'};
+  else try{
+   result=await locks.request(RESEARCH_LIBRARY_LOCK,{mode:'exclusive'},()=>{
+    try{
+     if(storageConflict||(storage.getItem(RESEARCH_LIBRARY_KEY)??null)!==durableText){storageConflict=true;return{persisted:false,reason:'conflict'};}
+     const next={...durable,[kind]:[...durable[kind].filter(item=>item.id!==id),...(record?[record]:[])]},text=JSON.stringify({version:1,...next});
+     if(researchByteLength(text)>MAX_LIBRARY_BYTES)return{persisted:false,reason:'quota'};
+     storage.setItem(RESEARCH_LIBRARY_KEY,text);durableText=text;durable=next;return{persisted:true,reason:null};
+    }catch(error){return{persisted:false,reason:reasonFor(error)};}
+   });
+  }catch{result={persisted:false,reason:'locking-unavailable'};}
+  if(result.persisted){if(record)setStatus(kind,id,'durable');else delete durability[kind][id];}
+  else setStatus(kind,id,result.reason==='quota'||result.reason==='locking-unavailable'||result.reason==='limit'?'session':'failed',result.reason);
+  updateWarning(result.reason);return{ok:true,persisted:result.persisted,reason:result.reason??null};
  };
- const lockFallback=()=>{lockingAvailable=false;sessionOnly=true;warning=lockingWarning;return{ok:true,persisted:false,reason:'locking-unavailable'};};
- const persist=async()=>{
-  if(!storageAvailable){sessionOnly=true;return{ok:true,persisted:false,reason:'unavailable'};}
-  if(!lockingAvailable)return lockFallback();
-  try{return await locks.request(RESEARCH_LIBRARY_LOCK,{mode:'exclusive'},persistLocked);}
-  catch{return lockFallback();}
- };
+ // Keep operations within one library in invocation order. The native write
+ // transaction also serializes the compare/write across separate tabs.
+ let tail=Promise.resolve();
+ const enqueue=operation=>{const result=tail.then(operation);tail=result.catch(()=>{});return result;};
  return{
-  getState:()=>deepFreeze({version:1,workspaces:[...workspaces],packages:[...packages],storageAvailable,sessionOnly,warning}),
-  listWorkspaces:()=>Object.freeze([...workspaces]),listPackages:()=>Object.freeze([...packages]),
-  getWorkspace:id=>workspaces.find(row=>row.id===id),getPackage:id=>packages.find(row=>row.id===id),
-  async saveWorkspace(input){
-   const record=parseWorkspace(input),index=workspaces.findIndex(row=>row.id===record.id);
-   if(index<0&&workspaces.length>=MAX_WORKSPACES)return{ok:false,persisted:false,reason:'limit'};
-   workspaces=index<0?[...workspaces,record]:workspaces.map((row,position)=>position===index?record:row);
-   return{...await persist(),record};
-  },
-  async removeWorkspace(id){researchId(id);workspaces=workspaces.filter(row=>row.id!==id);return persist();},
-  async pinPackage(input){
-   const record=await importResearchPackage(exportResearchPackage(input)),prior=packages.find(row=>row.id===record.id);
-   if(prior){
-    if(prior.checksum.value!==record.checksum.value)return{ok:false,persisted:false,reason:'duplicate-id'};
-    const result=await persist();return{...result,reason:result.reason??'already-pinned',record:prior};
-   }
-   if(packages.length>=MAX_PACKAGES)return{ok:false,persisted:false,reason:'limit'};
-   packages=[...packages,record];return{...await persist(),record};
-  },
-  async removePackage(id){researchId(id);packages=packages.filter(row=>row.id!==id);return persist();},
+  getState:()=>deepFreeze({version:1,...records,backend,durability:structuredClone(durability),storageAvailable,sessionOnly:sessionOnly()||backend==='session',warning:[notice,warning].filter(Boolean).join(' ')}),
+  listWorkspaces:()=>Object.freeze([...records.workspaces]),listPackages:()=>Object.freeze([...records.packages]),
+  getWorkspace:id=>records.workspaces.find(row=>row.id===id),getPackage:id=>records.packages.find(row=>row.id===id),
+  saveWorkspace:input=>enqueue(async()=>{
+   const record=parseWorkspace(input),index=records.workspaces.findIndex(row=>row.id===record.id);
+   if(index<0&&records.workspaces.length>=limits.workspaces)return{ok:false,persisted:false,reason:'limit'};
+   records.workspaces=index<0?[...records.workspaces,record]:records.workspaces.map((row,position)=>position===index?record:row);
+   return{...await persist('workspaces',record.id,record),record};
+  }),
+  removeWorkspace:id=>enqueue(async()=>{researchId(id);const result=await persist('workspaces',id,null);if(result.persisted)records.workspaces=records.workspaces.filter(row=>row.id!==id);return result;}),
+  pinPackage:input=>enqueue(async()=>{
+   const record=await importResearchPackage(exportResearchPackage(input)),prior=records.packages.find(row=>row.id===record.id);
+   if(prior&&prior.checksum.value!==record.checksum.value)return{ok:false,persisted:false,reason:'duplicate-id'};
+   if(!prior&&records.packages.length>=limits.packages)return{ok:false,persisted:false,reason:'limit'};
+   if(!prior)records.packages=[...records.packages,record];
+   const result=await persist('packages',record.id,prior??record);return{...result,reason:result.reason??(prior?'already-pinned':null),record:prior??record};
+  }),
+  removePackage:id=>enqueue(async()=>{researchId(id);const result=await persist('packages',id,null);if(result.persisted)records.packages=records.packages.filter(row=>row.id!==id);return result;}),
  };
 }

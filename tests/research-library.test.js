@@ -61,6 +61,18 @@ test('complete SOFR All history above the library cap stays downloadable in sess
  const reopened=await openLibrary(store);assert.equal(reopened.getWorkspace('workspace-one').name,workspace().name);assert.equal(reopened.getPackage(pkg.id),undefined);
 });
 
+test('a session-only full-history package does not prevent a later small workspace from surviving reload',async()=>{
+ const store=storage(),library=await openLibrary(store);
+ const pkg=await packages.createResearchPackage({id:'full-history-isolated',name:'Complete SOFR history',now,state:{selected:['sofr'],window:'all'}});
+ assert.equal((await library.pinPackage(pkg)).persisted,false);
+ const result=await library.saveWorkspace(workspace());
+ assert.equal(result.persisted,true,'unrelated small saves must not reserialize the failed package');
+ const reopened=await openLibrary(store);assert.equal(reopened.getWorkspace('workspace-one').name,'Saved comparison');
+ assert.equal(reopened.getPackage(pkg.id),undefined);
+ assert.equal(library.getState().durability.packages[pkg.id].status,'session');
+ assert.equal(library.getState().durability.workspaces['workspace-one'].status,'durable');
+});
+
 test('a stale open library preserves another instance durable bytes and retains its conflicting work for the session',async()=>{
  const store=storage(),first=await openLibrary(store),second=await openLibrary(store);
  assert.equal((await first.saveWorkspace(workspace())).persisted,true);

@@ -2,6 +2,7 @@ import { series } from './data.js';
 import { resolveDateWindow, windowObservations } from './date-window.js';
 import { indexEligibilityError } from './comparison-policy.js';
 import { searchSeries } from './search.js';
+import {quarterObservationMap,referenceQuarter} from './reference-quarter.js';
 export { resolveDateWindow, windowObservations } from './date-window.js';
 export { comparisonClassification } from './comparison-policy.js';
 
@@ -31,7 +32,7 @@ export function observationCoverageLabel(observation={}){
   if(observation.partial!==true)return '';
   const counts=[];
   if(Number.isInteger(observation.auctionCount))counts.push(`${observation.auctionCount} result auctions`);
-  if(Number.isInteger(observation.pendingCount))counts.push(`${observation.pendingCount} awaiting results`);
+  if(Number.isInteger(observation.pendingCount))counts.push(`${observation.pendingCount} without retained results`);
   return ['PARTIAL',...counts].join(' · ');
 }
 
@@ -139,20 +140,24 @@ export function compareSeries(ids, mode = 'native', range = 12, catalog = series
     const error = panels.map(panel => indexEligibilityError(panel, catalog !== series ? panel.series.comparisonClass : undefined)).find(Boolean);
     if (error) return { panels: [], error, window };
   }
-  const byDate = panels.map((panel) => new Map(panel.observations.map((o) => [o.date, o.value])));
-  const baseline = panels[0].observations.find((o) => byDate.every((values) => finite(values.get(o.date)) && (mode === 'difference' || values.get(o.date) > 0)));
+  const quarter=range?.alignment==='quarter';
+  let quarterMaps;
+  if(quarter){try{quarterMaps=panels.map(quarterObservationMap);}catch(error){return {panels:[],error:error.message,window};}}
+  const key=(panel,o)=>quarter?referenceQuarter(panel.series,o):o.date;
+  const byDate = panels.map((panel,index) => quarter?new Map([...quarterMaps[index]].map(([period,o])=>[period,o.value])):new Map(panel.observations.map((o) => [o.date, o.value])));
+  const baseline = panels[0].observations.find((o) => byDate.every((values) => finite(values.get(key(panels[0],o))) && (mode === 'difference' || values.get(key(panels[0],o)) > 0)));
   if (!baseline) {
-    return { panels: [], error: `No common ${mode === 'indexed' ? 'positive ' : ''}finite baseline exists on an exact shared date in the displayed window. Different source frequencies or missing values may prevent comparison; use native panels or a wider window.`, window };
+    return { panels: [], error: `No common ${mode === 'indexed' ? 'positive ' : ''}finite baseline exists on ${quarter?'a declared reference quarter':'an exact shared date'} in the displayed window. Different source frequencies, date conventions or missing values may prevent comparison. Use native panels${quarter?'':', or opt into reference-quarter baseline alignment for declared quarterly periods'}. A wider window cannot resolve incompatible date conventions.`, window };
   }
   return {
     panels: panels.map((panel, index) => {
-      const baselineValue = byDate[index].get(baseline.date);
-      const observations = panel.observations.filter((o) => o.date >= baseline.date).map((o) => ({
+      const period=key(panels[0],baseline),baselineValue = byDate[index].get(period),baselineDate=quarter?quarterMaps[index].get(period).date:baseline.date;
+      const observations = panel.observations.filter((o) => key(panel,o) >= period).map((o) => ({
         ...o,
         value: mode === 'difference' ? changeValue(panel.series, o.value, baselineValue) : finite(o.value) ? clean(o.value / baselineValue * 100) : null,
       }));
       return { ...panel, unit: mode === 'difference' ? changeUnit(panel.series) : 'Index (common baseline = 100)',
-        baselineDate: baseline.date, baselineValue,
+        baselineDate, baselineValue,...(quarter?{baselinePeriod:period,alignment:'quarter'}:{}),
         formula: mode === 'indexed' ? '100 × value / baseline' : panel.series.format === 'percent' && isYield(panel.series) ? '100 × (value − baseline)' : 'value − baseline',
         observations, coverage: coverage(panel.series, observations) };
     }),
@@ -207,9 +212,10 @@ export function toCsv(ids, { transform = 'level', range = 12, comparison = 'nati
   if(maxBytes!==Infinity&&(!Number.isSafeInteger(maxBytes)||maxBytes<0))throw new RangeError('CSV byte limit must be a nonnegative integer.');
   const includeInputs=panels.some(panel=>panel.observations.some(row=>row.inputDates||row.inputValues||row.sourcePeriodLabel));
   const includeRounded=panels.some(panel=>panel.series.observations.some(isRoundedSourceObservation));
+  const includeQuarter=range?.alignment==='quarter'&&comparison!=='native';
   const rows=[],encoder=maxBytes===Infinity?null:new TextEncoder();let bytes=0;
   const append=row=>{const line=row.map((cell,index)=>csvCell(cell,index===15||index===17)).join(',')+'\r\n';if(encoder&&(bytes+=encoder.encode(line).byteLength)>maxBytes)throw new RangeError('CSV byte limit exceeded.');rows.push(line);};
-  append(['series_id', 'name', 'date', 'value', 'unit', 'frequency', 'adjustment', 'source', 'publication_date', 'transform', 'data_status','retrieved_at','source_url','source_series','calculation','source_value','source_baseline_date','source_baseline_value','index_baseline_date','index_baseline_value','source_notice','coverage_note','observation_type','source_urls','license_url','attribution','source_title','partial','auction_count','pending_count','revision_indicator','source_notes','suppressed','measure','capture_provenance_json','comparison_mode','comparison_baseline_date','comparison_baseline_value','comparison_formula','window_preset','window_start_date','window_end_date','window_label',...(includeInputs?['source_period_label','input_dates_json','input_values_json','date_convention']:[]),...(includeRounded?roundedSourceCsvHeaders:[])]);
+  append(['series_id', 'name', 'date', 'value', 'unit', 'frequency', 'adjustment', 'source', 'publication_date', 'transform', 'data_status','retrieved_at','source_url','source_series','calculation','source_value','source_baseline_date','source_baseline_value','index_baseline_date','index_baseline_value','source_notice','coverage_note','observation_type','source_urls','license_url','attribution','source_title','partial','auction_count','pending_count','revision_indicator','source_notes','suppressed','measure','capture_provenance_json','comparison_mode','comparison_baseline_date','comparison_baseline_value','comparison_formula','window_preset','window_start_date','window_end_date','window_label',...(includeInputs?['source_period_label','input_dates_json','input_values_json','date_convention']:[]),...(includeRounded?roundedSourceCsvHeaders:[]),...(includeQuarter?['reference_quarter','baseline_reference_quarter','reference_date_convention','period_type','alignment']:[])]);
   for (const panel of panels) {
     const s = panel.series;
     const publications = new Map(s.observations.map((o) => [o.date, o.publishedAt]));
@@ -230,7 +236,7 @@ export function toCsv(ids, { transform = 'level', range = 12, comparison = 'nati
       }
       const notes=[...(observation.footnotes??[]),...(input?.date!==observation.date&&isRoundedSourceObservation(input)?(input.footnotes??[]).map(note=>`Input ${input.date}: ${note}`):[])];
       append([s.id, s.name, observation.date, observation.value, panel.unit, s.frequency, s.adjustment,
-        s.source.name, publications.get(observation.date), comparison !== 'native' ? comparison : transform, s.dataStatus||'unknown',capture.retrievedAt,observation.sourceUrl||s.sourceUrl||s.source.url,(s.source.seriesIds||[]).join('; '),s.calculation,observation.sourceValue,observation.baseDate|| (observation.yearAgoSourceValue!=null?`${Number(observation.date.slice(0,4))-1}${observation.date.slice(4)}`:null),observation.baseValue??observation.yearAgoSourceValue,comparison === 'indexed' ? panel.baselineDate : null,comparison === 'indexed' ? panel.baselineValue : null,s.agency === 'bls' ? BLS_DATA_NOTICE : s.sourceNotice??'',s.coverageNote,s.observationType??'official',sourceUrls.join('; '),s.licenseUrl,s.attribution,s.sourceTitle,observation.partial,observation.auctionCount,observation.pendingCount,observation.revisionIndicator,notes.join('; '),observation.suppressed,s.measure,JSON.stringify(capture.provenance),comparison,panel.baselineDate,panel.baselineValue,panel.formula,panel.window.preset,panel.window.startDate,panel.window.endDate,panel.window.label,...(includeInputs?[observation.sourcePeriodLabel??null,observation.inputDates?JSON.stringify(observation.inputDates):null,observation.inputValues?JSON.stringify(observation.inputValues):null,s.dateConvention??null]:[]),...(includeRounded?roundedSourceCsvCells(observation,[originals.get(observation.date),...(input&&input.date!==observation.date?[input]:[])]):[])]);
+        s.source.name, publications.get(observation.date), comparison !== 'native' ? comparison : transform, s.dataStatus||'unknown',capture.retrievedAt,observation.sourceUrl||s.sourceUrl||s.source.url,(s.source.seriesIds||[]).join('; '),s.calculation,observation.sourceValue,observation.baseDate|| (observation.yearAgoSourceValue!=null?`${Number(observation.date.slice(0,4))-1}${observation.date.slice(4)}`:null),observation.baseValue??observation.yearAgoSourceValue,comparison === 'indexed' ? panel.baselineDate : null,comparison === 'indexed' ? panel.baselineValue : null,s.agency === 'bls' ? BLS_DATA_NOTICE : s.sourceNotice??'',s.coverageNote,s.observationType??'official',sourceUrls.join('; '),s.licenseUrl,s.attribution,s.sourceTitle,observation.partial,observation.auctionCount,observation.pendingCount,observation.revisionIndicator,notes.join('; '),observation.suppressed,s.measure,JSON.stringify(capture.provenance),comparison,panel.baselineDate,panel.baselineValue,panel.formula,panel.window.preset,panel.window.startDate,panel.window.endDate,panel.window.label,...(includeInputs?[observation.sourcePeriodLabel??null,observation.inputDates?JSON.stringify(observation.inputDates):null,observation.inputValues?JSON.stringify(observation.inputValues):null,s.dateConvention??null]:[]),...(includeRounded?roundedSourceCsvCells(observation,[originals.get(observation.date),...(input&&input.date!==observation.date?[input]:[])]):[]),...(includeQuarter?[referenceQuarter(s,observation),panel.baselinePeriod,s.dateConvention,s.periodType??'Not declared', 'reference-quarter baseline; original observation dates preserved']:[])]);
     }
   }
   return rows.join('');

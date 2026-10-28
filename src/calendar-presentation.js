@@ -10,6 +10,7 @@ const calendarSourceNames = {
   census: 'U.S. Census Bureau, Advance Monthly Retail Trade Survey and New Residential Construction',
   dol: 'U.S. Department of Labor, Employment and Training Administration',
   treasury: 'U.S. Department of the Treasury, Bureau of the Fiscal Service',
+  'treasury-auctions':'U.S. Department of the Treasury, TreasuryDirect',
   'treasury-yield-timing': 'U.S. Department of the Treasury, Office of Debt Management',
 };
 const relatedSeries = event => seriesIds(calendarRelatedIds(event));
@@ -30,6 +31,7 @@ function scheduledTime(event) {
     : event.time ? `${event.time} ET` : 'Time not supplied';
 }
 function scheduleBasisNote(event) {
+  if(event.scheduleBasis==='announced-date')return 'Individually announced Treasury auction or issue/settlement date. No clock is supplied by the retained source; no timestamp has been inferred. Announcements may change and do not verify an auction result.';
   if(event.scheduleBasis==='secondary-calendar')return 'BLS release date and Eastern time listed by the Federal Reserve Bank of New York. Secondary calendar; dates and times are tentative. Observation period is not supplied and publication is not confirmed.';
   if (event.scheduleBasis === 'recurring-rule') return 'Generated from the DOL agency rule: Thursday at 08:30 Eastern Time. This future date was not individually listed and may change; check the official schedule for exceptions.';
   if (event.scheduleBasis === 'published-exception') return `The official DOL schedule lists this exception to its usual Thursday rule.${event.nominalDate ? ` Nominal Thursday: ${releaseDate(event.nominalDate)}.` : ''}`;

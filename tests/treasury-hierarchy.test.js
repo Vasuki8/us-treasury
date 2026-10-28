@@ -41,7 +41,7 @@ test('selected yield curves and matched yields precede retained current context 
  const html=yieldsPage({yieldDateA:'2026-01-02',yieldDateB:'2026-10-21'},yields),main=visible(html);
  before(html,'SELECTED-DATE RATE CHANGES','CURRENT RETAINED RATE CONTEXT');
  before(html,'HISTORICAL CURVE OVERLAYS','CURRENT RETAINED RATE CONTEXT');
- before(html,'MATCHED NOMINAL / REAL YIELDS','CURRENT RETAINED RATE CONTEXT');
+ before(html,'SELECTED NOMINAL / REAL / COMPENSATION CHANGES','CURRENT RETAINED RATE CONTEXT');
  assert.match(detail(html,'yields:methods'),/Treasury curve methodology/);
  for(const phrase of ['id="yield-curve-date-a"','id="yield-curve-date-b"','not zero-coupon yields','not pure expected inflation','own dates','Retained yield &lt;error&gt;','data-export-yield-curves'])assert.ok(main.includes(phrase),phrase);
 });

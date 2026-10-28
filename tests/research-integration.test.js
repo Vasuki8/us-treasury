@@ -26,8 +26,8 @@ test('fiscal registry definitions distinguish calculated arithmetic and preserve
 test('research captures join the existing freshness system without replacing any old target',()=>{
   const input={sources:{fiscal:{status:'ok',fetchedAt:'2026-10-21T23:50:00.000Z'}}};
   const entries=getFreshness(input,{now:new Date('2026-10-22T02:00:00Z')}).entries;
-  assert.equal(entries.length,30);
+  assert.equal(entries.length,32);
   assert.equal(entries.find(e=>e.id==='data:fiscal').status,'available');
   assert.equal(entries.find(e=>e.id==='calendar:bls').status,'unavailable');
-  for(const id of ['beaIta','dolAdvance','refinancing','yields','auctions','ownership','macroContributions','marketFunctioning','policyRates','activity','housing'])assert.equal(entries.find(e=>e.id===`data:${id}`).status,'unavailable');
+  for(const id of ['beaIta','dolAdvance','refinancing','yields','auctions','ownership','macroContributions','marketFunctioning','policyRates','activity','housing','laborEvidence','pcePriceContributions'])assert.equal(entries.find(e=>e.id===`data:${id}`).status,'unavailable');
 });

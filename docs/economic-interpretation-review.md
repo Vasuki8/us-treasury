@@ -1,0 +1,17 @@
+# Economic interpretation UI review
+
+October 27, 2026. This pass implements requirements 10, 11 and 15 using retained data. It adds no feed or calculated financial observation and does not change export schemas or source precision.
+
+- Overview keeps eight primary readings, adding real private domestic final demand as a secondary growth reading beside GDP. Its definition identifies private consumption and fixed investment and excludes inventories, government and net exports. Its reference quarter remains its own.
+- A shared inflation table puts headline/core PCE and CPI across monthly, year-over-year, 3-month annualized and 6-month annualized horizons. Dates stay independent; mismatched dates are explicit and a final missing value stays missing. Percent display uses one decimal while detail, CSV and stored observations retain their precision. Repeated source failures are escaped and deduplicated without hiding them.
+- The Fed's 2% longer-run objective is explicitly tied to annual headline PCE, with a direct link to the [official statement reaffirmed January 27, 2026](https://www.federalreserve.gov/monetarypolicy/files/FOMC_LongerRunGoals.pdf). Core PCE is labeled as an underlying-inflation measure rather than the target index.
+- Routine successful source health has one shared home in the main refresh details. Overview no longer repeats its complete source-health list. Calculated-measure distinctions and actual failures remain present.
+- GDP Contributions presents GDP only. The unavailable official CPI-effects panel is under Prices source coverage; its links, reason and prohibition on approximate weight-times-inflation effects remain intact. The existing macro CSV still retains its unavailable-CPI status row.
+- The complete FOMC decisions/minutes/projections reference table is available under Policy rates. Credit links directly there. Official document dates remain separate from meeting dates; linked documents are not labeled as ingested contents or numeric projections. The existing FOMC CSV action is preserved.
+- Advanced external-account component/trailing-ratio variants and balance/GDP-denominator variants have persistent Advanced disclosures in their existing Trends and Decomposition sections. Shared windows, routes, all existing export actions and frozen exports remain intact.
+- The Housing family's visible name is Residential construction. The `housing` family key and `Housing` series/topic filter values remain unchanged.
+- Scoped appended styles reduce supporting card size, preserve existing theme variables, and contain the inflation table's horizontal scrolling on narrow screens. Large credit balances use less display precision; small overnight operation amounts retain three decimal places in billions. CSV values remain exact.
+
+Validation: 70 tests passed across `economic-interpretation`, `overview-hierarchy`, `overview-disclosures`, `macro-page`, `macro-coverage-page`, `current-account-sections`, `credit-context-page`, `economy-layout`, `primary-hierarchy`, `context-hierarchy`, `treasury-hierarchy` and `treasury-layout`. Updated earlier layout expectations now test the requested CPI placement and inflation table instead of requiring an unrelated CPI failure on GDP or banning tables in the Prices readout. Control, ordering, source, return-context and export assertions remain.
+
+Browser review and the separate new PCE contribution/base-effect panel integration are coordinated by the parent task. No browser-layout success is claimed by this focused test pass.

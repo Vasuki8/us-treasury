@@ -57,3 +57,29 @@ export function matchedYieldComponents(source, {tenor = '10Y'} = {}) {
     };
   });
 }
+
+/** Shortcuts resolve only to retained observations on/before the stated target. */
+export function yieldComparisonShortcuts(source, anchorDate) {
+  const curves = capturedCurves(source),dates = curves.map(row=>row.date),dateA = anchorDate || dates.at(-1);
+  if (!dateA || !dates.includes(dateA)) return [];
+  const instant = new Date(`${dateA}T00:00:00Z`),previousMonthLast = new Date(Date.UTC(instant.getUTCFullYear(),instant.getUTCMonth(),0));
+  const monthDate = new Date(Date.UTC(instant.getUTCFullYear(),instant.getUTCMonth()-1,Math.min(instant.getUTCDate(),previousMonthLast.getUTCDate()))).toISOString().slice(0,10);
+  const targets = [['1D',dates.filter(date=>date<dateA).at(-1),'Previous retained observation'],['1W',new Date(instant.getTime()-7*86400000).toISOString().slice(0,10),'One calendar week earlier'],['1M',monthDate,'One calendar month earlier'],['YTD',`${instant.getUTCFullYear()-1}-12-31`,'Last retained observation of the preceding year']];
+  return targets.map(([label,targetDate,basis])=>({label,dateA,dateB:targetDate?dates.filter(date=>date<=targetDate).at(-1)??null:null,targetDate:targetDate??null,basis}));
+}
+
+export function selectedYieldChanges(source, dateA, dateB, {tenor = '10Y'} = {}) {
+  if (!REAL_YIELD_TENORS.includes(tenor)) throw new RangeError('Selected yield changes require a matched real tenor');
+  const [a,b] = selectCurveOverlays(source,[dateA,dateB]);
+  const measures = curve => ({nominal:rate(curve.nominal[tenor]),real:rate(curve.real[tenor]),inflationCompensation:finite(curve.nominal[tenor])&&finite(curve.real[tenor])?clean((curve.nominal[tenor]-curve.real[tenor])*100):null});
+  const valuesA = measures(a),valuesB = measures(b);
+  return Object.fromEntries(Object.keys(valuesA).map(measure=>[measure,{a:valuesA[measure],b:valuesB[measure],changeBps:valuesA[measure]!==null&&valuesB[measure]!==null?clean((valuesA[measure]-valuesB[measure])*(measure==='inflationCompensation'?1:100)):null}]));
+}
+
+/** Named dates are retained official schedules or documented Treasury method changes, not causal claims. */
+export function yieldEventComparisons(source, events = []) {
+  const dates = capturedCurves(source).map(row=>row.date);
+  const scheduled = events.filter(event=>event.sourceId==='fomc'&&event.program==='fomc-decision').map(event=>({date:event.date,label:`FOMC scheduled decision · ${event.date}`,sourceUrl:event.sourceUrl,basis:'Official scheduled date; this label does not verify when a decision was published.'}));
+  const methodology = [{date:REAL_YIELD_INPUT_CHANGE,label:'TIPS curve inputs · 2008-12-01'},{date:YIELD_METHODOLOGY_CHANGE,label:'Curve fitting change · 2021-12-06'}].map(event=>({...event,sourceUrl:'https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology',basis:'Documented Treasury methodology change; comparison does not identify a causal effect.'}));
+  return [...scheduled.filter(event=>dates.includes(event.date)).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3),...methodology].filter(event=>dates.includes(event.date)&&dates.some(date=>date<event.date)).map(event=>({...event,dateA:event.date,dateB:dates.filter(date=>date<event.date).at(-1)}));
+}

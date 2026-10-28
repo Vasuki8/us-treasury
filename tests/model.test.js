@@ -120,7 +120,7 @@ test('production calendar contains traced official schedules without invented pu
   for(const event of releases) {
     assert.ok(dataStatus.calendar.sources[event.sourceId].events.some(captured=>captured.id===event.id));
     assert.ok(event.seriesIds.every(id=>Object.hasOwn(series,id)));
-    if(event.sourceId==='fomc') {
+    if(['fomc','treasury-auctions'].includes(event.sourceId)) {
       assert.equal(event.datePrecision,'day');
       assert.equal(event.time,null);
       assert.equal(event.scheduledAt,null);

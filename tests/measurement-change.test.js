@@ -23,3 +23,7 @@ test('missing latest or prior value stays unavailable and is not bridged',()=>{
   const result=measurementChange(series({observations}));assert.equal(result.value,null);assert.match(result.text,/unavailable/i);
  }
 });
+test('PCE contributions remain percentage-point contributions in change descriptions',()=>{
+ const result=measurementChange(series({id:'pceGoodsPriceContribution',comparisonClass:'contribution',format:'percentagePoints',unit:'Percentage points',frequency:'Monthly'}));
+ assert.match(result.label,/monthly PCE inflation contribution/);assert.equal(result.unit,'Percentage points');
+});

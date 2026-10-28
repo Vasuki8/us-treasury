@@ -28,8 +28,9 @@ test('native economy families lead with compact readings and focused history bef
   const family=coverageFamilies[familyId],html=macroCoveragePage({macroFamily:familyId}),lead=visible(html);
   assert.match(html,/<section class="reading-group" aria-label="LATEST TOPIC READINGS">/);
   ordered(html,['LATEST TOPIC READINGS','FOCUSED HISTORY',`data-page-disclosure="macro-coverage:${familyId}:research"`]);
-  for(const id of family.ids.slice(0,6)){const series=getSeries(id);assert.ok(lead.includes(series.unit),`${familyId}: ${series.unit}`);assert.ok(lead.includes(series.adjustment));const last=series.observations.at(-1);if(last)assert.ok(lead.includes(periodLabel(series,last.date)));}
-  assert.doesNotMatch(lead,/<table>/);
+  if(familyId==='prices'){assert.match(lead,/YEAR OVER YEAR/);assert.match(lead,/3M ANNUALIZED/);assert.match(lead,/6M ANNUALIZED/);assert.equal((lead.match(/data-inflation-reading=/g)??[]).length,16);}
+  for(const id of familyId==='prices'?[]:family.ids.slice(0,6)){const series=getSeries(id);assert.ok(lead.includes(series.unit),`${familyId}: ${series.unit}`);assert.ok(lead.includes(series.adjustment));const last=series.observations.at(-1);if(last)assert.ok(lead.includes(periodLabel(series,last.date)));}
+  if(familyId!=='prices')assert.doesNotMatch(lead,/<table>/);
   assert.match(html,/SOURCE STATUS \/ FULL COVERAGE/);
   assert.equal((html.match(/id="macro-measure"/g)??[]).length,1);
   assert.match(lead,/data-export-macro-measure/);
@@ -47,7 +48,7 @@ test('GDP compact result retains native growth and contribution bases before acc
  const html=macroPage(gdpSource),lead=visible(html);
  assert.match(html,/<section class="reading-group" aria-label="LATEST GDP READINGS">/);
  ordered(html,['LATEST GDP READINGS','GDP: WHAT CHANGED','HISTORICAL REAL GDP','data-page-disclosure="macro:demand-detail"']);
- for(const label of ['2026 Q2','percent q/q annualized','percentage points','Sum of published contributions','Headline minus contribution sum',stamp,'Release date: unknown','Exact CPI effects unavailable'])assert.ok(lead.includes(label),label);
+ for(const label of ['2026 Q2','percent q/q annualized','percentage points','Sum of published contributions','Headline minus contribution sum',stamp,'Release date: unknown'])assert.ok(lead.includes(label),label);
  const bad=visible(macroPage({...gdpSource,status:'error',error:'Capture failed',quarterly:[{...gdpSource.quarterly[0],imports:9}]}));
  assert.match(bad,/Capture failed/);assert.match(bad,/GDP contribution data unavailable/);
  const incomplete=visible(macroPage({...gdpSource,quarterly:[{...gdpSource.quarterly[0],government:null}]}));

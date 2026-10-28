@@ -1,5 +1,7 @@
 import { collectBankCredit,collectLendingSurvey,collectFedBalance,collectOnRrp,collectHouseholdDebt,collectLoanDelinquency } from './sources/credit-context.mjs';
 import { collectFomcCalendar } from './sources/calendar-fomc.mjs';
+import {collectLaborEvidence} from './sources/labor-evidence.mjs';
+import {collectPcePriceContributions} from './sources/pce-price-contributions.mjs';
 import {collectBeaIta} from './sources/bea-ita.mjs';
 import { appendFile,writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -33,7 +35,7 @@ import { collectHousing } from './sources/housing.mjs';
 import {addMomentumSeries} from '../src/momentum.js';
 import {buildSourceAttemptReport} from './source-attempt-report.mjs';
 
-const all={beaIta:collectBeaIta,householdDebt:collectHouseholdDebt,loanDelinquency:collectLoanDelinquency,bankCredit:collectBankCredit,lendingSurvey:collectLendingSurvey,fedBalance:collectFedBalance,onRrp:collectOnRrp,treasury:collectTreasury,bls:async options=>collectBlsWithHistory({...options,previous:previousRoot.sources.bls}),bea:async options=>addMomentumSeries(await collectBea(options)),dol:async options=>collectDolWithRevisions({...options,previous:previousRoot.sources.dol}),dolAdvance:collectDolAdvance,census:collectCensus,fiscal:async options=>{const result=await collectFiscal(options);return {...result,series:{...result.series,...deriveFiscalSeries(result)}};},refinancing:collectRefinancing,yields:collectYields,auctions:collectAuctions,ownership:collectOwnership,macroContributions:collectMacroContributions,marketFunctioning:collectMarketFunctioning,policyRates:collectPolicyRates,activity:collectActivity,housing:collectHousing};
+const all={laborEvidence:collectLaborEvidence,pcePriceContributions:collectPcePriceContributions,beaIta:collectBeaIta,householdDebt:collectHouseholdDebt,loanDelinquency:collectLoanDelinquency,bankCredit:collectBankCredit,lendingSurvey:collectLendingSurvey,fedBalance:collectFedBalance,onRrp:collectOnRrp,treasury:collectTreasury,bls:async options=>collectBlsWithHistory({...options,previous:previousRoot.sources.bls}),bea:async options=>addMomentumSeries(await collectBea(options)),dol:async options=>collectDolWithRevisions({...options,previous:previousRoot.sources.dol}),dolAdvance:collectDolAdvance,census:collectCensus,fiscal:async options=>{const result=await collectFiscal(options);return {...result,series:{...result.series,...deriveFiscalSeries(result)}};},refinancing:collectRefinancing,yields:collectYields,auctions:collectAuctions,ownership:collectOwnership,macroContributions:collectMacroContributions,marketFunctioning:collectMarketFunctioning,policyRates:collectPolicyRates,activity:collectActivity,housing:collectHousing};
 const requireAll=process.argv.includes('--require-all');
 const allowCachedBlsData=process.argv.includes('--allow-cached-bls');
 const allowCachedBlsCalendar=allowCachedBlsData||process.argv.includes('--allow-cached-bls-calendar');

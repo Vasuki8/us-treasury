@@ -38,7 +38,7 @@ const execute=(f,extra={})=>maintainDataUpdates({api:f.api,readReport:f.readRepo
 const find=(f,key)=>f.issues.find(i=>i.body.startsWith(`<!-- data-update-maintenance:${key}:health -->`));
 
 test('healthy sources and actual successful update/deployment stay quiet',async()=>{
- const f=fixture();const result=await execute(f);assert.equal(f.writes.length,0);assert.equal(result.sourceCount,30);
+ const f=fixture();const result=await execute(f);assert.equal(f.writes.length,0);assert.equal(result.sourceCount,32);
 });
 
 test('daily monitoring defers incidents while a trusted bounded retry job is active, then alerts on its final failure',async()=>{
