@@ -1,6 +1,6 @@
 import { series, releases, dataStatus } from './data.js';
 import { getSeries, latest, formatValue, formatChange, periodLabel } from './model.js';
-import { heading, panel, chart, sourceStatusList, table, button, escapeHtml as esc } from './ui.js';
+import { heading, panel, chart, sourceStatusList, table, button, seriesStatus, escapeHtml as esc } from './ui.js';
 import { measurementChange } from './measurement-change.js';
 import { dailyBrief, nextCatalysts } from './research-brief.js';
 import { releaseCoverage, releaseCoveragePanel } from './release-coverage.js';
@@ -19,7 +19,7 @@ function reading(id,state,{label,primary=true}={}){
  const row=latest(current),change=measurementChange(current);
  const changeLabel=id==='payroll'?'Change in gains':id==='gdp'?'Growth-rate change':'Change';
  const delta=change.value===null?'Prior comparison unavailable':`${changeLabel} ${formatChange(current)} vs ${change.priorPeriod}`;
- return `<a class="oh-reading" data-overview-${primary?'reading':'support-reading'}="${esc(id)}" href="${esc(indicatorHref(id,{...state,page:'overview'}))}" title="${esc(current.name)} · ${esc(current.unit)}"><span class="reading-label">${esc(label??current.short)}</span><strong class="reading-value">${esc(formatValue(current,row?.value))}</strong><span class="reading-unit">${esc(compactUnits[id]??current.unit)} · ${esc(row?periodLabel(current,row.date):'Unavailable')}${current.dataStatus==='cached'?' · CACHED':''}${current.dataStatus==='unavailable'?' · UNAVAILABLE':''}</span><span class="reading-change" title="${esc(change.text)}">${esc(delta)}</span>${!Number.isFinite(row?.value)&&current.error?`<span class="reading-change amber">${esc(current.error)}</span>`:''}</a>`;
+ return `<a class="oh-reading" data-overview-${primary?'reading':'support-reading'}="${esc(id)}" href="${esc(indicatorHref(id,{...state,page:'overview'}))}" title="${esc(current.name)} · ${esc(current.unit)}"><span class="reading-label">${esc(label??current.short)}</span><strong class="reading-value">${esc(formatValue(current,row?.value))}</strong><span class="reading-unit">${esc(compactUnits[id]??current.unit)} · ${esc(row?periodLabel(current,row.date):'Unavailable')}${current.dataStatus==='cached'?' · CACHED':''}${current.dataStatus==='unavailable'?' · UNAVAILABLE':''}</span><span class="reading-basis">${esc(seriesStatus(current))}</span><span class="reading-change" title="${esc(change.text)}">${esc(delta)}</span>${!Number.isFinite(row?.value)&&current.error?`<span class="reading-change amber">${esc(current.error)}</span>`:''}</a>`;
 }
 
 function policyReading(state){
@@ -28,7 +28,7 @@ function policyReading(state){
   return `<div class="oh-pair" data-overview-reading="policyTargetRange">${reading('policyTargetLower',state,{label:'Target range · lower bound',primary:false})}${reading('policyTargetUpper',state,{label:'Target range · upper bound',primary:false})}</div>`;
  }
  const change=measurementChange(upper),delta=change.value===null?'Upper-bound prior comparison unavailable':`Upper bound ${formatChange(upper)} vs ${change.priorPeriod}`;
- return `<a class="oh-reading" data-overview-reading="policyTargetRange" href="${esc(indicatorHref('policyTargetUpper',{...state,page:'overview'}))}"><span class="reading-label">Fed funds target range</span><strong class="reading-value">${esc(formatValue(lower,low.value).replace(/%$/,''))}–${esc(formatValue(upper,high.value))}</strong><span class="reading-unit">Percent · ${esc(periodLabel(upper,high.date))}${[lower,upper].some(s=>s.dataStatus==='cached')?' · CACHED':''}</span><span class="reading-change" title="${esc(change.text)}">${esc(delta)}</span></a>`;
+ return `<a class="oh-reading" data-overview-reading="policyTargetRange" href="${esc(indicatorHref('policyTargetUpper',{...state,page:'overview'}))}"><span class="reading-label">Fed funds target range</span><strong class="reading-value">${esc(formatValue(lower,low.value).replace(/%$/,''))}–${esc(formatValue(upper,high.value))}</strong><span class="reading-unit">Percent · ${esc(periodLabel(upper,high.date))}${[lower,upper].some(s=>s.dataStatus==='cached')?' · CACHED':''}</span><span class="reading-basis">Official target bounds</span><span class="reading-change" title="${esc(change.text)}">${esc(delta)}</span></a>`;
 }
 
 function topic(title,href,body,extra=''){

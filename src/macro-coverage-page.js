@@ -1,4 +1,4 @@
-import {supportingDetails} from './page-hierarchy.js';
+import {readingGroup,supportingDetails} from './page-hierarchy.js';
 import { measurementChange } from './measurement-change.js';
 import {currentAccountPanel} from './current-account-view.js';
 import {currentAccountGdpPanel} from './current-account-gdp-view.js';
@@ -45,11 +45,16 @@ export function macroCoveragePage(state={}, {embedded=false}={}){
  const available=shown.observations.some(o=>Number.isFinite(o.value));
  const contributionContext=familyId==='external'?'The Summary accounting table separates changes in trade, income and current transfers. Inspect the native histories to assess their persistence; a quarterly deficit is not a measure of foreign debt.':'Inspect native measures and compare their timing; accounting contributions remain in <a href="#/macro">GDP contributions</a>.';
  const title=embedded?'':heading('ECONOMY',`${family.label} / ${family.question}`,button('COMPARE FAMILY',`data-compare="${esc(family.compare.join(','))}"`)+button('CSV MEASURE',`data-export-macro-measure${shown.error||!available?' disabled title="A valid window with retained observations is required."':''}`));
- const readings=embedded?'':panel('00','LATEST TOPIC READINGS',table(['MEASUREMENT / DEFINITION','LATEST','REFERENCE PERIOD','SOURCE STATUS / FULL COVERAGE'],rows,'Current topic readings and explicit source periods'));
+ const fullReadings=panel('00',familyId==='external'?'LATEST TOPIC READINGS':'FULL TOPIC COVERAGE',table(['MEASUREMENT / DEFINITION','LATEST','REFERENCE PERIOD','SOURCE STATUS / FULL COVERAGE'],rows,'Current topic readings and explicit source periods'));
+ const readingIds=family.ids.slice(0,6);
+ const readings=embedded?'':familyId==='external'?fullReadings:readingGroup('LATEST TOPIC READINGS',`<div class="metrics">${readingIds.map(key=>{
+  const s=getSeries(key),observation=latest(s);
+  return `<a class="metric" href="${esc(indicatorHref(key,{...focused,macroMeasure:key}))}"><span class="metric-name">${esc(s.name)}</span><strong class="metric-value">${esc(formatValue(s,observation?.value))}</strong><span class="metric-period">${esc(observation?periodLabel(s,observation.date):'Unavailable')} · ${esc(s.frequency)}</span><span class="metric-basis">${esc(s.unit)} · ${esc(s.adjustment)}</span><span class="metric-change">${esc(seriesStatus(s))}</span></a>`;
+ }).join('')}</div>${family.ids.map(key=>{const s=getSeries(key);return s.error?`<p class="panel-note amber">${esc(s.name)}: ${esc(s.error)}</p>`:'';}).join('')}`,'Latest retained readings use independent reference periods and native units. The selected history window applies below; full topic coverage is in research context.');
  const research=panel('02','RESEARCH QUESTION',`<div class="explain"><p><strong>CONTEXT.</strong> ${esc(family.context)}</p><p><strong>WHY IT MATTERS.</strong> ${contributionContext}</p><p>${esc(current.definition)}</p><p>Source: ${sourceLink(current)}. Retrieval: <span class="mono">${esc(current.fetchedAt??'Unavailable')}</span>. Reference dates are not verified publication timestamps.</p><p><a href="${esc(family.schedule)}" target="_blank" rel="noopener noreferrer">External official schedule ↗</a>. BLS, BEA, DOL and Census program associations appear in the <a href="#/calendar">captured calendar</a> where available. Dated FOMC events and official material references are available in the calendar and Credit & banking; linked documents are separate from captured numeric projections.</p></div>`);
- const focusedHistory=panel('01','FOCUSED HISTORY',(familyId==='external'?'':controls)+errors+`<p class="panel-note"><strong>LIMITATIONS.</strong> ${esc(family.limitations)}</p>`+(current.coverageNote?`<p class="panel-note amber">${esc(current.coverageNote)}</p>`:'')+history+`<p class="panel-note"><strong>WHAT CHANGED.</strong> ${esc(changed)}</p>`+coverageSummary(shown),`<a class="action" href="${esc(detail)}">DETAILS & DATA TABLE ↗</a>`,`${current.frequency} · ${current.unit} · ${current.adjustment}`);
+ const focusedHistory=panel('01','FOCUSED HISTORY',(familyId==='external'?'':controls)+errors+`<p class="panel-note"><strong>LIMITATIONS.</strong> ${esc(family.limitations)}</p>`+(current.coverageNote?`<p class="panel-note amber">${esc(current.coverageNote)}</p>`:'')+history+`<p class="panel-note"><strong>WHAT CHANGED.</strong> ${esc(changed)}</p>`+coverageSummary(shown),`<a class="action" href="${esc(detail)}">DETAILS & DATA TABLE ↗</a>`,`${current.frequency} · ${current.unit} · ${current.adjustment}`,'workspace-analysis');
  const exportNote=`<p class="panel-note">CSV MEASURE exports the focused history's exact window in native units, including source identifiers, calculation, rights notices and retrieval provenance. All history means retained observations; new captures do not establish historical publication vintages.</p>`;
- if(familyId!=='external')return title+readings+focusedHistory+supportingDetails(`macro-coverage:${familyId}:research`,'Research context, methods & sources',research+exportNote);
+ if(familyId!=='external')return title+readings+focusedHistory+supportingDetails(`macro-coverage:${familyId}:research`,'Research context, methods & sources',fullReadings+research+exportNote);
  const active=externalSections.some(([id])=>id===state.externalView)?state.externalView:'summary';
  const controlPanel=panel('W','SHARED HISTORY CONTROLS',controls+rangeControls(focused,[id])+`<p class="panel-note">Measure and date window carry across sections. Latest-quarter accounting and ratio context in Summary remain independent of the history window.</p>`);
  const sharedControls=active==='summary'?`<details class="supporting-details" id="external-history-controls" data-page-disclosure="macro-coverage:external:history-controls"${shown.error?' open':''}><summary>History controls · ${esc(current.name)} · ${esc(shown.window.label)}</summary>${controlPanel}</details>`:controlPanel;
@@ -58,6 +63,6 @@ export function macroCoveragePage(state={}, {embedded=false}={}){
   :active==='decomposition'
   ?currentAccountGdpContributionsPanel(dataStatus.sources,range)+currentAccountGdpBalanceEffectsPanel(dataStatus.sources,range)+currentAccountGdpAllComponentEffectsPanel(dataStatus.sources,range)+currentAccountGdpComponentEffectsPanel(dataStatus.sources,range,{measure:id})
   :active==='methods'?externalMethods(focused,readings,research)
-  :currentAccountPanel(dataStatus.sources.beaIta)+currentAccountGdpPanel(dataStatus.sources)+focusedHistory;
+  :currentAccountPanel(dataStatus.sources.beaIta,{compact:true})+focusedHistory+currentAccountGdpPanel(dataStatus.sources,{compact:true});
  return title+externalNavigation(focused,active)+sharedControls+content+exportNote;
 }

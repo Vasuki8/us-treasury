@@ -18,7 +18,7 @@ test('current-account default leads with exact-quarter accounting and native his
  assert.doesNotMatch(html,/data-chart-catalog="current-account-gdp-|LATEST TOPIC READINGS/);
  assert.ok(html.indexOf('id="macro-measure"')<html.indexOf('CURRENT ACCOUNT · ACCOUNTING CHANGES'));
  assert.ok(html.indexOf('CURRENT ACCOUNT · ACCOUNTING CHANGES')<html.indexOf('CURRENT ACCOUNT / NOMINAL GDP'));
- assert.ok(html.indexOf('CURRENT ACCOUNT / NOMINAL GDP')<html.indexOf('FOCUSED HISTORY'));
+ assert.ok(html.indexOf('FOCUSED HISTORY')<html.indexOf('CURRENT ACCOUNT / NOMINAL GDP'));
  assert.match(html,/<nav[^>]+aria-label="Current-account sections"/);
  for(const label of ['Summary','Trends','Decomposition','Data &amp; methods'])assert.ok(html.includes(`>${label}</a>`),label);
  assert.match(html,/<a[^>]+aria-current="page"[^>]*>Summary<\/a>/);

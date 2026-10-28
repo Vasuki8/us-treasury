@@ -1,3 +1,4 @@
+import { supportingDetails } from './page-hierarchy.js';
 import { csvCell, tabularCsv } from './model.js';
 import { panel, table, button, emptyState, escapeHtml as esc } from './ui.js';
 
@@ -84,7 +85,7 @@ function sourceDetails(source) {
 }
 
 /** A compact Graphite accounting panel using the captured ITA source only. */
-export function currentAccountPanel(source = {}, { frozen = false } = {}) {
+export function currentAccountPanel(source = {}, { frozen = false, compact = false } = {}) {
   const result = currentAccountContext(source), credit = sourceDetails(source);
   const captureStatus = frozen ? `Frozen recorded source status: ${result.status}` : result.status === 'official' ? 'Official capture' : result.status === 'cached' ? 'Cached · refresh failed' : 'Unavailable';
   const status = `<p class="panel-note"><strong>${esc(captureStatus)}</strong> · Retrieved ${esc(result.fetchedAt ?? 'not recorded')}.${result.error ? ` <span class="amber">${esc(result.error)}</span>` : ''}</p>`;
@@ -99,7 +100,10 @@ export function currentAccountPanel(source = {}, { frozen = false } = {}) {
   const publicationNote = source?.series?.currentAccountBalance?.publicationNote;
   const metadata = `<p class="panel-note">Table release date: ${esc(source?.tableReleaseDate ?? 'not recorded')}. This is separate from retrieval time and is not a historical first-publication date.${publicationNote ? ` ${esc(publicationNote)}` : ''}${result.coverageNote ? ` ${esc(result.coverageNote)}` : ''}</p>`;
   const sourceCredit = `<p class="panel-note">${esc(credit.attribution)} <a href="${esc(credit.url)}" target="_blank" rel="noopener noreferrer">${esc(credit.title)} ↗</a> · <a href="${esc(credit.licenseUrl)}" target="_blank" rel="noopener noreferrer">BEA source policies ↗</a>${credit.notice ? ` ${esc(credit.notice)}` : ''}</p>`;
-  return panel('CA', `${frozen ? 'FROZEN ' : ''}CURRENT ACCOUNT · ACCOUNTING CHANGES`, status + accounting + definition + metadata + sourceCredit, frozen ? '' : button('CSV CURRENT & PRIOR', 'data-export-current-account'));
+  const compactBasis = `<p class="panel-note">USD billions · seasonally adjusted quarterly amounts, not annualized. Changes use the exact preceding quarter. Component changes are accounting arithmetic, not causes or market surprises.</p><p class="panel-note">Table release date: ${esc(source?.tableReleaseDate ?? 'not recorded')}; separate from retrieval time, not a historical first-publication date.</p>`;
+  const compactCredit = `<p class="panel-note">${esc(credit.attribution)}${credit.notice ? ` ${esc(credit.notice)}` : ''}</p>`;
+  const body = compact ? status + accounting + compactBasis + compactCredit + supportingDetails('current-account:accounting-evidence', 'Accounting definitions, release & source evidence', definition + metadata + sourceCredit) : status + accounting + definition + metadata + sourceCredit;
+  return panel('CA', `${frozen ? 'FROZEN ' : ''}CURRENT ACCOUNT · ACCOUNTING CHANGES`, body, frozen ? '' : button('CSV CURRENT & PRIOR', 'data-export-current-account'));
 }
 
 /** Exact displayed periods, preserving missingness, source precision and evidence. */
