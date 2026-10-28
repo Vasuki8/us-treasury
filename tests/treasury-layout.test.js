@@ -39,7 +39,7 @@ test('selected yield controls and overlay lead detailed tenor evidence while ret
   const selected=group(main,'Selected curve comparison'),retained=group(main,'Current retained rate context');
   before(selected,'id="yield-curve-date-a"','data-kind="history-curve"');
   before(selected,'data-kind="history-curve"','SELECTED-DATE RATE CHANGES');
-  before(selected,'data-kind="history-curve"','MATCHED NOMINAL / REAL YIELDS');
+  before(selected,'data-kind="history-curve"','SELECTED NOMINAL / REAL / COMPENSATION CHANGES');
   assert.match(selected,/2026-01-02/);assert.match(selected,/2026-10-21/);assert.match(selected,/not pure expected inflation/);
   assert.match(retained,/own dates/);assert.match(retained,/data-series="spread2s10s,spread3m10y"/);
   const missing=visible(yieldsPage({yieldDateA:'1900-01-01',yieldDateB:'2026-10-21'},yields));
@@ -47,11 +47,11 @@ test('selected yield controls and overlay lead detailed tenor evidence while ret
   assert.match(main,/Retained curve &lt;error&gt;/);
 });
 
-test('auction selection preserves open history paging and visibly distinguishes pending results and source capture',()=>{
+test('auction selection preserves open history paging and visibly distinguishes elapsed results not retained and source capture',()=>{
   const source={status:'error',error:'Retained auction <error>',fetchedAt:'2026-10-22T02:00:00Z',auctions:Array.from({length:75},(_,i)=>auction(`record-${i}`,new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10)))};
-  source.auctions[0].status='announced';
+  Object.assign(source.auctions[0],{status:'announced',competitiveAccepted:null,totalAccepted:null,somaAccepted:null,primaryDealerAccepted:null,directAccepted:null,indirectAccepted:null});
   const main=visible(auctionsPage({auctionId:'record-0'},source)),selected=group(main,'Selected auction comparison');
-  assert.match(selected,/id="auction-type"/);assert.match(selected,/AWAITING RESULTS/);assert.match(selected,/Result release timestamp<\/dt><dd>Unknown/);
+  assert.match(selected,/id="auction-type"/);assert.match(selected,/RESULTS NOT RETAINED/);assert.match(selected,/Result release timestamp<\/dt><dd>Unknown/);
   before(main,'PRIOR MATCHING RESULTS','AUCTION HISTORY');
   assert.match(main,/History page 2 of 2/);assert.match(main,/data-auction-history-page/);assert.match(main,/id="auction-history" tabindex="-1"/);
   assert.match(main,/data-auction-id="record-0" aria-pressed="true"/);assert.match(main,/CACHED/);assert.match(main,/Retained auction &lt;error&gt;/);

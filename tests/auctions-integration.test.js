@@ -11,5 +11,5 @@ test('monthly auction series carries point-level partial coverage and counts int
   const [headers,...rows]=parseCsv(toCsv(['auctionOfferingMonthly']));assert.ok(headers.includes('partial'));assert.ok(headers.includes('pending_count'));assert.ok(rows.length>0);assert.ok(rows.some(row=>row[headers.indexOf('partial')]==='true'));
 });
 test('partial point labels retain explicit zero counts without labeling unrelated observations',()=>{
-  assert.equal(observationCoverageLabel({partial:true,auctionCount:0,pendingCount:4}),'PARTIAL · 0 result auctions · 4 awaiting results');assert.equal(observationCoverageLabel({}), '');
+  assert.equal(observationCoverageLabel({partial:true,auctionCount:0,pendingCount:4}),'PARTIAL · 0 result auctions · 4 without retained results');assert.equal(observationCoverageLabel({}), '');
 });

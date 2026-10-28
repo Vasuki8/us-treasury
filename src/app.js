@@ -26,11 +26,13 @@ import {vintagesCsv,normalizedCutoff} from './vintages-page.js';
 import {marketFunctioningCsv} from './market-functioning-page.js';
 import {mountCompactNavigation,syncCompactNavigation} from './compact-navigation.js';
 import { renderPage } from './pages.js';
-import { escapeHtml as esc, sourceStatusList, sourceNotice } from './ui.js';
+import { escapeHtml as esc, sourceNotice } from './ui.js';
 import { mountFreshnessBanner } from './freshness-controller.js';
 import { renderCharts } from './charts.js';
 import { parseRoute, routeFor } from './router.js';
-import { readPreferences, writePreferences } from './storage.js';
+import {readPreferences,writePreferences,normalizePreferences,saveNamedWatchlist,selectNamedWatchlist,removeNamedWatchlist} from './storage.js';
+import {exportResearchSettings,importResearchSettings,mergeResearchSettings,MAX_RESEARCH_SETTINGS_BYTES} from './research-settings.js';
+import {parseResearchQuestion} from './research-questions.js';
 import { createHistoryLoader } from './history-loader.js';
 import { createHistoryController, preserveHistoryView } from './history-controller.js';
 import {viewRange,indicatorHref,createWorkspaceMemory,updateWorkspaceSelection} from './workspace-context.js';
@@ -41,7 +43,7 @@ import {exactIndicatorMatch} from './global-search.js';
 import {createWorkspace,openWorkspace,MAX_RESEARCH_JSON_BYTES} from './research-workspaces.js';
 import {createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,researchPackageAttachment} from './research-packages.js';
 import {createResearchLibrary} from './research-library.js';
-import {buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin,buildCpiPublicationPin,buildGdpMatrixPin} from './research-context.js';
+import {buildPinContext,freezeCandidates,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin,buildCpiPublicationPin,buildGdpMatrixPin} from './research-context.js';
 import {captureChanges,changesCsv,readChangeCheckpoint,writeChangeCheckpoint} from './capture-changes.js';
 import {createPublicationLoader} from './publication-loader.js';
 import {createClaimsPublicationLoader} from './claims-publication-loader.js';
@@ -55,6 +57,9 @@ import {buildCoverageInventory,coverageInventoryCsv} from './coverage-inventory.
 import {fundingChartCatalog} from './funding-distribution.js';
 import {createPublicationExplanationLoader} from './publication-explanation-loader.js';
 import {publicationExplanationsCsv} from './publication-explanation-view.js';
+import {economicEvidenceCsv,economicEvidenceChartCatalog} from './economic-evidence.js';
+import {pceBaseEffectsCsv,pceBaseEffectsChartCatalog,buildPceBaseEffects} from './pce-base-effects.js';
+import {pceScenarioOptions} from './workspace-context.js';
 
 const root = document.getElementById('app');
 const main = document.getElementById('main-content');
@@ -101,6 +106,7 @@ function downloadCsv(content,filename,notice){
   const anchor=document.createElement('a');anchor.href=url;anchor.download=filename;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);announce(notice);
 }
 function persist() {
+  state={...state,...normalizePreferences(state)};
   state.storageAvailable=writePreferences(storage,state);
   return state.storageAvailable;
 }
@@ -210,13 +216,22 @@ function renderCurrentChartsIn(container){
  }:{};
  if([1,2].includes(pkg?.context.fundingDistributions?.version))chartCatalogs.funding=fundingChartCatalog(pkg.context.moduleSources?.marketFunctioning??{},{frozen:true});
  else if(!pkg&&state.page==='market')chartCatalogs.funding=fundingChartCatalog(dataStatus.sources.marketFunctioning);
+ if(pkg){
+  for(const evidence of Object.values(pkg.context.economicEvidence??{}))Object.assign(chartCatalogs,economicEvidenceChartCatalog(evidence.source,{frozen:true}));
+  if(pkg.context.pceBaseEffects){const value=pkg.context.pceBaseEffects;Object.assign(chartCatalogs,pceBaseEffectsChartCatalog(value.indexSeries,value.model.assumptions,{frozen:true}));}
+ }else{
+  if(state.page==='labor'||state.page==='macroCoverage'&&state.macroFamily==='labor')Object.assign(chartCatalogs,economicEvidenceChartCatalog(dataStatus.sources.laborEvidence));
+  if(state.page==='macroCoverage'&&state.macroFamily==='prices')Object.assign(chartCatalogs,economicEvidenceChartCatalog(dataStatus.sources.pcePriceContributions),pceBaseEffectsChartCatalog(getSeries(state.pceBaseIndex),pceScenarioOptions(state)));
+ }
  renderCharts(container,{...(pkg?{catalog:pkg.catalog}:{}),chartCatalogs});
 }
 function researchActions(){
   const alert=changeCheckpoint.enabled&&dataStatus.generatedAt>changeCheckpoint.snapshotAt?'<p class="panel-note amber" role="status">A newer snapshot is available since your local change checkpoint. <a href="#/research?view=changes">Review captured changes and collector failures</a>. A new snapshot does not itself establish a new economic release.</p>':'';
   if(state.page==='research')return alert;
   const active=researchLibrary.getWorkspace(activeWorkspaceId),name=researchLabel||active?.name||`${pageNames[state.page]} research`;
-  return alert+`<details class="context-save"${state.researchError?' open':''}><summary>SAVE</summary><section class="research-savebar" aria-label="Save research"><label for="research-name">Research name<input id="research-name" value="${esc(name)}" maxlength="80" autocomplete="off"></label><div class="actions"><button type="button" class="action" data-save-workspace>${active?'UPDATE SAVED VIEW':'SAVE VIEW'}</button><button type="button" class="action" data-pin-result${pinBusy?' disabled':''}>${pinBusy?'FREEZING…':'FREEZE RESULT'}</button><a class="action" href="#/research">SAVED RESEARCH</a>${active?'<button type="button" class="link-button" data-clear-workspace>NEW WORKSPACE</button>':''}</div><p class="small muted">${active?`Editing ${esc(active.name)}. `:''}Workspaces reopen current data. Pins freeze up to four scoped measurements and retain relevant module inputs, assumptions and original exports.</p>${state.researchError?`<p class="amber" role="alert">${esc(state.researchError)}</p>`:''}</section></details>`;
+  const candidates=state.page==='release'?[]:freezeCandidates(state),chosen=state.freezeSelection??candidates.slice(0,4);
+  const preview=candidates.length?`<fieldset class="freeze-preview"><legend>Freeze preview · ${chosen.length}/4 measurements</legend>${candidates.map(id=>`<label><input type="checkbox" data-freeze-select="${esc(id)}"${chosen.includes(id)?' checked':''}> ${esc(getSeries(id).name)} <span class="small muted">${esc(getSeries(id).unit)}</span></label>`).join('')}<p class="small muted">Choose one to four primary measurement histories. Module evidence is retained as described in the result. ${state.page==='watchlist'?`All ${candidates.length} ordered watchlist members are retained as settings; unchecked observations are not frozen.`:''}</p></fieldset>`:'';
+  return alert+`<details class="context-save"${state.researchError?' open':''}><summary>SAVE</summary><section class="research-savebar" aria-label="Save research"><label for="research-name">Research name<input id="research-name" value="${esc(name)}" maxlength="80" autocomplete="off"></label>${preview}<div class="actions"><button type="button" class="action" data-save-workspace>${active?'UPDATE SAVED VIEW':'SAVE VIEW'}</button><button type="button" class="action" data-pin-result${pinBusy?' disabled':''}>${pinBusy?'FREEZING…':'FREEZE RESULT'}</button><a class="action" href="#/research">SAVED RESEARCH</a>${active?'<button type="button" class="link-button" data-clear-workspace>NEW WORKSPACE</button>':''}</div><p class="small muted">${active?`Editing ${esc(active.name)}. `:''}Workspaces reopen current data. Pins freeze up to four scoped measurements and retain relevant module inputs, assumptions and original exports.</p>${state.researchError?`<p class="amber" role="alert">${esc(state.researchError)}</p>`:''}</section></details>`;
 }
 
 function render({focusHeading=false,preserveFocus=false}={}) {
@@ -251,7 +266,6 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   document.getElementById('saved-count').textContent=state.saved.length;
   document.getElementById('mobile-saved-count').textContent=state.saved.length;
   document.getElementById('saved-list').innerHTML=state.saved.length?state.saved.map(id=>`<div class="saved-item"><a href="${esc(indicatorHref(id,{...state,page:'watchlist'}))}">${esc(getSeries(id).short)}</a><button type="button" data-save="${id}" aria-label="Remove ${esc(getSeries(id).name)} from watchlist">×</button></div>`).join(''):'<p class="rail-note">No saved series.<br>Open an indicator to save it.</p>';
-  document.getElementById('source-status').innerHTML=sourceStatusList(dataStatus.sources,{compact:true});
   document.getElementById('source-notice').innerHTML=sourceNotice(dataStatus.sources);
   document.getElementById('snapshot-time').textContent=`OFFICIAL SNAPSHOT · ASSEMBLED ${dataStatus.generatedAt ?? 'UNAVAILABLE'}`;
   document.title=`${state.page==='indicator'?getSeries(state.seriesId).name:pageNames[state.page]} — Meridian`;
@@ -273,6 +287,7 @@ function render({focusHeading=false,preserveFocus=false}={}) {
 function navigate(patch,{replace=false,preserveFocus=true}={}) {
   const previous={page:state.page,seriesId:state.seriesId};
   if(patch.page&&patch.page!==state.page)rememberWorkspace();
+  if(['page','seriesId','macroFamily','macroMeasure','vintageSeries','eventId','selected'].some(key=>key in patch&&patch[key]!==state[key]))delete state.freezeSelection;
   state={...state,...patch};
   if(state.page==='labor')Object.assign(state,{macroFamily:'labor',macroMeasure:parseRoute(routeFor(state)).macroMeasure});
   if(patch.selected&&state.returnTo)state.returnTo=updateWorkspaceSelection(state.returnTo,state.selected);
@@ -287,6 +302,7 @@ window.addEventListener('hashchange',()=>{
   if(route.page!==state.page)rememberWorkspace();
   if(route.page!=='indicator')route.seriesId=state.seriesId;
   if(!location.hash.includes('selected='))route.selected=state.selected;
+  delete state.freezeSelection;
   state={...state,...route};
   render({focusHeading:oldPage!==state.page || oldId!==state.seriesId});
 });
@@ -294,7 +310,7 @@ window.addEventListener('hashchange',()=>{
 function save(id) {
   if(!getSeries(id))return;
   const wasSaved=state.saved.includes(id);
-  state.saved=wasSaved?state.saved.filter(value=>value!==id):[...state.saved,id];
+  state.saved=wasSaved?state.saved.filter(value=>value!==id):[...state.saved,id];delete state.freezeSelection;
   const durable=persist();
   const removedRow=wasSaved&&state.page==='watchlist'&&main.contains(document.activeElement)?document.activeElement.closest('tr'):null;
   const nextSaved=removedRow?.nextElementSibling?.querySelector('[data-save]')?.dataset.save??removedRow?.previousElementSibling?.querySelector('[data-save]')?.dataset.save;
@@ -320,6 +336,15 @@ function downloadJson(pkg){
   const url=URL.createObjectURL(new Blob([exportResearchPackage(pkg)],{type:'application/json;charset=utf-8'})),anchor=document.createElement('a');
   anchor.href=url;anchor.download=`meridian-package-${pkg.id}.json`;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);announce('Frozen research JSON downloaded with original observations, assumptions, exports and provenance.');
 }
+function applyPceAssumptions(){
+  if(currentPackage())throw new Error('Frozen assumptions are read-only.');
+  const read=id=>document.getElementById(id).value.trim(),raw=['pce-monthly-rate','pce-horizon-months','pce-target-annual'].map(read);
+  if(raw.some(value=>value===''||!Number.isFinite(Number(value))))throw new Error('Enter finite numeric assumptions; no value was substituted.');
+  const pceBaseIndex=read('pce-base-index');if(!['pceIndex','pceCoreIndex'].includes(pceBaseIndex))throw new Error('Choose a retained PCE price index.');
+  const [pceMonthlyRate,pceHorizonMonths,pceTargetAnnualRate]=raw.map(Number),patch={pceBaseIndex,pceMonthlyRate,pceHorizonMonths,pceTargetAnnualRate};
+  const result=buildPceBaseEffects(getSeries(pceBaseIndex),pceScenarioOptions(patch));if(result.error)throw new Error(result.error);
+  navigate(patch);announce('Assumptions applied. The conditional chart, table, saved view and CSV now use this path. Future values remain modeled, not forecasts.');
+}
 function stored(result,label){
   if(!result.ok)throw new Error(result.reason==='duplicate-id'?'This package ID already identifies different frozen evidence.':`Research library ${result.reason??'save failed'}.`);
   announce(`${label}${result.persisted?' saved in this browser.':' retained for this session; download pinned JSON for durable storage.'}`);
@@ -333,9 +358,21 @@ function showCalendarPreview(force=false){
 }
 async function handleResearchAction(d){
   state.researchError='';
-  if('saveWorkspace' in d){
+  if('saveQuestion' in d){
+    const prior=researchLibrary.getWorkspace(d.saveQuestion);if(!prior)throw new Error('Saved view unavailable.');
+    const input=name=>document.getElementById(`question-${name}-${prior.id}`).value.trim(),ids=value=>value.split(',').map(id=>id.trim()).filter(Boolean);
+    const conditionSeries=input('condition-series'),threshold=input('condition-value');
+    if(conditionSeries&&!threshold)throw new Error('Enter a condition threshold in the measurement’s native units.');
+    const question=parseResearchQuestion({version:1,hypothesis:input('hypothesis'),supportingSeriesIds:ids(input('support')),contradictingSeriesIds:ids(input('contradict')),baselinePackageId:'',reviewDate:input('review-date'),reviewEvent:input('review-event'),conditions:[...(conditionSeries?[{seriesId:conditionSeries,operator:input('condition-op'),value:Number(threshold)}]:[]),...(prior.researchQuestion?.conditions.slice(1)??[])]});
+    const selected=[...new Set([...question.supportingSeriesIds,...question.contradictingSeriesIds,...question.conditions.map(row=>row.seriesId)])];
+    if(!selected.length||selected.length>4)throw new Error('Choose one to four unique supporting, contradicting or condition measurements for the exact frozen baseline.');
+    const pkg=await createResearchPackage({name:`${prior.name.slice(0,60)} · question baseline`,state:{...prior.state,page:'explore',exploreMode:'compare',selected,comparison:'native',transform:'level',alignment:'exact'},context:{researchQuestion:question,scope:'Complete retained histories for the explicitly selected question evidence. Roles and thresholds are the researcher’s hypotheses, not agency interpretations.'}});
+    const baseline=await researchLibrary.pinPackage(pkg);stored(baseline,'Question baseline');
+    if(!baseline.persisted)throw new Error('The baseline is session-only. Download its JSON from Frozen results before reloading. The previous saved question was preserved.');
+    stored(await researchLibrary.saveWorkspace({...prior,researchQuestion:{...question,baselinePackageId:pkg.id}}),'Research question');
+  }else if('saveWorkspace' in d){
     const prior=researchLibrary.getWorkspace(activeWorkspaceId),name=document.getElementById('research-name').value;
-    const record=createWorkspace({name,state,...(prior?{id:prior.id,now:new Date(prior.createdAt)}:{})});
+    const record=createWorkspace({name,state,...(prior?{id:prior.id,now:new Date(prior.createdAt),researchQuestion:prior.researchQuestion}:{})});
     stored(await researchLibrary.saveWorkspace(record),'Workspace');activeWorkspaceId=record.id;researchLabel=record.name;
   }else if('clearWorkspace' in d){activeWorkspaceId=null;researchLabel='';}
   else if('openWorkspace' in d){
@@ -421,12 +458,34 @@ root.addEventListener('click',async event=>{
   const d=button.dataset;
   if(button.disabled)return;
   if(button.id==='theme-toggle'){toggleTheme();return;}
+  if('yieldShortcut' in d){navigate({yieldDateA:d.yieldDateA,yieldDateB:d.yieldDateB});announce(`Selected retained curves ${d.yieldDateA} and ${d.yieldDateB}.`);return;}
+  if('exportEconomicEvidence' in d){
+    if(!['laborEvidence','pcePriceContributions'].includes(d.exportEconomicEvidence)||currentPackage())return;
+    downloadCsv(economicEvidenceCsv(dataStatus.sources[d.exportEconomicEvidence],{range:viewRange(state)}),`meridian-${d.exportEconomicEvidence}.csv`,'Exact selected official observations downloaded with native units, preliminary flags, definitions, rights and capture receipts.');return;
+  }
+  if('applyPceAssumptions' in d){
+    try{applyPceAssumptions();}catch(error){document.getElementById('pce-input-status').textContent=error.message;announce(error.message);}return;
+  }
+  if('exportPceBaseEffects' in d){
+    if(currentPackage())return;
+    downloadCsv(pceBaseEffectsCsv(getSeries(state.pceBaseIndex),pceScenarioOptions(state)),'meridian-pce-conditional-path.csv','Conditional arithmetic and exact historical indexes downloaded with all assumptions. Future rows are modeled, not official observations.');return;
+  }
   if('sourceHealth' in d){const details=document.querySelector('#data-freshness .freshness-details');if(details){details.open=true;details.querySelector('summary')?.focus();details.scrollIntoView({block:'nearest'});}return;}
-  const researchKeys=['saveWorkspace','clearWorkspace','pinResult','pinPublication','pinGdpMatrix','exportGdpMatrix','exportCoverage','openWorkspace','renameWorkspace','removeWorkspace','openPackage','removePackage','packageJson','packageCsv','packageAttachment','exportFrozenCurrentAccountGdpContributions','exportFrozenCurrentAccountGdpBalanceEffects','exportFrozenCurrentAccountGdpComponentEffects','exportFrozenCurrentAccountGdpAllComponentEffects','enableChanges','disableChanges','markChanges','reviewAllChanges','retryChanges','changePage','exportChanges','exportPublications','retryPublications','exportPublicationExplanations','retryPublicationExplanations'];
+  const researchKeys=['saveQuestion','saveWorkspace','clearWorkspace','pinResult','pinPublication','pinGdpMatrix','exportGdpMatrix','exportCoverage','openWorkspace','renameWorkspace','removeWorkspace','openPackage','removePackage','packageJson','packageCsv','packageAttachment','exportFrozenCurrentAccountGdpContributions','exportFrozenCurrentAccountGdpBalanceEffects','exportFrozenCurrentAccountGdpComponentEffects','exportFrozenCurrentAccountGdpAllComponentEffects','enableChanges','disableChanges','markChanges','reviewAllChanges','retryChanges','changePage','exportChanges','exportPublications','retryPublications','exportPublicationExplanations','retryPublicationExplanations'];
   if(researchKeys.some(key=>key in d)){
     const before=location.hash;
     try{await handleResearchAction(d);}catch(error){state.researchError=error.message;announce(`Research action unavailable: ${error.message}`);}
     if(location.hash===before)render({preserveFocus:true});return;
+  }
+  if('exportSettings' in d){
+    const content=exportResearchSettings({preferences:state,workspaces:researchLibrary.listWorkspaces()}),url=URL.createObjectURL(new Blob([content],{type:'application/json;charset=utf-8'})),anchor=document.createElement('a');anchor.href=url;anchor.download='meridian-research-settings.json';anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);announce('Watchlists and saved-view settings downloaded. Frozen evidence is exported separately.');return;
+  }
+  if('createWatchlist' in d||'renameWatchlist' in d||'deleteWatchlist' in d){
+    try{
+      const name=document.getElementById('watchlist-name').value;
+      const preferences='deleteWatchlist' in d?removeNamedWatchlist(state,state.activeWatchlistId):saveNamedWatchlist(state,{id:'createWatchlist' in d?globalThis.crypto.randomUUID():state.activeWatchlistId,name,saved:state.saved});
+      state={...state,...preferences};delete state.freezeSelection;const durable=persist();render({preserveFocus:true});announce(durable?'Named watchlist saved with its ordered membership.':'Named watchlist retained for this session; export settings for recovery.');
+    }catch(error){announce(error.message);state.researchError=error.message;render({preserveFocus:true});}return;
   }
   if('watchMove' in d){state.saved=moveFollowed(state.saved,d.watchMove,Number(d.direction));const durable=persist();render({preserveFocus:true});announce(durable?'Watchlist order saved.':'Order changed for this session; browser storage is unavailable.');return;}
   if('reloadSnapshot' in d){
@@ -518,7 +577,24 @@ root.addEventListener('click',async event=>{
 
 root.addEventListener('change',async event=>{
   const target=event.target;
-  if(target.id==='watchlist-sort'||target.id==='watchlist-group'){state={...state,...(target.id==='watchlist-sort'?{watchlistSort:target.value}:{watchlistGroup:target.checked})};const durable=persist();render({preserveFocus:true});announce(durable?'Monitoring preferences saved.':'Monitoring preferences changed for this session; browser storage is unavailable.');return;}
+  if(target.dataset&&'freezeSelect' in target.dataset){
+    const candidates=freezeCandidates(state),chosen=[...(state.freezeSelection??candidates.slice(0,4))],id=target.dataset.freezeSelect;
+    if(target.checked&&chosen.length>=4){target.checked=false;announce('Freeze result holds four primary measurements. Uncheck one before selecting another. Complete watchlist membership remains contextual metadata.');return;}
+    state.freezeSelection=target.checked?[...chosen,id]:chosen.filter(value=>value!==id);render({preserveFocus:true});return;
+  }
+  if(target.id==='watchlist-sort' ||target.id==='watchlist-group'){state={...state,...(target.id==='watchlist-sort'?{watchlistSort:target.value}:{watchlistGroup:target.checked})};const durable=persist();render({preserveFocus:true});announce(durable?'Monitoring preferences saved.':'Monitoring preferences changed for this session; browser storage is unavailable.');return;}
+  if(target.id==='watchlist-active'){
+    try{state={...state,...selectNamedWatchlist(state,target.value)};delete state.freezeSelection;const durable=persist();render({preserveFocus:true});announce(durable?'Named watchlist restored with its ordering.':'Watchlist restored for this session; export settings for recovery.');}catch(error){announce(error.message);}return;
+  }
+  if(target.id==='research-settings-import'){
+    const file=target.files?.[0];if(!file)return;
+    try{
+      if(file.size>MAX_RESEARCH_SETTINGS_BYTES)throw new Error('Settings file exceeds the 1 MiB limit.');
+      const imported=importResearchSettings(await file.text()),merged=mergeResearchSettings(state,imported,researchLibrary.listWorkspaces());
+      let durable=true;for(const record of merged.workspaces){const result=await researchLibrary.saveWorkspace(record);if(!result.ok)throw new Error(`Saved view import failed: ${result.reason}`);durable=durable&&result.persisted;}
+      state={...state,...merged.preferences};delete state.freezeSelection;durable=persist()&&durable;applyAppearance();render({preserveFocus:true});announce(durable?'Settings imported. Existing records were preserved; conflicting identities were copied.':'Settings imported with session-only records. Export settings for recovery; existing records were preserved.');
+    }catch(error){state.researchError=error.message;render({preserveFocus:true});announce(`Settings import rejected: ${error.message}`);}return;
+  }
   if(target.id==='research-import'){
     const file=target.files?.[0];if(!file)return;
     try{
@@ -543,7 +619,7 @@ root.addEventListener('change',async event=>{
     announce(durable?'Appearance saved in this browser.':'Appearance changed for this session; browser storage is unavailable.');
     return;
   }
-  const fields={'topic-filter':'topic','frequency-filter':'frequency','transform-select':'transform','comparison-select':'comparison','calendar-topic':'calendarTopic','yield-curve-date-a':'yieldDateA','yield-curve-date-b':'yieldDateB','auction-type':'auctionType','vintage-cutoff':'vintageCutoff','vintage-series':'vintageSeries'};
+  const fields={'topic-filter':'topic','frequency-filter':'frequency','transform-select':'transform','comparison-select':'comparison','alignment-select':'alignment','calendar-topic':'calendarTopic','yield-curve-date-a':'yieldDateA','yield-curve-date-b':'yieldDateB','auction-type':'auctionType','vintage-cutoff':'vintageCutoff','vintage-series':'vintageSeries'};
   if(target.id==='macro-family'&&Object.hasOwn(coverageFamilies,target.value))navigate({macroFamily:target.value,macroMeasure:coverageFamilies[target.value].defaultMeasure});
   else if(target.id==='macro-measure'&&coverageFamilies[state.macroFamily].ids.includes(target.value))navigate({macroMeasure:target.value});
   else if(target.id==='current-account-comparison-measure'&&state.macroFamily==='external'&&CURRENT_ACCOUNT_GDP_COMPARISON_MEASURES.some(item=>item.id===target.value))navigate({macroMeasure:target.value});

@@ -151,7 +151,8 @@ test('overview leads with six dated topics and keeps catalysts, momentum and pub
  assert.match(html,/data-overview-disclosure="publications"/);assert.match(html,/NEXT CATALYSTS/);
  assert.ok(html.indexOf('class="oh-topic-grid"')<html.indexOf('NEXT CATALYSTS'));
  assert.ok(html.indexOf('NEXT CATALYSTS')<html.indexOf('class="oh-momentum"'));
- assert.match(html,/Source health, coverage and methodology/);
+ assert.doesNotMatch(html,/Source health, coverage and methodology/);
+ assert.match(html,/Collection failures and retained-source status are in Refresh details above/);
  assert.doesNotMatch(html,/synthetic|sample week|sample observations/i);
 });
 
@@ -569,7 +570,7 @@ function withChartDocument(run) {
   finally { if (saved === undefined) delete globalThis.document; else globalThis.document = saved; }
 }
 
-test('a narrow official curve retains all tenor labels and hides a missing selected value', () => {
+test('a narrow quantitative curve uses elapsed maturity and retains every tenor through keyboard inspection', () => {
   const point = yieldCurve.find(item => item.years === 2);
   const saved = point.value;
   point.value = null;
@@ -583,7 +584,10 @@ test('a narrow official curve retains all tenor labels and hides a missing selec
       const svg = rendered.find(node => node.tag === 'svg');
       assert.match(svg.attributes['aria-label'], /Official snapshot/);
       const labels = rendered.filter(node => node.tag === 'text' && yieldCurve.some(item => item.tenor === node.textContent));
-      assert.equal(labels.length, yieldCurve.length);
+      assert.ok(labels.length>=3&&labels.length<yieldCurve.length,'sparse numeric axis labels keep elapsed-maturity text readable');
+      assert.match(svg.attributes['aria-label'],/elapsed maturity/);
+      const label=tenor=>Number(labels.find(node=>node.textContent===tenor)?.attributes.x);
+      assert.ok(Math.abs((label('30Y')-label('20Y'))/(label('20Y')-label('10Y'))-1)<1e-8,'equal ten-year gaps have equal chart widths');
       for (const row of new Set(labels.map(node => node.attributes.y))) {
         const bounds = labels.filter(node => node.attributes.y === row).map(node => {
           const x = Number(node.attributes.x), width = node.textContent.length * 7;

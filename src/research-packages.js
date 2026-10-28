@@ -8,6 +8,7 @@ import {DEALER_METRICS}from'./market-functioning.js';
 import {generatedFundingCsv}from'./market-functioning-page.js';
 import {generatedAuctionsCsv}from'./auctions-page.js';
 import {aggregateAuctionOfferings}from'./auctions.js';
+import {validateEconomicEvidenceContext,validatePceBaseEffectsContext}from'./economic-evidence-validation.js';
 import {canonicalJson,deepFreeze,researchJsonCopy,researchByteLength,researchId,researchName,researchTimestamp,MAX_RESEARCH_JSON_BYTES}from'./research-workspaces.js';
 
 const verified=new WeakSet(),classes=new Set(['level','count','amount','rate','growth','contribution','balance','change','unknown']);
@@ -209,6 +210,16 @@ function validateAuctionContext(context){
 }
 function validateContext(context){
  if(!object(context))fail('context must be data');
+ if(context.economicEvidence!==undefined){
+  if(!object(context.economicEvidence)||Object.keys(context.economicEvidence).some(id=>!['laborEvidence','pcePriceContributions'].includes(id)))fail('economic evidence source scope');
+  for(const [id,evidence]of Object.entries(context.economicEvidence)){if(evidence?.source?.id!==id)fail('economic evidence source key');validateEconomicEvidenceContext(evidence);}
+ }
+ if(context.pceBaseEffects!==undefined)validatePceBaseEffectsContext(context.pceBaseEffects);
+ const economicFiles=[...Object.values(context.economicEvidence??{}).flatMap(value=>value.attachments),...(context.pceBaseEffects?.attachments??[])];
+ for(const expected of economicFiles){
+  const actual=context.attachments?.find(file=>file?.name===expected.name);
+  if(!actual||actual.content!==expected.content||actual.type!==expected.type)fail('economic evidence attachment differs from its validated source or scenario');
+ }
  if(context.currentAccountInputs!==undefined)validateCurrentAccountInputs(context.currentAccountInputs);
  if(context.currentAccountGdpDenominator!==undefined)validateCurrentAccountInputs(context.currentAccountGdpDenominator,{label:'current-account GDP denominator',seriesIds:['nominalGdp'],maxObservations:2,extraMetadata:['dataStatus']});
  if(context.currentAccountGdpHistory!==undefined){
@@ -302,7 +313,8 @@ function displayed(request,catalog){
 }
 function validateRange(range){
  if(typeof range==='number'&&Number.isInteger(range)&&range>=0&&range<=50000)return;
- if(!object(range)||!Object.hasOwn(range,'preset')||!['1y','3y','5y','all','custom'].includes(range.preset)||Object.keys(range).some(key=>!['preset','startDate','endDate'].includes(key))||['startDate','endDate'].some(key=>range[key]!==undefined&&typeof range[key]!=='string'))fail('measurement date-window request');
+ if(!object(range)||!Object.hasOwn(range,'preset')||!['1y','3y','5y','all','custom','observations'].includes(range.preset)||Object.keys(range).some(key=>!['preset','startDate','endDate','alignment','count'].includes(key))||['startDate','endDate'].some(key=>range[key]!==undefined&&typeof range[key]!=='string')||range.alignment!==undefined&&range.alignment!=='quarter')fail('measurement date-window request');
+ if(range.preset==='observations'&&(!Number.isInteger(range.count)||range.count<0||range.count>50000))fail('measurement observation count');
  if(range.preset==='custom'&&(!isIsoDate(range.startDate)||!isIsoDate(range.endDate)||range.startDate>range.endDate))fail('measurement custom date-window request');
 }
 function validateBody(body){

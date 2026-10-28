@@ -3,7 +3,11 @@ import {parseRoute,routeFor,safeReturnTo,returnPages} from './router.js';
 /** One range descriptor feeds chart, table and CSV. Numeric deep links stay explicit. */
 export function viewRange(state={}) {
   const window=state.window??(Object.hasOwn(state,'range')?'observations':'1y');
-  return window==='observations'?state.range??12:{preset:window,startDate:state.startDate??'',endDate:state.endDate??''};
+  const range=window==='observations'?state.range??12:{preset:window,startDate:state.startDate??'',endDate:state.endDate??''};
+  return state.alignment==='quarter'?{...(typeof range==='number'?{preset:'observations',count:range}:range),alignment:'quarter'}:range;
+}
+export function pceScenarioOptions(state={}){
+ return {monthlyRate:state.pceMonthlyRate??0.2,horizonMonths:state.pceHorizonMonths??12,targetAnnualRate:state.pceTargetAnnualRate??2};
 }
 
 export function indicatorHref(seriesId,state={}) {

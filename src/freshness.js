@@ -8,6 +8,8 @@ const targets = [
   ['calendar','fomc','Federal Reserve FOMC calendar'],
   ['data', 'treasury', 'Treasury data'],
   ['data', 'bls', 'BLS data'],
+  ['data','laborEvidence','BLS real earnings and employment breadth'],
+  ['data','pcePriceContributions','BEA PCE price contributions'],
   ['data', 'bea', 'BEA data'],
   ['data', 'beaIta', 'BEA international transactions'],
   ['data', 'dol', 'DOL ETA data'],

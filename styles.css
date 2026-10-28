@@ -831,6 +831,7 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
 /* Supporting research shares the existing compact UI and palette. */
 .page-hierarchy { min-width:0; }
 .page-hierarchy .hierarchy-details { margin-top:10px; margin-bottom:10px; }
+.supporting-details code { overflow-wrap:anywhere; white-space:normal; }
 .page-hierarchy .hierarchy-details>summary { display:flex; align-items:baseline; flex-wrap:wrap; gap:5px 12px; }
 .page-hierarchy .hierarchy-details>summary>span { flex:1; min-width:0; }
 .page-hierarchy .hierarchy-details>summary>small { color:var(--muted); font-size:11px; font-weight:400; }
@@ -910,4 +911,24 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
  .page-hierarchy .reading-group .metrics:has(>.metric:last-child:nth-child(3))>.metric:last-child,.page-hierarchy .reading-group .metrics:has(>.metric:last-child:nth-child(5))>.metric:last-child { grid-column:1/-1; }
  .page-hierarchy .reading-group .metric { padding:9px; }
  .page-hierarchy .workspace-analysis { grid-template-columns:minmax(0,1fr); }
+}
+
+/* Economic interpretation: compact local readouts, shared inflation horizons, existing theme tokens. */
+.inflation-horizon-comparison { min-width:0; }
+.inflation-horizon-comparison .table-wrap { max-width:100%; overflow-x:auto; }
+.inflation-horizon-comparison table { width:100%; min-width:520px; }
+.inflation-horizon-comparison :is(th,td) { padding:8px 9px; font-size:12px; }
+.inflation-horizon-comparison thead th { font-size:10px; white-space:normal; }
+.inflation-horizon-comparison tbody th { width:26%; font-weight:400; }
+.inflation-horizon-comparison td>a { display:inline-block; font-variant-numeric:tabular-nums; }
+.inflation-horizon-comparison .table-code { font-size:10px; line-height:1.35; white-space:normal; }
+.inflation-horizon-comparison .panel-note { margin:7px 0 0; font-size:11px; line-height:1.45; }
+.overview-hierarchy .oh-inflation-comparison { margin-bottom:9px; padding:9px; border:1px solid var(--border); border-radius:5px; background:var(--panel); }
+.overview-hierarchy .oh-topic [data-overview-support-reading="privateDomesticDemandGrowth"] .reading-value { font-size:17px; }
+.overview-hierarchy .oh-growth-note { margin:5px 0 0; font-size:10.5px; line-height:1.35; }
+.page-hierarchy .compact-family-readings .metric-value { font-size:21px; line-height:1.2; }
+.page-hierarchy .compact-family-readings .metric { padding:10px; }
+@media(max-width:600px) {
+ .inflation-horizon-comparison td>a { padding-block:6px; }
+ .overview-hierarchy .oh-inflation-comparison { padding:6px; }
 }

@@ -3,6 +3,7 @@ import { getSeries, compareSeries, transformSeries, formatValue, periodLabel, ob
 import { selectCurveOverlays, NOMINAL_YIELD_TENORS } from './yields.js';
 import {createLinkedCursor} from './comparison-cursor.js';
 import {resolveDateWindow} from './date-window.js';
+import {maturityYears,observationEvidence} from './chart-evidence.js';
 
 const ns = 'http://www.w3.org/2000/svg';
 let chartId = 0;
@@ -24,7 +25,7 @@ function svgElement(name, attributes, parent, text) {
   return node;
 }
 
-function draw(container, panels, {height = 180, bars = false, curve = false, transformed = false,cursor=null,evidenceLabel='Official snapshot',yDomain,distribution=false} = {}) {
+function draw(container, panels, {height = 180, bars = false, curve = false, transformed = false,cursor=null,evidenceLabel='Official snapshot',yDomain,exactDomain=false,yReference,distribution=false} = {}) {
   container.replaceChildren();
   let domain;
   if(yDomain!==undefined){
@@ -42,7 +43,7 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   }
   const dates = [...new Set(panels.flatMap(panel => panel.observations.map(o => o.date)))].sort();
   const orderedDates = curve ? yieldCurve.map(point => point.tenor) : dates;
-  const positions = orderedDates.map((date,index) => curve ? index : Date.parse(`${date}T00:00:00Z`));
+  const positions = orderedDates.map(date => curve ? maturityYears(date) : Date.parse(`${date}T00:00:00Z`));
   // Calendar bounds belong to the requested window, including empty coverage
   // before a source starts or a derived comparison's common baseline.
   const window = !curve && panels[0].window?.mode === 'calendar' ? panels[0].window : null;
@@ -51,7 +52,8 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const spanX = maxX-minX || 1;
   let lo = domain?domain[0]:Math.min(...values), hi = domain?domain[1]:Math.max(...values);
   if (bars&&!domain) { lo = Math.min(0,lo); hi = Math.max(0,hi); }
-  const pad = Math.max((hi-lo)*.13,Math.abs(hi)*.015,.05);
+  if((exactDomain&&!domain)||(yReference!==undefined&&(!domain||!finite(Number(yReference))||Number(yReference)<domain[0]||Number(yReference)>domain[1]))){container.textContent='Chart configuration error: reference and exact bounds require a valid covering y-domain.';return;}
+  const pad = exactDomain?0:Math.max((hi-lo)*.13,Math.abs(hi)*.015,.05);
   lo -= bars && !domain && lo === 0 ? 0 : pad;
   hi += pad;
   if(domain&&(!finite(lo)||!finite(hi)||!finite(hi-lo)||hi<=lo)){
@@ -83,7 +85,7 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const xDate = date => curve ? xIndex(orderedDates.indexOf(date)) : xPosition(Date.parse(`${date}T00:00:00Z`));
   const y = value => top+(hi-value)/(hi-lo)*ph;
   const id = `chart-readout-${++chartId}`;
-  const title = curve ? 'Treasury par yield curve' : panels.map(panel => panel.series.name).join(' and ');
+  const title = curve ? 'Treasury par yield curve · quantitative elapsed maturity spacing' : panels.map(panel => panel.series.name).join(' and ');
   const svg = svgElement('svg',{viewBox:`0 0 ${width} ${h}`,tabindex:0,role:'group','aria-label':`${title}. ${evidenceLabel}. Use left and right arrow keys for exact values.`,'aria-describedby':id},container);
   svgElement('title',{},svg,`${title} · ${panels[0].unit} · ${evidenceLabel}`);
   const unitLabel = svgElement('text',{x:left,y:14},svg);
@@ -95,10 +97,11 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
     svgElement('text',{x:left-8,y:y(value)+4,'text-anchor':'end'},svg,tickLabels[index]);
   }
   if(domain&&lo<=0&&hi>=0)svgElement('line',{x1:left,x2:width-right,y1:y(0),y2:y(0),class:'zero-reference',stroke:'currentColor','stroke-opacity':'.35','stroke-dasharray':'3 3','aria-hidden':'true'},svg);
-  const labelDates = curve ? orderedDates : window
+  if(yReference!==undefined)svgElement('line',{x1:left,x2:width-right,y1:y(Number(yReference)),y2:y(Number(yReference)),class:'value-reference',stroke:'currentColor','stroke-opacity':'.5','stroke-dasharray':'4 4','aria-label':`Reference ${yReference}`},svg);
+  const labelDates = curve ? ['1M','1Y','5Y','10Y','20Y','30Y'].filter(date=>orderedDates.includes(date)) : window
     ? [window.startDate, new Date(minX+(maxX-minX)/2).toISOString().slice(0,10), window.endDate]
     : [orderedDates[0], orderedDates[Math.floor((orderedDates.length-1)/2)], orderedDates.at(-1)];
-  const uniqueLabelDates = [...new Set(!curve&&width<350?[labelDates[0],labelDates.at(-1)]:labelDates)];
+  const uniqueLabelDates = [...new Set(curve&&width<500?labelDates.filter(date=>['1M','5Y','10Y','20Y','30Y'].includes(date)):!curve&&width<350?[labelDates[0],labelDates.at(-1)]:labelDates)];
   uniqueLabelDates.forEach((date,index) => {
     let label = curve ? date : window ? periodLabel({frequency:'Daily'},date) : chartDateLabel(panels,date);
     if (!curve && !window && panels[0].series.frequency === 'Weekly') label = label.replace('Week ending ','');
@@ -177,10 +180,10 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
         const volume=observation?.volumeInBillions;
         span.append(` · Volume ${finite(volume)?`$${volume.toLocaleString('en-US',{maximumFractionDigits:12})}B`:'—'} (USD billions) · Revision flag ${observation?.revisionIndicator||'not supplied'}`);
         if(observation?.footnoteId!=null)span.append(` · Footnote ${observation.footnoteId}`);
-        if(!isRoundedSourceObservation(observation))for(const note of observation?.footnotes??[])span.append(` · ${note}`);
+
       }
       const coverage=observationCoverageLabel(observation);if(coverage)span.append(` · ${coverage}`);
-      if(isRoundedSourceObservation(observation))for(const note of observation.footnotes??[])span.append(` · ${note}`);
+      for(const note of observationEvidence(panel.series,observation))span.append(` · ${note}`);
       if(!observation)span.append(' · no observation on this reference date');
       else if(!finite(value))span.append(' · source value unavailable');
       readout.append(span);
@@ -224,7 +227,7 @@ export function renderCharts(root,{catalog,chartCatalogs={}}={}) {
     if(scoped&&(kind==='history-curve'||kind==='curve')){container.textContent='Chart data unavailable: yield curves are not supplied by this chart catalog.';return;}
     if(kind==='history-curve'){
       const curves=selectCurveOverlays(dataStatus.sources.yields,container.dataset.dates.split(',').filter(Boolean));
-      draw(container,curves.map(curve=>({series:getSeries('yield'),label:curve.date+(curve.available?'':' — unavailable'),unit:'Yield · %',observations:NOMINAL_YIELD_TENORS.map(tenor=>({date:tenor,value:curve.nominal[tenor]??null}))})),{height,curve:true,yDomain:container.dataset.yDomain});
+      draw(container,curves.map(curve=>({series:{...getSeries('yield'),methodologyBreaks:[]},label:curve.date+(curve.available?'':' — unavailable'),unit:'Yield · % · elapsed maturity years',observations:NOMINAL_YIELD_TENORS.map(tenor=>({date:tenor,value:curve.nominal[tenor]??null,footnotes:observationEvidence({id:'yield',methodologyBreaks:dataStatus.sources.yields.methodologyBreaks},{date:curve.date})}))})),{height,curve:true,yDomain:container.dataset.yDomain});
       return;
     }
     if (kind === 'curve') {
@@ -259,6 +262,6 @@ export function renderCharts(root,{catalog,chartCatalogs={}}={}) {
     if(!cursorCatalogs.has(cursorScope))cursorCatalogs.set(cursorScope,new Map());
     const cursors=cursorCatalogs.get(cursorScope);
     if(group&&!cursors.has(group))cursors.set(group,createLinkedCursor(result.panels));
-    draw(container,panels,{height,bars:kind==='bar',transformed:transform==='change'||comparison==='difference',cursor:group?cursors.get(group):null,evidenceLabel,yDomain:container.dataset.yDomain});
+    draw(container,panels,{height,bars:kind==='bar',transformed:transform==='change'||comparison==='difference',cursor:group?cursors.get(group):null,evidenceLabel,yDomain:container.dataset.yDomain,exactDomain:container.dataset.yDomainExact==='true',yReference:container.dataset.yReference});
   });
 }

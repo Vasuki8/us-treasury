@@ -51,7 +51,8 @@ test('Comparison groups measurement basis without hiding the controls, no-fill s
 test('Calendar keeps filters and scope limitations together ahead of the working schedule',()=>{
  const html=calendarPage(state({calendarView:'all',calendarMonth:'upcoming'})),basis=group(html,'Schedule scope');
  for(const id of ['calendar-scope','calendar-month','calendar-day','calendar-topic','calendar-watch-only'])assert.ok(basis.includes(`id="${id}"`),id);
- assert.match(basis,/upcoming auctions and settlements are not included/);
+ assert.match(basis,/Individually announced auctions and issue\/settlement dates/);
+ assert.match(basis,/later announcements are not covered/);
  before(html,'aria-label="Schedule scope"','id="calendar-selected-preview"');
  assert.match(visible(html),/data-reset-calendar/);
 });

@@ -2,6 +2,12 @@
 
 This is a working admission ledger, not a blanket license approval. Existing reviews in [data-sources.md](data-sources.md) and executable allowlists in `scripts/data-policy.mjs` remain authoritative. A candidate becomes admitted only after exact feed, fields, coverage, cadence, units, commercial display/export scope and validation are recorded and enforced.
 
+## Research reliability extension: 27 October 2026
+
+The [labor and inflation evidence review](labor-inflation-evidence-source-review.md) admits five BLS real-earnings/private-diffusion measurements and four BEA monthly PCE price/contribution measurements, with exact API/flat-file identities, public-domain reuse scope, true receipts, preliminary flags, native units, contribution hierarchy and executable admission. Both independent collectors are required freshness targets in the normal refresh. The conditional PCE base-effects calculator uses existing price-index inputs and adds no source. Its assumptions and modeled outputs remain separate from observed history.
+
+The [expectations and policy-path dependency review](expectations-policy-path-dependencies.md) records the investigated provider, timing, rights and contract limitations. It admits no proprietary consensus, market-implied policy series or additional financial-conditions composite. The payroll-publication requirement remains dependent on permissible acquisition of the independently dated official release bytes; neither API revisions nor web-extracted text is assigned a fabricated raw-response receipt.
+
 ## Website review milestone 2: balanced macro coverage
 
 Admitted on 22 October 2026, extending 48 to 77 registered measurements. The existing admission module delegates new exact-feed and metadata checks to `scripts/macro-coverage-policy.mjs`. Ordinary daily refresh and freshness require the new policy, activity and housing collectors.

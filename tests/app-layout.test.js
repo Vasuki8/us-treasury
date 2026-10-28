@@ -16,13 +16,15 @@ test('reading groups identify native content and escape labels without replacing
  assert.doesNotMatch(html,/<details/);
 });
 
-test('Overview primary readings show their official or calculated basis next to their own units and periods',()=>{
+test('Overview distinguishes calculated readings and preserves native units without repeating routine official labels',()=>{
  const html=overviewPage({saved:[]});
  const fiscal=html.match(/<a class="oh-reading" data-overview-reading="interestRevenueRatio"[\s\S]*?<\/a>/)?.[0];
  assert.ok(fiscal);
- assert.match(fiscal,/class="reading-basis">Calculated metric/);
+ assert.match(fiscal,/class="reading-basis">Calculated measure/);
  const gdp=html.match(/<a class="oh-reading" data-overview-reading="gdp"[\s\S]*?<\/a>/)?.[0];
- assert.match(gdp,/class="reading-basis">Official snapshot/);
+ assert.ok(gdp);
+ assert.doesNotMatch(gdp,/Calculated measure/);
+ assert.match(gdp,/reading-unit/);
  assert.match(gdp,/q\/q SAAR/);
  assert.ok(html.indexOf('ECONOMIC CONDITIONS')<html.indexOf('MOMENTUM'));
 });

@@ -9,10 +9,10 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const execute=promisify(execFile);
 const root=fileURLToPath(new URL('../',import.meta.url));
 const scratchRoot=path.join(root,'test-results');
-// The 20 MB snapshot and expanded archive took 54.7 s locally; the full-refresh
-// CI fixture exceeded the former 60 s deadline. Preserve complete admission and
-// publication checks with CI headroom; early rejection remains bounded at 20 s.
-const publicationTimeout=120000;
+// The expanded real-source archive now takes 119.5 s for a serial health check;
+// publication also verifies/writes the immutable archive. Preserve every source,
+// admission and byte-prefix assertion with headroom; early rejection stays 20 s.
+const publicationTimeout=240000;
 const independentCalendars=[
   ['calendar-bea.mjs','collectBeaCalendar','bea'],
   ['calendar-census.mjs','collectCensusCalendar','census'],
@@ -198,6 +198,8 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
     ['treasury.mjs','collectTreasury','treasury',false],
     ['bls.mjs','collectBls','bls',false],
     ['bea.mjs','collectBea','bea',false],
+    ['labor-evidence.mjs','collectLaborEvidence','laborEvidence',false],
+    ['pce-price-contributions.mjs','collectPcePriceContributions','pcePriceContributions',false],
     ['bea-ita.mjs','collectBeaIta','beaIta',false],
     ['dol.mjs','collectDol','dol',false],
     ['dol-advance.mjs','collectDolAdvance','dolAdvance',false],

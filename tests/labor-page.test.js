@@ -100,3 +100,12 @@ test('Labor observation-count controls explain the shared focused dates while ot
  assert.doesNotMatch(html,/Each series uses its own observation count/);
  assert.match(rangeControls({window:'observations',range:6},['payroll','unrate']),/Each series uses its own observation count/);
 });
+
+test('Labor shows preliminary and sampling context beside headlines and working real earnings and breadth evidence',()=>{
+ const html=render();
+ assert.ok(html.indexOf('Labor estimate uncertainty')>html.indexOf('Latest headline indicators'));
+ assert.ok(html.indexOf('Labor estimate uncertainty')<html.indexOf('id="labor-analysis"'));
+ assert.match(html,/Preliminary payroll estimate/);assert.match(html,/difference between two monthly job gains/);
+ assert.match(html,/Real earnings &amp; employment breadth/);assert.match(html,/data-export-economic-evidence="laborEvidence"/);
+ assert.match(html,/Private employment diffusion/);assert.match(html,/CPI-U/);
+});

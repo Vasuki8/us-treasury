@@ -1,4 +1,4 @@
-import { calendarRelatedIds } from './macro-calendar.js';
+import { calendarRelatedIds,calendarPublicationIds } from './macro-calendar.js';
 export function monitorUpdateLabel(id,changes={},checkpoint={}){
  if(!checkpoint.enabled)return 'Update comparison off';
  if(changes.status==='error')return 'Update history unavailable';
@@ -15,7 +15,7 @@ export function moveFollowed(saved,id,direction){
 export function watchlistMonitor(saved,{catalog={},events=[],sort='manual',group=false,now=new Date()}={}){
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
  const ordered=[...events].filter(e=>e.date>=today&&(!e.scheduledAt||Date.parse(e.scheduledAt)>=now.getTime())).sort((a,b)=>a.date.localeCompare(b.date)||String(a.time??'').localeCompare(String(b.time??'')));
- return [...new Set(saved)].filter(id=>catalog[id]).map((id,index)=>({id,current:catalog[id],index,nextEvent:ordered.find(event=>calendarRelatedIds(event).includes(id))??null})).sort((a,b)=>{
+ return [...new Set(saved)].filter(id=>catalog[id]).map((id,index)=>({id,current:catalog[id],index,nextEvent:ordered.find(event=>calendarPublicationIds(event).includes(id))??null,nextCatalyst:ordered.find(event=>calendarRelatedIds(event).includes(id)&&!calendarPublicationIds(event).includes(id))??null})).sort((a,b)=>{
   const topic=group?String(a.current.topic).localeCompare(String(b.current.topic)):0;
   return topic||(sort==='updated'?String(b.current.fetchedAt??'').localeCompare(String(a.current.fetchedAt??'')):sort==='next'?String(a.nextEvent?.date??'9999').localeCompare(String(b.nextEvent?.date??'9999')):0)||a.index-b.index;
  });

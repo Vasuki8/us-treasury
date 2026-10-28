@@ -1,5 +1,6 @@
 import {defaults,parseRoute,routeFor} from './router.js';
 import {series} from './data.js';
+import {isIsoDate} from './date-window.js';
 
 export const MAX_RESEARCH_JSON_BYTES=12*1024*1024;
 export const researchByteLength=value=>new TextEncoder().encode(value).byteLength;
@@ -49,13 +50,40 @@ export function normalizeWorkspaceState(input={}){
  state.returnTo=null;
  return Object.fromEntries(Object.keys(defaults).map(key=>[key,state[key]]));
 }
-export function createWorkspace({name,state={},id=globalThis.crypto.randomUUID(),now=new Date()}={}){
- return deepFreeze({version:1,id:researchId(id),name:researchName(name),createdAt:researchTimestamp(now),state:normalizeWorkspaceState(state)});
+export function createWorkspace({name,state={},id=globalThis.crypto.randomUUID(),now=new Date(),researchQuestion}={}){
+ return deepFreeze({version:1,id:researchId(id),name:researchName(name),createdAt:researchTimestamp(now),state:normalizeWorkspaceState(state),...(researchQuestion===undefined||researchQuestion===null?{}:{researchQuestion:parseResearchQuestion(researchQuestion)})});
 }
 export function parseWorkspace(input){
  const value=researchJsonCopy(input,{maxBytes:64000});
- if(!value||value.version!==1||Object.keys(value).length!==5||['version','id','name','createdAt','state'].some(key=>!Object.hasOwn(value,key))||!value.state||typeof value.state!=='object'||Array.isArray(value.state))throw new Error('Invalid named workspace record.');
+ if(!value||value.version!==1||Object.keys(value).some(key=>!['version','id','name','createdAt','state','researchQuestion'].includes(key))||['version','id','name','createdAt','state'].some(key=>!Object.hasOwn(value,key))||!value.state||typeof value.state!=='object'||Array.isArray(value.state))throw new Error('Invalid named workspace record.');
  if(researchName(value.name)!==value.name)throw new Error('Invalid stored workspace name.');
- return createWorkspace({id:value.id,name:value.name,now:value.createdAt,state:value.state});
+ return createWorkspace({id:value.id,name:value.name,now:value.createdAt,state:value.state,researchQuestion:value.researchQuestion});
 }
 export function openWorkspace(record){return normalizeWorkspaceState(parseWorkspace(record).state);}
+
+export function parseResearchQuestion(input){
+ const value=researchJsonCopy(input,{maxBytes:16000}),allowed=['version','hypothesis','supportingSeriesIds','contradictingSeriesIds','baselinePackageId','reviewDate','reviewEvent','conditions'];
+ if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!allowed.includes(key))||(value.version??1)!==1)throw Error('Invalid research question.');
+ const text=(item,max,label)=>{if(typeof item!=='string'||item.length>max||/[\u0000-\u0008\u000b-\u001f\u007f]/.test(item))throw Error(`Invalid research question ${label}.`);return item.trim();};
+ const hypothesis=text(value.hypothesis,1000,'hypothesis');if(!hypothesis)throw Error('Research question hypothesis is required.');
+ const ids=items=>{if(!Array.isArray(items)||items.length>20)throw Error('Invalid research question series.');return[...new Set(items.map(researchId))];};
+ const baselinePackageId=value.baselinePackageId===undefined||value.baselinePackageId===''?'':researchId(value.baselinePackageId),reviewDate=value.reviewDate??'',reviewEvent=text(value.reviewEvent??'',200,'review event');
+ if(typeof reviewDate!=='string'||reviewDate&&!isIsoDate(reviewDate))throw Error('Invalid research question review date.');
+ if(!Array.isArray(value.conditions??[])||(value.conditions??[]).length>20)throw Error('Invalid research question conditions.');
+ const conditions=(value.conditions??[]).map(row=>{
+  if(!row||typeof row!=='object'||Object.keys(row).length!==3||!['seriesId','operator','value'].every(key=>Object.hasOwn(row,key))||!['>','>=','<','<=','==','!='].includes(row.operator)||typeof row.value!=='number'||!Number.isFinite(row.value))throw Error('Invalid threshold condition or operator.');
+  return{seriesId:researchId(row.seriesId),operator:row.operator,value:row.value};
+ });
+ return deepFreeze({version:1,hypothesis,supportingSeriesIds:ids(value.supportingSeriesIds??[]),contradictingSeriesIds:ids(value.contradictingSeriesIds??[]),baselinePackageId,reviewDate,reviewEvent,conditions});
+}
+
+/** Summaries describe the controls that actually govern each saved page. */
+export function workspaceSummary(input){
+ const state=parseWorkspace(input).state;
+ const names=ids=>ids.map(id=>series[id]?.short??series[id]?.name??id).join(' / ');
+ const window=state.window==='custom'?`${state.startDate} to ${state.endDate}`:state.window==='observations'?`${state.range} observations`:state.window==='all'?'All retained history':state.window;
+ const dates=label=>`${label} · ${window}`;
+ const summaries={overview:()=>dates('Overview'),indicator:()=>dates(`${names([state.seriesId])} · ${state.transform}`),explore:()=>dates(state.exploreMode==='compare'?`Comparison · ${names(state.selected)} · ${state.comparison} · ${state.alignment==='quarter'?'declared reference-quarter baseline':'exact-date baseline'}`:`${state.exploreMode==='coverage'?'Coverage inventory':'Series catalog'} · ${state.topic} · ${state.frequency}${state.query?' · '+state.query:''}`),macroCoverage:()=>dates(`Economy · ${state.macroFamily} · ${state.macroFamily==='external'?state.externalView:names([state.macroMeasure])}`),labor:()=>dates(`Labor market · ${state.laborGroup}`),yields:()=>dates(`Rates & curves · overlays ${state.yieldDateA||'latest'} / ${state.yieldDateB||'previous'}`),auctions:()=>dates(`Auction demand · ${state.auctionType}${state.auctionId?' · '+state.auctionId:''}`),refinancing:()=>`Refinancing risk · ${state.refinancingHorizon} months · +${state.refinancingShock} bp hypothetical shock`,macro:()=>dates('GDP contributions'),fiscal:()=>dates('Fiscal pressure'),market:()=>dates('Funding & market functioning'),credit:()=>dates('Credit & banking'),ownership:()=>dates('Debt ownership'),watchlist:()=>dates('Watchlist'),calendar:()=>`Calendar · ${state.calendarMonth} · ${state.calendarTopic} · ${state.watchOnly?'watchlist':'all series'}${state.eventId?' · '+state.eventId:''}`,vintages:()=>`Captured history · ${names([state.vintageSeries])} · ${state.vintageCutoff||'latest capture'}`,release:()=>`Release evidence · ${state.publicationSeries} · ${state.publicationPeriod||'latest period'} · ${state.publicationCutoff||'latest retained'}`,research:()=>`Research library · ${state.researchView}`};
+ const summary=(summaries[state.page]??(()=>dates(state.page)))();
+ return summary+(state.page==='macroCoverage'&&state.macroFamily==='prices'?` · Conditional ${state.pceBaseIndex==='pceCoreIndex'?'core':'headline'} PCE: ${state.pceMonthlyRate}% monthly, ${state.pceHorizonMonths} months, ${state.pceTargetAnnualRate}% annual target`:'');
+}

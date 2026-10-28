@@ -14,3 +14,9 @@ const associations={
 export function calendarRelatedIds(event={}){
  return [...new Set([...(event.seriesIds??[event.seriesId]),...(associations[`${event.sourceId}/${event.program}`]??[])])].filter(Boolean);
 }
+/** Publication/update association is narrower than economic relevance. */
+export function calendarPublicationIds(event={}){
+ if(event.sourceId==='fomc')return event.program==='fomc-decision'?['policyTargetUpper','policyTargetLower']:[];
+ if(event.program==='settlement')return [];
+ return calendarRelatedIds(event);
+}

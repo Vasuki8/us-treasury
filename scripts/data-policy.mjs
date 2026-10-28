@@ -1,4 +1,5 @@
 import {isDeepStrictEqual} from 'node:util';
+import {economicEvidencePolicies,matchesEconomicEvidenceFeed,assertEconomicEvidenceSources} from './economic-evidence-policy.mjs';
 import {normalizeVintageTimestamp} from '../src/vintages.js';
 import {creditContextPolicies,matchesCreditContextFeed,assertCreditContextData,fomcCalendarPolicy,matchesFomcCalendarFeed,assertFomcCalendarData} from './credit-context-policy.mjs';
 import { easternFields } from './sources/calendar-utils.mjs';
@@ -18,6 +19,7 @@ import {assertDebtFallbackData} from './debt-fallback-policy.mjs';
 // Dataset-specific commercial reuse review. Evidence and limitations: docs/data-sources.md.
 // An official-looking hostname alone does not establish reuse rights.
 export const dataPolicies = [
+  ...economicEvidencePolicies,
   beaItaPolicy,
   ...creditContextPolicies,
   ...economicDepthPolicies,
@@ -65,6 +67,7 @@ export const dataPolicies = [
 ];
 
 function matchesFeed(value, feed) {
+  if(matchesEconomicEvidenceFeed(value,feed))return true;
   if(value===DTS_DEBT_URL&&feed==='treasury-debt')return true;
   if(feed==='bls-api')return matchesBlsApiFeed(value);
   if(matchesBeaItaFeed(value,feed))return true;
@@ -242,6 +245,7 @@ function assertCalendarData(snapshot) {
 
 /** Stop publication or snapshot replacement when data exceed the reviewed scope. */
 export function assertCommercialData(snapshot) {
+  assertEconomicEvidenceSources(snapshot.sources??{},{complete:false});
   assertDebtFallbackData(snapshot);
   assertBeaItaData(snapshot);
   assertCreditContextData(snapshot);

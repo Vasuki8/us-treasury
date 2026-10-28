@@ -48,9 +48,25 @@ export function summarizeRefinancing(source) {
       const endDate = horizon(asOf, months);
       const principal = sum(securities.filter(row => row.maturityDate <= endDate).map(row => row.principal));
       return { months, endDate, principal, sharePct: principal / totalPrincipal * 100 };
-    }), byType, limitations: [...limitations],
+    }), monthlyMaturities: contractualMaturityLadder(source), byType, limitations: [...limitations],
     methodology: 'Outstanding principal weights remaining calendar days to contractual maturity / 365.25. Horizons include the end date and preserve month-end alignment. This is a calculated remaining maturity, not duration or an official Treasury WAM series.',
   };
+}
+
+/** Calendar-aligned contractual principal, not projected issuance or FRN reset dates. */
+export function contractualMaturityLadder(source, {months = 24} = {}) {
+  if (!Number.isInteger(months) || months < 1 || months > 120) throw new RangeError('Maturity ladder must span 1–120 months');
+  if (!valid(source)) return [];
+  const totalPrincipal = sum(source.securities.map(row => row.principal));
+  let priorEnd = source.asOf, cumulativePrincipal = 0;
+  return Array.from({length:months},(_,index) => {
+    const endDate = horizon(source.asOf,index+1),startDate = new Date(date(priorEnd)+DAY).toISOString().slice(0,10);
+    const securities = source.securities.filter(row=>row.maturityDate>priorEnd&&row.maturityDate<=endDate);
+    const principal = sum(securities.map(row=>row.principal));
+    cumulativePrincipal += principal;priorEnd = endDate;
+    return {startDate,endDate,principal,sharePct:principal/totalPrincipal*100,cumulativePrincipal,
+      byType:TYPES.map(type=>({type,principal:sum(securities.filter(row=>row.type===type).map(row=>row.principal))}))};
+  });
 }
 
 export function refinancingScenario(source, { horizonMonths = 12, rateShockBps = 100, baselineRatePct = 4, frnResetLagDays = 7 } = {}) {

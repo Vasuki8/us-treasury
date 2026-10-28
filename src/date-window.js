@@ -36,6 +36,7 @@ export function resolveDateWindow(range = 12, seriesList = []) {
     return { mode: 'observations', preset: 'observations', count, startDate: null, endDate: null, label: `${count} OBS`, error: null, ...bounds };
   }
   const { preset, startDate = '', endDate = '' } = range;
+  if(preset==='observations'&&Number.isInteger(range.count)&&range.count>=0&&range.count<=50000)return {mode:'observations',preset,count:range.count,startDate:null,endDate:null,label:`${range.count} OBS`,error:null,...bounds};
   const resolved = { mode: 'calendar', preset, count: null, startDate: null, endDate: null, label: preset === 'all' ? 'All' : preset === 'custom' ? 'Custom' : String(preset).toUpperCase(), error: null, ...bounds };
   if (!['1y', '3y', '5y', 'all', 'custom'].includes(preset)) {
     return { ...resolved, error: `Unknown date-window preset: ${String(preset)}.` };

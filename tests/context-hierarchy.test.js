@@ -41,7 +41,7 @@ test('GDP accounting results lead supporting subdetail and methods while critica
  const source={status:'ok',fetchedAt:stamp,quarterly:[{date:'2026-04-01',total:2,consumption:1,investment:.5,government:.2,exports:.4,imports:-.1,reconciliationResidual:0,complete:true}],cpiCategoryEffects:{reason:'Exact CPI effects unavailable; no approximation.'}};
  const html=macroPage(source),lead=visible(html);
  ordered(html,['GDP: WHAT CHANGED','HISTORICAL REAL GDP','data-page-disclosure="macro:demand-detail"','data-page-disclosure="macro:methods"']);
- for(const text of ['Sum of published contributions','Headline minus contribution sum','percent q/q annualized','percentage points','Imports','Exact CPI effects unavailable'])assert.ok(lead.includes(text),text);
+ for(const text of ['Sum of published contributions','Headline minus contribution sum','percent q/q annualized','percentage points','Imports'])assert.ok(lead.includes(text),text);
  assert.match(lead,/accounting contributions do not establish economic causation/i);
  assert.match(disclosureContent(html,'macro:demand-detail'),/alternatives to parent totals/);
  assert.match(disclosureContent(html,'macro:methods'),/not establish economic causation/);

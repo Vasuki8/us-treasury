@@ -14,7 +14,14 @@ test('research routes preserve library views and bounded package/cutoff context'
 test('library explains editable versus frozen research and escapes user labels',()=>{
  const state=parseRoute('#/research'),record=createWorkspace({name:'My <workspace>',state:{...state,page:'explore'}});
  const html=researchPage(state,{library:{workspaces:[record],packages:[],sessionOnly:true,warning:'Quota <warning>'}});
- assert.match(html,/My &lt;workspace&gt;/);assert.match(html,/latest snapshot/);assert.match(html,/frozen|immutable/i);assert.match(html,/session-only/);assert.match(html,/data-open-workspace/);assert.doesNotMatch(html,/type="file"/);assert.match(researchPage({...state,researchView:'packages'},{library:{}}),/type="file"/);
+ assert.match(html,/My &lt;workspace&gt;/);assert.match(html,/latest snapshot/);assert.match(html,/frozen|immutable/i);assert.match(html,/session-only/);assert.match(html,/data-open-workspace/);assert.doesNotMatch(html,/id="research-import"/);assert.match(html,/id="research-settings-import"/);assert.match(researchPage({...state,researchView:'packages'},{library:{}}),/type="file"/);
+});
+
+test('saved views show page-aware summaries and an editable research-question review against frozen evidence',()=>{
+ const record=createWorkspace({id:'rates-question',name:'Rate view',state:{page:'yields',yieldDateA:'2026-01-02',yieldDateB:'2026-10-01'},researchQuestion:{hypothesis:'Rates <hypothesis>',supportingSeriesIds:['sofr'],conditions:[{seriesId:'sofr',operator:'>=',value:4}]}});
+ const html=researchPage(parseRoute('#/research'),{library:{workspaces:[record],packages:[],durability:{workspaces:{'rates-question':{status:'session',reason:'quota'}}}}});
+ for(const text of ['Rates &amp; curves','2026-01-02','2026-10-01','Rates &lt;hypothesis&gt;','data-save-question="rates-question"','question-hypothesis-rates-question','question-support-rates-question','question-contradict-rates-question','question-review-date-rates-question','question-review-event-rates-question','question-condition-series-rates-question','question-condition-op-rates-question','question-condition-value-rates-question','Session-only','Frozen baseline unavailable','data-export-settings'])assert.ok(html.includes(text),text);
+ assert.doesNotMatch(html,/<hypothesis>/);
 });
 test('frozen viewer shows captured inputs, exact observations and original export actions',async()=>{
  const pkg=await createResearchPackage({name:'Pinned <GDP>',state:{...parseRoute('#/series/gdp?window=all'),selected:['gdp']},catalog:series,context:{attachments:[]}});

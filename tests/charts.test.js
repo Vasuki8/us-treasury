@@ -22,7 +22,7 @@ test('weekly chart readouts identify the week-ending date', () => {
 });
 
 // Exercise the real SVG renderer; only the browser's element boundary is replaced.
-function withRenderedCharts(range, comparison, run, {linked=false,transform='level',frozen=false,width=374,height=180,valueScale=1,unit=series.debt.unit}={}) {
+function withRenderedCharts(range, comparison, run, {linked=false,transform='level',frozen=false,width=374,height=180,valueScale=1,unit=series.debt.unit,domainOptions={}}={}) {
   class Element {
     constructor(tag) { this.tag = tag; this.attributes = {}; this.children = []; this.listeners = {}; }
     setAttribute(name, value) { this.attributes[name] = String(value); }
@@ -46,12 +46,13 @@ function withRenderedCharts(range, comparison, run, {linked=false,transform='lev
     const containers = (comparison === 'indexed' ? [null] : ids).map(panelId => {
       const container = new Element('div');
       container.clientWidth = width;
-      container.dataset = { series: ids.join(','), range: JSON.stringify(range), comparison,transform,height:String(height), ...(panelId ? { panelId } : {}),...(linked?{cursorGroup:'comparison'}:{}) };
+      container.dataset = { series: ids.join(','), range: JSON.stringify(range), comparison,transform,height:String(height), ...(panelId ? { panelId } : {}),...(linked?{cursorGroup:'comparison'}:{}),...domainOptions };
       return container;
     });
     renderCharts({ querySelectorAll: () => containers },frozen?{catalog:series}:{});
     const paths = containers.flatMap(container => {
       const rendered = nodes(container), grid = rendered.find(node => node.attributes.class === 'gridline');
+      if(!grid)return [];
       const left = Number(grid.attributes.x1), width = Number(grid.attributes.x2) - left;
       return rendered.filter(node => node.tag === 'path').map(node => ({
         xs: [...node.attributes.d.matchAll(/[ML]([\d.]+) /g)].map(match => Number(match[1])), left, width,
@@ -202,4 +203,18 @@ test('frozen SVG labels retain their evidence classification during keyboard int
   assert.match(svg.attributes['aria-label'],/Frozen research snapshot/);
   assert.doesNotMatch(svg.attributes['aria-label'],/Official snapshot/);
  },{frozen:true});
+});
+
+test('explicit diffusion bounds retain zero and one hundred with a visible balanced-breadth reference',()=>{
+ withRenderedCharts({preset:'all'},'native',({containers,nodes})=>{
+  const rendered=nodes(containers[0]),reference=rendered.find(node=>node.attributes.class==='value-reference'),grid=rendered.filter(node=>node.attributes.class==='gridline');
+  assert.ok(reference);assert.equal(reference.attributes['aria-label'],'Reference 50');
+  assert.ok(Math.abs(Number(reference.attributes.y1)-(Number(grid[0].attributes.y1)+Number(grid.at(-1).attributes.y1))/2)<1e-8);
+  assert.ok(rendered.some(node=>node.tag==='text'&&node.textContent==='0'));
+  assert.ok(rendered.some(node=>node.tag==='text'&&node.textContent==='100'));
+  const svg=rendered.find(node=>node.tag==='svg');svg.listeners.keydown({key:'Home',preventDefault(){}});assert.match(containers[0].textContent,/1\.00/);
+ },{domainOptions:{yDomain:'[0,100]',yDomainExact:'true',yReference:'50'}});
+ for(const domainOptions of [{yDomain:'[0,100]',yDomainExact:'true',yReference:'101'},{yDomainExact:'true'},{yDomain:'[0,100]',yReference:'NaN'}]){
+  withRenderedCharts({preset:'all'},'native',({containers})=>assert.match(containers[0].textContent,/configuration error/i),{domainOptions});
+ }
 });

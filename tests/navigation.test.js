@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseRoute, routeFor } from '../src/router.js';
-import { readPreferences, writePreferences } from '../src/storage.js';
+import { readPreferences, writePreferences, normalizePreferences } from '../src/storage.js';
 import { releases } from '../src/data.js';
 import {readFile} from 'node:fs/promises';
 
@@ -14,7 +14,7 @@ function themeControl(storage){
   const start=application.indexOf('function persist()'),end=application.indexOf('function rememberFocus()',start);
   assert.ok(start>=0&&end>start,'Theme helpers must remain independently usable');
   const click=/root\.addEventListener\('click',async event=>\{([^]*?)\n\}\);/.exec(application);assert.ok(click,'Native button click dispatch must exist');
-  const env={state:readPreferences(storage),storage,writePreferences,root,document,announce:message=>notices.push(message),render:()=>{throw Error('Theme changes must preserve the focused native control');}};
+  const env={state:readPreferences(storage),storage,writePreferences,normalizePreferences,root,document,announce:message=>notices.push(message),render:()=>{throw Error('Theme changes must preserve the focused native control');}};
   const handlers=new Function('env',`let {${Object.keys(env).join(',')}}=env;${application.slice(start,end)};return {apply:applyAppearance,click:async event=>{${click[1]}},state:()=>state};`)(env);
   return {...handlers,button,label,sun,moon,attributes,root,document,meta,density,notices};
 }

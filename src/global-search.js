@@ -1,4 +1,4 @@
-import {searchSeries} from './search.js';
+import {searchSeries,groupSearchMeasurements} from './search.js';
 import {calendarRelatedIds} from './macro-calendar.js';
 import {escapeHtml as esc} from './ui.js';
 
@@ -9,7 +9,7 @@ const pageDefinitions=[
  ['GDP contributions','#/macro','growth gross domestic product components consumption investment'],
  ['Inflation','#/economy?family=prices','economy consumer prices CPI PCE inflation momentum'],
  ['Labor market','#/economy/labor','economy jobs employment unemployment wages participation claims payroll'],
- ['Housing','#/economy?family=housing','economy starts permits completions construction'],
+ ['Residential Construction','#/economy?family=housing','housing economy starts permits completions construction'],
  ['Trade & current account','#/economy?family=external','economy trade balance external exports imports income transfers'],
  ['Credit & banking','#/credit','economy credit banking transmission loans deposits'],
  ['Policy rates','#/economy?family=policy','fed FOMC federal reserve monetary policy target funding'],
@@ -55,7 +55,7 @@ export function globalSearch(query,{catalog=[],events=[],library={},now=new Date
    const pastA=a.date<today,pastB=b.date<today;
    return Number(pastA)-Number(pastB)||(pastA?String(b.date).localeCompare(String(a.date)):String(a.date).localeCompare(String(b.date)))||String(a.time??'').localeCompare(String(b.time??''))||String(a.id).localeCompare(String(b.id));
   })
-  .map(event=>({id:event.id,label:event.name,date:event.date,time:event.time??null,periodLabel:event.periodLabel??null,agency:event.agency??event.sourceId,basis:basisLabel(event),past:event.date<today,href:`#/calendar?month=${encodeURIComponent(String(event.date).slice(0,7))}&event=${encodeURIComponent(event.id)}&scope=${event.sourceId==='treasury'?'treasury':'macro'}`}));
+  .map(event=>({id:event.id,label:event.name,date:event.date,time:event.time??null,periodLabel:event.periodLabel??null,agency:event.agency??event.sourceId,basis:basisLabel(event),past:event.date<today,href:`#/calendar?month=${encodeURIComponent(String(event.date).slice(0,7))}&event=${encodeURIComponent(event.id)}&scope=${['treasury','treasury-auctions'].includes(event.sourceId)?'treasury':'macro'}`}));
  result.research=[
   ...(library.workspaces??[]).filter(item=>matches(normalized,[item.name,item.state?.page,indicatorText([...new Set([item.state?.seriesId,...item.state?.selected??[]].filter(Boolean))])].join(' '))).map(item=>({id:item.id,label:item.name,kind:'workspace',description:'Saved view · opens current data'})),
   ...(library.packages??[]).filter(item=>matches(normalized,[item.name,indicatorText(item.request?.ids??[]),item.resolvedWindow?.label].join(' '))).map(item=>({id:item.id,label:item.name,kind:'package',description:'Frozen values · retained package',href:`#/research?view=packages&package=${encodeURIComponent(item.id)}`})),
@@ -66,6 +66,10 @@ export function globalSearch(query,{catalog=[],events=[],library={},now=new Date
 export function globalSearchPanel(result,{includeIndicators=true}={}) {
  if(!result.query)return '';
  const anchor=item=>`<a href="${esc(item.href)}">${esc(item.label)}</a>`;
- const group=(label,items,render)=>`<section class="global-search-group" aria-label="${label} search results"><h3>${label} <span class="muted">${items.length}</span></h3>${items.length?`<ul>${items.slice(0,8).map(item=>`<li>${render(item)}</li>`).join('')}</ul>${items.length>8?`<p class="small muted">Showing the first 8 of ${items.length} matches.</p>`:''}`:'<p class="small muted">No matches.</p>'}</section>`;
- return `<div class="panel-body global-search-results" role="region" aria-label="Search across the workspace"><div class="grid g11">${group('Pages',result.pages,anchor)}${group('Scheduled events',result.events,item=>`${anchor(item)}<span class="table-code muted">${esc(item.date)} · ${esc(item.time??'Time not supplied')} Eastern · ${esc(item.agency)}${item.periodLabel?` · ${esc(item.periodLabel)}`:''} · ${esc(item.basis)} · ${item.past?'Earlier schedule · ':''}Schedule only</span>`)}</div>${group('Saved research',result.research,item=>`${item.kind==='workspace'?`<button type="button" class="link-button" data-open-workspace="${esc(item.id)}">${esc(item.label)}</button>`:anchor(item)}<span class="table-code muted">${esc(item.description)}</span>`)}${includeIndicators?group('Indicators',result.indicators,item=>`<a href="#/series/${encodeURIComponent(item.id)}">${esc(item.name)}</a><span class="table-code mono muted">${esc(item.code)}</span>`):''}<p class="small muted">Scheduled events are source calendar entries; publication is verified separately. Saved research is local to this browser.</p></div>`;
+ const group=(label,items,render)=>items.length?`<details class="global-search-group" aria-label="${label} search results"${label==='Indicators'?' open':''}><summary>${label} <span class="muted">${items.length}</span></summary><ul>${items.map(item=>`<li>${render(item)}</li>`).join('')}</ul></details>`:'';
+ const events=group('Scheduled events',result.events,item=>`${anchor(item)}<span class="table-code muted">${esc(item.date)} · ${esc(item.time??'Time not supplied')} Eastern · ${esc(item.agency)}${item.periodLabel?` · ${esc(item.periodLabel)}`:''} · ${esc(item.basis)} · ${item.past?'Past event · Earlier schedule':'Upcoming event'} · Schedule only</span>`);
+ const research=group('Saved research',result.research,item=>`${item.kind==='workspace'?`<button type="button" class="link-button" data-open-workspace="${esc(item.id)}">${esc(item.label)}</button>`:anchor(item)}<span class="table-code muted">${esc(item.description)}</span>`);
+ const indicator=item=>`<a href="#/series/${encodeURIComponent(item.id)}">${esc(item.name)}</a><span class="table-code mono muted">${esc(item.code)} · ${esc(item.source?.name??'')}</span>`;
+ const indicators=includeIndicators?group('Indicators',groupSearchMeasurements(result.indicators),entry=>indicator(entry.primary)+(entry.variants.length?`<details><summary>Separate source evidence · ${entry.variants.length}</summary><ul>${entry.variants.map(item=>`<li>${indicator(item)}</li>`).join('')}</ul></details>`:'')):'';
+ return `<div class="panel-body global-search-results" role="region" aria-label="Search across the workspace">${indicators}<div class="grid g11">${group('Pages',result.pages,anchor)}${events}</div>${research}<p class="small muted">Scheduled events are source calendar entries; publication is verified separately. Saved research is local to this browser.</p></div>`;
 }

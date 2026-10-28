@@ -15,7 +15,7 @@ const build=(extra={})=>buildSourceAttemptReport({checkedAt,sources:{bea:source(
 test('attempt report includes only attempted known inputs and fixed collection metadata',()=>{
  const secret='private-key-canary';
  const report=build({sources:{bea:source({error:secret,provenance:[{url:`https://example.com/?key=${secret}`}]}),census:source()},calendarSources:{bls:source({status:'error',fetchedAt:'2026-10-24T12:00:00Z',error:secret,failure:{kind:'http',status:503,requestedUrl:secret}})},attemptedCalendarIds:['bls']});
- assert.equal(SOURCE_ATTEMPT_IDS.length,30);
+ assert.equal(SOURCE_ATTEMPT_IDS.length,32);
  assert.deepEqual(report,{schemaVersion:1,checkedAt,sources:[
   {id:'data:bea',status:'ok',fetchedAt:'2026-10-25T12:00:01.000Z',lastAttemptAt:checkedAt,httpStatus:null,cached:false},
   {id:'calendar:bls',status:'error',fetchedAt:'2026-10-24T12:00:00.000Z',lastAttemptAt:checkedAt,httpStatus:503,cached:true},

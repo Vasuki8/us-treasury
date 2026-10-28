@@ -18,7 +18,12 @@ export function creditWindowSources(sources){
 }
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
 const status=source=>source?.fetchedAt?(source.status==='ok'?'CAPTURED':'CACHED'):'UNAVAILABLE';
-const format=(id,value)=>!finite(value)?'Unavailable':creditContextRegistry[id].format==='billions'?`$${value.toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3})}B`:`${value.toFixed(creditContextRegistry[id].precision)}%`;
+function format(id,value){
+ if(!finite(value))return 'Unavailable';
+ if(creditContextRegistry[id].format!=='billions')return `${value.toFixed(creditContextRegistry[id].precision)}%`;
+ const digits=Math.abs(value)>=1000?1:Math.abs(value)>=1?2:3;
+ return `${value.toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits})}B`;
+}
 function notice(source){const text=source?.series?.onRrpAccepted?.sourceNotice??'';return text||`${NY_FED_DATA_NOTICE} ${NY_FED_PRODUCT_NOTICE}`;}
 function metrics(source,ids){return `<section class="metrics" aria-label="Banking and policy observations">${ids.map(id=>{const definition=creditContextRegistry[id],row=source?.series?.[id]?.observations?.at(-1);return `<a class="metric" href="#/series/${id}"><span class="metric-name">${esc(definition.name)}</span><strong class="metric-value">${esc(format(id,row?.value))}</strong><span class="metric-period">${esc(row?.date??'No reference date')} · ${esc(definition.frequency)}${row?.sourcePeriodLabel?` · Source label ${esc(row.sourcePeriodLabel)}`:''}</span><span class="metric-basis">${esc(definition.unit)} · ${esc(definition.adjustment)}</span></a>`;}).join('')}</section>`;}
 function groupPanel(group,index,sources){
@@ -36,7 +41,7 @@ export function creditContextPage(sources=dataStatus.sources,calendarSource=data
   return heading('Credit & policy transmission','How do bank balances, lending conditions and Federal Reserve funding context differ?',button('Download data','data-export-credit'))
     +`<p class="section-copy">${esc(CREDIT_CONTEXT_LIMITATION)}</p>`
     +`<p class="section-copy">Charts and data downloads show the latest three years per source group, using exact dates. Open a measurement for its full retained history.</p>`+creditContextGroups.map((group,index)=>groupPanel(group,index,sources)).join('')
-    +fomcContext(calendarSource);
+    +`<p class="panel-note"><a href="#/economy?family=policy">Policy rates · FOMC decisions, minutes & projections ↗</a>. The complete official reference list is grouped with policy-rate observations.</p>`;
 }
 
 export function creditContextCsv(sources){
