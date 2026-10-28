@@ -884,3 +884,30 @@ td button,th button,.link-button { color:var(--link); padding:0; font:inherit; }
  .fiscal-gdp-context>.table-wrap>table>thead>tr>th:first-child { width:70%; }
  .fiscal-gdp-mobile-basis { display:block; }
 }
+
+/* Reviewed reading hierarchy, shared by the remaining native workspaces. */
+.page-hierarchy .reading-group { min-width:0; margin:14px 0 16px; }
+.page-hierarchy .reading-group>h2 { margin:0 0 8px; font-size:12px; font-weight:500; letter-spacing:.025em; }
+.page-hierarchy .reading-group .metrics { grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr)); gap:0; max-width:none; margin:0; border:1px solid var(--border); border-radius:4px; background:var(--panel); }
+.page-hierarchy .reading-group .metric { padding:10px 12px; border:0; border-radius:0; box-shadow:inset -1px -1px var(--divider); background:transparent; }
+.page-hierarchy .reading-group .metric:hover { background:var(--hover); }
+.page-hierarchy .reading-group .metric-value { font-size:clamp(16px,2.4cqw,21px); }
+.page-hierarchy .metric-basis { display:block; margin-top:4px; font-size:11px; line-height:1.45; color:var(--muted); overflow-wrap:anywhere; }
+.page-hierarchy .reading-group>.panel,.page-hierarchy .reading-group>.grid { margin-top:10px; }
+.page-hierarchy .reading-group>.panel+.panel { margin-top:10px; }
+.page-hierarchy .reading-group-note { margin-top:7px; color:var(--muted); font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
+.page-hierarchy .workspace-basis { margin:10px 0 14px; padding:8px 10px; border-left:2px solid var(--border); background:var(--panel); font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
+.page-hierarchy .workspace-basis>.panel-note { padding:3px 0; border:0; }
+.page-hierarchy .workspace-basis>p+p { margin-top:4px; }
+.page-hierarchy .workspace-analysis { align-items:start; margin-bottom:16px; }
+.page-hierarchy .reading-group :is(tbody th,td:not(.num)) { white-space:normal; overflow-wrap:anywhere; }
+.page-hierarchy[data-hierarchy-page="vintages"] .workspace-analysis .table-code { overflow-wrap:normal; }
+.overview-hierarchy .oh-reading .reading-basis { display:block; margin-top:3px; color:var(--muted); font-size:11px; }
+.labor-reading-basis { display:block; margin-top:5px; color:var(--muted); font-size:11px; line-height:1.45; overflow-wrap:anywhere; }
+#app[data-density="comfortable"] .page-hierarchy .reading-group .metric { padding-block:13px; }
+@container(max-width:650px) {
+ .page-hierarchy .reading-group .metrics:has(>.metric:nth-child(2)) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .page-hierarchy .reading-group .metrics:has(>.metric:last-child:nth-child(3))>.metric:last-child,.page-hierarchy .reading-group .metrics:has(>.metric:last-child:nth-child(5))>.metric:last-child { grid-column:1/-1; }
+ .page-hierarchy .reading-group .metric { padding:9px; }
+ .page-hierarchy .workspace-analysis { grid-template-columns:minmax(0,1fr); }
+}
