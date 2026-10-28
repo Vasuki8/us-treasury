@@ -1,5 +1,7 @@
 # Research reliability local verification — October 28, 2026
 
+This records the original local-only acceptance. The subsequent authorized merge, deployment and live verification are recorded in the [release record](research-reliability-release-2026-10-28.md).
+
 Implemented in the isolated worktree on `codex/research-reliability`, based on `d363bde6b4a2f28ecd9c555c3580b51122c8750e`. No commit, push, merge or deployment was performed. The original checkout has only its preexisting untracked `exports/`, `output/` and `tmp/` directories. Public-origin research storage and the deployed site were not modified.
 
 Open the production build at **http://127.0.0.1:4192/#/overview**. The preview is running with `node server.mjs --dist --port 4192`. To restart it, run that command from this worktree after `npm run build`.
