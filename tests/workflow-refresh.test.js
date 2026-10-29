@@ -50,7 +50,8 @@ test('refresh downloads run only after a successful due check', () => {
 });
 
 test('core labor bootstrap explicitly selects only BLS while automatic and all-source modes retain their scope',()=>{
- const command=jobs.refresh_check.match(/^        run: (.+)$/m)?.[1];
+ const run=jobs.refresh_check.match(/^        run: ([^\r\n]+)((?:\r?\n          [^\r\n]*)*)/m);
+ const command=run?.[1]==='>-'?run[2].trim().split(/\r?\n/).map(line=>line.trim()).join(' '):run?.[1];
  assert.ok(command);
  const render=data=>command.replace(/\$\{\{([\s\S]*?)\}\}/g,(_,expression)=>String(vm.runInNewContext(expression,data,{timeout:1000})));
  const labor=render(context('workflow_dispatch',{force:true,scope:'core-labor'}));

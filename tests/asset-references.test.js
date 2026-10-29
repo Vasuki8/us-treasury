@@ -1,5 +1,26 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {moduleAssetReferences} from '../scripts/asset-references.mjs';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {moduleAssetReferences, staticModuleReferences} from '../scripts/asset-references.mjs';
 import {readFile} from 'node:fs/promises';
+test('static discovery includes imports and re-exports while excluding lazy modules and history descriptors', () => {
+  const source = [
+    "import './side-effect.js';",
+    "import value from './default.js';",
+    "import {a} from './named.js';",
+    "export {b} from './re-export.js';",
+    "export * from './all.js';",
+    "import{c}from'./compact-import.js';",
+    "export{d}from'./compact-export.js';",
+    "export*from'./compact-all.js';",
+    "const action='import'; const label='not a module';",
+    "const lazy=()=>import('./later.js');",
+    `const archive={url:'./history-${'a'.repeat(64)}.json.gz'};`,
+  ].join('\n');
+  assert.deepEqual(staticModuleReferences(source), [
+    './side-effect.js', './default.js', './named.js', './re-export.js', './all.js',
+    './compact-import.js', './compact-export.js', './compact-all.js',
+  ]);
+});
 test('asset discovery includes static modules and both lazy archive variants without interpreting arbitrary code',()=>{
  const a='a'.repeat(64),b='b'.repeat(64);assert.deepEqual(moduleAssetReferences(`import {a} from './data.js'; export {b} from './other.js';const descriptor={compressed:{url:'./history-${a}.json.gz'},fallback:{url:"./history-${b}.json"}};`),['./data.js','./other.js',`./history-${a}.json.gz`,`./history-${b}.json`]);
 });

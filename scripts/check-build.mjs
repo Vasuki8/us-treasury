@@ -3,8 +3,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createAppServer } from '../server.mjs';
 import {moduleAssetReferences} from './asset-references.mjs';
+import {measureBuild, reportBuildMetrics} from './build-metrics.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+reportBuildMetrics(await measureBuild(path.join(root, 'dist')));
 const server = createAppServer(path.join(root, 'dist'));
 await new Promise((resolve, reject) => {
   server.once('error', reject);

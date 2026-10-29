@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;
+      connect-src 'self'; object-src 'none'; base-uri 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Meridian — a compact US macroeconomic research workspace with traceable official Treasury, BLS and BEA snapshots.">
   <meta name="theme-color" content="#f3f6fa">
@@ -31,10 +34,12 @@
       </div>
     </header>
     <nav class="functionbar" aria-label="Main navigation">
-      <a href="#/overview" data-nav="overview" aria-keyshortcuts="F1">Overview</a>
-      <a href="#/economy" data-nav-group="economy" aria-keyshortcuts="F2">Economy</a>
-      <a href="#/calendar" data-nav="calendar" aria-keyshortcuts="F4">Calendar</a>
-      <a href="#/explore" data-nav="explore" aria-keyshortcuts="F5"><span class="nav-full-label">Explore data</span><span class="nav-short-label">Explore</span></a>
+      <a href="#/overview" data-nav="overview">Overview</a>
+      <a href="#/economy" data-nav-group="economy">Economy</a>
+      <a href="#/calendar" data-nav="calendar">Calendar</a>
+      <a href="#/explore" data-nav="explore">
+        <span class="nav-full-label">Explore data</span><span class="nav-short-label">Explore</span>
+      </a>
       <a class="nav-secondary" href="#/economy?family=policy" data-nav-group="fed">Fed &amp; rates</a>
       <a class="nav-secondary" href="#/fiscal" data-nav-group="treasury">Treasury &amp; funding</a>
       <details class="navigation-more" id="navigation-more">

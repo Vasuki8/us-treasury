@@ -688,9 +688,6 @@ document.addEventListener('keydown',event=>{
   if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){
     event.preventDefault();document.getElementById('command-input').focus();return;
   }
-  const editable=event.target.matches('input,select,textarea,[contenteditable]');
-  const key=['F1','F2','F3','F4','F5'].indexOf(event.key);
-  if(key>=0 && !editable){event.preventDefault();navigate({page:['overview','macroCoverage','indicator','calendar','explore'][key]});}
   const tab=event.target.closest('[role="tab"]');
   if(tab && ['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){
     event.preventDefault();
