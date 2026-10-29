@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Meridian — a compact US macroeconomic research workspace with traceable official Treasury, BLS and BEA snapshots.">
-  <meta name="theme-color" content="#f7f5ec">
+  <meta name="theme-color" content="#f3f6fa">
   <title>Meridian — US Macro Research</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
@@ -14,14 +14,21 @@
   <a class="skip-link" href="#main-content">Skip to content</a>
   <div id="app" data-theme="Light" data-density="compact">
     <header class="brandbar">
-      <a class="brand" href="#/overview">MERIDIAN<span>US MACRO / RESEARCH TERMINAL</span></a>
-      <span class="data-mode"><span aria-hidden="true">●</span> OFFICIAL SNAPSHOT</span>
+      <a class="brand" href="#/overview" aria-label="Meridian overview">MERIDIAN</a>
+      <form class="commandbar" id="command-form" role="search">
+        <label class="sr-only" for="command-input">Search indicators, pages and research</label>
+        <input id="command-input" placeholder="Search data or pages" aria-description="Exact indicator codes open the indicator. Commands US, LABOR, UNRATE, CAL and FIND remain available." autocomplete="off" spellcheck="false" maxlength="200">
+        <kbd class="command-hint">Ctrl K</kbd><button class="go" type="submit" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></button>
+      </form>
       <button id="theme-toggle" type="button" class="appearance theme-toggle" aria-label="Light theme. Switch to Dark theme." title="Switch to Dark theme">
         <span class="theme-icon" data-theme-sun aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg></span>
         <span class="theme-icon" data-theme-moon aria-hidden="true" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M20.9 13A9 9 0 1 1 11 3.1 7 7 0 0 0 20.9 13Z"></path></svg></span>
         <span data-theme-label hidden>Light</span>
       </button>
-      <label class="appearance density-label">Density <select id="density-select"><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select></label>
+      <button type="button" class="appearance theme-toggle display-options-toggle" popovertarget="display-options" aria-label="Display options" title="Display options"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="3" fill="currentColor" stroke="none"/></svg></button>
+      <div id="display-options" class="display-options" popover aria-label="Display options">
+        <label class="appearance density-label">Display density <select id="density-select"><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select></label>
+      </div>
     </header>
     <nav class="functionbar" aria-label="Main navigation">
       <a href="#/overview" data-nav="overview" aria-keyshortcuts="F1">Overview</a>
@@ -32,7 +39,7 @@
       <a class="nav-secondary" href="#/fiscal" data-nav-group="treasury">Treasury &amp; funding</a>
       <details class="navigation-more" id="navigation-more">
         <summary aria-label="More pages">More<svg aria-hidden="true" focusable="false" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 4.5 3 3 3-3"/></svg></summary>
-        <div class="navigation-menu"><p class="navigation-group-label">My research</p>
+        <div class="navigation-menu"><div class="mobile-density"><label for="density-select-mobile">Density</label><select id="density-select-mobile"><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select></div><p class="navigation-group-label">My research</p>
           <a href="#/series/unrate" data-nav="indicator" id="indicator-mobile">Recent indicator</a>
           <a href="#/watchlist" data-nav="watchlist">Watchlist <span class="nav-count" id="mobile-saved-count">0</span></a>
           <a href="#/research" data-nav="research" data-nav-view="workspaces">Saved views</a>
@@ -45,43 +52,40 @@
           <a href="#/refinancing" data-nav="refinancing">Refinancing exposure</a>
           <a href="#/auctions" data-nav="auctions">Auction demand</a>
           <a href="#/ownership" data-nav="ownership">Debt ownership</a>
-          <p class="navigation-group-label">Data &amp; evidence</p><a href="#/research?view=publications" data-nav="research" data-nav-view="publications">Published estimates</a><a href="#/vintages" data-nav="vintages">Captured history</a><a href="#/research?view=changes" data-nav="research" data-nav-view="changes">Capture changes</a><button type="button" class="action link-button" data-source-health>Source health &amp; coverage</button>
+          <p class="navigation-group-label">Data &amp; evidence</p><a href="#/research?view=publications" data-nav="research" data-nav-view="publications">Publication History</a><a href="#/vintages" data-nav="vintages">Retrieval History</a><a href="#/research?view=changes" data-nav="research" data-nav-view="changes">Capture changes</a><button type="button" class="action link-button" data-source-health>Source health &amp; coverage</button>
         </div>
       </details>
     </nav>
-    <form class="commandbar" id="command-form" role="search">
-      <label for="command-input">SEARCH <span aria-hidden="true">›</span></label>
-      <input id="command-input" placeholder="Search indicators, pages, releases or saved research" aria-description="Exact indicator codes open the indicator. Commands US, LABOR, UNRATE, CAL and FIND remain available." autocomplete="off" spellcheck="false" maxlength="200">
-      <kbd class="command-hint">Ctrl K</kbd><button class="go" type="submit">GO</button>
-    </form>
     <div class="ticker" id="ticker" aria-label="Official macro snapshot"></div>
     <div id="data-freshness"></div>
     <div class="shell">
       <aside class="rail" aria-label="Workspace navigation">
-        <div class="rail-title">WORKSPACE</div>
-        <a href="#/overview" data-nav="overview"><span class="code">US</span>Overview</a>
-        <a href="#/economy" data-nav-group="economy"><span class="code">ECO</span>Economy</a>
-        <a href="#/economy?family=policy" data-nav-group="fed"><span class="code">FED</span>Fed &amp; rates</a>
-        <a href="#/fiscal" data-nav-group="treasury"><span class="code">UST</span>Treasury &amp; funding</a>
-        <a href="#/calendar" data-nav="calendar"><span class="code">CAL</span>Calendar</a>
-        <a href="#/explore" data-nav="explore"><span class="code">EXP</span>Explore data</a>
-        <hr><div class="rail-title">MY RESEARCH</div>
-        <a href="#/watchlist" data-nav="watchlist"><span class="code">FOL</span>Watchlist</a>
-        <a href="#/research" data-nav="research" data-nav-view="workspaces"><span class="code">SAV</span>Saved views</a>
-        <a href="#/research?view=packages" data-nav="research" data-nav-view="packages"><span class="code">PIN</span>Frozen results</a>
-        <hr><details><summary class="rail-title">DATA &amp; EVIDENCE</summary>
-          <a href="#/research?view=publications" data-nav="research" data-nav-view="publications">Published estimates</a>
-          <a href="#/vintages" data-nav="vintages">Captured history</a>
+        <div class="rail-title">Workspace</div>
+        <a href="#/overview" data-nav="overview">Overview</a>
+        <a href="#/economy" data-nav-group="economy">Economy</a>
+        <a href="#/economy?family=policy" data-nav-group="fed">Fed &amp; rates</a>
+        <a href="#/fiscal" data-nav-group="treasury">Treasury &amp; funding</a>
+        <a href="#/calendar" data-nav="calendar">Calendar</a>
+        <a href="#/explore" data-nav="explore">Explore data</a>
+        <hr><div class="rail-title">Research</div>
+        <a href="#/watchlist" data-nav="watchlist">Watchlist</a>
+        <a href="#/research" data-nav="research" data-nav-view="workspaces">Saved views</a>
+        <a href="#/research?view=packages" data-nav="research" data-nav-view="packages">Frozen results</a>
+        <hr><details class="rail-group"><summary class="rail-title">Shortcuts</summary>
+          <div class="rail-title">Quick series</div>
+          <a href="#/series/gdp"><span class="code">GDP</span>Real growth</a>
+          <a href="#/series/cpi"><span class="code">CPI</span>Inflation</a>
+          <a href="#/series/debt"><span class="code">DBT</span>Federal debt</a>
+          <a href="#/series/yield"><span class="code">UST</span>Treasury 10Y</a>
+          <div class="rail-title">Followed indicators <span id="saved-count">0</span></div>
+          <div id="saved-list" class="saved-list"></div>
+        </details>
+        <details class="rail-group"><summary class="rail-title">Data &amp; evidence</summary>
+          <a href="#/research?view=publications" data-nav="research" data-nav-view="publications">Publication History</a>
+          <a href="#/vintages" data-nav="vintages">Retrieval History</a>
           <a href="#/research?view=changes" data-nav="research" data-nav-view="changes">Capture changes</a>
           <button type="button" class="action link-button" data-source-health>Source health &amp; coverage</button>
-        </details><hr><div class="rail-title">QUICK SERIES</div>
-        <a href="#/series/gdp"><span class="code">GDP</span>Real growth</a>
-        <a href="#/series/cpi"><span class="code">CPI</span>Inflation</a>
-        <a href="#/series/debt"><span class="code">DBT</span>Federal debt</a>
-        <a href="#/series/yield"><span class="code">UST</span>Treasury 10Y</a>
-        <hr><div class="rail-title"><a href="#/watchlist" data-nav="watchlist">MY WATCHLIST <span id="saved-count">0</span></a></div>
-        <div id="saved-list" class="saved-list"></div>
-        <hr><div class="rail-note">UNITED STATES<br><span class="mono">ET · USD</span><br><br>OFFICIAL SNAPSHOT<br>Agency retrieval status</div><button type="button" class="link-button" data-source-health aria-controls="data-freshness">Collection details ↗</button>
+        </details>
       </aside>
       <main id="main-content" tabindex="-1"><div class="loading">Loading workspace…</div></main>
     </div>

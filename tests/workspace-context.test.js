@@ -45,7 +45,7 @@ test('watchlist is a real route with safe return access through comparisons',()=
 });
 
 test('return routes stay in approved workspaces with at most one watchlist origin',()=>{
- for(const value of ['https://example.com','#/series/sofr','#/exploreevil','javascript:alert(1)','//example.com','#/watchlist\n'])assert.equal(safeReturnTo(value),null);
+ for(const value of ['https://example.com','#/series/missing','#/exploreevil','javascript:alert(1)','//example.com','#/watchlist\n'])assert.equal(safeReturnTo(value),null);
  assert.equal(safeReturnTo('#/explore?q=Treasury&return=%23%2Fwatchlist'),'#/explore?q=Treasury&return=%23%2Fwatchlist');
  assert.equal(safeReturnTo('#/explore?return=%23%2Fexplore'),'#/explore');
  assert.equal(safeReturnTo('#/watchlist?return=%23%2Fexplore'),'#/watchlist');

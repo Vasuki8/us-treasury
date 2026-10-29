@@ -20,7 +20,8 @@ test('external decomposition adds eight all-component charts while preserving on
 });
 
 test('new frozen comparison alone binds the existing component catalog and never borrows current data',async()=>{
- const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8'),start=source.indexOf('function renderCurrentCharts()'),end=source.indexOf('function researchActions()',start);
+ const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8'),start=source.indexOf('function renderCurrentCharts('),end=source.indexOf('function researchActions()',start);
+ assert.ok(start>=0&&end>start,'The integration probe extracts the current chart renderer, including its inspection argument.');
  let pkg=null;const calls=[],state=parseRoute('#/economy?family=external');
  const run=new Function('currentPackage','renderCharts','main','dataStatus','state','currentAccountGdpHistoryChartCatalog','currentAccountGdpBreakdownChartCatalog','currentAccountGdpTrailingChartCatalog','currentAccountGdpComparisonChartCatalog','currentAccountGdpContributionsChartCatalog',source.slice(start,end)+';return renderCurrentCharts;')(()=>pkg,(...args)=>calls.push(args),{},snapshot,state,currentAccountGdpHistoryChartCatalog,currentAccountGdpBreakdownChartCatalog,currentAccountGdpTrailingChartCatalog,currentAccountGdpComparisonChartCatalog,currentAccountGdpContributionsChartCatalog);
  const args=buildPinContext(state);assert.ok(args.context.currentAccountGdpAllComponentEffects);

@@ -21,22 +21,25 @@ const ordered = (html, labels) => {
 test('Overview keeps primary readings and supporting measurements individually inspectable in the hierarchy', () => {
   const html = overviewPage(state());
   assert.match(html, /class="radar-page radar-overview overview-hierarchy"/);
-  for (const id of ['gdp','pceCore','payroll','unrate','yield','spread2s10s','interestRevenueRatio']) {
+  for (const id of ['gdp','pceCore','payroll','unrate','policyTargetRange','yield','spread2s10s','interestRevenueRatio']) {
     const reading = html.match(new RegExp('data-overview-reading="'+id+'"([^]*?)</a>'));
     assert.ok(reading, id+' remains individually inspectable');
     assert.match(reading[1], /class="reading-value">[^<]+<\/strong>/);
     assert.match(reading[1], /class="reading-unit">[^<]+ · [^<]+<\/span>/);
     assert.match(reading[1], /class="reading-change"/);
   }
-  assert.equal((html.match(/class="oh-topic"/g)||[]).length,6);
+  assert.equal((html.match(/class="oh-topic"/g)||[]).length,8);
   for(const id of ['realSpendingMonthly','pceCoreMonthly','effr','policyTargetLower','policyTargetUpper','publicDebt','claimsAdvance','continuedClaimsAdvance'])assert.ok(html.includes('#/series/'+id),id);
-  for (const href of ['#/economy?family=activity','#/economy?family=prices','#/economy/labor','#/economy?family=policy','#/yields','#/fiscal','#/explore']) assert.ok(html.includes(href));
+  for (const href of ['#/economy?family=activity','#/economy?family=prices','#/economy/labor','#/economy?family=policy','#/yields','#/fiscal']) assert.ok(html.includes(href),href);
+  assert.match(html,/data-compare="pceMonthly,pceCoreMonthly"/,'The focused comparison action replaces the generic catalog link');
   assert.match(html,/Fed funds target range/);assert.match(html,/Effective rates and target bounds can refer to different days/);
 });
 
-test('Overview leads with conditions, then catalysts and momentum, with research exceptions in supporting disclosures', () => {
+test('Overview leads with conditions and momentum, then catalysts, with research exceptions in supporting disclosures', () => {
   const html=overviewPage(state({saved:['unrate']}), {checkpoint:{enabled:true,since:'2026-10-20'},changes:{status:'ready',rows:[{seriesId:'unrate',kind:'value-change',period:'2026-09-01',capturedAt:'2026-10-22T12:00:00Z'}]}});
-  ordered(html,['ECONOMIC CONDITIONS','NEXT CATALYSTS','Published results · GDP, claims &amp; CPI','PCE INFLATION · MONTHLY','PAYROLL GAINS · 3-MONTH AVERAGE','Activity &amp; income','Weekly claims','My research','Following 1','Captured changes 1','Collection attention 0','Data &amp; methods','Collection failures and retained-source status are in Refresh details above']);
+  ordered(html,['ECONOMIC CONDITIONS','Monthly inflation','Payroll momentum','NEXT CATALYSTS','Published results · GDP, claims &amp; CPI','Activity &amp; income','Weekly claims','My research','Following 1','Captured changes 1','Collection attention 0','Data &amp; methods','Collection failures and retained-source status are in Refresh details above']);
+  assert.match(html,/Percent month over month · headline and core PCE\. Year-over-year inflation is a different horizon/);
+  assert.match(html,/Thousands of jobs · three-month average of monthly payroll gains; establishment jobs differ from household people measures/);
   assert.match(html,/retrieval update is not itself an official publication or market surprise/);
   assert.match(html,/Routine debt dates remain in the full calendar; schedules do not confirm results/);
   assert.match(html,/Observed value change between retrievals/);
@@ -52,7 +55,7 @@ test('Overview renders a retained historical publication through reviewed archiv
   const row=claimsFact({period:'2026-03-14',publicationDate:'2026-03-19'});
   row.id=`dol-${row.seriesId}-${row.period}-${row.releaseStage}-${row.publicationDate}`;
   const html=overviewPage(state(),{publicationContexts:{claims:{status:'ready',archive:{releases:[row]}},gdp:{status:'error',error:'Archive unavailable'}}});
-  const publications=html.slice(html.indexOf('data-overview-disclosure="publications"'),html.indexOf('class="oh-momentum"'));
+  const publications=html.slice(html.indexOf('data-overview-disclosure="publications"'),html.indexOf('class="oh-support"'));
   assert.match(publications,/Initial claims/);assert.match(publications,/Published 2026-03-19 · day precision/);
   assert.match(publications,/Captured 2026-10-22T22:00:00\.000Z/);assert.match(publications,/reference 2026-03-14/);
   assert.match(publications,/GDP: Publication evidence unavailable/);

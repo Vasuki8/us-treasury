@@ -24,11 +24,14 @@ const yields={status:'error',error:'Retained curve <error>',fetchedAt:'2026-10-2
 const ownership={status:'error',error:'Retained ownership <error>',fetchedAt:'2026-10-22T02:00:00Z',z1:{asOf:'2026-06-30',releaseDate:'2026-09-11',assets:20,liabilities:20,valuationDiscrepancy:0,reconciled:false,sectors:[{code:'LM713061103.Q',label:'Central bank',value:20,valuation:'market value'}],history:[{date:'2026-06-30',sectors:[{code:'LM713061103.Q',label:'Central bank',value:20,valuation:'market value'}],assets:20,liabilities:20,valuationDiscrepancy:0}]},soma:{asOf:'2026-10-14',principal:24,inflationCompensation:1,adjustedPrincipal:25,attribution:'Required SOMA credit',redistributionNotice:'Required SOMA reuse notice',history:[{date:'2026-10-14',principal:24,inflationCompensation:1,adjustedPrincipal:25}]}};
 const auction=(id,date,extra={})=>({id,auctionDate:date,securityType:'Note',securityTerm:'10-Year',originalTerm:'10-Year',reopening:false,cashManagement:false,status:'results',competitiveAccepted:100,totalAccepted:110,somaAccepted:10,primaryDealerAccepted:20,directAccepted:10,indirectAccepted:70,...extra});
 
-test('refinancing groups observed instrument dates apart from modeled horizon and leads tables with the trend',()=>{
+test('refinancing groups observed instrument dates apart from modeled horizon and leads tables with maturity bars',()=>{
   const html=refinancingPage({refinancingHorizon:3,refinancingShock:50},refinancing),main=visible(html);
   const observed=group(main,'Observed refinancing exposure'),modeled=group(main,'Modeled rate sensitivity');
   assert.match(observed,/2026-09-30/);assert.match(observed,/own.*date/i);
-  before(observed,'OUTSTANDING PRINCIPAL HISTORY','CONTRACTUAL MATURITIES');
+  before(observed,'maturity-ladder-chart','CONTRACTUAL MATURITIES');
+  assert.match(html,/data-page-disclosure="refinancing:principal-history"[\s\S]*OUTSTANDING PRINCIPAL HISTORY[\s\S]*data-series="marketableDebt"/,'Supplemental principal history remains available');
+  assert.doesNotMatch(observed,/OUTSTANDING PRINCIPAL HISTORY/,'The primary view prioritizes current maturity exposure');
+  assert.match(html,/data-page-disclosure="refinancing:maturity-table"[\s\S]*CUMULATIVE PRINCIPAL/,'Exact monthly values remain accessible');
   before(main,'Observed refinancing exposure','Modeled rate sensitivity');
   for(const phrase of ['2026-12-31','4% hypothetical baseline','id="refinancing-horizon"','id="refinancing-shock"','not observed rates or forecasts','USD billions'])assert.ok(modeled.includes(phrase),phrase);
   for(const phrase of ['CACHED','2026-10-22T02:00:00Z','Release date: unknown','Retained maturity &lt;error&gt;','Instrument coverage warning','future inflation is unknown'])assert.ok(main.includes(phrase),phrase);
@@ -91,7 +94,7 @@ test('Treasury source warnings follow primary readings while critical capture er
   before(refinancingMain,'Retained maturity &lt;error&gt;','aria-label="Calculated refinancing exposure"');
   before(refinancingMain,'aria-label="Calculated refinancing exposure"','Instrument coverage warning');
   before(refinancingMain,'Bill share','Eligible unmatured marketable principal is not gross federal debt');
-  before(refinancingMain,'Instrument coverage warning','OUTSTANDING PRINCIPAL HISTORY');
+  before(refinancingMain,'Instrument coverage warning','maturity-ladder-chart');
   const ownershipMain=visible(ownershipPage({...ownership,warnings:['Ownership source warning']}));
   before(ownershipMain,'Retained ownership &lt;error&gt;','href="#/series/foreignTreasuryHoldings"');
   before(ownershipMain,'href="#/series/foreignTreasuryHoldings"','Ownership source warning');

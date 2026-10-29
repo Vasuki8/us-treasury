@@ -65,9 +65,11 @@ test('Explore comparison leads with charts, one export action and visible no-fil
 
 test('Macro readings and history lead supporting research while external accounting sections remain intact',()=>{
  const html=macroCoveragePage(state({macroFamily:'prices'}));
- assert.ok(html.indexOf('LATEST TOPIC READINGS')<html.indexOf('FOCUSED HISTORY'));
+ const focused=html.indexOf('INFLATION · CURRENT READING &amp; HISTORY'),chart=html.indexOf('data-chart'),readings=html.indexOf('LATEST TOPIC READINGS');
+ assert.ok(focused>=0&&focused<chart&&chart<readings,'Inflation current reading and principal chart precede the full horizon readings');
  assert.match(html,/data-page-disclosure="macro-coverage:prices:research"/);
- assert.ok(html.indexOf('FOCUSED HISTORY')<html.indexOf('data-page-disclosure="macro-coverage:prices:research"'));
+ assert.ok(readings<html.indexOf('data-page-disclosure="macro-coverage:prices:research"'));
+ assert.match(outsideDetails(html),/data-series="cpiMonthly"/);assert.match(html,/data-page-disclosure="macro-coverage:prices:history-controls"/);
  assert.match(outsideDetails(html),/WHAT CHANGED/);
  assert.equal(count(html,'WHAT CHANGED'),1);
  assert.match(html,/id="macro-measure"/);assert.match(html,/data-export-macro-measure/);

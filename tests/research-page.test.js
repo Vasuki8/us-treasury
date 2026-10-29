@@ -5,6 +5,7 @@ import {createWorkspace} from '../src/research-workspaces.js';
 import {createResearchPackage,exportResearchPackage,importResearchPackage} from '../src/research-packages.js';
 import {series} from '../src/data.js';
 import {publicationArchive} from '../src/publication-archive.js';
+import {createQuestionDrafts} from '../src/question-drafts.js';
 
 test('research routes preserve library views and bounded package/cutoff context',()=>{
  const route=parseRoute('#/research?view=packages&package=sample-1');assert.equal(route.page,'research');assert.equal(route.researchView,'packages');assert.equal(route.packageId,'sample-1');
@@ -19,7 +20,8 @@ test('library explains editable versus frozen research and escapes user labels',
 
 test('saved views show page-aware summaries and an editable research-question review against frozen evidence',()=>{
  const record=createWorkspace({id:'rates-question',name:'Rate view',state:{page:'yields',yieldDateA:'2026-01-02',yieldDateB:'2026-10-01'},researchQuestion:{hypothesis:'Rates <hypothesis>',supportingSeriesIds:['sofr'],conditions:[{seriesId:'sofr',operator:'>=',value:4}]}});
- const html=researchPage(parseRoute('#/research'),{library:{workspaces:[record],packages:[],durability:{workspaces:{'rates-question':{status:'session',reason:'quota'}}}}});
+ const questionDrafts=createQuestionDrafts();questionDrafts.edit(record.id,record.researchQuestion);
+ const html=researchPage(parseRoute('#/research'),{questionDrafts:questionDrafts.snapshot(),library:{workspaces:[record],packages:[],durability:{workspaces:{'rates-question':{status:'session',reason:'quota'}}}}});
  for(const text of ['Rates &amp; curves','2026-01-02','2026-10-01','Rates &lt;hypothesis&gt;','data-save-question="rates-question"','question-hypothesis-rates-question','question-support-rates-question','question-contradict-rates-question','question-review-date-rates-question','question-review-event-rates-question','question-condition-series-rates-question','question-condition-op-rates-question','question-condition-value-rates-question','Session-only','Frozen baseline unavailable','data-export-settings'])assert.ok(html.includes(text),text);
  assert.doesNotMatch(html,/<hypothesis>/);
 });
@@ -123,4 +125,30 @@ test('pinned explanations remain readable frozen evidence and malformed imported
  for(const malformed of [null,'<script>',[null,1,'x',{summary:'<img src=x>',period:null}]])assert.match(await make(malformed),/READ-ONLY/);
  for(const patch of [{attribution:{toString:null}},{sourceSection:{toString:null}},{provenance:[{retrievedAt:{toString:null}}]},{details:[{toString:null}]},{annualUpdate:{summary:{toString:null}}}])assert.match(await make([{...entry,...patch}]),/READ-ONLY/);
  assert.match(await make([entry],{toString:null}),/Capture status: Unavailable/);
+});
+
+test('storage recovery directs each research destination to the recoverable artifact',()=>{
+ const warningFor=(view,library)=>researchPage(parseRoute(`#/research?view=${view}`),{library,publicationState:{status:'loading'}}).match(/<p class="panel-note amber" role="status">([\s\S]*?)<\/p>/)?.[1]??'';
+ for(const library of [{sessionOnly:true},{warning:'Research storage unavailable.'}]){
+  const saved=warningFor('workspaces',library);
+  assert.match(saved,/Export settings/);assert.match(saved,/Saved Views.*watchlists/);
+  assert.doesNotMatch(saved,/Download.*JSON|pinned/i,'A saved configuration has no frozen package JSON to download');
+  const frozen=warningFor('packages',library);
+  assert.match(frozen,/Download JSON.*each Frozen Result/);assert.doesNotMatch(frozen,/Export settings/);
+  for(const view of ['changes','publications']){
+   const mixed=warningFor(view,library);
+   assert.match(mixed,/Export settings.*saved configurations/);assert.match(mixed,/Download JSON.*frozen evidence/);
+  }
+ }
+ assert.equal(warningFor('workspaces',{}),'','Durable records do not need a storage-recovery warning');
+});
+
+test('frozen-result display uses consistent terminology without rewriting legacy records or action identities',async()=>{
+ const pkg=await createResearchPackage({name:'Legacy retained result',state:{selected:['gdp'],range:1}}),original=JSON.stringify(pkg);
+ const state={...parseRoute('#/research?view=packages')},library={packages:[pkg]};
+ const index=researchPage(state,{library}),selected=researchPage({...state,packageId:pkg.id},{library});
+ assert.match(index,/FROZEN RESULT LIBRARY/);assert.match(index,/NAME \/ FROZEN UTC/);assert.match(index,/Import frozen result \(JSON\)/);
+ assert.match(selected,/FROZEN UTC/);assert.match(index,new RegExp(`data-open-package="${pkg.id}"`));assert.match(selected,new RegExp(`data-package-json="${pkg.id}"`));
+ for(const html of [index,selected])assert.doesNotMatch(html,/PINNED|Pinning|pinned package|pinned records|pinned JSON/);
+ assert.equal(JSON.stringify(pkg),original);
 });

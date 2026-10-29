@@ -57,7 +57,7 @@ test('credit source metrics and errors remain open with one persistent source-ev
 
 test('capture controls and both evidence tables precede supporting provenance with UTC scope visible',()=>{
  const html=vintagesPage({vintageSeries:'gdp'},history),lead=visible(html);
- ordered(html,['id="vintage-cutoff"','REAL GROSS DOMESTIC PRODUCT GROWTH · CAPTURED BY','OBSERVED VALUE CHANGES','data-page-disclosure="vintages:provenance"']);
+ ordered(html,['id="vintage-cutoff"','REAL GROSS DOMESTIC PRODUCT GROWTH · RETAINED VALUES','OBSERVED VALUE CHANGES','data-page-disclosure="vintages:provenance"']);
  for(const text of ['step="0.001"','Captures at the exact cutoff are included','First captured','Latest captured','2.4%','2.2%','not first reported'])assert.ok(lead.includes(text),text);
  assert.match(disclosureContent(html,'vintages:methods'),/Supplemental module data and calendars are not reconstructed/);
  assert.match(disclosureContent(html,'vintages:source-terms'),/Captured growth/);
@@ -72,10 +72,12 @@ test('release results, roles and essential clocks remain open before collection 
  ordered(html,['VERIFIED OFFICIAL RESULT','SCHEDULE, PUBLICATION AND COLLECTION','AGENCY EXPLANATION','data-page-disclosure="release:source-reuse"']);
 });
 
-test('watchlist keeps ordering, comparison, removal and recovery open while source details persist',()=>{
+test('watchlist keeps comparison and recovery open while deliberate editing and source details persist',()=>{
  const html=watchlistPage({saved:['gdp','unrate'],selected:['gdp'],storageAvailable:false}),lead=visible(html);
- for(const text of ['id="watchlist-sort"','id="watchlist-group"','session only','data-watch-move="gdp"','data-save="gdp"','data-add-compare="unrate"'])assert.ok(lead.includes(text),text);
+ for(const text of ['id="watchlist-sort"','id="watchlist-group"','session only','data-add-compare="unrate"'])assert.ok(lead.includes(text),text);
  assert.match(disclosureContent(html,'watchlist:gdp:source'),/Source/);
+ assert.match(disclosureContent(html,'watchlist:gdp:edit'),/data-watch-move="gdp"[\s\S]*data-save="gdp"/);
+ assert.doesNotMatch(lead,/data-watch-move="gdp"|data-save="gdp"/,'Editing controls stay behind the explicit edit disclosure');
  assert.match(visible(watchlistPage({saved:[]})),/FIND SERIES/);
 });
 
@@ -86,13 +88,13 @@ test('frozen result and original exports lead advanced evidence; import follows 
  assert.match(disclosureContent(html,`research:package:${pkg.id}:checksum`),/SHA-256/);
  assert.match(disclosureContent(html,`research:package:${pkg.id}:series:gdp`),/Source IDs/);
  assert.match(disclosureContent(html,`research:package:${pkg.id}:evidence`),/research-json/);
- ordered(html,['IMMUTABLE PINNED PACKAGES','READ-ONLY','data-page-disclosure="research:import"']);
+ ordered(html,['FROZEN RESULT LIBRARY','READ-ONLY','data-page-disclosure="research:import"']);
 });
 
 test('publication controls, selected estimate and confirmation limits remain open before fuller methods',()=>{
  const html=researchPage({researchView:'publications',publicationSeries:'gdp',publicationPeriod:'2026-01-01',publicationCutoff:'2026-06-25'},{publicationArchive}),lead=visible(html);
  for(const text of ['id="publication-series"','id="publication-period"','id="publication-cutoff"','2.1%','data-export-publications','data-pin-publication','Final does not mean permanently unrevisable','confirmations'])assert.ok(lead.includes(text),text);
- assert.match(disclosureContent(html,'research:publications:methods'),/retrieval hashes/);
+ assert.match(disclosureContent(html,'research:publications:gdp:methods'),/retrieval hashes/);
 });
 
 
@@ -117,7 +119,7 @@ test('Research checkpoint failures and immutable-package recovery remain visible
  const changes=visible(researchPage({researchView:'changes'},{changes:{status:'error',error:'Archive failed'},checkpoint:{enabled:true,since:stamp},failures:[{id:'bea',error:'Cached source',fetchedAt:stamp}]}));
  for(const text of ['id="change-since"','data-disable-changes','data-retry-changes','Cached source','Archive failed'])assert.ok(changes.includes(text),text);
  const missing=researchPage({researchView:'packages',packageId:'missing',researchError:'Import rejected'},{library:{sessionOnly:true}}),lead=visible(missing);
- for(const text of ['session-only','Import rejected','Pinned package unavailable','Current observations are never substituted'])assert.ok(lead.includes(text),text);
+ for(const text of ['session-only','Import rejected','Frozen result unavailable','Current observations are never substituted'])assert.ok(lead.includes(text),text);
  assert.match(disclosureContent(missing,'research:import'),/id="research-import"/);
 });
 
@@ -153,7 +155,7 @@ test('the package library leads without a selection and discloses its index besi
  const second=await createResearchPackage({name:'Second retained result',state:{selected:['unrate'],range:1}});
  const library={packages:[first,second]};
  const index=researchPage({researchView:'packages'},{library}),indexLead=visible(index);
- assert.match(indexLead,/IMMUTABLE PINNED PACKAGES/);
+ assert.match(indexLead,/FROZEN RESULT LIBRARY/);
  for(const pkg of [first,second]){
   for(const attribute of ['data-open-package','data-remove-package','data-package-json'])assert.ok(indexLead.includes(`${attribute}="${pkg.id}"`));
  }
@@ -164,7 +166,7 @@ test('the package library leads without a selection and discloses its index besi
  assert.match(selectedLead,/data-chart/);
  assert.ok(selectedLead.includes(`data-package-csv="${second.id}"`));
  assert.ok(selectedLead.includes(`data-package-json="${second.id}"`));
- assert.doesNotMatch(selectedLead,/IMMUTABLE PINNED PACKAGES|First retained result|data-open-package|data-remove-package/);
+ assert.doesNotMatch(selectedLead,/FROZEN RESULT LIBRARY|First retained result|data-open-package|data-remove-package/);
  const disclosed=disclosureContent(selected,'research:package-library');
  assert.match(disclosed,/<summary>[\s\S]*Frozen result library/);
  for(const pkg of [first,second])for(const attribute of ['data-open-package','data-remove-package','data-package-json'])assert.ok(disclosed.includes(`${attribute}="${pkg.id}"`));

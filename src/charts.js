@@ -7,6 +7,17 @@ import {maturityYears,observationEvidence} from './chart-evidence.js';
 
 const ns = 'http://www.w3.org/2000/svg';
 let chartId = 0;
+const chartInspection=new WeakMap();
+const chartKey=container=>container.id||container.dataset.chartKey||['kind','chartCatalog','series','panelId','cursorGroup','transform','comparison'].map(key=>container.dataset[key]??'').join('|');
+/** Session-only inspection is keyed by chart identity and exact date, never observation index. */
+export function captureChartInspection(root){
+ const result=new Map();
+ for(const container of root.querySelectorAll('[data-chart]')){
+  const key=chartKey(container),rows=result.get(key)??[],previous=chartInspection.get(container);
+  rows.push(previous?{...previous,focused:globalThis.document?.activeElement===previous.svg}:null);result.set(key,rows);
+ }
+ return result;
+}
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 export function chartDateLabel(panels, date) {
   const frequencies = new Set(panels.map(panel => panel.series.frequency));
@@ -25,7 +36,9 @@ function svgElement(name, attributes, parent, text) {
   return node;
 }
 
-function draw(container, panels, {height = 180, bars = false, curve = false, transformed = false,cursor=null,evidenceLabel='Official snapshot',yDomain,exactDomain=false,yReference,distribution=false} = {}) {
+function draw(container, panels, {height = 180, bars = false, curve = false, transformed = false,cursor=null,evidenceLabel='Official snapshot',yDomain,exactDomain=false,yReference,distribution=false,inspection} = {}) {
+  const previous=inspection??chartInspection.get(container),active=document.activeElement;
+  const restoreFocused=Boolean(previous&&(previous.focused||active===previous.svg));
   container.replaceChildren();
   let domain;
   if(yDomain!==undefined){
@@ -147,13 +160,19 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const hit = svgElement('rect',{x:left,y:top,width:pw,height:ph,fill:'transparent'},svg);
   const readout = document.createElement('div');
   readout.id=id; readout.className=`chart-readout${curve?' curve-readout':''}`; container.append(readout);
-  let selected=orderedDates.length-1;
+  const inspected={date:null,svg};chartInspection.set(container,inspected);
+  // If the exact observation leaves the window, inspect the latest visible date.
+  const availableDates=cursor?.dates??orderedDates;
+  const initialDate=availableDates.includes(previous?.date)?previous.date:availableDates.at(-1);
+  let selected=Math.max(0,orderedDates.indexOf(initialDate));
   function select(index, announce = false) {
     selected = Math.max(0,Math.min(orderedDates.length-1,index));
     selectDate(orderedDates[selected],announce);
   }
   function selectDate(date,announce=false){
     if(!date)return;
+    inspected.date=date;
+    if(orderedDates.includes(date))selected=orderedDates.indexOf(date);
     const x=xDate(date);
     guide.setAttribute('x1',x); guide.setAttribute('x2',x);
     guide.setAttribute('visibility',x>=left&&x<=width-right?'visible':'hidden');
@@ -206,13 +225,18 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
     if(cursor)cursor.move(event.key==='Home'?'home':event.key==='End'?'end':event.key==='ArrowRight'?1:-1,{announce:true,origin:id});
     else select(event.key==='Home'?0:event.key==='End'?orderedDates.length-1:selected+(event.key==='ArrowRight'?1:-1),true);
   });
-  if(cursor)cursor.subscribe(({date,announce,origin})=>selectDate(date,announce&&origin===id));else select(selected);
+  if(cursor){if(initialDate&&cursor.date!==initialDate)cursor.select(initialDate);cursor.subscribe(({date,announce,origin})=>selectDate(date,announce&&origin===id));}else select(selected);
+  if(restoreFocused&&(!document.activeElement||document.activeElement===document.body||document.activeElement===previous.svg))svg.focus?.({preventScroll:true});
 }
 
 /** Responsive view boxes avoid layout mutations inside ResizeObserver callbacks. */
-export function renderCharts(root,{catalog,chartCatalogs={}}={}) {
+export function renderCharts(root,{catalog,chartCatalogs={},inspection}={}) {
+  const occurrences=new Map();
   const cursorCatalogs=new Map();
   root.querySelectorAll('[data-chart]').forEach(container => {
+    const key=chartKey(container),occurrence=occurrences.get(key)??0;occurrences.set(key,occurrence+1);
+    const previous=inspection?.get(key)?.[occurrence]??chartInspection.get(container);
+    const renderDraw=(target,panels,options)=>draw(target,panels,{...options,inspection:previous});
     const scoped=Object.hasOwn(container.dataset,'chartCatalog');
     const binding=scoped&&chartCatalogs&&Object.hasOwn(chartCatalogs,container.dataset.chartCatalog)?chartCatalogs[container.dataset.chartCatalog]:null;
     if(scoped&&(!binding||!binding.catalog||typeof binding.catalog!=='object'||Array.isArray(binding.catalog)||typeof binding.evidenceLabel!=='string'||!binding.evidenceLabel.trim())){
@@ -227,12 +251,12 @@ export function renderCharts(root,{catalog,chartCatalogs={}}={}) {
     if(scoped&&(kind==='history-curve'||kind==='curve')){container.textContent='Chart data unavailable: yield curves are not supplied by this chart catalog.';return;}
     if(kind==='history-curve'){
       const curves=selectCurveOverlays(dataStatus.sources.yields,container.dataset.dates.split(',').filter(Boolean));
-      draw(container,curves.map(curve=>({series:{...getSeries('yield'),methodologyBreaks:[]},label:curve.date+(curve.available?'':' — unavailable'),unit:'Yield · % · elapsed maturity years',observations:NOMINAL_YIELD_TENORS.map(tenor=>({date:tenor,value:curve.nominal[tenor]??null,footnotes:observationEvidence({id:'yield',methodologyBreaks:dataStatus.sources.yields.methodologyBreaks},{date:curve.date})}))})),{height,curve:true,yDomain:container.dataset.yDomain});
+      renderDraw(container,curves.map(curve=>({series:{...getSeries('yield'),methodologyBreaks:[]},label:curve.date+(curve.available?'':' — unavailable'),unit:'Yield · % · elapsed maturity years',observations:NOMINAL_YIELD_TENORS.map(tenor=>({date:tenor,value:curve.nominal[tenor]??null,footnotes:observationEvidence({id:'yield',methodologyBreaks:dataStatus.sources.yields.methodologyBreaks},{date:curve.date})}))})),{height,curve:true,yDomain:container.dataset.yDomain});
       return;
     }
     if (kind === 'curve') {
       const reference=getSeries('yield');
-      draw(container,[
+      renderDraw(container,[
         {series:reference,label:`Latest (${dataStatus.curveDate ?? 'date unavailable'})`,unit:'Yield · %',observations:yieldCurve.map(p=>({date:p.tenor,value:p.value}))},
         {series:reference,label:`Prior (${dataStatus.previousCurveDate ?? 'date unavailable'})`,unit:'Yield · %',observations:yieldCurve.map(p=>({date:p.tenor,value:p.previous}))},
       ],{height,curve:true,yDomain:container.dataset.yDomain});
@@ -248,7 +272,7 @@ export function renderCharts(root,{catalog,chartCatalogs={}}={}) {
       }
       const window=resolveDateWindow(range,Object.values(selectedCatalog)),panel=transformSeries(lookup(ids[0]),'level',range,window);
       if(panel.error){container.textContent=panel.error;return;}
-      draw(container,[panel],{height,evidenceLabel,yDomain:container.dataset.yDomain,distribution});return;
+      renderDraw(container,[panel],{height,evidenceLabel,yDomain:container.dataset.yDomain,distribution});return;
     }
     const result=comparison!=='native'||container.dataset.panelId?compareSeries(ids,comparison,range,selectedCatalog):{panels:ids.map(id=>transformSeries(lookup(id),transform,range))};
     if(comparison==='native'&&container.dataset.panelId&&transform!=='level'&&!result.error)result.panels=result.panels.map(panel=>transformSeries(panel.series,transform,range,result.window));
@@ -262,6 +286,6 @@ export function renderCharts(root,{catalog,chartCatalogs={}}={}) {
     if(!cursorCatalogs.has(cursorScope))cursorCatalogs.set(cursorScope,new Map());
     const cursors=cursorCatalogs.get(cursorScope);
     if(group&&!cursors.has(group))cursors.set(group,createLinkedCursor(result.panels));
-    draw(container,panels,{height,bars:kind==='bar',transformed:transform==='change'||comparison==='difference',cursor:group?cursors.get(group):null,evidenceLabel,yDomain:container.dataset.yDomain,exactDomain:container.dataset.yDomainExact==='true',yReference:container.dataset.yReference});
+    renderDraw(container,panels,{height,bars:kind==='bar',transformed:transform==='change'||comparison==='difference',cursor:group?cursors.get(group):null,evidenceLabel,yDomain:container.dataset.yDomain,exactDomain:container.dataset.yDomainExact==='true',yReference:container.dataset.yReference});
   });
 }

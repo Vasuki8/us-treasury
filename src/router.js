@@ -12,7 +12,7 @@ export const defaults = {
   refinancingHorizon:12,refinancingShock:100,
   yieldDateA:'',yieldDateB:'',
   pceBaseIndex:'pceIndex',pceMonthlyRate:0.2,pceHorizonMonths:12,pceTargetAnnualRate:2,
-  auctionType:'All',auctionId:'',
+  auctionType:'All',auctionId:'',auctionHistoryPage:null,
   vintageCutoff:null,vintageSeries:'gdp',
   window:'1y',startDate:'',endDate:'',returnTo:null,
   macroFamily:'prices',macroMeasure:'cpiMonthly',laborGroup:'all',
@@ -20,20 +20,19 @@ export const defaults = {
 };
 
 export const returnPages=['overview','explore','watchlist','macroCoverage','labor','fiscal','refinancing','yields','auctions','ownership','macro','vintages','market','credit','calendar'];
-const returnPath=/^#\/(?:overview|explore|watchlist|economy(?:\/labor)?|fiscal|refinancing|yields|auctions|ownership|macro|vintages|market|credit|calendar)(?:\?|$)/;
-/** Only bounded local research workspaces can be offered as a return destination. */
-export function safeReturnTo(value) {
-  if(typeof value!=='string'||value.length>4000||/[\u0000-\u001f\u007f]/.test(value)||!returnPath.test(value))return null;
-  const [path,query='']=value.split('?'),params=new URLSearchParams(query);
-  const origin=params.get('return');params.delete('return');
-  // One terminal watchlist/family origin may accompany an explore return.
-  // Terminal workspaces discard nested returns, preventing recursive chains.
-  if(path==='#/explore'&&origin?.split('?')[0]!=='#/explore'&&returnPath.test(origin??'')){
-    const terminal=safeReturnTo(origin);if(terminal)params.set('return',terminal);
-  }
-  return path+(params.size?'?'+params.toString():'');
+const returnPath=/^#\/(?:overview|explore|watchlist|economy(?:\/labor)?|fiscal|refinancing|yields|auctions|ownership|macro|vintages|market|credit|calendar|release|research|series\/[A-Za-z0-9]+)(?:\?|$)/;
+/** Local return journeys retain at most three origins, without recursive route growth. */
+export function safeReturnTo(value,depth=0,seen=[]){
+ if(typeof value!=='string'||value.length>4000||/[\u0000-\u001f\u007f]/.test(value)||!returnPath.test(value)||depth>=3)return null;
+ const [path,query='']=value.split('?');
+ if(seen.includes(path)||path.startsWith('#/series/')&&!Object.hasOwn(series,path.slice(9)))return null;
+ const params=new URLSearchParams(query),origin=params.get('return');params.delete('return');
+ // Established list/module destinations are terminal; detail destinations and comparisons may retain an origin.
+ if(['#/explore','#/release','#/research','#/vintages'].includes(path)||path.startsWith('#/series/')){
+  const terminal=safeReturnTo(origin,depth+1,[...seen,path]);if(terminal)params.set('return',terminal);
+ }
+ return path+(params.size?'?'+params.toString():'');
 }
-
 /** Hash routes work on ordinary static hosts and preserve browser history. */
 export function parseRoute(hash = '') {
   const state = { ...defaults, selected: [...defaults.selected] };
@@ -76,6 +75,7 @@ export function parseRoute(hash = '') {
     state.vintageSeries=Object.hasOwn(series,p.get('series'))?p.get('series'):'gdp';
     state.auctionType=['All','Bill','Note','Bond','FRN','TIPS'].includes(p.get('type'))?p.get('type'):'All';
     state.auctionId=(p.get('auction')??'').slice(0,200);
+    state.auctionHistoryPage=/^\d{1,5}$/.test(p.get('historyPage')??'')?Math.min(10000,Number(p.get('historyPage'))):null;
     const validCurveDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
     state.yieldDateA=validCurveDate(p.get('curveA'))?p.get('curveA'):'';
     state.yieldDateB=validCurveDate(p.get('curveB'))?p.get('curveB'):'';
@@ -142,6 +142,7 @@ export function routeFor(input) {
   if(state.page==='auctions'){
     if(state.auctionType!=='All')p.set('type',state.auctionType);
     if(state.auctionId)p.set('auction',state.auctionId);
+    if(Number.isInteger(state.auctionHistoryPage)&&state.auctionHistoryPage>=0)p.set('historyPage',String(Math.min(10000,state.auctionHistoryPage)));
   }
   if(state.page==='yields'){
     if(state.yieldDateA)p.set('curveA',state.yieldDateA);
@@ -151,9 +152,9 @@ export function routeFor(input) {
     if(state.refinancingHorizon!==12)p.set('horizon',String(state.refinancingHorizon));
     if(state.refinancingShock!==100)p.set('shock',String(state.refinancingShock));
   }
-  if (state.page === 'indicator') {
-    if(safeReturnTo(state.returnTo))p.set('selected',validIds(state.selected||[]).join(','));
-    if(safeReturnTo(state.returnTo)&&['indexed','difference'].includes(state.comparison))p.set('comparison',state.comparison);
+  if (state.page === 'indicator'||['release','research'].includes(state.page)&&safeReturnTo(state.returnTo)) {
+    if(safeReturnTo(state.returnTo)||validIds(state.selected||[]).join(',')!==defaults.selected.join(','))p.set('selected',validIds(state.selected||[]).join(','));
+    if(['indexed','difference'].includes(state.comparison))p.set('comparison',state.comparison);
     if (state.transform === 'change') p.set('transform', 'change');
     if (state.tab !== 'data') p.set('tab', state.tab);
   }
@@ -169,7 +170,7 @@ export function routeFor(input) {
     p.set('selected',validIds(state.selected||[]).join(','));
     if(['indexed','difference'].includes(state.comparison))p.set('comparison',state.comparison);
   }
-  if(state.page==='indicator'||returnPages.includes(state.page)){
+  if(state.page==='indicator'||returnPages.includes(state.page)||['release','research'].includes(state.page)){
     if(state.window==='observations')p.set('range',String(state.range===6?6:12));
     else if(state.window!=='1y')p.set('window',state.window);
     if(state.window==='custom'){p.set('start',state.startDate);p.set('end',state.endDate);}
@@ -185,3 +186,11 @@ export function routeFor(input) {
   }
   return `#${path}${p.size ? `?${p}` : ''}`;
 }
+
+/** Destination identity excludes in-place choices such as filters, ranges and tabs. */
+export function navigationDestination(state={}){
+ const page=state.page??defaults.page;
+ const detail=page==='macroCoverage'?state.macroFamily??defaults.macroFamily:page==='indicator'?state.seriesId??defaults.seriesId:page==='research'?`${state.researchView??defaults.researchView}:${state.researchView==='packages'?state.packageId??'':''}`:page==='release'?`${state.eventId??''}:${state.publicationSeries??'gdp'}:${state.publicationPeriod??''}:${state.publicationCutoff??''}`:page==='explore'?state.exploreMode??defaults.exploreMode:'';
+ return `${page}:${detail}`;
+}
+export const destinationChanged=(previous,next)=>navigationDestination(previous)!==navigationDestination(next);

@@ -119,7 +119,8 @@ test('yield detail shows independently cached timing beside unchanged observatio
 
 test('initial timing failure stays unavailable without presenting an uncaptured usual deadline', async () => {
   const source = yieldTimingSource({ status: 'unavailable', fetchedAt: null, timing: undefined, error: 'Methodology unavailable' });
-  const failed = await refreshSnapshot({ calendarCollectors: { 'treasury-yield-timing': async () => { throw Error('Methodology unavailable'); } } });
+  // Deliberately use the usual-deadline clock for collection: retrieval time is separate from guidance.
+  const failed = await refreshSnapshot({ now:new Date('2026-10-28T18:00:00.000Z'),calendarCollectors: { 'treasury-yield-timing': async () => { throw Error('Methodology unavailable'); } } });
   for (const calendar of [{ status: 'unavailable', sources: { 'treasury-yield-timing': source } }, { status: 'unavailable', sources: {} }, failed.calendar]) {
     withCalendar([], calendar, () => {
       for (const state of [{ page: 'calendar',calendarView:'treasury' }, { page: 'indicator', seriesId: 'yield' }]) {
@@ -127,7 +128,8 @@ test('initial timing failure stays unavailable without presenting an uncaptured 
         assert.ok(panel);
         assert.match(panel, /TIMING UNAVAILABLE/);
         assert.match(panel, /No successful retrieval/);
-        assert.doesNotMatch(html, /18:00|usually available|CACHED TIMING|CAPTURED TIMING/);
+        assert.doesNotMatch(html, /18:00 Eastern Time|usually available|CACHED TIMING|CAPTURED TIMING/,'An attempted-retrieval clock does not establish an availability deadline');
+        if(calendar===failed.calendar)assert.match(panel,/Last attempt[\s\S]*2026-10-28T18:00:00\.000Z/,'The real failed-attempt timestamp stays visible even when its clock reads 18:00');
       }
     });
   }
@@ -140,9 +142,9 @@ test('HTML helpers escape untrusted values and expose declarative chart controls
   assert.match(chart(['unrate'], { range: 6, transform: 'change' }), /data-transform="change"/);
 });
 
-test('overview leads with six dated topics and keeps catalysts, momentum and publication evidence reachable', () => {
+test('overview leads with eight dated readings and keeps momentum, catalysts and publication evidence reachable', () => {
  const html=render(),current=getSeries('unrate');
- assert.equal((html.match(/class="oh-topic"/g)||[]).length,6);
+ assert.equal((html.match(/class="oh-topic"/g)||[]).length,8);
  assert.equal((html.match(/data-overview-reading=/g)||[]).length,8);
  assert.ok(html.includes(formatValue(current,latest(current)?.value)));
  assert.match(html,/data-series="pceMonthly,pceCoreMonthly"/);
@@ -150,7 +152,8 @@ test('overview leads with six dated topics and keeps catalysts, momentum and pub
  assert.doesNotMatch(html,/data-chart[^>]*data-series="(?:pceMonthly|payroll),unrate"/);
  assert.match(html,/data-overview-disclosure="publications"/);assert.match(html,/NEXT CATALYSTS/);
  assert.ok(html.indexOf('class="oh-topic-grid"')<html.indexOf('NEXT CATALYSTS'));
- assert.ok(html.indexOf('NEXT CATALYSTS')<html.indexOf('class="oh-momentum"'));
+ assert.ok(html.indexOf('class="oh-topic-grid"')<html.indexOf('class="oh-momentum"'));
+ assert.ok(html.indexOf('class="oh-momentum"')<html.indexOf('NEXT CATALYSTS'));
  assert.doesNotMatch(html,/Source health, coverage and methodology/);
  assert.match(html,/Collection failures and retained-source status are in Refresh details above/);
  assert.doesNotMatch(html,/synthetic|sample week|sample observations/i);
@@ -400,7 +403,9 @@ test('indexed comparisons describe their shared baseline and export units accura
   assert.match(html, /original observation dates thereafter/i);
   assert.match(html, /VALUES <b class="mono">INDEXED/);
   assert.doesNotMatch(html, /retain each series’ native units/i);
-  assert.match(render({page:'explore',exploreMode:'compare',comparison:'indexed'}),/Comparison unavailable/,'rates and growth measures cannot be ratio indexed');
+  const unsupported=render({page:'explore',exploreMode:'compare',comparison:'indexed'});
+  assert.match(unsupported,/Indexed comparison is unsupported/,'rates and growth measures cannot be ratio indexed');
+  assert.match(unsupported,/cannot be ratio-indexed/);assert.match(unsupported,/data-comparison-mode="native"/);assert.match(unsupported,/data-comparison-mode="difference"/);assert.match(unsupported,/data-export[^>]*disabled/);
 });
 
 test('an unconnected calendar has no invented release results or fixed displayed week', () => {

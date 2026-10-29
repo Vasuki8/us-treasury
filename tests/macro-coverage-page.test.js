@@ -22,7 +22,7 @@ test('family workspace reuses date windows, history, detail context, safe compar
  delete series[id].inputProvenanceScope;
  try{
   const state=parseRoute('#/economy?family=prices&measure=cpiMonthly&window=custom&start=2026-08-01&end=2026-08-31'),html=renderPage(state);
-  for(const text of ['ECONOMY','How do headline and core','WHAT CHANGED','CONTEXT','WHY IT MATTERS','LIMITATIONS','Seasonally adjusted','month over month','Retained: 3 observations','Displayed: 1 observations'])assert.ok(html.includes(text),text);
+  for(const text of ['INFLATION','How do headline and core','WHAT CHANGED','CONTEXT','WHY IT MATTERS','LIMITATIONS','Seasonally adjusted','month over month','Retained: 3 observations','Displayed: 1 observations'])assert.ok(html.includes(text),text);
   assert.match(html,/id="macro-family"/);assert.match(html,/id="macro-measure"/);assert.match(html,/data-export-macro-measure/);assert.match(html,/data-compare="cpiMonthly,cpiCoreMonthly"/);
   assert.match(html,/data-series="cpiMonthly"/);assert.match(html,/window=custom.*return=/);
   const [header,...rows]=parseCsv(toCsv([id],{range:{preset:'custom',startDate:'2026-08-01',endDate:'2026-08-31'}}));

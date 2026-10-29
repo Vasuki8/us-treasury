@@ -82,12 +82,12 @@ export function metrics(ids,{label='Headline indicators',showBasis=false}={}) {
     const series = getSeries(id);
     if (!series) return '';
     const observation = latest(series),change=measurementChange(series);
-    return `<a class="metric" href="#/series/${encodeURIComponent(id)}"${series.error ? ` title="${escapeHtml(series.error)}"` : ''}><span class="metric-name">${escapeHtml(series.short)}</span><strong class="metric-value">${escapeHtml(formatValue(series, observation?.value))}</strong><span class="metric-change" title="${escapeHtml(change.text)}">${escapeHtml(compactChange(series,change))}</span><span class="metric-period">${escapeHtml(observation ? periodLabel(series, observation.date) : 'Unavailable')}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span>${showBasis?`<span class="metric-basis">${escapeHtml(seriesStatus(series))} · ${escapeHtml(series.unit)}</span>`:''}${coverageBadge(series)}</a>`;
+    return `<a class="metric" href="#/series/${encodeURIComponent(id)}"${series.error ? ` title="${escapeHtml(series.error)}"` : ''}><span class="metric-name">${escapeHtml(series.short)}</span><strong class="metric-value">${escapeHtml(formatValue(series, observation?.value))}</strong><span class="metric-change" title="${escapeHtml(change.text)}">${escapeHtml(compactChange(series,change))}</span><span class="metric-period">${escapeHtml(observation ? periodLabel(series, observation.date) : 'Unavailable')}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span>${showBasis?`<span class="metric-basis">${escapeHtml(seriesStatus(series))} · ${escapeHtml(series.unit)}</span>`:''}${coverageBadge(series)}<span class="metric-detail" aria-hidden="true">Details ↗</span></a>`;
   }).join('')}</section>`;
 }
 
 export function table(headers, rows, caption = '') {
-  return `<div class="table-wrap"><table>${caption ? `<caption class="sr-only">${escapeHtml(caption)}</caption>` : ''}<thead><tr>${headers.map((header, index) => `<th scope="col"${index > 0 && index < 3 ? ' class="num"' : ''}>${escapeHtml(header)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `<div class="table-wrap"><table>${caption ? `<caption class="sr-only">${escapeHtml(caption)}</caption>` : ''}<thead><tr>${headers.map(header => `<th scope="col"${header?.numeric === true ? ' class="num"' : ''}>${escapeHtml(typeof header === 'object' ? header.label : header)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 export function seriesTable(ids) {
@@ -97,7 +97,7 @@ export function seriesTable(ids) {
     const observation = latest(series),change=measurementChange(series);
     return `<tr><th scope="row">${seriesLink(id)}<span class="table-code mono muted">${escapeHtml(series.code)}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span>${coverageBadge(series)}${!observation && series.error ? `<span class="table-code muted">${escapeHtml(series.error)}</span>` : ''}</th><td class="num">${escapeHtml(formatValue(series, observation?.value))}</td><td class="num muted" title="${escapeHtml(change.text)}">${escapeHtml(compactChange(series,change))}</td><td class="mono">${escapeHtml(observation ? periodLabel(series, observation.date) : '—')}</td></tr>`;
   }).join('');
-  return table(['INDICATOR', 'LATEST', 'PERIOD CHANGE', 'OBSERVATION'], rows, 'Official macroeconomic snapshot; unavailable observations appear as a dash');
+  return table(['INDICATOR', {label:'LATEST',numeric:true}, {label:'PERIOD CHANGE',numeric:true}, 'OBSERVATION'], rows, 'Official macroeconomic snapshot; unavailable observations appear as a dash');
 }
 
 export function emptyState(message, detail = '', action = '') {

@@ -1,3 +1,7 @@
+import {rememberStableFocus,restoreStableFocus} from '../src/stable-focus.js';
+import {createResearchSaveDrafts,researchSaveScope,positionResearchSave} from '../src/research-save.js';
+import {createQuestionDrafts,saveResearchQuestion,questionFieldId} from '../src/question-drafts.js';
+import {destinationChanged} from '../src/router.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -8,7 +12,7 @@ import {pceScenarioOptions} from '../src/workspace-context.js';
 import {createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,researchPackageAttachment} from '../src/research-packages.js';
 import {createResearchLibrary as createLibrary} from '../src/research-library.js';
 const createResearchLibrary=storage=>createLibrary(storage,{locks:{request:async(_name,_options,callback)=>callback()}});
-import {buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin,buildCpiPublicationPin,buildGdpMatrixPin} from '../src/research-context.js';
+import {buildPinContext,freezeCandidates,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin,buildCpiPublicationPin,buildGdpMatrixPin} from '../src/research-context.js';
 import {cpiPublicationArchive} from '../src/cpi-publication-archive.js';
 import {cpiPublicationIds,cpiPublicationCsv,selectCpiPublicationHistory} from '../src/cpi-publication-history.js';
 import {gdpRevisionMatrixCsv} from '../src/gdp-revision-matrix.js';
@@ -18,7 +22,7 @@ import {parseRoute,routeFor} from '../src/router.js';
 import {updateWorkspaceSelection} from '../src/workspace-context.js';
 import {normalizedCutoff} from '../src/vintages-page.js';
 import {normalizeVintageTimestamp} from '../src/vintages.js';
-import {dataStatus,series} from '../src/data.js';
+import {dataStatus,series,releases} from '../src/data.js';
 import {getSeries} from '../src/model.js';
 import {publicationArchive} from '../src/publication-archive.js';
 import {publicationCsv,selectPublicationHistory} from '../src/publication-history.js';
@@ -60,10 +64,11 @@ async function app(hash='#/series/gdp?window=all',{archive=publicationArchive,ex
  const values=new Map(),storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
  const researchLibrary=await createResearchLibrary(storage),inputs=new Map([['research-name',{value:'Handler research'}]]),downloads=[],chartCalls=[],chartRoots=[],listeners=new Map(),announcements=[];
  const location={hash},history={pushState:(_state,_title,route)=>{location.hash=route;},replaceState:(_state,_title,route)=>{location.hash=route;}};
- const env={buildPceBaseEffects,pceScenarioOptions,parseResearchQuestion,createWorkspace,openWorkspace,createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,MAX_RESEARCH_JSON_BYTES,buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin,selectClaimsPublicationHistory,claimsPublicationCsv,claimsPublicationIds,normalizedCutoff,normalizeVintageTimestamp,researchLibrary,parseRoute,routeFor,updateWorkspaceSelection,dataStatus,series,getSeries,publicationArchive:archive,publicationState:{status:publicationStatus},publicationExplanations:explanations,explanationState:{status:explanationStatus},publicationExplanationsCsv,publicationCsv,selectPublicationHistory,periodLabel,changesCsv,writeChangeCheckpoint,storage,
+ const questionDrafts=createQuestionDrafts(),saveDrafts=createResearchSaveDrafts();
+ const env={rememberStableFocus,restoreStableFocus,freezeCandidates,prepareReadableTables:()=>{},questionDrafts,saveDrafts,researchSaveScope,positionResearchSave,destinationChanged,saveResearchQuestion,questionFieldId,buildPceBaseEffects,pceScenarioOptions,parseResearchQuestion,createWorkspace,openWorkspace,createResearchPackage,importResearchPackage,exportResearchPackage,researchPackageCsv,MAX_RESEARCH_JSON_BYTES,buildPinContext,buildPublicationPin,buildClaimsPublicationPin,buildReleasePin,selectClaimsPublicationHistory,claimsPublicationCsv,claimsPublicationIds,normalizedCutoff,normalizeVintageTimestamp,researchLibrary,parseRoute,routeFor,updateWorkspaceSelection,dataStatus,series,releases,getSeries,publicationArchive:archive,publicationState:{status:publicationStatus},publicationExplanations:explanations,explanationState:{status:explanationStatus},publicationExplanationsCsv,publicationCsv,selectPublicationHistory,periodLabel,changesCsv,writeChangeCheckpoint,storage,
   publicationController:{context:()=>({status:publicationStatus,archive})},state:{...parseRoute(hash),saved:[]},activeWorkspaceId:null,researchLabel:'',pinBusy:false,changeCheckpoint:{enabled:true,since:'2026-10-01T12:00:00.000Z',snapshotAt:'2026-10-01T12:00:00.000Z'},changeState:{status:'ready',history:{captures:[]}},historyController:{context:()=>({historyState:{status:'idle'}})},
-  document:{getElementById:id=>inputs.get(id)},location,history,watchDisclosureCharts,main:{addEventListener:(name,callback,capture)=>{assert.equal(name,'toggle');assert.equal(capture,true);listeners.set(name,callback);}},window:{addEventListener:(name,callback)=>listeners.set(name,callback)},cancelAnimationFrame(){},requestAnimationFrame(callback){callback();return 1;},render(){},rememberWorkspace(){},announce:message=>announcements.push(message),renderCharts:(root,options)=>{chartRoots.push(root);chartCalls.push(options);},downloadCsv:(content,name)=>downloads.push({content,name}),downloadJson:pkg=>downloads.push({content:exportResearchPackage(pkg),name:'json'}),changesContext:()=>({status:'ready',rows:[]}),syncChanges(){}};
- Object.assign(env,{buildCpiPublicationPin,buildGdpMatrixPin,cpiPublicationIds,cpiPublicationCsv,selectCpiPublicationHistory,gdpRevisionMatrixCsv,buildCoverageInventory,coverageInventoryCsv,fundingChartCatalog,researchPackageAttachment});
+  document:{getElementById:id=>{const input=inputs.get(id);if(input&&!input.focus)input.focus=()=>{};return input;}},location,history,watchDisclosureCharts,main:{contains:()=>false,querySelector:()=>null,addEventListener:(name,callback,capture)=>{assert.equal(name,'toggle');assert.equal(capture,true);listeners.set(name,callback);}},window:{addEventListener:(name,callback)=>listeners.set(name,callback)},cancelAnimationFrame(){},requestAnimationFrame(callback){callback();return 1;},render(){},rememberWorkspace(){},announce:message=>announcements.push(message),renderCharts:(root,options)=>{chartRoots.push(root);chartCalls.push(options);},downloadCsv:(content,name)=>downloads.push({content,name}),downloadJson:pkg=>downloads.push({content:exportResearchPackage(pkg),name:'json'}),changesContext:()=>({status:'ready',rows:[]}),syncChanges(){}};
+ Object.assign(env,{positionResearchSave:node=>positionResearchSave(node,{innerWidth:1280,innerHeight:720}),buildCpiPublicationPin,buildGdpMatrixPin,cpiPublicationIds,cpiPublicationCsv,selectCpiPublicationHistory,gdpRevisionMatrixCsv,buildCoverageInventory,coverageInventoryCsv,fundingChartCatalog,researchPackageAttachment});
  const change=/root\.addEventListener\('change',async event=>\{([^]*?)\n\}\);/.exec(source);assert.ok(change,'App change delegation must exist');
  const code=`let {${Object.keys(env).join(',')}}=env;\n`
   +section('function trackedChanges()','function syncPublications(')
@@ -73,7 +78,7 @@ async function app(hash='#/series/gdp?window=all',{archive=publicationArchive,ex
   +section('let resizeFrame;','\nrender();')
   +`;return {handleResearchAction,applyPceAssumptions,changeHandler:async event=>{${change[1]}},navigate,state:()=>state,workspaceId:()=>activeWorkspaceId,checkpoint:()=>changeCheckpoint};`;
  const handlers=new Function('env',code)(env);
- return {...handlers,researchLibrary,values,inputs,downloads,chartCalls,chartRoots,listeners,announcements,location};
+ return {...handlers,questionDrafts,saveDrafts,researchLibrary,values,inputs,downloads,chartCalls,chartRoots,listeners,announcements,location};
 }
 
 test('checkpoint mark, enable and disable clear the displayed cutoff/page in the actual route',async()=>{
@@ -231,6 +236,7 @@ test('question action freezes exactly the explicit evidence and later view updat
  const prior=view.researchLibrary.listWorkspaces()[0];
  const fields={hypothesis:'Does labor support a slower inflation hypothesis?',support:'unrate',contradict:'cpi','review-date':'2026-11-01','review-event':'','condition-series':'unrate','condition-op':'>=','condition-value':'4'};
  for(const [name,value]of Object.entries(fields))view.inputs.set(`question-${name}-${prior.id}`,{value});
+ Object.assign(view.questionDrafts.get(prior.id).draft,{hypothesis:fields.hypothesis,supportingSeriesIds:['unrate'],contradictingSeriesIds:['cpi'],reviewDate:fields['review-date'],reviewEvent:'',conditions:[{seriesId:'unrate',operator:'>=',value:'4'}]});
  await view.handleResearchAction({saveQuestion:prior.id});
  const saved=view.researchLibrary.getWorkspace(prior.id),baseline=view.researchLibrary.getPackage(saved.researchQuestion.baselinePackageId);
  assert.deepEqual(baseline.request.ids,['unrate','cpi']);assert.equal(saved.state.seriesId,'yield');
@@ -249,4 +255,21 @@ test('conditional assumptions apply together and blank/invalid inputs cannot sil
  assert.match(view.location.hash,/assumedMonthly=0.25/);
  view.inputs.get('pce-monthly-rate').value='';assert.throws(()=>view.applyPceAssumptions(),/no value was substituted/);assert.equal(view.state().pceMonthlyRate,.25);
  view.inputs.get('pce-monthly-rate').value='-100';assert.throws(()=>view.applyPceAssumptions(),/Invalid assumptions/);assert.equal(view.state().pceMonthlyRate,.25);
+});
+
+
+test('actual question validation preserves the whole draft, keeps its editor open and leaves the saved baseline untouched',async()=>{
+ const view=await app('#/series/unrate');await view.handleResearchAction({saveWorkspace:''});const prior=view.researchLibrary.listWorkspaces()[0];
+ const entry=view.questionDrafts.get(prior.id);Object.assign(entry.draft,{hypothesis:'Keep this unsaved question',supportingSeriesIds:['unrate'],contradictingSeriesIds:['cpi'],reviewDate:'2026-11-01',reviewEvent:'',conditions:[{seriesId:'unrate',operator:'>=',value:''}]});
+ const before=structuredClone(entry.draft);
+ for(const [name,value]of Object.entries({hypothesis:entry.draft.hypothesis,support:'unrate',contradict:'cpi','review-date':'2026-11-01','review-event':'','condition-series':'unrate','condition-op':'>=','condition-value':''}))view.inputs.set(`question-${name}-${prior.id}`,{value});
+ await assert.doesNotReject(view.handleResearchAction({saveQuestion:prior.id}));
+ assert.deepEqual(entry.draft,before);assert.equal(entry.status,'error');assert.match(entry.errors['condition-value'],/threshold/);assert.equal(entry.focusField,'condition-value');
+ assert.equal(view.researchLibrary.getWorkspace(prior.id).researchQuestion,undefined);assert.equal(view.researchLibrary.listPackages().length,0);
+});
+
+
+test('actual Freeze never substitutes defaults when every preview measurement is unchecked',async()=>{
+ const current=await app('#/series/unrate');current.saveDrafts.get(researchSaveScope(current.state()),{name:'Empty evidence',selected:[]});
+ await assert.rejects(current.handleResearchAction({pinResult:''}),/one to four measurements/);assert.equal(current.researchLibrary.listPackages().length,0);
 });

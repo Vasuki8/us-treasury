@@ -74,14 +74,16 @@ test('Watchlist puts each native unit with its latest value and keeps storage an
  assert.ok(readings[0][1].includes(getSeries('gdp').unit));assert.ok(readings[1][1].includes(getSeries('unrate').unit));
  const basis=group(html,'Monitor scope');
  for(const text of ['id="watchlist-sort"','id="watchlist-group"','session only','data-retry-changes'])assert.ok(basis.includes(text),text);
- assert.match(lead,/data-add-compare="unrate"/);assert.match(lead,/data-watch-move="gdp"/);assert.match(lead,/data-save="gdp"/);
+ assert.match(lead,/data-add-compare="unrate"/);assert.match(html,/Edit order or remove/);
+ assert.match(html,/data-page-disclosure="watchlist:gdp:edit"/);assert.match(html,/data-watch-move="gdp"/);assert.match(html,/data-save="gdp"/);
+ assert.doesNotMatch(lead,/data-watch-move="gdp"|data-save="gdp"/,'Order and removal controls appear in deliberate edit mode');
 });
 
 test('Frozen result basis is compact while original charts, exports and attachment order remain visible',async()=>{
  const pkg=await createResearchPackage({name:'Retained layout',state:{selected:['gdp'],range:1},context:{attachments:[{name:'First.csv',type:'text/csv',content:'value\n1'},{name:'Second.csv',type:'text/csv',content:'value\n2'}]}});
  const original=JSON.stringify(pkg),html=researchPage({researchView:'packages',packageId:pkg.id},{library:{packages:[pkg]}}),lead=visible(html);
  const basis=group(html,'Frozen result basis');
- for(const text of ['PINNED','WINDOW','VALUES','independent of the current snapshot'])assert.ok(basis.includes(text),text);
+ for(const text of ['FROZEN UTC','WINDOW','VALUES','independent of the current snapshot'])assert.ok(basis.includes(text),text);
  for(const text of ['data-chart','data-package-json','data-package-csv','does not authenticate','Imported source claims remain unverified'])assert.ok(lead.includes(text),text);
  before(lead,'data-package-attachment="0"','data-package-attachment="1"');
  assert.equal(JSON.stringify(pkg),original,'Rendering never mutates retained inputs');
@@ -90,7 +92,7 @@ test('Frozen result basis is compact while original charts, exports and attachme
 test('Saved research views retain editable and frozen scope with independent failed-publication recovery',()=>{
  for(const view of ['workspaces','packages','changes','publications']){
   const html=researchPage(state({researchView:view}),{library:{sessionOnly:true},changes:{status:'error',error:'History failed'},publicationState:{status:'error',error:'Publication failed'}}),lead=visible(html);
-  assert.match(html,/class="workspace-analysis"/);assert.match(lead,/session-only/);assert.match(lead,/Research library views/);
+  assert.match(html,/class="workspace-analysis"/);assert.match(lead,/session-only/);assert.doesNotMatch(html,/research-library-nav/,'Research destinations use the shared contextual navigation');
   if(view==='changes')assert.match(lead,/data-retry-changes/);
   if(view==='publications')assert.match(lead,/data-retry-publications/);
  }
