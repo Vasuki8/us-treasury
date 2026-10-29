@@ -14,7 +14,14 @@ export function rangeControls(state,ids,{catalog,observationDescription='Each se
 export function coverageSummary(panel) {
   const all=panel.series?.observations??[],shown=panel.observations??[],missing=shown.filter(o=>!Number.isFinite(o.value)).length;
   const bounds=rows=>rows.length?`${rows[0].date} to ${rows.at(-1).date}`:'no observations';
-  return `<p class="panel-note coverage-summary">Retained: ${all.length} observations · reference dates ${esc(bounds(all))}. Displayed: ${shown.length} observations · ${esc(bounds(shown))}${missing?` · ${missing} missing or suppressed`:''}. Retrieval: ${esc(panel.series?.fetchedAt??'unavailable')}. Reference dates are not verified release times.</p>`;
+  const retained=panel.series?.retainedCoverage;
+  const count=retained?.count??all.length;
+  const retainedDates=retained?.startDate?`${retained.startDate} to ${retained.endDate}`:bounds(all);
+  return '<p class="panel-note coverage-summary">'
+    +`Retained: ${count} observations · reference dates ${esc(retainedDates)}. `
+    +`Displayed: ${shown.length} observations · ${esc(bounds(shown))}`
+    +(missing?` · ${missing} missing or suppressed`:'')
+    +`. Retrieval: ${esc(panel.series?.fetchedAt??'unavailable')}. Reference dates are not verified release times.</p>`;
 }
 
 export function measureLabel(current){return current.observationType==='calculated'?'Calculated metric':current.observationType==='modeled'?'Model estimate':'Official observation';}

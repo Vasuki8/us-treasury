@@ -94,7 +94,8 @@ export function periodLabel(s, date) {
 
 function coverage(s, observations) {
   const full = resolveDateWindow({ preset: 'all' }, [s]);
-  return { fullStartDate: full.fullStartDate, fullEndDate: full.fullEndDate, fullCount: s.observations.length,
+  return { fullStartDate: full.fullStartDate, fullEndDate: full.fullEndDate,
+    fullCount: s.retainedCoverage?.count??s.observations.length,
     startDate: observations[0]?.date ?? null, endDate: observations.at(-1)?.date ?? null, count: observations.length };
 }
 

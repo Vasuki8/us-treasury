@@ -31,22 +31,30 @@ test('server serves versioned native modules and rejects unreviewed or malformed
     assert(path.basename(target).startsWith('meridian-server-assets-'));
     await rm(target, { recursive: true, force: true });
   });
-  const prefix = 'assets/0123456789abcdef/';
+  const prefix = 'assets/';
   await mkdir(path.join(root, prefix, 'src'), { recursive: true });
-  for (const [name, contents] of [['src/app.js', 'export const loaded = true;'], ['styles.css', 'body {}'], ['favicon.svg', '<svg/>'], ['src/private.txt', 'private'], ['package.json', '{}']]) {
+  const fixtures = [
+    ['src/app.0123456789abcdef.js', 'export const loaded = true;'], ['styles.0123456789abcdef.css', 'body {}'],
+    ['favicon.0123456789abcdef.svg', '<svg/>'], ['src/private.txt', 'private'], ['package.json', '{}'],
+  ];
+  for (const [name, contents] of fixtures) {
     await writeFile(path.join(root, prefix, name), contents);
   }
   const server = createAppServer(root);
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise(resolve => server.close(resolve)));
   const origin = `http://127.0.0.1:${server.address().port}`;
-  const module = await fetch(`${origin}/${prefix}src/app.js`);
+  const module = await fetch(`${origin}/${prefix}src/app.0123456789abcdef.js`);
   assert.equal(module.status, 200);
   assert.equal(module.headers.get('content-type'), 'text/javascript; charset=utf-8');
   assert.equal(await module.text(), 'export const loaded = true;');
-  assert.equal((await fetch(`${origin}/${prefix}styles.css`)).headers.get('content-type'), 'text/css; charset=utf-8');
-  assert.equal((await fetch(`${origin}/${prefix}favicon.svg`)).headers.get('content-type'), 'image/svg+xml');
-  for (const invalid of ['assets/short/src/app.js', 'assets/0123456789ABCDEF/src/app.js', `${prefix}package.json`, `${prefix}src/private.txt`, `${prefix}src/%2e%2e%2fpackage.json`, `${prefix}src/nested/app.js`, `${prefix}src/app.js/extra`]) {
+  assert.equal((await fetch(`${origin}/${prefix}styles.0123456789abcdef.css`)).headers.get('content-type'), 'text/css; charset=utf-8');
+  assert.equal((await fetch(`${origin}/${prefix}favicon.0123456789abcdef.svg`)).headers.get('content-type'), 'image/svg+xml');
+  const invalidPaths = [
+    'assets/src/app.short.js', 'assets/src/app.0123456789ABCDEF.js', 'assets/src/app.js', `${prefix}package.json`,
+    `${prefix}src/private.txt`, `${prefix}src/%2e%2e%2fpackage.json`, `${prefix}src/nested/app.js`, `${prefix}src/app.js/extra`,
+  ];
+  for (const invalid of invalidPaths) {
     assert.equal((await fetch(`${origin}/${invalid}`)).status, 404, invalid);
   }
 });

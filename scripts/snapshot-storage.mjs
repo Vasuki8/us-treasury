@@ -4,6 +4,7 @@ import { lstat, mkdir, open, rename, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { normalizeVintageTimestamp } from '../src/vintages.js';
+import { currentSnapshotAssets } from './current-snapshot.mjs';
 
 const MAX_CAPTURE_BYTES = 64 * 1024 * 1024;
 const MAX_ARCHIVE_BYTES = 512 * 1024 * 1024;
@@ -276,5 +277,7 @@ export function browserSnapshotAssets(fullSnapshot) {
   }));
   const { vintages: _history, vintageArchive: _storedArchive, historyArchive: _oldArchive, ...current } = fullSnapshot;
   const snapshot = { ...current, historyArchive: { version: 2, captureCount: history.captures.length, latestCaptureAt, sources } };
-  return { snapshot, module: snapshotModule(snapshot), files };
+  const projected = currentSnapshotAssets(snapshot, snapshotModule);
+  for (const [name, bytes] of projected.files) files.set(name, bytes);
+  return { ...projected, files };
 }

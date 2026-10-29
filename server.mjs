@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath,pathToFileURL } from 'node:url';
 import {loadSnapshotHistory,browserSnapshotAssets} from './scripts/snapshot-storage.mjs';
 import {assertCommercialData} from './scripts/data-policy.mjs';
+import {importMapCspHash, isBuiltAsset} from './scripts/asset-references.mjs';
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 const types = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.json':'application/json; charset=utf-8','.gz':'application/gzip'};
@@ -31,16 +32,23 @@ export function createAppServer(root = projectRoot) {
     const asset = pathname === '/' ? 'index.html' : pathname.slice(1);
     const allowed = ['index.html','styles.css','favicon.svg'].includes(asset)
       || /^src\/[a-zA-Z0-9_-]+\.js$/.test(asset)
-      || /^src\/history-[a-f0-9]{64}\.json(?:\.gz)?$/.test(asset)
-      || /^assets\/[a-f0-9]{16}\/(?:styles\.css|favicon\.svg|src\/(?:[a-zA-Z0-9_-]+\.js|history-[a-f0-9]{64}\.json(?:\.gz)?))$/.test(asset);
+      || /^src\/(?:history-[a-f0-9]{64}\.json(?:\.gz)?|source-[a-f0-9]{64}\.js)$/.test(asset)
+      || isBuiltAsset(asset);
     if (!allowed) { res.writeHead(404); res.end('Not found'); return; }
     try {
       let data;
       if(asset==='src/official-snapshot.js')data=Buffer.from((await projection()).module);
-      else if(/^src\/history-[a-f0-9]{64}\.json(?:\.gz)?$/.test(asset)){
+      else if (/^src\/(?:history-[a-f0-9]{64}\.json(?:\.gz)?|source-[a-f0-9]{64}\.js)$/.test(asset)) {
         data=(await projection()).files.get(asset.slice(4));
         if(!data){res.writeHead(404);res.end('Not found');return;}
       }else data=await readFile(path.join(root, asset));
+      if (asset === 'index.html') {
+        const mapHash = importMapCspHash(data.toString('utf8'));
+        if (mapHash) {
+          const policy = res.getHeader('Content-Security-Policy');
+          res.setHeader('Content-Security-Policy', policy.replace("script-src 'self'", `script-src 'self' '${mapHash}'`));
+        }
+      }
       res.writeHead(200, {'Content-Type':types[path.extname(asset)] || 'application/octet-stream'});
       res.end(req.method === 'HEAD' ? undefined : data);
     } catch {

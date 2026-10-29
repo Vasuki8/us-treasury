@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {pathToFileURL} from 'node:url';
+import {createHash} from 'node:crypto';
 
 const run = promisify(execFile);
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -29,11 +30,12 @@ async function build(root) {
   await run(process.execPath, ['scripts/build.mjs'], { cwd: root });
   const html = await readFile(path.join(root, 'dist', 'index.html'), 'utf8');
   const entry = html.match(/<script type="module" src="([^"]+)"/)[1];
-  assert.match(entry, /^\.\/assets\/[a-f0-9]{16}\/src\/app\.js$/, 'The whole module graph needs a content-specific directory');
-  return { html, entry, directory: entry.slice(2, -'src/app.js'.length) };
+  assert.match(entry, /^\.\/assets\/src\/app\.[a-f0-9]{16}\.js$/, 'The entry needs its own content hash');
+  const map = JSON.parse(html.match(/<script type="importmap">([\s\S]*?)<\/script>/)[1]);
+  return { html, entry, imports: map.imports };
 }
 
-test('unchanged builds reuse asset URLs while a refreshed snapshot changes the entire module graph URL', async t => {
+test('each asset keeps its URL unless its own bytes change, including snapshot-only and stylesheet refreshes', async t => {
   const root = await fixture(t);
   const first = await build(root);
   assert.deepEqual(await build(root), first);
@@ -41,19 +43,20 @@ test('unchanged builds reuse asset URLs while a refreshed snapshot changes the e
   const original = await readFile(snapshotPath, 'utf8');
   await writeFile(snapshotPath, original.replace(/"generatedAt":\s*"[^"]+"/, '"generatedAt": "2026-10-22T02:00:00.000Z"'));
   const refreshed = await build(root);
-  assert.notEqual(refreshed.entry, first.entry);
-  const {snapshot:projected}=await import(pathToFileURL(path.join(root,'dist',refreshed.directory,'src','official-snapshot.js')).href);
-  assert.equal(projected.generatedAt,'2026-10-22T02:00:00.000Z');
-  assert.equal(projected.vintages,undefined,'the browser only loads history on demand');assert.equal(projected.vintageArchive,undefined);
-  assert.equal(projected.historyArchive.version,2);assert.ok(Object.values(projected.historyArchive.sources).every(source=>source.compressed.url.endsWith('.json.gz')));
-  const modules = (await readdir(path.join(root, 'dist', refreshed.directory, 'src'))).filter(name => name.endsWith('.js'));
-  for (const name of modules) {
-    const moduleURL = new URL(`src/${name}`, `https://example.test/us-treasury/${refreshed.directory}`);
-    assert(moduleURL.pathname.startsWith(`/us-treasury/${refreshed.directory}`));
-    assert.notEqual(moduleURL.pathname, `/us-treasury/${first.directory}src/${name}`);
+  assert.equal(refreshed.entry, first.entry);
+  assert.notEqual(refreshed.html, first.html);
+  const snapshotKey = './assets/src/official-snapshot.js';
+  assert.notEqual(refreshed.imports[snapshotKey], first.imports[snapshotKey]);
+  for (const [key, url] of Object.entries(first.imports)) {
+    if (key !== snapshotKey) assert.equal(refreshed.imports[key], url, `Unchanged module URL: ${key}`);
   }
+  const projected = await readFile(path.join(root, 'dist', refreshed.imports[snapshotKey]), 'utf8');
+  assert.match(projected, /2026-10-22T02:00:00\.000Z/);
   await writeFile(path.join(root, 'styles.css'), `${await readFile(path.join(root, 'styles.css'), 'utf8')}\n/* updated appearance */\n`);
-  assert.notEqual((await build(root)).entry, refreshed.entry, 'A stylesheet change must invalidate the shared directory too');
+  const styled = await build(root);
+  assert.equal(styled.entry, refreshed.entry);
+  assert.deepEqual(styled.imports, refreshed.imports);
+  assert.notEqual(styled.html.match(/href="([^\"]+\.css)"/)[1], refreshed.html.match(/href="([^\"]+\.css)"/)[1]);
 });
 
 test('build packages only the entry and allowlisted versioned application files, which pass the HTTP smoke check', async t => {
@@ -62,14 +65,35 @@ test('build packages only the entry and allowlisted versioned application files,
   await mkdir(path.join(root, 'src', 'internal'), { recursive: true });
   await writeFile(path.join(root, 'src', 'internal', 'private.js'), 'not a public asset');
   const built = await build(root);
-  assert(built.html.includes(`href="./${built.directory}styles.css"`));
-  assert(built.html.includes(`href="./${built.directory}favicon.svg"`));
+  assert.match(built.html, /href="\.\/assets\/styles\.[a-f0-9]{16}\.css"/);
+  assert.match(built.html, /href="\.\/assets\/favicon\.[a-f0-9]{16}\.svg"/);
   const files = (await readdir(path.join(root, 'dist'), { recursive: true, withFileTypes: true })).filter(item => item.isFile());
   for (const item of files) {
     const relative = path.relative(path.join(root, 'dist'), path.join(item.parentPath, item.name)).replaceAll(path.sep, '/');
-    assert(relative === 'index.html' || /^assets\/[a-f0-9]{16}\/(?:styles\.css|favicon\.svg|src\/(?:[a-zA-Z0-9_-]+\.js|history-[a-f0-9]{64}\.json(?:\.gz)?))$/.test(relative), `Unexpected public file: ${relative}`);
+    if (relative === 'index.html') continue;
+    const hashed = relative.match(/^assets\/(?:src\/)?[a-zA-Z0-9_-]+\.([a-f0-9]{16})\.(?:js|css|svg)$/);
+    const generated = relative.match(/^assets\/src\/(?:history|source)-([a-f0-9]{64})\.(?:js|json(?:\.gz)?)$/);
+    assert(hashed || generated, `Unexpected public file: ${relative}`);
+    const bytes = await readFile(path.join(root, 'dist', relative));
+    const digest = createHash('sha256').update(bytes).digest('hex');
+    assert.equal(hashed ? digest.slice(0, 16) : digest, (hashed || generated)[1], relative);
   }
   const checked = await run(process.execPath, ['scripts/check-build.mjs'], { cwd: root });
   const checkedCount=checked.stdout.match(/smoke check passed \((\d+) assets\)/);
   assert.ok(checkedCount&&Number(checkedCount[1])>=14,'the full imported module graph and baseline assets are checked');
+});
+
+test('the built import map has an exact CSP hash and the server applies it without weakening the dev policy', async t => {
+  const root = await fixture(t);
+  const built = await build(root);
+  const map = built.html.match(/<script type="importmap">([\s\S]*?)<\/script>/)[1];
+  const digest = createHash('sha256').update(map).digest('base64');
+  assert(built.html.includes(`script-src 'self' 'sha256-${digest}'`));
+  assert(built.html.indexOf('type="importmap"') < built.html.indexOf('type="module"'));
+  const {createAppServer} = await import(pathToFileURL(path.join(root, 'server.mjs')).href);
+  const server = createAppServer(path.join(root, 'dist'));
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/`);
+  assert(response.headers.get('content-security-policy').includes(`'sha256-${digest}'`));
 });

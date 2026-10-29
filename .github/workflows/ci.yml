@@ -193,6 +193,8 @@ jobs:
         run: npm run build
 
       - name: Smoke test the refreshed build
+        env:
+          STRICT_ASSET_SIZE: '1'
         run: node scripts/check-build.mjs
 
       - name: Commit and push only the verified snapshot
@@ -250,6 +252,8 @@ jobs:
         run: npm run build
 
       - name: Smoke test built application
+        env:
+          STRICT_ASSET_SIZE: '1'
         run: node scripts/check-build.mjs
 
       - name: Save static build
