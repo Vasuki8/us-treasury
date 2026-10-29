@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import {moduleAssetReferences} from './asset-references.mjs';
+import {moduleAssetReferences, parseImportMap, resolveModuleReference} from './asset-references.mjs';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -50,9 +50,10 @@ export async function verifyLiveBuild(input, { directory = path.join(projectRoot
   const localRoot = path.resolve(directory);
   const pending = [base];
   const visited = new Set();
+  let imports = new Map();
 
   function resolveAsset(reference, parent) {
-    const url = new URL(reference, parent);
+    const url = resolveModuleReference(reference, parent, imports);
     if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname) || url.search || url.hash || url.username || url.password) {
       throw new Error(`Asset is outside deployment root: ${reference}`);
     }
@@ -81,7 +82,9 @@ export async function verifyLiveBuild(input, { directory = path.join(projectRoot
     const actual = Buffer.from(await response.arrayBuffer());
     if (!actual.equals(expected)) throw new Error(`Deployed file differs from local build: ${name}`);
     const source = actual.toString('utf8');
-    const dependencies = name === 'index.html' ? entryAssets(source) : name.endsWith('.js') ? moduleImports(source) : [];
+    if (name === 'index.html') imports = parseImportMap(source, url);
+    const dependencies = name === 'index.html'
+      ? [...entryAssets(source), ...imports.values()] : name.endsWith('.js') ? moduleImports(source) : [];
     for (const dependency of dependencies) pending.push(resolveAsset(dependency, url));
   }
   return { url: base.href, assets: visited.size - 1 };

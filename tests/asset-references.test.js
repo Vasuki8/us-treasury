@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {moduleAssetReferences, staticModuleReferences} from '../scripts/asset-references.mjs';
+import {moduleAssetReferences, staticModuleReferences, parseImportMap, resolveModuleReference} from '../scripts/asset-references.mjs';
 import {readFile} from 'node:fs/promises';
 test('static discovery includes imports and re-exports while excluding lazy modules and history descriptors', () => {
   const source = [
@@ -30,4 +30,23 @@ test('asset discovery follows literal lazy module imports for publication archiv
 test('the claims archive remains a discoverable literal lazy asset while retries may use a query',async()=>{
  const source=await readFile(new URL('../src/claims-publication-loader.js',import.meta.url),'utf8');
  assert.ok(moduleAssetReferences(source).includes('./claims-publication-archive.js'));
+});
+
+test('module resolution follows per-file import maps under a deployment prefix and preserves literal lazy data', () => {
+  const base = new URL('https://example.test/preview/');
+  const html = '<script type="importmap">{"imports":{"./assets/src/data.js":"./assets/src/data.0123456789abcdef.js"}}</script>';
+  const imports = parseImportMap(html, base);
+  const parent = new URL('./assets/src/app.fedcba9876543210.js', base);
+  assert.equal(resolveModuleReference('./data.js', parent, imports).href,
+    'https://example.test/preview/assets/src/data.0123456789abcdef.js');
+  const source = `./source-${'a'.repeat(64)}.js`;
+  assert.deepEqual(moduleAssetReferences(`export const descriptor={url:'${source}'};`), [source]);
+  assert.equal(resolveModuleReference(source, parent, imports).href, new URL(source, parent).href);
+});
+
+test('import-map parsing rejects malformed or remote maps instead of skipping dependencies', () => {
+  const base = new URL('https://example.test/preview/');
+  for (const contents of ['{', '{"imports":[]}', '{"imports":{"./data.js":"https://other.test/data.js"}}']) {
+    assert.throws(() => parseImportMap(`<script type="importmap">${contents}</script>`, base), /JSON|import.map|local/i);
+  }
 });

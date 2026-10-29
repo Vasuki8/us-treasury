@@ -7,11 +7,14 @@ export function isIsoDate(value) {
 
 function dateBounds(seriesList) {
   let startDate = null, endDate = null;
-  for (const s of seriesList) for (const observation of s?.observations ?? []) {
-    const date = observation.date;
-    if (!isIsoDate(date)) continue;
-    if (startDate === null || date < startDate) startDate = date;
-    if (endDate === null || date > endDate) endDate = date;
+  for (const s of seriesList) {
+    const retained=s?.retainedCoverage;
+    const rows=retained?[{date:retained.startDate},{date:retained.endDate}]:s?.observations??[];
+    for (const {date} of rows) {
+      if (!isIsoDate(date)) continue;
+      if (startDate === null || date < startDate) startDate = date;
+      if (endDate === null || date > endDate) endDate = date;
+    }
   }
   return { fullStartDate: startDate, fullEndDate: endDate };
 }

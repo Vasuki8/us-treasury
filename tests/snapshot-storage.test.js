@@ -51,7 +51,11 @@ async function directory(t) {
   });
   return root;
 }
-const moduleValue = async source => (await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`)).snapshot;
+const moduleValue = async source => {
+  const codec = new URL('../src/source-codec.js', import.meta.url).href;
+  const resolved = source.replace("'./source-codec.js'", JSON.stringify(codec));
+  return (await import(`data:text/javascript;base64,${Buffer.from(resolved).toString('base64')}`)).snapshot;
+};
 
 test('generated modules pool repeated long strings without changing JSON values or __proto__ keys', async () => {
   const repeated = 'Captured terms and original input URL. '.repeat(15);
@@ -209,7 +213,10 @@ test('browser projection excludes captures from the initial module and produces 
   assert.deepEqual(full, original);
   assert.equal(result.snapshot.vintages, undefined);
   assert.equal(result.snapshot.vintageArchive, undefined);
-  assert.deepEqual(result.snapshot.sources, full.sources);
+  assert.deepEqual(result.snapshot.sources.test.series.measure.observations, full.sources.test.series.measure.observations);
+  assert.deepEqual(result.snapshot.sources.test.series.measure.retainedCoverage, {
+    startDate:'2026-01-01', endDate:'2026-01-01', count:1,
+  });
   assert.deepEqual(await moduleValue(result.module), result.snapshot);
   const descriptor = result.snapshot.historyArchive;
   assert.equal(descriptor.version, 2);
@@ -221,7 +228,7 @@ test('browser projection excludes captures from the initial module and produces 
   assert.equal(descriptor.sources.test.latestCaptureAt, at[1]);
   assert.equal(descriptor.compressed, undefined);
   assert.equal(descriptor.fallback, undefined);
-  assert.equal(result.files.size, 2);
+  assert.equal(result.files.size, 3);
   for (const [kind, item] of [['compressed', descriptor.sources.test.compressed], ['fallback', descriptor.sources.test.fallback]]) {
     assert.match(item.url, kind === 'compressed' ? /^\.\/history-[a-f0-9]{64}\.json\.gz$/ : /^\.\/history-[a-f0-9]{64}\.json$/);
     const bytes = result.files.get(item.url.slice(2));
@@ -244,7 +251,7 @@ test('source partitions retain removed and moved series and merge exactly in can
   assert.equal(manifest.sources.alpha.latestCaptureAt, at[2]);
   assert.equal(manifest.sources.zeta.captureCount, 3);
   assert.equal(manifest.sources.zeta.latestCaptureAt, '2026-10-21T13:00:00.000Z');
-  assert.equal(result.files.size, 4);
+  assert.equal(result.files.size, 6);
   const partitions = {};
   for (const [id, descriptor] of Object.entries(manifest.sources)) {
     for (const kind of ['compressed', 'fallback']) {

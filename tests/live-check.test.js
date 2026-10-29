@@ -45,6 +45,23 @@ test('live verifier confirms the tested artifact including nested and side-effec
   assert.equal(result.url, 'https://meridian.example/preview/');
 });
 
+test('live verifier resolves import maps for eager and lazy modules and verifies generated full-source modules', async t => {
+  const digest = 'a'.repeat(64), prefix = 'assets/src/', version = '0123456789abcdef';
+  const imports = Object.fromEntries(['app', 'data', 'lazy'].map(name => [`./${prefix}${name}.js`, `./${prefix}${name}.${version}.js`]));
+  const mappedHtml = html.replace('./src/app.js', `./${prefix}app.${version}.js`)
+    .replace('<script type="module"', `<script type="importmap">${JSON.stringify({imports})}</script><script type="module"`);
+  const setup = await fixture(t, {
+    'index.html': mappedHtml,
+    [`${prefix}app.${version}.js`]: "import './data.js';\nconst later=()=>import('./lazy.js');\n",
+    [`${prefix}data.${version}.js`]: `export const manifest={url:'./source-${digest}.js'};`,
+    [`${prefix}lazy.${version}.js`]: 'export const lazy=true;',
+    [`${prefix}source-${digest}.js`]: 'export const snapshot={source:{complete:true}};',
+  });
+  assert.equal((await verifyLiveBuild('https://meridian.example/preview/', setup)).assets, 6);
+  setup.remote.delete(`${prefix}source-${digest}.js`);
+  await assert.rejects(verifyLiveBuild('https://meridian.example/preview/', setup), /404.*source-/);
+});
+
 test('live verifier accepts a deployment origin without an explicit trailing slash', async t => {
   const setup = await fixture(t);
   const result = await verifyLiveBuild('https://meridian.example', {

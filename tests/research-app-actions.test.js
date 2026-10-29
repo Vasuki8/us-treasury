@@ -32,6 +32,7 @@ import {periodLabel} from '../src/model.js';
 import {selectClaimsPublicationHistory,claimsPublicationCsv,claimsPublicationIds} from '../src/claims-publication-history.js';
 import {claimsFixture} from './helpers/claims-publications-fixture.js';
 import {createPublicationController} from '../src/publication-controller.js';
+import {requiredSourceIds} from '../src/source-controller.js';
 import {watchDisclosureCharts} from '../src/page-hierarchy.js';
 
 const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8');
@@ -60,7 +61,9 @@ test('actual publication synchronization requests no archive on ordinary views a
 
 // Run the actual delegated handlers and chart/resize helpers. Browser element
 // boundaries are replaced; model, package, storage and route contracts stay real.
-async function app(hash='#/series/gdp?window=all',{archive=publicationArchive,explanations={version:1,explanations:[]},explanationStatus='ready',publicationStatus='ready'}={}){
+async function app(hash='#/series/gdp?window=all',{
+ archive=publicationArchive,explanations={version:1,explanations:[]},explanationStatus='ready',publicationStatus='ready',sourceController,
+}={}){
  const values=new Map(),storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
  const researchLibrary=await createResearchLibrary(storage),inputs=new Map([['research-name',{value:'Handler research'}]]),downloads=[],chartCalls=[],chartRoots=[],listeners=new Map(),announcements=[];
  const location={hash},history={pushState:(_state,_title,route)=>{location.hash=route;},replaceState:(_state,_title,route)=>{location.hash=route;}};
@@ -69,6 +72,8 @@ async function app(hash='#/series/gdp?window=all',{archive=publicationArchive,ex
   publicationController:{context:()=>({status:publicationStatus,archive})},state:{...parseRoute(hash),saved:[]},activeWorkspaceId:null,researchLabel:'',pinBusy:false,changeCheckpoint:{enabled:true,since:'2026-10-01T12:00:00.000Z',snapshotAt:'2026-10-01T12:00:00.000Z'},changeState:{status:'ready',history:{captures:[]}},historyController:{context:()=>({historyState:{status:'idle'}})},
   document:{getElementById:id=>{const input=inputs.get(id);if(input&&!input.focus)input.focus=()=>{};return input;}},location,history,watchDisclosureCharts,main:{contains:()=>false,querySelector:()=>null,addEventListener:(name,callback,capture)=>{assert.equal(name,'toggle');assert.equal(capture,true);listeners.set(name,callback);}},window:{addEventListener:(name,callback)=>listeners.set(name,callback)},cancelAnimationFrame(){},requestAnimationFrame(callback){callback();return 1;},render(){},rememberWorkspace(){},announce:message=>announcements.push(message),renderCharts:(root,options)=>{chartRoots.push(root);chartCalls.push(options);},downloadCsv:(content,name)=>downloads.push({content,name}),downloadJson:pkg=>downloads.push({content:exportResearchPackage(pkg),name:'json'}),changesContext:()=>({status:'ready',rows:[]}),syncChanges(){}};
  Object.assign(env,{positionResearchSave:node=>positionResearchSave(node,{innerWidth:1280,innerHeight:720}),buildCpiPublicationPin,buildGdpMatrixPin,cpiPublicationIds,cpiPublicationCsv,selectCpiPublicationHistory,gdpRevisionMatrixCsv,buildCoverageInventory,coverageInventoryCsv,fundingChartCatalog,researchPackageAttachment});
+ Object.assign(env,{requiredSourceIds,sourceController,actionFeedback(){}});
+ if(sourceController)env.dataStatus={...dataStatus,sourceArchive:{version:1,sources:{}}};
  const change=/root\.addEventListener\('change',async event=>\{([^]*?)\n\}\);/.exec(source);assert.ok(change,'App change delegation must exist');
  const code=`let {${Object.keys(env).join(',')}}=env;\n`
   +section('function trackedChanges()','function syncPublications(')
@@ -272,4 +277,40 @@ test('actual question validation preserves the whole draft, keeps its editor ope
 test('actual Freeze never substitutes defaults when every preview measurement is unchecked',async()=>{
  const current=await app('#/series/unrate');current.saveDrafts.get(researchSaveScope(current.state()),{name:'Empty evidence',selected:[]});
  await assert.rejects(current.handleResearchAction({pinResult:''}),/one to four measurements/);assert.equal(current.researchLibrary.listPackages().length,0);
+});
+
+test('Freeze waits for full source inputs and retains its initiating measurement selection',async()=>{
+ let finish,calls=[];
+ const sourceController={ensure:ids=>{calls.push(ids);return new Promise(resolve=>{finish=resolve;});}};
+ const current=await app('#/series/gdp?window=1y',{sourceController});
+ const pending=current.handleResearchAction({pinResult:''});await Promise.resolve();
+ assert.deepEqual(calls,[['bea']]);assert.equal(current.researchLibrary.listPackages().length,0);
+ current.state().freezeSelection=[];finish();await pending;
+ const pkg=current.researchLibrary.getPackage(current.state().packageId);
+ assert.deepEqual(pkg.request.ids,['gdp']);
+ assert.equal(pkg.catalog.gdp.observations.length,series.gdp.observations.length);
+});
+
+test('Freeze cannot save evidence from another route when source loading finishes late',async()=>{
+ let finish;const sourceController={ensure:()=>new Promise(resolve=>{finish=resolve;})};
+ const current=await app('#/series/gdp?window=all',{sourceController});
+ const pending=current.handleResearchAction({pinResult:''});await Promise.resolve();
+ current.navigate({page:'overview'});finish();await assert.rejects(pending,/view changed/i);
+ assert.equal(current.researchLibrary.listPackages().length,0);assert.equal(current.state().page,'overview');
+});
+
+test('question baseline waits for all explicit evidence histories before saving',async()=>{
+ let finish,calls=[];const sourceController={ensure:ids=>{calls.push(ids);return new Promise(resolve=>{finish=resolve;});}};
+ const current=await app('#/series/yield?window=1y',{sourceController});
+ await current.handleResearchAction({saveWorkspace:''});const prior=current.researchLibrary.listWorkspaces()[0];
+ const entry=current.questionDrafts.get(prior.id);
+ Object.assign(entry.draft,{
+  hypothesis:'Retain the chosen evidence histories',supportingSeriesIds:['unrate'],contradictingSeriesIds:['gdp'],conditions:[],
+ });
+ const pending=current.handleResearchAction({saveQuestion:prior.id});await Promise.resolve();
+ assert.deepEqual(calls,[['bls','bea']]);assert.equal(current.researchLibrary.listPackages().length,0);
+ finish();await pending;
+ const saved=current.researchLibrary.getWorkspace(prior.id),pkg=current.researchLibrary.getPackage(saved.researchQuestion.baselinePackageId);
+ assert.deepEqual(pkg.request.ids,['unrate','gdp']);
+ assert.equal(pkg.catalog.unrate.observations.length,series.unrate.observations.length);
 });

@@ -1,5 +1,8 @@
 /** Separate loading keeps numerical publication history usable if narrative evidence fails. */
-export function createPublicationExplanationLoader({importArchive=(attempt=0)=>attempt?import(`./publication-explanations.js?retry=${attempt}`):import('./publication-explanations.js')}={}){
+const nativeArchive = (attempt = 0) => attempt
+  ? import(import.meta.resolve('./publication-explanations.js') + `?retry=${attempt}`)
+  : import('./publication-explanations.js');
+export function createPublicationExplanationLoader({importArchive = nativeArchive} = {}) {
  let pending=null,failed=false,attempt=0;
  return {load({retry=false}={}){
   if(pending&&(!failed||!retry))return pending;

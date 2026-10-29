@@ -17,6 +17,9 @@ import {CURRENT_ACCOUNT_GDP_COMPARISON_MEASURES} from './current-account-gdp-com
 import { moveFollowed } from './watchlist-monitor.js';
 import { relevantRefreshIds } from './research-status.js';
 import { releases, dataStatus,series } from './data.js';
+import {hydrateSource} from './data.js';
+import {createSourceLoader} from './source-loader.js';
+import {createSourceController,requiredSourceIds} from './source-controller.js';
 import {revealedCalendarState} from './calendar-scope.js';
 import { filterSeries, getSeries, latest, formatValue, formatChange, toCsv,periodLabel } from './model.js';
 import {fiscalFinancingCsv} from './research-exports.js';
@@ -94,6 +97,10 @@ const historyLoader = createHistoryLoader(dataStatus.historyArchive);
 const historyController = createHistoryController(historyLoader, {
   getRoute:() => state,
   onChange:() => preserveHistoryView(main, () => render()),
+});
+const sourceController=createSourceController(createSourceLoader(dataStatus.sourceArchive),{
+  getRoute:()=>state,getLibrary:()=>researchLibrary.getState(),hydrate:hydrateSource,
+  onChange:()=>preserveHistoryView(main,()=>render()),
 });
 const pageNames = {release:'Release evidence',credit:'Credit & banking',research:"Saved research",macroCoverage:'Economy',overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',watchlist:'Watchlist',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Rates & curves',auctions:'Auction demand',ownership:'Debt ownership',macro:'GDP contributions',vintages:'Retrieval history',market:'Market functioning'};
 
@@ -205,6 +212,7 @@ function renderCurrentCharts(inspection){
  renderCurrentChartsIn(main,inspection);
 }
 function renderCurrentChartsIn(container,inspection){
+ if(dataStatus.sourceArchive&&sourceController.context(state).status!=='ready')return;
  const pkg=currentPackage(),history=pkg?.context.currentAccountGdpHistory,breakdown=pkg?.context.currentAccountGdpBreakdown,trailing=pkg?.context.currentAccountGdpTrailing,comparison=pkg?.context.currentAccountGdpComparison,contributions=pkg?.context.currentAccountGdpContributions,balanceEffects=pkg?.context.currentAccountGdpBalanceEffects,componentEffects=pkg?.context.currentAccountGdpComponentEffects,allComponentEffects=pkg?.context.currentAccountGdpAllComponentEffects;
  const chartCatalogs=pkg?{
   ...(history?currentAccountGdpHistoryChartCatalog(history.sources,{frozen:true}):{}),
@@ -249,6 +257,7 @@ function render({focusHeading=false,preserveFocus=false,captureDrafts=true}={}) 
   const externalControlsOpen=main.querySelector('#external-history-controls')?.open??false;
   researchDisclosures.capture(main);
   historyController.sync(state);
+  sourceController.sync(state);
   syncChanges();
   syncPublications();
   syncPublicationExplanations();
@@ -256,7 +265,11 @@ function render({focusHeading=false,preserveFocus=false,captureDrafts=true}={}) 
   root.dataset.page=state.page==='labor'||state.page==='macroCoverage'&&state.macroFamily==='labor'?'labor':state.page;
   const failures=trackedFailures();
   const publicationContexts={gdp:publicationController.context('gdp'),claims:publicationController.context('claimsAdvance'),cpi:publicationController.context('cpiMonthly')};
-  main.innerHTML=renderPage(state,{...historyController.context(state),library:researchLibrary.getState(),questionDrafts:questionDrafts.snapshot(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationContexts,publicationArchive,publicationState,publicationExplanations,explanationState});
+  main.innerHTML=renderPage(state,{
+    ...historyController.context(state),sourceState:sourceController.context(state),library:researchLibrary.getState(),
+    questionDrafts:questionDrafts.snapshot(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationContexts,
+    publicationArchive,publicationState,publicationExplanations,explanationState,
+  });
   main.querySelector('.page-heading .actions')?.insertAdjacentHTML('beforeend',researchActions());
   if(externalControlsOpen&&main.querySelector('#external-history-controls'))main.querySelector('#external-history-controls').open=true;
   researchDisclosures.restore(main);
@@ -352,6 +365,19 @@ function applyPceAssumptions(){
   const result=buildPceBaseEffects(getSeries(pceBaseIndex),pceScenarioOptions(patch));if(result.error)throw new Error(result.error);
   navigate(patch);announce('Assumptions applied. The conditional chart, table, saved view and CSV now use this path. Future values remain modeled, not forecasts.');
 }
+async function ensureSourceAction(sourceIds,{retry=false}={}){
+  if(!dataStatus.sourceArchive||!sourceIds.length)return;
+  const route=routeFor(state);
+  actionFeedback('Loading complete retained source data…');
+  try{await sourceController.ensure(sourceIds,{retry});}
+  catch(error){
+    actionFeedback(`Complete retained history unavailable: ${error.message}`,'error');
+    main.querySelector('.page-action-feedback')?.insertAdjacentHTML('beforeend',
+      `<button type="button" class="action" data-retry-sources="${esc(sourceIds.join(','))}">Retry source history</button>`);
+    throw error;
+  }
+  if(routeFor(state)!==route)throw new Error('The view changed while history loaded. Choose the action again in the current view.');
+}
 function stored(result,label){
   if(!result.ok)throw new Error(result.reason==='duplicate-id'?'This package ID already identifies different frozen evidence.':`Research library ${result.reason??'save failed'}.`);
   announce(`${label}${result.persisted?' saved in this browser.':' retained for this session. Export settings for Saved Views and watchlists; download JSON for Frozen Results before reloading.'}`);
@@ -365,6 +391,7 @@ function showCalendarPreview(force=false){
 }
 async function handleResearchAction(d){
   state.researchError='';
+  if('exportCoverage' in d)await ensureSourceAction(requiredSourceIds(state,{purpose:'export',action:d}));
   if('editQuestion' in d||'closeQuestion' in d){
     const id=d.editQuestion??d.closeQuestion,prior=researchLibrary.getWorkspace(id);if(!prior)throw new Error('Saved view unavailable.');
     questionDrafts.capture(document);
@@ -379,7 +406,13 @@ async function handleResearchAction(d){
     questionDrafts.capture(document);const entry=questionDrafts.get(prior.id,prior.researchQuestion);if(entry.status==='pending')return;
     const initiatingFocus=rememberStableFocus(main,{document});
     questionDrafts.pending(prior.id);render({preserveFocus:true,captureDrafts:false});
-    const result=await saveResearchQuestion({library:researchLibrary,workspace:prior,draft:entry.draft,createPackage:createResearchPackage,catalog:series,events:releases});
+    const createPackage=async args=>{
+      await ensureSourceAction(requiredSourceIds(args.state,{ids:args.state.selected}));
+      return createResearchPackage(args);
+    };
+    const result=await saveResearchQuestion({
+      library:researchLibrary,workspace:prior,draft:entry.draft,createPackage,catalog:series,events:releases,
+    });
     if(result.ok)questionDrafts.saved(prior.id,result.question);else questionDrafts.failed(prior.id,result);
     render({preserveFocus:true,captureDrafts:false});
     if(result.focusField)document.getElementById(questionFieldId(prior.id,result.focusField))?.focus();else restoreStableFocus(main,initiatingFocus,{document});
@@ -404,23 +437,41 @@ async function handleResearchAction(d){
     if(pinBusy)return;
     if(('pinPublication' in d||'pinGdpMatrix' in d)&&publicationState.status!=='ready')throw new Error('Load the selected official publication archive before pinning.');
     if('pinGdpMatrix' in d&&state.publicationSeries!=='gdp')throw new Error('The revision matrix requires GDP publication evidence.');
-    const claims=claimsPublicationIds.includes(state.publicationSeries),cpi=cpiPublicationIds.includes(state.publicationSeries);
-    let args,name;
     if('pinResult' in d&&state.page!=='release'){const draft=saveDrafts.get(researchSaveScope(state),{selected:state.freezeSelection??freezeCandidates(state).slice(0,4)});state.freezeSelection=[...draft.selected];}
-    if('pinGdpMatrix' in d){
-      args=buildGdpMatrixPin(publicationArchive,state.publicationCutoff);name=`GDP revision matrix by ${args.context.gdpRevisionMatrix.cutoff}`;
-    }else if('pinPublication' in d){
-      if(cpi)args=buildCpiPublicationPin(publicationArchive,state.publicationSeries,state.publicationCutoff,state.publicationPeriod);
-      else if(claims)args=buildClaimsPublicationPin(publicationArchive,state.publicationSeries,state.publicationCutoff,state.publicationPeriod);
-      else args=buildPublicationPin(publicationArchive,state.publicationCutoff,state.publicationPeriod,{explanationArchive:publicationExplanations,explanationStatus:explanationState.status});
-      name=cpi?`${args.catalog[state.publicationSeries].short} ${args.context.publicationPeriod} by ${args.context.publicationCutoff}`:claims?`${state.publicationSeries==='continuedClaimsAdvance'?'Continued':'Initial'} claims ${args.context.publicationPeriod} by ${args.context.publicationCutoff}`:`GDP ${periodLabel({frequency:'Quarterly'},args.context.publicationPeriod)} published by ${args.context.publicationCutoff}`;
-    }else{
-      args=state.page==='release'?buildReleasePin(state,{archive:publicationArchive,publicationState,explanationArchive:publicationExplanations,explanationStatus:explanationState.status}):buildPinContext(state,{...historyController.context(state),changes:changesContext(),checkpoint:changeCheckpoint,failures:trackedFailures(),publicationContexts:{gdp:publicationController.context('gdp'),claims:publicationController.context('claimsAdvance'),cpi:publicationController.context('cpiMonthly')}});
-      name=document.getElementById('research-name').value;
-    }
+    const pinState={...state,...(state.freezeSelection?{freezeSelection:[...state.freezeSelection]}:{})};
+    const claims=claimsPublicationIds.includes(pinState.publicationSeries),cpi=cpiPublicationIds.includes(pinState.publicationSeries);
+    let args,name=document.getElementById('research-name')?.value??'';
     const initiatingScope=researchSaveScope(state),initiatingFocus=rememberStableFocus(main,{document});
     pinBusy=true;render({preserveFocus:true});
     try{
+      if('pinGdpMatrix' in d){
+        args=buildGdpMatrixPin(publicationArchive,pinState.publicationCutoff);
+        name=`GDP revision matrix by ${args.context.gdpRevisionMatrix.cutoff}`;
+      }else if('pinPublication' in d){
+        const {publicationSeries:id,publicationCutoff:cutoff,publicationPeriod:period}=pinState;
+        if(cpi)args=buildCpiPublicationPin(publicationArchive,id,cutoff,period);
+        else if(claims)args=buildClaimsPublicationPin(publicationArchive,id,cutoff,period);
+        else args=buildPublicationPin(publicationArchive,cutoff,period,{
+          explanationArchive:publicationExplanations,explanationStatus:explanationState.status,
+        });
+        const context=args.context;
+        const label=cpi?args.catalog[id].short:claims?`${id==='continuedClaimsAdvance'?'Continued':'Initial'} claims`
+          :`GDP ${periodLabel({frequency:'Quarterly'},context.publicationPeriod)} published`;
+        name=`${label} ${cpi||claims?context.publicationPeriod+' ':''}by ${context.publicationCutoff}`;
+      }else if(pinState.page==='release'){
+        args=buildReleasePin(pinState,{
+          archive:publicationArchive,publicationState,explanationArchive:publicationExplanations,explanationStatus:explanationState.status,
+        });
+      }else{
+        await ensureSourceAction(requiredSourceIds(pinState,{purpose:'freeze'}));
+        args=buildPinContext(pinState,{
+          ...historyController.context(pinState),changes:changesContext(),checkpoint:changeCheckpoint,failures:trackedFailures(),
+          publicationContexts:{
+            gdp:publicationController.context('gdp'),claims:publicationController.context('claimsAdvance'),
+            cpi:publicationController.context('cpiMonthly'),
+          },
+        });
+      }
       const pkg=await createResearchPackage({name,...args}),result=await researchLibrary.pinPackage(pkg);stored(result,'Frozen package');
       navigate({page:'research',researchView:'packages',packageId:pkg.id,researchFeedback:{packageId:pkg.id,message:result.persisted?'Frozen Result saved with its original evidence.':'Frozen Result is session-only. Download JSON before reloading for recovery.'}});
     }finally{pinBusy=false;if(researchSaveScope(state)===initiatingScope){render({preserveFocus:true});restoreStableFocus(main,initiatingFocus,{document});}}
@@ -477,6 +528,17 @@ root.addEventListener('click',async event=>{
   const d=button.dataset;
   if(button.disabled)return;
   if(button.id==='theme-toggle'){toggleTheme();return;}
+  if(Object.keys(d).some(key=>key.startsWith('export')&&!key.startsWith('exportFrozen')&&key!=='exportSettings')){
+    try{await ensureSourceAction(requiredSourceIds(state,{purpose:'export',action:d}));}
+    catch(error){announce(`Export unavailable: ${error.message}`);return;}
+  }
+  if('retrySources' in d){
+    try{
+      await ensureSourceAction(d.retrySources.split(','),{retry:true});
+      preserveHistoryView(main,()=>render());announce('Complete source history loaded. The selected workspace is ready.');
+    }catch(error){announce(`Source history unavailable: ${error.message}`);}
+    return;
+  }
   if('yieldShortcut' in d){navigate({yieldDateA:d.yieldDateA,yieldDateB:d.yieldDateB});announce(`Selected retained curves ${d.yieldDateA} and ${d.yieldDateB}.`);return;}
   if('exportEconomicEvidence' in d){
     if(!['laborEvidence','pcePriceContributions'].includes(d.exportEconomicEvidence)||currentPackage())return;

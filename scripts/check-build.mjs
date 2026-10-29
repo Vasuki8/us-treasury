@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createAppServer } from '../server.mjs';
-import {moduleAssetReferences} from './asset-references.mjs';
-import {measureBuild, reportBuildMetrics} from './build-metrics.mjs';
+import {isBuiltAsset, moduleAssetReferences, parseImportMap, resolveModuleReference} from './asset-references.mjs';
+import {assertBuildBudgets, measureBuild, reportBuildMetrics} from './build-metrics.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-reportBuildMetrics(await measureBuild(path.join(root, 'dist')));
+const metrics = await measureBuild(path.join(root, 'dist'));
+reportBuildMetrics(metrics);
+assertBuildBudgets(metrics);
 const server = createAppServer(path.join(root, 'dist'));
 await new Promise((resolve, reject) => {
   server.once('error', reject);
@@ -20,16 +22,18 @@ try {
   const html = await response.text();
   assert.match(html, /<title>Meridian/, 'Built entry must contain the application');
   const entry = new URL('/', origin);
+  const imports = parseImportMap(html, entry);
   const pending = [...html.matchAll(/(?:src|href)="(\.\/[^"#]+)"/g)].map(match => new URL(match[1], entry));
-  assert(pending.some(url => /^\/assets\/[a-f0-9]{16}\/src\/app\.js$/.test(url.pathname)), 'Built entry must load the versioned application module');
-  assert(pending.some(url => /^\/assets\/[a-f0-9]{16}\/styles\.css$/.test(url.pathname)), 'Built entry must load its stylesheet');
-  assert(pending.some(url => /^\/assets\/[a-f0-9]{16}\/favicon\.svg$/.test(url.pathname)), 'Built entry must load its icon');
+  assert(pending.some(url => /^\/assets\/src\/app\.[a-f0-9]{16}\.js$/.test(url.pathname)), 'Built entry must load its hashed module');
+  assert(pending.some(url => /^\/assets\/styles\.[a-f0-9]{16}\.css$/.test(url.pathname)), 'Built entry must load its stylesheet');
+  assert(pending.some(url => /^\/assets\/favicon\.[a-f0-9]{16}\.svg$/.test(url.pathname)), 'Built entry must load its icon');
+  pending.push(...[...imports.values()].map(reference => new URL(reference)));
   const visited = new Set();
   while (pending.length) {
     const url = pending.shift();
     const asset = url.pathname;
     assert.equal(url.origin, origin, `Built asset must remain local: ${url.href}`);
-    assert.match(asset, /^\/assets\/[a-f0-9]{16}\/(?:styles\.css|favicon\.svg|src\/(?:[a-zA-Z0-9_-]+\.js|history-[a-f0-9]{64}\.json(?:\.gz)?))$/, `Built asset must use the reviewed versioned directory: ${asset}`);
+    assert(isBuiltAsset(asset.slice(1)), `Built asset must use a reviewed content hash: ${asset}`);
     if (visited.has(url.href)) continue;
     visited.add(url.href);
     const result = await fetch(url);
@@ -37,7 +41,7 @@ try {
     if (asset.endsWith('.js')) {
       assert.match(result.headers.get('content-type'), /javascript/, `Built module must have a JavaScript MIME type: ${asset}`);
       const source = await result.text();
-      for (const reference of moduleAssetReferences(source))pending.push(new URL(reference,url));
+      for (const reference of moduleAssetReferences(source)) pending.push(resolveModuleReference(reference, url, imports));
     } else if (asset.endsWith('.css')) {
       assert.match(result.headers.get('content-type'), /^text\/css(?:;|$)/, `Built stylesheet must have a CSS MIME type: ${asset}`);
     } else if (asset.endsWith('.svg')) {
