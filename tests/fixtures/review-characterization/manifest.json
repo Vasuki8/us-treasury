@@ -1,0 +1,113 @@
+{
+  "baseline": "b3a7adf",
+  "capturedAt": "2026-10-29T02:48:47.948Z",
+  "now": "2026-10-29T12:00:00.000Z",
+  "receiptScope": "Summaries of displayed inputs; complete receipt fields and catalog/source metadata are in inputs.json.gz.",
+  "cases": [
+    {
+      "id": "unrate", "startDate": "2026-07-01", "endDate": "2026-09-30",
+      "precedingDate": "2026-06-01", "receiptIds": ["r1"],
+      "readings": [["2026-07-01",4.1],["2026-08-01",4.1],["2026-09-01",4.2]]
+    },
+    {
+      "id": "cpi", "startDate": "2026-07-01", "endDate": "2026-09-30",
+      "precedingDate": "2026-06-01", "receiptIds": ["r1"],
+      "readings": [["2026-07-01",3.364825041479902],["2026-08-01",3.3965478924364856],["2026-09-01",3.737684729064039]]
+    },
+    {
+      "id": "yield", "startDate": "2025-12-30", "endDate": "2026-01-05",
+      "precedingDate": "2025-12-29", "receiptIds": ["r2","r3"],
+      "readings": [["2025-12-30",4.14],["2025-12-31",4.18],["2026-01-02",4.19],["2026-01-05",4.17]]
+    },
+    {
+      "id": "payroll", "startDate": "2026-07-01", "endDate": "2026-09-30",
+      "precedingDate": "2026-06-01", "receiptIds": ["r1"],
+      "readings": [["2026-07-01",-10],["2026-08-01",133],["2026-09-01",29]]
+    },
+    {
+      "id": "claims", "startDate": "2026-09-26", "endDate": "2026-10-10",
+      "precedingDate": "2026-09-19", "receiptIds": ["r4","r5","r6"],
+      "readings": [["2026-09-26",199],["2026-10-03",198],["2026-10-10",200]]
+    },
+    {
+      "id": "receiptsTtm", "startDate": "2026-07-01", "endDate": "2026-09-30",
+      "precedingDate": "2026-06-01", "receiptIds": ["r7","r8","r9","r10","r11"],
+      "readings": [["2026-07-01",5373.2782425082],["2026-08-01",5388.9956563393],["2026-09-01",5403.2071881164]]
+    },
+    {
+      "id": "somaTreasuryHoldings", "startDate": "2026-10-07", "endDate": "2026-10-21",
+      "precedingDate": "2026-09-30", "receiptIds": ["r12"],
+      "readings": [["2026-10-07",4.566383658548371],["2026-10-14",4.57055175190972],["2026-10-21",4.572653893231879]]
+    }
+  ],
+  "receiptSummaries": [
+    {
+      "id": "r1", "host": "api.bls.gov",
+      "sha256": "f645f6ec49c03a3edae3c2aa6398a3e2e9150e7e907d1af99c7c1a8b15d7fc6d",
+      "retrievedAt": "2026-10-29T02:48:36.204Z"
+    },
+    {
+      "id": "r2", "host": "home.treasury.gov",
+      "sha256": "cf2fa3da7f160384b63d2ead698532b1d76cd9f789ce4911e2304db85b14e6d5",
+      "retrievedAt": "2026-10-29T02:48:47.181Z"
+    },
+    {
+      "id": "r3", "host": "home.treasury.gov",
+      "sha256": "97fdefe668a47928b852a94978f62273dedfb494107553d6640b9858de4b02ac",
+      "retrievedAt": "2026-10-29T02:48:47.331Z"
+    },
+    {
+      "id": "r4", "host": "oui.doleta.gov",
+      "sha256": "a73370c703e7e30fc1ccd0b705c57d5a92f01d21f4429899a0b54753d980ea6d",
+      "retrievedAt": "2026-10-29T02:48:35.744Z"
+    },
+    {
+      "id": "r5", "host": "oui.doleta.gov",
+      "sha256": "336003478153e4a3c6e13ce179230fd555905aeef3e0f0569d833fa29c7e4d6f",
+      "retrievedAt": "2026-10-29T02:48:37.303Z"
+    },
+    {
+      "id": "r6", "host": "oui.doleta.gov",
+      "sha256": "6bc739a9ccf4035720b6f09b6108c9800bb3d35bedb358938eaefa009ab974f8",
+      "retrievedAt": "2026-10-29T02:48:36.004Z"
+    },
+    {
+      "id": "r7", "host": "api.fiscaldata.treasury.gov",
+      "sha256": "e440a0b8d641b8f9cdf5a6f66cc56677d55b5627ea82c2a6c7b58f5efc2d8f30",
+      "retrievedAt": "2026-10-29T02:48:41.784Z"
+    },
+    {
+      "id": "r8", "host": "api.fiscaldata.treasury.gov",
+      "sha256": "8bd8feb826c8f38786c20e8f3e1b9e96514229914cfc7367100f554876a2865d",
+      "retrievedAt": "2026-10-29T02:48:37.468Z"
+    },
+    {
+      "id": "r9", "host": "api.fiscaldata.treasury.gov",
+      "sha256": "d79c07e9bc429866e6d716948e5ffb2f2e6943f9ab599e868d5ff88b4ad2b358",
+      "retrievedAt": "2026-10-29T02:48:35.989Z"
+    },
+    {
+      "id": "r10", "host": "api.fiscaldata.treasury.gov",
+      "sha256": "e644ba8e7f8252fa69096d23561b54e5554aa92c15ecdf18d367b6c728adeba3",
+      "retrievedAt": "2026-10-29T02:48:41.857Z"
+    },
+    {
+      "id": "r11", "host": "fiscaldata.treasury.gov",
+      "sha256": "2afa2b2497dc88fb4b14893681d127d651c868b7c3d46ad0c52455df7e6f5c9f",
+      "retrievedAt": "2026-10-29T02:48:42.285Z"
+    },
+    {
+      "id": "r12", "host": "markets.newyorkfed.org",
+      "sha256": "823f4a6b3eb31ca82c502498114dab39cc76beb77ffe8a03355ea38f6db13290",
+      "retrievedAt": "2026-10-29T02:48:36.475Z"
+    }
+  ],
+  "inputs": {
+    "bytes": 196329, "gzipBytes": 19988,
+    "sha256": "6988dfdef73ddf0c111f400408097cdd2cd2418ccc34211521ef78a14eb5f119"
+  },
+  "expected": {
+    "bytes": 414838, "gzipBytes": 29717,
+    "sha256": "9509741e3b01115d0f76f2a749c5a452a3d74db6929368e811b35d84960db39b"
+  }
+}

@@ -12,9 +12,21 @@ test('source retry configuration stays in collection steps and no whole collecto
  assert.match(bls,/SOURCE_RETRY_ATTEMPTS: '3'/);
  assert.match(jobs.refresh,/UPDATE_RETRY_ATTEMPTS: '3'/);
  assert.doesNotMatch(ci,/retry-command\.mjs -- (?:npm run data:refresh|node scripts\/(?:refresh-data|publish-snapshot|report-publication-upkeep))/);
- assert.match(jobs.refresh_check,/retry-command\.mjs -- node scripts\/check-release-refresh\.mjs/);
- for(const id of ['verify','refresh'])for(const command of ['npm test','npm run build','node scripts/check-build.mjs'])assert.ok(jobs[id].includes(`retry-command.mjs -- ${command}`));
  assert.match(jobs.verify,/timeout-minutes: 20/);
+});
+
+test('deterministic checks run once while the remote deployment check retains retries',()=>{
+ for(const id of ['refresh','verify']){
+  const commands=[...jobs[id].matchAll(/^        run: ([^\r\n]+)/gm)].map(match=>match[1]);
+  for(const command of ['npm test','npm run build','node scripts/check-build.mjs']){
+   assert.equal(commands.filter(value=>value===command).length,1,`${id}: ${command} must run directly once`);
+  }
+  assert.doesNotMatch(jobs[id],/retry-command\.mjs/);
+ }
+ assert.doesNotMatch(jobs.refresh_check,/retry-command\.mjs/,'refresh planning is local and must not be replayed');
+ const retried=[...ci.matchAll(/run: node scripts\/retry-command\.mjs -- ([^\r\n]+)/g)].map(match=>match[1]);
+ assert.ok(retried.length>0,'remote deployment verification retains its bounded retry');
+ for(const command of retried)assert.match(command,/^node scripts\/check-live\.mjs /);
 });
 
 test('deployment retries use the same pinned action/artifact and only the last attempt can fail the job',()=>{
