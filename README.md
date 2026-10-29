@@ -133,7 +133,13 @@ The public date record in [`scripts/bls-backup-maintenance.json`](scripts/bls-ba
 
 Install the pinned PDF text extractor once with `npm ci --ignore-scripts`; it runs only in the Node collector, never in the browser. Refresh uses Node's server-side fetch; the browser does not contact agency APIs. BEA's two public bulk files total about 70 MB, so refreshing may take several seconds. The BLS fresh-window primitives and registered weekly checker retain their ten-calendar-year requests and native definitions. The separate [unemployment/CPI history wrapper](docs/unemployment-cpi-debt-history.md) bootstraps 13 existing outputs with the configured registered key, then preserves older verified observations during routine updates. The first requested year supplies checked comparison context; subsequent years update normally. Missing keys or API failures cannot silently shorten an already retained history.
 
-The refresh command writes new immutable, content-addressed gzip captures under `src/history/`, verifies retained files, then atomically replaces `src/official-snapshot.js` with current data and an ordered storage index. All original captures, confirmations, provenance and timestamps remain available; no history is pruned. Build, refresh and publication hydrate the archive before commercial-data admission. The command exits with an error if an agency fails. Other successful agencies still update. A failed agency retains its last successful values, original retrieval time and provenance; its cached status and refresh error are visible. A first failure leaves that agency unavailable. Do not hand-edit snapshot observations or archive files. See the [storage and replay contract](docs/vintages-design.md).
+The refresh command writes new immutable, content-addressed gzip captures under `src/history/`, verifies retained files, then atomically replaces
+`src/official-snapshot.json.gz` with current data and an ordered storage index. The small `src/official-snapshot.js` Node adapter decodes it for
+collectors and builds. All original captures, confirmations, provenance and timestamps remain available; no history is pruned. Build, refresh and
+publication hydrate the archive before commercial-data admission. The command exits with an error if an agency fails. Other successful agencies still
+update. A failed agency retains its last successful values, original retrieval time and provenance; its cached status and refresh error are visible. A
+first failure leaves that agency unavailable. Do not hand-edit snapshot observations or archive files. See the [storage and replay
+contract](docs/vintages-design.md).
 
 Use `--require-all` when every selected source must succeed before replacing the snapshot. The daily workflow uses the approved `--allow-cached-bls` policy: after the exact primary BLS HTTP503, registered v2 is selected once when a key is configured, with automatic transient retries within the selected endpoint. If its bounded attempt fails, a complete validated earlier BLS capture may remain cached/error with original timestamps and safe failure context; all other selected sources must succeed. A successful later capture clears the cached marker. The modes are mutually exclusive. Missing/invalid prior data, primary redirects or other primary BLS failures reject the candidate before writing. The older annual-calendar HTTP403 retention exception remains limited to reviewed legacy BLS schedules; it does not apply to the current New York Fed calendar.
 
@@ -217,11 +223,11 @@ The historical publication archive loads only when its view needs it, with expli
 | File | Responsibility |
 | --- | --- |
 | `src/registry.js` | Canonical official series definitions, units and source mappings |
-| `src/data.js`, `src/official-snapshot.js` | Hydrated official snapshots, availability and provenance |
+| `src/data.js`, `src/official-snapshot.js` | Hydrated data and a small Node reader for `src/official-snapshot.json.gz` |
 | `src/freshness.js` | Recorded retrieval/attempt summary, daily refresh deadlines and independent stale/cached states |
 | `src/freshness-controller.js` | Minute/resume freshness checks that preserve disclosure and keyboard focus |
 | `scripts/refresh-data.mjs`, `scripts/sources/` | Official agency retrieval, parsing, transformations and last-good retention |
-| `scripts/snapshot-storage.mjs`, `src/history/` | Verified immutable captures, compact current module and lazy bundle projection |
+| `scripts/snapshot-storage.mjs`, `src/history/` | Canonical gzip current data, verified immutable captures and lazy browser projection |
 | `src/history-loader.js`, `src/history-controller.js` | On-demand verified history, retry, navigation and focus handling |
 | `src/research-workspaces.js`, `src/research-packages.js`, `src/research-library.js` | Validated saved configurations, frozen portable evidence and bounded browser persistence |
 | `src/research-context.js`, `src/research-page.js` | Scoped specialist pinning, frozen viewer and research library |
@@ -269,7 +275,13 @@ For a source diagnostic without changing the snapshot, run `node scripts/refresh
 
 The workflow's optional **check_sources** input runs that same diagnostic in a separate job with read-only repository permissions and no persisted Git credentials. Its `official-source-health` artifact is retained even when collection fails. This job does not publish data, commit, push or gate unrelated deployment. Leave **refresh_data** disabled and select a branch to inspect sources without a production deployment. The [October 24 source audit](docs/source-update-audit-2026-10-24.md) records source coverage, confirmed fixes and external access limitations.
 
-The refresh job tests, builds and smoke-checks the candidate before committing `src/official-snapshot.js` and its exact newly referenced immutable captures with the job's `GITHUB_TOKEN`. Unreferenced files are excluded. It checks remote `main` against the starting commit, rejects unrelated tracked/staged changes and historical edits/deletions, verifies archive prefixes/bytes, and uses a normal push. Failures outside the reviewed BLS retention exceptions, validation errors and push conflicts stop publication. Retained BLS statistics do not create a new statistical vintage or reset their successful retrieval clock. Subsequent Node22/24 verification and deployment check out the exact emitted snapshot commit. Refresh and deployment share one workflow because [pushes using `GITHUB_TOKEN` do not trigger another push workflow](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
+The refresh job tests, builds and smoke-checks the candidate before committing `src/official-snapshot.json.gz` and its exact newly referenced
+immutable captures with the job's `GITHUB_TOKEN`. Unreferenced files are excluded. It checks remote `main` against the starting commit, rejects
+unrelated tracked/staged changes and historical edits/deletions, verifies archive prefixes/bytes, and uses a normal push. Failures outside the
+reviewed BLS retention exceptions, validation errors and push conflicts stop publication. Retained BLS statistics do not create a new statistical
+vintage or reset their successful retrieval clock. Subsequent Node22/24 verification and deployment check out the exact emitted snapshot commit.
+Refresh and deployment share one workflow because pushes using `GITHUB_TOKEN` do not trigger another push workflow ([GitHub
+documentation](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)).
 
 The cron is [GitHub's best-effort schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule): runs can be delayed, and public repositories disable schedules after 60 days without repository activity. The refresh job needs repository `contents: write`; other verification jobs retain read-only repository access. No personal token or additional repository secret is needed for data refreshes.
 

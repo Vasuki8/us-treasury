@@ -97,6 +97,15 @@ for (const [sourceId, source] of Object.entries(manifest.sources)) {
 }
 assert.ok(lazyGzipBytes <= MAX_ARCHIVE_BYTES && lazyFallbackBytes <= MAX_ARCHIVE_BYTES, 'Total public resource byte limits');
 assert.equal(indexes.size, manifest.captureCount, 'Every global capture index must occur exactly once');
+for(const [sourceId,descriptor]of Object.entries(assets.snapshot.sourceArchive.sources)){
+  const filename=descriptor.url.slice(2),content=assets.files.get(filename);
+  assert.ok(Buffer.isBuffer(content),`Missing current source module for ${sourceId}`);
+  assert.equal(content.length,descriptor.bytes,`Current source byte length for ${sourceId}`);
+  assert.equal(digest(content),descriptor.sha256,`Current source SHA256 for ${sourceId}`);
+  const module=await import(`data:text/javascript;base64,${content.toString('base64')}`);
+  assert.deepEqual(module.snapshot.source,snapshot.sources[sourceId],`Exact complete current source for ${sourceId}`);
+  referencedFiles.add(filename);
+}
 assert.deepEqual([...assets.files.keys()].sort(), [...referencedFiles].sort(), 'No unreferenced public assets');
 const merged = merge([...bundles.values()]);
 assert.deepEqual(merged, history, 'Source partitions must merge to the exact canonical history');
@@ -136,7 +145,7 @@ for (const id of seriesIds(history)) {
   }
 }
 
-const storedRoot = await readFile(path.join(directory, 'official-snapshot.js'));
+const storedRoot = await readFile(path.join(directory, 'official-snapshot.json.gz'));
 const immutableArchiveBytes = snapshot.vintageArchive?.captures.reduce((total, capture) => total + capture.bytes, 0) ?? 0;
 console.log(JSON.stringify({
   captures: history.captures.length, sources: bundles.size,

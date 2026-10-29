@@ -12,7 +12,9 @@ const types = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-
 export function createAppServer(root = projectRoot) {
   let cachedProjection=null,projectionKey='';
   const projection=async()=>{
-    const sourcePath=path.join(root,'src','official-snapshot.js'),info=await stat(sourcePath),key=`${info.mtimeMs}:${info.size}`;
+    const sourcePath=path.join(root,'src','official-snapshot.js');
+    const info=await stat(path.join(root,'src','official-snapshot.json.gz'));
+    const key=`${info.mtimeMs}:${info.ctimeMs}:${info.size}:${info.ino}`;
     if(!cachedProjection||projectionKey!==key){
       projectionKey=key;
       cachedProjection=(async()=>{const {snapshot}=await import(pathToFileURL(sourcePath).href+`?projection=${encodeURIComponent(key)}`);const full={...snapshot,vintages:await loadSnapshotHistory(snapshot,{directory:path.join(root,'src')})};assertCommercialData(full);return browserSnapshotAssets(full);})();

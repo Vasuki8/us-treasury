@@ -5,11 +5,12 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {setTimeout as delay} from 'node:timers/promises';
-import {loadSnapshotHistory,validateArchiveIndex,assertArchivePrefix} from './snapshot-storage.mjs';
+import {loadSnapshotHistory,validateArchiveIndex,assertArchivePrefix,decodeStoredSnapshot} from './snapshot-storage.mjs';
 import {assertCommercialData} from './data-policy.mjs';
+import {assertTreeBudget} from './repository-budget.mjs';
 
 const exec = promisify(execFile);
-const snapshotPath = 'src/official-snapshot.js';
+const snapshotPath = 'src/official-snapshot.json.gz';
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const paths = output => output.split('\0').filter(Boolean);
 
@@ -79,15 +80,10 @@ export async function publishSnapshot({ cwd = process.cwd(), expectedHead } = {}
   const changedPaths = (await git('diff', '--name-only', '-z')).split('\0').filter(Boolean);
   if (changedPaths.some(file => file !== snapshotPath)) throw new Error('Unrelated tracked changes or edits/deletions to immutable history exist outside the official snapshot; refusing to publish.');
 
-  const importSnapshot=async code=>{
-    const result=(await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)).snapshot;
-    if(!result||typeof result!=='object'||Array.isArray(result))throw new Error('Invalid generated snapshot root');
-    return result;
-  };
   const previousBytes=await gitBytes('show',`${expectedHead}:${snapshotPath}`);
   const validatedRoot=await readFile(path.join(cwd,snapshotPath));
-  const previous=await importSnapshot(previousBytes);
-  const next=await importSnapshot(validatedRoot);
+  const previous=decodeStoredSnapshot(previousBytes);
+  const next=decodeStoredSnapshot(validatedRoot);
   if(previous.vintageArchive)validateArchiveIndex(previous.vintageArchive);
   if(next.vintageArchive)validateArchiveIndex(next.vintageArchive);
   assertArchivePrefix(previous,next);
@@ -133,6 +129,7 @@ export async function publishSnapshot({ cwd = process.cwd(), expectedHead } = {}
     const bytes=await gitBytes('show',`${tree}:src/${entry.path}`);
     if (bytes.length!==entry.bytes || sha256(bytes)!==entry.sha256) throw new Error('Staged immutable archive differs from the validated bytes.');
   }
+  await assertTreeBudget({cwd,tree,parent:expectedHead});
   // commit-tree consumes the verified immutable tree, never a second read of a
   // mutable index. The compare-and-swap retains the exact expected parent.
   const commitSha=(await git('-c','user.name=github-actions[bot]','-c','user.email=41898282+github-actions[bot]@users.noreply.github.com','commit-tree',tree,'-p',expectedHead,'-m','data: refresh official data and release calendars')).trim();
