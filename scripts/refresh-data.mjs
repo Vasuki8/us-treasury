@@ -58,7 +58,7 @@ const snapshot=await refreshSnapshot({previous,collectors,calendarCollectors,req
 const admission={status:'passed',error:null};
 try{assertCommercialData(snapshot);}
 catch(error){if(!checkOnly)throw error;admission.status='failed';admission.error=String(error.message||error);}
-const destination=fileURLToPath(new URL('../src/official-snapshot.js',import.meta.url));
+const destination=fileURLToPath(new URL('../src/official-snapshot.json.gz',import.meta.url));
 if(checkOnly){
   const sources=selection.flatMap(id=>id==='calendar'?Object.entries(snapshot.calendar.sources).map(([agency,source])=>({id:`calendar:${agency}`,source})): [{id:`data:${id}`,source:snapshot.sources[id]}]).map(({id,source})=>({
     id,status:source.status,error:source.error??null,fetchedAt:source.fetchedAt,lastAttemptAt:source.lastAttemptAt,

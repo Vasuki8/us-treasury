@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
+import {decodeStoredSnapshot,encodeStoredSnapshot} from '../scripts/snapshot-storage.mjs';
 
 const run = promisify(execFile);
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -39,9 +40,10 @@ test('each asset keeps its URL unless its own bytes change, including snapshot-o
   const root = await fixture(t);
   const first = await build(root);
   assert.deepEqual(await build(root), first);
-  const snapshotPath = path.join(root, 'src', 'official-snapshot.js');
-  const original = await readFile(snapshotPath, 'utf8');
-  await writeFile(snapshotPath, original.replace(/"generatedAt":\s*"[^"]+"/, '"generatedAt": "2026-10-22T02:00:00.000Z"'));
+  const snapshotPath = path.join(root, 'src', 'official-snapshot.json.gz');
+  const updated = decodeStoredSnapshot(await readFile(snapshotPath));
+  updated.generatedAt = '2026-10-22T02:00:00.000Z';
+  await writeFile(snapshotPath, encodeStoredSnapshot(updated));
   const refreshed = await build(root);
   assert.equal(refreshed.entry, first.entry);
   assert.notEqual(refreshed.html, first.html);

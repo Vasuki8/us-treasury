@@ -8,6 +8,8 @@ import { currentSnapshotAssets } from './current-snapshot.mjs';
 
 const MAX_CAPTURE_BYTES = 64 * 1024 * 1024;
 const MAX_ARCHIVE_BYTES = 512 * 1024 * 1024;
+const MAX_STORED_BYTES = 20 * 1024 * 1024;
+const MAX_STORED_CONTENT_BYTES = 128 * 1024 * 1024;
 const MAX_CAPTURES = 100000;
 const HASH = /^[a-f0-9]{64}$/;
 const ENTRY_KEYS = ['path', 'sha256', 'contentSha256', 'bytes', 'contentBytes', 'sourceId', 'capturedAt', 'recordedAt', 'baseline'];
@@ -110,6 +112,35 @@ function representation(snapshot) {
   if (snapshot?.vintageArchive !== undefined && snapshot?.vintages !== undefined) fail('ambiguous inline and indexed capture history');
   if (snapshot?.vintageArchive !== undefined) return { indexed: true, captures: validateArchiveIndex(snapshot.vintageArchive).captures };
   return { indexed: false, captures: validateHistory(snapshot?.vintages ?? { version: 1, captures: [] }).captures };
+}
+
+function storedRoot(snapshot) {
+  if (!object(snapshot)) fail('snapshot root must be a JSON object');
+  representation(snapshot);
+  return snapshot;
+}
+
+/** Canonical repository storage; strict JSON retains signed zero and property order. */
+export function encodeStoredSnapshot(snapshot) {
+  const content = Buffer.from(jsonValue(storedRoot(snapshot)));
+  if (content.length > MAX_STORED_CONTENT_BYTES) fail('snapshot content bytes exceed output limit');
+  const compressed = canonicalGzip(content);
+  if (compressed.length > MAX_STORED_BYTES) fail('snapshot compressed bytes exceed input limit');
+  return compressed;
+}
+
+export function decodeStoredSnapshot(bytes) {
+  if (!(bytes instanceof Uint8Array)) fail('snapshot input must be bytes');
+  if (bytes.length > MAX_STORED_BYTES) fail('snapshot compressed bytes exceed input limit');
+  let content;
+  try { content = gunzipSync(bytes, { maxOutputLength: MAX_STORED_CONTENT_BYTES }); }
+  catch (error) { fail(`snapshot gzip decompression failed: ${error.message}`); }
+  let snapshot;
+  try { snapshot = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(content)); }
+  catch (error) { fail(`snapshot UTF-8 or JSON is invalid: ${error.message}`); }
+  storedRoot(snapshot);
+  jsonValue(snapshot);
+  return snapshot;
 }
 
 /** A previous capture and its descriptor may never change or disappear. */
@@ -241,7 +272,10 @@ export async function writeStoredSnapshot(fullSnapshot, { destination, previous 
   const temporary = path.join(directory, `.${path.basename(destination)}.${randomUUID()}.tmp`);
   try {
     const handle = await open(temporary, 'wx', 0o644);
-    try { await handle.writeFile(snapshotModule(stored)); await handle.sync(); }
+    try {
+      await handle.writeFile(destination.endsWith('.json.gz') ? encodeStoredSnapshot(stored) : snapshotModule(stored));
+      await handle.sync();
+    }
     finally { await handle.close(); }
     await rename(temporary, destination);
   } catch (error) { await unlink(temporary).catch(() => {}); throw error; }
