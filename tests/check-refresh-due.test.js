@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {copyFixtureProject} from './helpers/snapshot-fixture.js';
 
 const moduleUrl = new URL('../scripts/check-refresh-due.mjs', import.meta.url);
 const execute = promisify(execFile);
@@ -185,8 +186,7 @@ async function withCliFixture(value, run) {
   await mkdir(scratchRoot, { recursive: true });
   const directory = await mkdtemp(path.join(scratchRoot, 'refresh-due-'));
   try {
-    await cp(path.join(root, 'scripts'), path.join(directory, 'scripts'), { recursive: true });
-    await cp(path.join(root, 'src'), path.join(directory, 'src'), {recursive:true});
+    await copyFixtureProject(directory,['src','scripts','package.json']);
     await writeFile(path.join(directory, 'package.json'), '{"type":"module"}');
     await writeFile(path.join(directory, 'src', 'official-snapshot.js'), `export const snapshot = ${JSON.stringify(value)};\n`);
     await writeFile(path.join(directory, 'clock.mjs'), `const NativeDate=Date; globalThis.Date=class extends NativeDate { constructor(...args){super(...(args.length?args:['2026-10-22T00:17:00.000Z']));} static now(){return NativeDate.parse('2026-10-22T00:17:00.000Z');} };\n`);

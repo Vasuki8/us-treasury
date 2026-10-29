@@ -7,16 +7,23 @@ import vm from 'node:vm';
 // contexts. Actual job execution is also verified in Actions after publication.
 const workflow = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
 const jobs = Object.fromEntries([...workflow.slice(workflow.indexOf('\njobs:')).matchAll(/^  ([\w-]+):\r?\n([\s\S]*?)(?=^  [\w-]+:\r?$|(?![\s\S]))/gm)].map(match => [match[1], match[2]]));
-function context(event = 'push', { ref = 'refs/heads/main', force = false, scope = 'all', checkSources = false, cancelled = false, check = 'success', required = 'true', refresh = 'success', verify = 'success', target = '' } = {}) {
+function context(event = 'push', {
+  ref = 'refs/heads/main', force = false, scope = 'all', checkSources = false, cancelled = false,
+  check = 'success', required = 'true', refresh = 'success', verify = 'success', constrained = 'success', target = '',
+} = {}) {
   return {
     github: { event_name: event, ref }, inputs: { refresh_data: force, refresh_scope: scope, check_sources: checkSources }, vars: { DEPLOY_TARGET: target },
-    needs: { refresh_check: { result: check, outputs: { required } }, refresh: { result: refresh }, verify: { result: verify } },
+    needs: {
+      refresh_check: { result: check, outputs: { required } }, refresh: { result: refresh },
+      verify: { result: verify }, test_constrained: { result: constrained },
+    },
     cancelled: () => cancelled,
   };
 }
 function eligible(job, data) {
   assert.ok(jobs[job], `Missing workflow job: ${job}`);
-  const condition = jobs[job].match(/^    if:\s*(.+)$/m)?.[1];
+  const condition = jobs[job].match(/^    if:\s*(?:>-\r?\n\s*)?(\$\{\{[\s\S]*?\}\})/m)?.[1]
+    ?? jobs[job].match(/^    if:\s*(.+)$/m)?.[1];
   assert.ok(condition, `Missing explicit workflow gate: ${job}`);
   const expression = condition.replace(/^\$\{\{\s*|\s*\}\}$/g, '').trim();
   // Actions exposes only declared job dependencies in the needs context.
@@ -76,9 +83,23 @@ test('backup checks become cheap no-ops after completion and never deploy an unv
   assert.equal(eligible('verify', context('schedule')), true);
   for (const job of ['deploy', 'deploy-cloudflare']) {
     for (const verify of ['failure', 'skipped', 'cancelled']) assert.equal(eligible(job, context('schedule', { verify })), false);
+    for (const constrained of ['failure', 'skipped', 'cancelled']) {
+      assert.equal(eligible(job, context('schedule', { constrained })), false);
+    }
   }
   assert.equal(eligible('deploy', context('schedule')), true);
   assert.equal(eligible('deploy-cloudflare', context('schedule', { target: 'cloudflare' })), true);
+});
+
+test('constrained tests follow refresh gates and also run on pull requests',()=>{
+  for(const event of ['push','pull_request','workflow_dispatch','schedule']){
+    assert.equal(eligible('test_constrained',context(event)),true,event);
+  }
+  for(const options of [{refresh:'failure'},{check:'failure'},{cancelled:true}]){
+    assert.equal(eligible('test_constrained',context('push',options)),false);
+  }
+  assert.equal(eligible('test_constrained',context('schedule',{required:'false',refresh:'skipped'})),false);
+  assert.equal(eligible('test_constrained',context('pull_request',{check:'skipped',refresh:'skipped'})),true);
 });
 
 test('publication upkeep is manually verifiable on a branch and its failure cannot gate statistical deployment',()=>{

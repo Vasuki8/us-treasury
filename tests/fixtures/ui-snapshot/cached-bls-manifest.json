@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "cutoff": "2026-10-24T00:05:02.137Z",
+  "capturedAt": "2026-10-24T00:05:02.137Z",
+  "sourceSha256": "167946ea930d9a87ae538f4579665e15cd8a22013c52e3dba48f7c82d37fc913",
+  "sha256": "07ebf524d5820fc0671447b0ccf82cbcbb003a4a2579af8aab3ede0ff5f9920d",
+  "compressedBytes": 14285,
+  "jsonBytes": 126862,
+  "originalBytes": 499183,
+  "seriesCount": 31
+}

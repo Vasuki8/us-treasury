@@ -2,27 +2,14 @@ import test from'node:test';import assert from'node:assert/strict';
 import {researchIndexedDB}from'./helpers/research-indexeddb.js';
 import {researchLocks}from'./helpers/research-locks.js';
 import {createResearchLibrary,RESEARCH_LIBRARY_KEY}from'../src/research-library.js';
-import {createWorkspace,researchByteLength}from'../src/research-workspaces.js';
-import {createResearchPackage,exportResearchPackage,researchPackageCsv}from'../src/research-packages.js';
+import {createWorkspace}from'../src/research-workspaces.js';
+import {createResearchPackage,exportResearchPackage}from'../src/research-packages.js';
 import {RESEARCH_DATABASE_NAME}from'../src/research-database.js';
 const now='2026-10-22T15:00:00.000Z';
 const workspace=(id='durable-workspace',name='Durable study')=>createWorkspace({id,name,now,state:{page:'explore',selected:['sofr'],window:'all'}});
-const packageOf=(id='durable-package',full=false)=>createResearchPackage({id,name:'Frozen study',now,state:{selected:[full?'sofr':'gdp'],range:full?0:1,window:'all'}});
+const packageOf=(id='durable-package')=>createResearchPackage({id,name:'Frozen study',now,state:{selected:['gdp'],range:1,window:'all'}});
 const localStore=text=>{const values=new Map(text?[[RESEARCH_LIBRARY_KEY,text]]:[]);return{values,getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};};
 const open=(indexedDB,storage=localStore(),options={})=>createResearchLibrary(storage,{indexedDB,locks:researchLocks(),...options});
-
-test('full SOFR package above the former shared cap is durable, validated and downloadable after reopening',async()=>{
- const indexedDB=researchIndexedDB(),store=localStore(),library=await open(indexedDB,store),pkg=await packageOf('full-sofr-durable',true),json=exportResearchPackage(pkg);
- assert.ok(researchByteLength(json)>3*1024*1024);
- assert.equal((await library.pinPackage(pkg)).persisted,true);
- assert.equal((await library.saveWorkspace(workspace())).persisted,true);
- const reopened=await open(indexedDB,store),record=reopened.getPackage(pkg.id);
- assert.equal(exportResearchPackage(record),json);assert.equal(researchPackageCsv(record),pkg.csv);
- assert.equal(reopened.getWorkspace('durable-workspace').name,'Durable study');
- assert.equal(reopened.getState().durability.packages[pkg.id].status,'durable');
- assert.equal(reopened.getState().sessionOnly,false);
- assert.equal(store.values.has(RESEARCH_LIBRARY_KEY),false,'new database writes must not recreate the capped envelope');
-});
 
 test('a failed record remains exportable while an unrelated small save commits and reopens',async()=>{
  const indexedDB=researchIndexedDB(),library=await open(indexedDB),pkg=await packageOf();

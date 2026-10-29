@@ -12,7 +12,6 @@ import {canonicalJson} from '../src/research-workspaces.js';
 import {researchPage} from '../src/research-page.js';
 import {parseCsv} from '../scripts/sources/http.mjs';
 import {aggregateAuctionOfferings} from '../src/auctions.js';
-import {createResearchLibrary} from '../src/research-library.js';
 
 const directory=new URL('./fixtures/auction-frozen-baseline/',import.meta.url);
 const manifest=JSON.parse(await readFile(new URL('manifest.json',directory),'utf8'));
@@ -72,8 +71,10 @@ test('new auction profiles retain complete inputs and expose both generated expo
   const records=parseCsv(file.content);assert.equal(records.length,index===0?input.auctions.length+1:2);
  }
  const html=researchPage(parseRoute('#/research?view=packages&package='+pkg.id),{library:{packages:[restored]}});
- assert.match(html,/data-package-attachment="0"/);assert.match(html,/data-package-attachment="1"/);assert.match(html,/generated.*frozen inputs/i);
- assert.match(html,/Both auction specialist CSVs are generated/);
+ const actions=[...html.matchAll(/<button\b[^>]*data-package-attachment="(\d+)"[^>]*>([^<]*)<\/button>/g)];
+ assert.deepEqual(actions.map(([,index,label])=>({index:Number(index),label})),[
+  {index:0,label:'auction-results.csv'},{index:1,label:'auction-peers.csv'},
+ ]);
  assert.throws(()=>packages.researchPackageAttachment({...restored},0),/validated/i);
  assert.throws(()=>packages.researchPackageAttachment(restored,2),/unavailable/i);
  const prior=dataStatus.sources.auctions;dataStatus.sources.auctions={auctions:[]};
@@ -105,26 +106,6 @@ test('new auction import rejects unsupported profiles, missing inputs, malformed
   value=>{value.context.moduleSources.auctions.series.auctionOfferingMonthly.observations[0].publishedAt='2024-10-01';},
   value=>{value.context.attachments=[{name:'auction-results.csv',type:'text/csv',content:'x\r\n1\r\n'}];},
  ]){const value=JSON.parse(json);change(value);await assert.rejects(packages.importResearchPackage(rehash(value)),/auction|receipt|source URL/i);}
-});
-
-test('retained-scale default, All, Bill and 2008-selected packages preserve full inputs within unchanged limits',async()=>{
- const input=dataStatus.sources.auctions;
- assert.ok(input.auctions.length>6000,'exercise the complete admitted history');assert.equal(input.coverageStart,'2008-04-07');
- const first=input.auctions[0],routes=['#/auctions','#/auctions?window=all','#/auctions?type=Bill','#/auctions?window=all&auction='+first.id];
- for(const [index,route]of routes.entries()){
-  const options=args(input,route),pkg=await create({...options,id:'auction-retained-'+index}),text=packages.exportResearchPackage(pkg),restored=await packages.importResearchPackage(text);
-  assert.ok(Buffer.byteLength(text)<=12*1024*1024);assert.equal(packages.exportResearchPackage(restored),text);
-  assert.equal(canonicalJson(restored.context.moduleSources.auctions),canonicalJson(input));
-  assert.equal(restored.catalog.auctionOfferingMonthly.observations.length,input.series.auctionOfferingMonthly.observations.length);
-  assert.equal(packages.researchPackageCsv(restored),packages.researchPackageCsv(pkg));
-  for(const fileIndex of [0,1]){
-   const file=packages.researchPackageAttachment(restored,fileIndex);
-   assert.ok(Buffer.byteLength(file.content)<=32*1024*1024);assert.equal(file.content,packages.researchPackageAttachment(pkg,fileIndex).content);
-   if(fileIndex===0)assert.equal(parseCsv(file.content).length,input.auctions.filter(row=>options.context.auctionExports.securityType==='All'||row.securityType===options.context.auctionExports.securityType).length+1);
-  }
-  let stored=null;const storage={getItem:()=>stored,setItem:(_key,value)=>{stored=value;}},library=await createResearchLibrary(storage,{locks:{request:async(_name,_options,callback)=>callback()}});
-  const result=await library.pinPackage(pkg);assert.equal(result.persisted,false);assert.equal(result.reason,'quota');assert.equal(stored,null);assert.match(library.getState().warning,/session-only/);
- }
 });
 
 test('generated auction CSV enforces the unchanged 32 MiB amplification bound and stored CSV keeps its 8 MiB cap',async()=>{

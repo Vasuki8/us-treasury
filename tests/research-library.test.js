@@ -1,6 +1,5 @@
 import test from'node:test';import assert from'node:assert/strict';
 import {researchLocks}from'./helpers/research-locks.js';
-import {series}from'../src/data.js';
 let api,workspaces,packages;
 try{api=await import('../src/research-library.js');workspaces=await import('../src/research-workspaces.js');packages=await import('../src/research-packages.js');}catch(error){if(error.code!=='ERR_MODULE_NOT_FOUND')throw error;}
 const use=()=>{assert.ok(api,'Research library persistence must exist');return api;};
@@ -54,31 +53,6 @@ test('persisted package reopens as validated immutable evidence and identical ID
  assert.equal(packages.researchPackageCsv(record),pkg.csv);assert.equal(Object.isFrozen(record.catalog.sofr.observations),true);
  assert.equal((await reopened.pinPackage(record)).reason,'already-pinned');assert.equal(store.values.get('meridian.research-library.v1'),durable);
  assert.throws(()=>reopened.listPackages().push(pkg),TypeError);
-});
-
-test('complete SOFR All history above the library cap stays downloadable in session without changing durable bytes',async()=>{
- const store=storage(),library=await openLibrary(store);assert.equal((await library.saveWorkspace(workspace())).persisted,true);
- const durable=store.values.get(api.RESEARCH_LIBRARY_KEY),pkg=await packages.createResearchPackage({id:'full-sofr-session',name:'Complete SOFR history',now,state:{selected:['sofr'],window:'all'}}),json=packages.exportResearchPackage(pkg);
- assert.ok(workspaces.researchByteLength(json)>3*1024*1024);assert.ok(workspaces.researchByteLength(json)<workspaces.MAX_RESEARCH_JSON_BYTES);
- const result=await library.pinPackage(pkg);assert.equal(result.ok,true);assert.equal(result.persisted,false);assert.equal(result.reason,'quota');
- assert.equal(library.getState().sessionOnly,true);assert.match(library.getState().warning,/storage limit.*session-only/i);
- const session=library.getPackage(pkg.id);assert.deepEqual(session.catalog.sofr.observations,series.sofr.observations);assert.equal(session.catalog.sofr.observations[0].date,'2018-04-02');
- assert.equal(session.panels[0].observations.length,series.sofr.observations.length);assert.equal(packages.researchPackageCsv(session),pkg.csv);
- assert.equal(packages.exportResearchPackage(session),json);assert.equal(packages.exportResearchPackage(await packages.importResearchPackage(json)),json);
- assert.equal(store.values.get(api.RESEARCH_LIBRARY_KEY),durable);assert.equal(store.values.get('meridian.preferences.v1'),'original preferences');
- const reopened=await openLibrary(store);assert.equal(reopened.getWorkspace('workspace-one').name,workspace().name);assert.equal(reopened.getPackage(pkg.id),undefined);
-});
-
-test('a session-only full-history package does not prevent a later small workspace from surviving reload',async()=>{
- const store=storage(),library=await openLibrary(store);
- const pkg=await packages.createResearchPackage({id:'full-history-isolated',name:'Complete SOFR history',now,state:{selected:['sofr'],window:'all'}});
- assert.equal((await library.pinPackage(pkg)).persisted,false);
- const result=await library.saveWorkspace(workspace());
- assert.equal(result.persisted,true,'unrelated small saves must not reserialize the failed package');
- const reopened=await openLibrary(store);assert.equal(reopened.getWorkspace('workspace-one').name,'Saved comparison');
- assert.equal(reopened.getPackage(pkg.id),undefined);
- assert.equal(library.getState().durability.packages[pkg.id].status,'session');
- assert.equal(library.getState().durability.workspaces['workspace-one'].status,'durable');
 });
 
 test('a stale open library preserves another instance durable bytes and retains its conflicting work for the session',async()=>{

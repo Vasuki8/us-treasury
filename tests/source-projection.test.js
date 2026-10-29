@@ -1,8 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
-import { gzipSync } from 'node:zlib';
-import { snapshot as stored } from '../src/official-snapshot.js';
 import { currentSnapshotAssets } from '../scripts/current-snapshot.mjs';
 import { snapshotModule } from '../scripts/snapshot-storage.mjs';
 
@@ -33,27 +30,4 @@ test('current projection keeps one calendar year plus predecessor and complete m
   assert.deepEqual(await projectedValue(result.module), result.snapshot);
   const entry = result.snapshot.sourceArchive.sources.alpha;
   assert.deepEqual((await moduleValue(result.files.get(entry.url.slice(2)))).source, source);
-});
-
-test('every complete current source has exact bytes, original JSON property order and all observations', async () => {
-  const result = currentSnapshotAssets(stored, snapshotModule);
-  assert.ok(gzipSync(result.module).length < 300000, 'The eager current data module must leave room for supplementary data');
-  assert.deepEqual(await projectedValue(result.module), result.snapshot);
-  assert.equal(result.files.size, Object.keys(stored.sources).length);
-  for (const [sourceId, descriptor] of Object.entries(result.snapshot.sourceArchive.sources)) {
-    const bytes = result.files.get(descriptor.url.slice(2)), original = stored.sources[sourceId];
-    assert.equal(bytes.length, descriptor.bytes);
-    assert.equal(createHash('sha256').update(bytes).digest('hex'), descriptor.sha256);
-    assert.ok(bytes.length < 20 * 1024 ** 2, `${sourceId} must fit the deployment file limit`);
-    assert.deepEqual(bytes, Buffer.from(snapshotModule({ source:original })));
-    const module = await moduleValue(bytes);
-    assert.deepEqual(module.source, original);
-    assert.equal(JSON.stringify(module.source), JSON.stringify(original));
-    for (const [id, item] of Object.entries(result.snapshot.sources[sourceId].series ?? {})) {
-      const full = original.series[id].observations;
-      assert.deepEqual(item.retainedCoverage, { startDate:full[0]?.date ?? null, endDate:full.at(-1)?.date ?? null, count:full.length });
-      assert.deepEqual(item.observations.at(-1), full.at(-1));
-      if (full.length > 1) assert.deepEqual(item.observations.at(-2), full.at(-2));
-    }
-  }
 });

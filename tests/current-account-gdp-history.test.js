@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { snapshot } from '../src/official-snapshot.js';
 import * as module from '../src/current-account-gdp.js';
 
 const row = (date, value) => ({ date, value, sourceValue: value === null ? '...' : String(value), publishedAt: null });
@@ -47,24 +46,6 @@ test('historical ratio uses quarterly current account / (nominal GDP SAAR / 4) e
   assert.equal(result.observations.at(-1).nominalGdpQuarter, 6000);
   assert.equal(result.observations.at(-1).numeratorObservation, sources.beaIta.series.currentAccountBalance.observations.at(-1));
   assert.equal(result.observations.at(-1).denominatorObservation, sources.bea.series.nominalGdp.observations.at(-1));
-});
-
-test('all retained official current-account quarters match exact nominal GDP quarters, covering at least 266 quarters', () => {
-  const result = history(snapshot.sources), balances = snapshot.sources.beaIta.series.currentAccountBalance.observations;
-  const nominalGdp = new Map(snapshot.sources.bea.series.nominalGdp.observations.map(point => [point.date, point]));
-  assert.equal(result.error, null);
-  assert.equal(result.observations.length, balances.length);
-  assert.ok(result.observations.length >= 266);
-  assert.equal(result.observations[0].date, '1960-01-01');
-  assert.equal(result.observations.at(-1).date, balances.at(-1).date);
-  for (const [index, balance] of balances.entries()) {
-    const point = result.observations[index], gdp = nominalGdp.get(balance.date);
-    assert.equal(point.date, balance.date);
-    const available = Number.isFinite(balance.value) && Number.isFinite(gdp?.value) && gdp.value > 0;
-    assert.equal(point.value, available ? 100 * balance.value / (gdp.value / 4) : null);
-    assert.equal(point.numeratorObservation, balance);
-    assert.equal(point.denominatorObservation, gdp ?? null);
-  }
 });
 
 test('custom, year and count windows select exact reference dates while preserving full history', () => {

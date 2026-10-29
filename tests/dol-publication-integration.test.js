@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {cp,mkdtemp,readFile,writeFile,rm} from 'node:fs/promises';import path from 'node:path';import {tmpdir} from 'node:os';import {fileURLToPath} from 'node:url';
+import {mkdtemp,readFile,writeFile,rm} from 'node:fs/promises';import path from 'node:path';import {tmpdir} from 'node:os';
 import {execFile} from 'node:child_process';import {promisify} from 'node:util';
 import {claimsPublicationArchive as archive} from '../src/claims-publication-archive.js';
 import {assertClaimsPublicationData} from '../scripts/dol-publication-policy.mjs';
@@ -8,7 +8,8 @@ import {selectClaimsPublicationHistory,claimsPublicationCsv} from '../src/claims
 import {buildClaimsPublicationPin} from '../src/research-context.js';
 import {createResearchPackage,exportResearchPackage,importResearchPackage,researchPackageCsv} from '../src/research-packages.js';
 import {parseCsv} from '../scripts/sources/http.mjs';
-const execute=promisify(execFile),root=fileURLToPath(new URL('../',import.meta.url));
+import {copyFixtureProject} from './helpers/snapshot-fixture.js';
+const execute=promisify(execFile);
 
 test('canonical archive admits all768 facts with the original weekly sequences and exact immutable prefixes',()=>{
  assertClaimsPublicationData(archive,{complete:true});assert.equal(archive.releases.length,768);
@@ -98,7 +99,7 @@ test('real weekly publication CSV and immutable pins retain source roles/dates/r
 test('production build refuses an altered DOL publication fact before creating public assets',async t=>{
  const directory=await mkdtemp(path.join(tmpdir(),'meridian-dol-publication-build-'));
  t.after(async()=>{const absolute=path.resolve(directory);assert.equal(path.dirname(absolute),path.resolve(tmpdir()));assert.ok(path.basename(absolute).startsWith('meridian-dol-publication-build-'));await rm(absolute,{recursive:true,force:true});});
- for(const name of ['src','scripts','index.html','styles.css','favicon.svg','package.json'])await cp(path.join(root,name),path.join(directory,name),{recursive:true});
+ await copyFixtureProject(directory,['src','scripts','index.html','styles.css','favicon.svg','package.json']);
  const destination=path.join(directory,'src','claims-publication-archive.js'),text=await readFile(destination,'utf8');
  await writeFile(destination,text.replace('"value": 200,','"value": 999,'));
  await assert.rejects(execute(process.execPath,['scripts/build.mjs'],{cwd:directory}),error=>error.code===1&&/DOL claims publication.*value/i.test(error.stderr));

@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {cp,mkdir,mkdtemp,readFile,realpath,rm,writeFile} from 'node:fs/promises';
+import {mkdtemp,readFile,realpath,rm,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {tmpdir} from 'node:os';
-import {snapshot} from '../src/official-snapshot.js';
-import {encodeStoredSnapshot} from '../scripts/snapshot-storage.mjs';
+import {snapshot,copyFixtureProject} from './helpers/snapshot-fixture.js';
+import {decodeStoredSnapshot,encodeStoredSnapshot} from '../scripts/snapshot-storage.mjs';
 import {createAppServer} from '../server.mjs';
 
 async function request(server){
@@ -28,18 +28,12 @@ test('development projection reloads changed gzip data while the Node adapter st
     assert.ok(path.basename(resolved).startsWith('meridian-gzip-cache-'));
     await rm(resolved,{recursive:true,force:true});
   });
-  await mkdir(path.join(root,'src'));await mkdir(path.join(root,'scripts'));
-  for(const file of [
-    'src/official-snapshot.js','src/official-snapshot.json.gz','src/source-codec.js','src/vintages.js',
-    'scripts/snapshot-storage.mjs','scripts/current-snapshot.mjs',
-  ])await cp(new URL(`../${file}`,import.meta.url),path.join(root,file));
-  await cp(new URL('../src/history/',import.meta.url),path.join(root,'src/history'),{recursive:true});
-  await writeFile(path.join(root,'package.json'),'{"type":"module"}');
+  await copyFixtureProject(root,['src','scripts','package.json']);
   const server=createAppServer(root),first=await request(server);
   assert.equal(first.status,200);
   assert.equal((await projected(first.body)).generatedAt,snapshot.generatedAt);
   const reader=await readFile(path.join(root,'src/official-snapshot.js'));
-  const changed={...snapshot,generatedAt:'2026-10-29T12:01:00.000Z'};
+  const changed={...decodeStoredSnapshot(await readFile(path.join(root,'src/official-snapshot.json.gz'))),generatedAt:'2026-10-29T12:01:00.000Z'};
   await writeFile(path.join(root,'src/official-snapshot.json.gz'),encodeStoredSnapshot(changed));
   const second=await request(server);
   assert.equal(second.status,200);
