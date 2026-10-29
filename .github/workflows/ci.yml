@@ -223,7 +223,7 @@ jobs:
     needs: [refresh_check, refresh]
     if: ${{ !cancelled() && (needs.refresh_check.result == 'success' || needs.refresh_check.result == 'skipped') && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') && (github.event_name != 'schedule' || needs.refresh.result == 'success') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:

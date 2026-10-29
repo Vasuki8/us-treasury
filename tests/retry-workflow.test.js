@@ -12,7 +12,7 @@ test('source retry configuration stays in collection steps and no whole collecto
  assert.match(bls,/SOURCE_RETRY_ATTEMPTS: '3'/);
  assert.match(jobs.refresh,/UPDATE_RETRY_ATTEMPTS: '3'/);
  assert.doesNotMatch(ci,/retry-command\.mjs -- (?:npm run data:refresh|node scripts\/(?:refresh-data|publish-snapshot|report-publication-upkeep))/);
- assert.match(jobs.verify,/timeout-minutes: 20/);
+ assert.match(jobs.verify,/timeout-minutes: 25/);
 });
 
 test('deterministic checks run once while the remote deployment check retains retries',()=>{
