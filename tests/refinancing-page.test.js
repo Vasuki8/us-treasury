@@ -55,3 +55,12 @@ test('scenario CSV contains both signs, all inputs and assumptions without relab
   assert.equal(output.filter(row=>row.row_type==='security').length,5);
   assert.equal(rows(api().refinancingCsv(undefined)).length,0);
 });
+
+test('refinancing maturity bars use the exact retained monthly principal and keep the exact table accessible',()=>{
+ const html=api().refinancingPage({},source());
+ assert.match(html,/class="maturity-ladder-chart"/);
+ assert.match(html,/Monthly contractual principal/);
+ assert.match(html,/data-page-disclosure="refinancing:maturity-table"/);
+ assert.match(html,/<title>2026-10-31: \$100\.00B<\/title>/);
+ assert.match(html,/CUMULATIVE PRINCIPAL/);
+});

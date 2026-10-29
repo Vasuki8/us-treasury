@@ -27,6 +27,14 @@ test('quota and unavailable storage retain session work without partially changi
  const unavailable=await openLibrary(undefined);assert.equal((await unavailable.saveWorkspace(workspace())).persisted,false);assert.equal(unavailable.getState().sessionOnly,true);
 });
 
+test('a required durable workspace update keeps the prior record on storage failure',async()=>{
+ const store=storage(),library=await openLibrary(store),original=workspace();await library.saveWorkspace(original);
+ const priorStatus=library.getState().durability.workspaces[original.id];
+ store.setItem=()=>{const error=Error('Full');error.name='QuotaExceededError';throw error;};
+ const result=await library.saveWorkspace({...original,name:'Unsaved rename'},{requireDurable:true});
+ assert.equal(result.ok,false);assert.equal(result.persisted,false);assert.equal(result.reason,'quota');assert.deepEqual(library.getWorkspace(original.id),original);assert.deepEqual(library.getState().durability.workspaces[original.id],priorStatus);
+});
+
 test('pinned package IDs never overwrite different evidence and malformed stored JSON remains session-only',async()=>{
  const library=await openLibrary(storage());
  const make=name=>packages.createResearchPackage({id:'package-one',name,now,state:{page:'indicator',selected:['sofr'],transform:'level',comparison:'native',window:'all'}});

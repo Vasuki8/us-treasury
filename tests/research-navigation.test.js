@@ -36,7 +36,9 @@ test('the compact shell makes Economy primary and separates rates and evidence f
  assert.match(top,/Fed &amp; rates/);
  assert.doesNotMatch(top,/Recent indicator|Labor market/);
  const rail=html.match(/<aside class="rail"[^]*?<\/aside>/)?.[0]??'';
- assert.match(rail,/MY RESEARCH/);assert.match(rail,/DATA &amp; EVIDENCE/);
+ assert.match(rail,/<div class="rail-title">Research<\/div>/);
+ assert.match(rail,/<summary class="rail-title">Data &amp; evidence<\/summary>/);
+ for(const href of ['#/watchlist','#/research','#/research?view=packages'])assert.ok(rail.includes(`href="${href}"`),href);
  assert.doesNotMatch(rail,/Recent indicator|Refinancing risk/);
  assert.match(html,/data-source-health/);
 });

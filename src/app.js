@@ -1,3 +1,6 @@
+import {createResearchSaveDrafts,researchSaveScope,renderResearchSave,filterFreezeCandidates,positionResearchSave,installResearchSaveDismissal} from './research-save.js';
+import {createQuestionDrafts,filterQuestionPicker,saveResearchQuestion,questionFieldId} from './question-drafts.js';
+import {rememberStableFocus,restoreStableFocus} from './stable-focus.js';
 import { fiscalGdpCsv } from './fiscal-gdp-view.js';
 import { creditContextCsv,fomcDocumentsCsv } from './credit-context-page.js';
 import {currentAccountCsv} from './current-account-view.js';
@@ -28,8 +31,8 @@ import {mountCompactNavigation,syncCompactNavigation} from './compact-navigation
 import { renderPage } from './pages.js';
 import { escapeHtml as esc, sourceNotice } from './ui.js';
 import { mountFreshnessBanner } from './freshness-controller.js';
-import { renderCharts } from './charts.js';
-import { parseRoute, routeFor } from './router.js';
+import { renderCharts,captureChartInspection } from './charts.js';
+import { parseRoute, routeFor,destinationChanged } from './router.js';
 import {readPreferences,writePreferences,normalizePreferences,saveNamedWatchlist,selectNamedWatchlist,removeNamedWatchlist} from './storage.js';
 import {exportResearchSettings,importResearchSettings,mergeResearchSettings,MAX_RESEARCH_SETTINGS_BYTES} from './research-settings.js';
 import {parseResearchQuestion} from './research-questions.js';
@@ -83,6 +86,9 @@ let publicationExplanations=null,explanationState={status:'idle',error:null};
 const explanationLoader=createPublicationExplanationLoader();
 const workspaceMemory=createWorkspaceMemory();
 const researchDisclosures=createOverviewDisclosureMemory();
+const saveDrafts=createResearchSaveDrafts(),questionDrafts=createQuestionDrafts();
+installResearchSaveDismissal(main,document,{capture:()=>saveDrafts.capture(main)});
+main.addEventListener('toggle',event=>{if(event.target.matches?.('.context-save')){saveDrafts.capture(main);positionResearchSave(main);}prepareReadableTables(main);},true);
 if('scrollRestoration' in history)history.scrollRestoration='manual';
 const historyLoader = createHistoryLoader(dataStatus.historyArchive);
 const historyController = createHistoryController(historyLoader, {
@@ -99,11 +105,11 @@ document.querySelector('.skip-link').addEventListener('click',event=>{
 function announce(message) { status.textContent=message; }
 function rememberWorkspace(){
   const active=document.activeElement;
-  workspaceMemory.remember(state,{left:window.scrollX,top:window.scrollY,focusHref:main.contains(active)&&active.tagName==='A'?active.getAttribute('href'):null});
+  workspaceMemory.remember(state,{left:window.scrollX,top:window.scrollY,focusHref:main.contains(active)&&active.tagName==='A'?active.getAttribute('href'):null,focusElement:main.contains(active)&&active.tagName==='A'?active:null});
 }
 function downloadCsv(content,filename,notice){
   const url=URL.createObjectURL(new Blob(['\ufeff',content],{type:'text/csv;charset=utf-8'}));
-  const anchor=document.createElement('a');anchor.href=url;anchor.download=filename;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);announce(notice);
+  const anchor=document.createElement('a');anchor.href=url;anchor.download=filename;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);announce(notice);actionFeedback(notice);
 }
 function persist() {
   state={...state,...normalizePreferences(state)};
@@ -115,7 +121,7 @@ function applyAppearance() {
   root.dataset.theme=state.theme;
   root.dataset.density=state.density;
   document.documentElement.dataset.theme=state.theme;
-  document.querySelector('meta[name="theme-color"]').content=state.theme==='Graphite'?'#19151f':'#f7f5ec';
+  document.querySelector('meta[name="theme-color"]').content=state.theme==='Graphite'?'#101722':'#f3f6fa';
   const dark=state.theme==='Graphite',themeButton=document.getElementById('theme-toggle');
   themeButton.querySelector('[data-theme-label]').textContent=dark?'Dark':'Light';
   themeButton.querySelector('[data-theme-sun]').hidden=dark;
@@ -123,6 +129,7 @@ function applyAppearance() {
   themeButton.setAttribute('aria-label',`${dark?'Dark':'Light'} theme. Switch to ${dark?'Light':'Dark'} theme.`);
   themeButton.setAttribute('title',`Switch to ${dark?'Light':'Dark'} theme`);
   document.getElementById('density-select').value=state.density;
+  const mobileDensity=document.getElementById('density-select-mobile');if(mobileDensity)mobileDensity.value=state.density;
 }
 
 function toggleTheme() {
@@ -131,22 +138,19 @@ function toggleTheme() {
   announce(`${state.theme==='Graphite'?'Dark':'Light'} theme enabled. ${durable?'Saved in this browser.':'Changed for this session; browser storage is unavailable.'}`);
 }
 
-function rememberFocus() {
-  const active=document.activeElement;
-  if (!main.contains(active))return null;
-  return {id:active.id,tag:active.tagName,data:{...active.dataset},start:active.selectionStart,end:active.selectionEnd};
+function rememberFocus(){return rememberStableFocus(main);}
+function restoreFocus(focus){return restoreStableFocus(main,focus);}
+function prepareReadableTables(container){
+ for(const wrap of container.querySelectorAll('.table-wrap')){
+  const visible=wrap.getBoundingClientRect().width>0,overflow=visible&&wrap.scrollWidth>wrap.clientWidth+2;
+  wrap.dataset.overflow=String(overflow);
+  if(overflow){wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label',`${wrap.querySelector('caption')?.textContent??'Data table'} · Scroll horizontally for all columns`);}
+  else {wrap.removeAttribute('tabindex');wrap.removeAttribute('role');wrap.removeAttribute('aria-label');}
+ }
 }
-function restoreFocus(focus) {
-  if (!focus)return;
-  let element=focus.id?document.getElementById(focus.id):null;
-  if (!element && Object.keys(focus.data).length) {
-    element=[...main.querySelectorAll(focus.tag)].find(node=>Object.entries(focus.data).every(([key,value])=>node.dataset[key]===value));
-  }
-  if (!element)return;
-  element.focus({preventScroll:true});
-  if (typeof focus.start==='number' && typeof element.setSelectionRange==='function') {
-    try {element.setSelectionRange(focus.start,focus.end);} catch { /* Not all input types support selections. */ }
-  }
+function actionFeedback(message,kind='status'){
+ let node=main.querySelector('.page-action-feedback');if(!node){node=document.createElement('p');node.className='page-action-feedback';main.querySelector('.page-heading')?.after(node);}
+ node.setAttribute('role',kind==='error'?'alert':'status');node.textContent=message;
 }
 
 function trackedChanges(){return [...new Set((state.saved.length?state.saved:state.selected).filter(id=>getSeries(id)))];}
@@ -197,10 +201,10 @@ function changesContext(){
   catch(error){return {...changeState,status:'error',error:error.message};}
 }
 function currentPackage(){return state.page==='research'&&state.researchView==='packages'?researchLibrary.getPackage(state.packageId):null;}
-function renderCurrentCharts(){
- renderCurrentChartsIn(main);
+function renderCurrentCharts(inspection){
+ renderCurrentChartsIn(main,inspection);
 }
-function renderCurrentChartsIn(container){
+function renderCurrentChartsIn(container,inspection){
  const pkg=currentPackage(),history=pkg?.context.currentAccountGdpHistory,breakdown=pkg?.context.currentAccountGdpBreakdown,trailing=pkg?.context.currentAccountGdpTrailing,comparison=pkg?.context.currentAccountGdpComparison,contributions=pkg?.context.currentAccountGdpContributions,balanceEffects=pkg?.context.currentAccountGdpBalanceEffects,componentEffects=pkg?.context.currentAccountGdpComponentEffects,allComponentEffects=pkg?.context.currentAccountGdpAllComponentEffects;
  const chartCatalogs=pkg?{
   ...(history?currentAccountGdpHistoryChartCatalog(history.sources,{frozen:true}):{}),
@@ -223,24 +227,25 @@ function renderCurrentChartsIn(container){
   if(state.page==='labor'||state.page==='macroCoverage'&&state.macroFamily==='labor')Object.assign(chartCatalogs,economicEvidenceChartCatalog(dataStatus.sources.laborEvidence));
   if(state.page==='macroCoverage'&&state.macroFamily==='prices')Object.assign(chartCatalogs,economicEvidenceChartCatalog(dataStatus.sources.pcePriceContributions),pceBaseEffectsChartCatalog(getSeries(state.pceBaseIndex),pceScenarioOptions(state)));
  }
- renderCharts(container,{...(pkg?{catalog:pkg.catalog}:{}),chartCatalogs});
+ renderCharts(container,{...(pkg?{catalog:pkg.catalog}:{}),chartCatalogs,...(inspection?{inspection}:{})});
 }
 function researchActions(){
-  const alert=changeCheckpoint.enabled&&dataStatus.generatedAt>changeCheckpoint.snapshotAt?'<p class="panel-note amber" role="status">A newer snapshot is available since your local change checkpoint. <a href="#/research?view=changes">Review captured changes and collector failures</a>. A new snapshot does not itself establish a new economic release.</p>':'';
-  if(state.page==='research')return alert;
-  const active=researchLibrary.getWorkspace(activeWorkspaceId),name=researchLabel||active?.name||`${pageNames[state.page]} research`;
-  const candidates=state.page==='release'?[]:freezeCandidates(state),chosen=state.freezeSelection??candidates.slice(0,4);
-  const preview=candidates.length?`<fieldset class="freeze-preview"><legend>Freeze preview · ${chosen.length}/4 measurements</legend>${candidates.map(id=>`<label><input type="checkbox" data-freeze-select="${esc(id)}"${chosen.includes(id)?' checked':''}> ${esc(getSeries(id).name)} <span class="small muted">${esc(getSeries(id).unit)}</span></label>`).join('')}<p class="small muted">Choose one to four primary measurement histories. Module evidence is retained as described in the result. ${state.page==='watchlist'?`All ${candidates.length} ordered watchlist members are retained as settings; unchecked observations are not frozen.`:''}</p></fieldset>`:'';
-  return alert+`<details class="context-save"${state.researchError?' open':''}><summary>SAVE</summary><section class="research-savebar" aria-label="Save research"><label for="research-name">Research name<input id="research-name" value="${esc(name)}" maxlength="80" autocomplete="off"></label>${preview}<div class="actions"><button type="button" class="action" data-save-workspace>${active?'UPDATE SAVED VIEW':'SAVE VIEW'}</button><button type="button" class="action" data-pin-result${pinBusy?' disabled':''}>${pinBusy?'FREEZING…':'FREEZE RESULT'}</button><a class="action" href="#/research">SAVED RESEARCH</a>${active?'<button type="button" class="link-button" data-clear-workspace>NEW WORKSPACE</button>':''}</div><p class="small muted">${active?`Editing ${esc(active.name)}. `:''}Workspaces reopen current data. Pins freeze up to four scoped measurements and retain relevant module inputs, assumptions and original exports.</p>${state.researchError?`<p class="amber" role="alert">${esc(state.researchError)}</p>`:''}</section></details>`;
+ const alert=changeCheckpoint.enabled&&dataStatus.generatedAt>changeCheckpoint.snapshotAt?'<p class="panel-note amber" role="status">A newer snapshot is available since your local change checkpoint. <a href="#/research?view=changes">Review captured changes and collector failures</a>. A new snapshot does not itself establish a new economic release.</p>':'';
+ if(state.page==='research')return alert;
+ const active=researchLibrary.getWorkspace(activeWorkspaceId),name=researchLabel||active?.name||`${pageNames[state.page]} research`,candidates=state.page==='release'?[]:freezeCandidates(state),scope=researchSaveScope(state);
+ const draft=saveDrafts.get(scope,{name,selected:state.freezeSelection??candidates.slice(0,4)});
+ if(state.freezeSelection)draft.selected=[...state.freezeSelection];
+ return alert+renderResearchSave({scope,draft,candidates,catalog:series,active:Boolean(active),watchlist:state.page==='watchlist',pending:pinBusy,release:state.page==='release'});
 }
 
-function render({focusHeading=false,preserveFocus=false}={}) {
+function render({focusHeading=false,preserveFocus=false,captureDrafts=true}={}) {
+  if(captureDrafts){saveDrafts.capture(main);questionDrafts.capture(document);}
+  const inspection=focusHeading?null:captureChartInspection(main);
   if(state.page==='calendar'){
     const normalized=revealedCalendarState(state);
     if(normalized!==state){state=normalized;history.replaceState(null,'',routeFor(state));}
   }
   const focus=preserveFocus?rememberFocus():null;
-  const saveOpen=main.querySelector('.context-save')?.open??false;
   const externalControlsOpen=main.querySelector('#external-history-controls')?.open??false;
   researchDisclosures.capture(main);
   historyController.sync(state);
@@ -251,9 +256,8 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   root.dataset.page=state.page==='labor'||state.page==='macroCoverage'&&state.macroFamily==='labor'?'labor':state.page;
   const failures=trackedFailures();
   const publicationContexts={gdp:publicationController.context('gdp'),claims:publicationController.context('claimsAdvance'),cpi:publicationController.context('cpiMonthly')};
-  main.innerHTML=`<div class="breadcrumbs"><a href="#/overview">US</a><span>/</span><span>${esc(pageNames[state.page].toUpperCase())}</span></div>${renderPage(state,{...historyController.context(state),library:researchLibrary.getState(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationContexts,publicationArchive,publicationState,publicationExplanations,explanationState})}`;
+  main.innerHTML=renderPage(state,{...historyController.context(state),library:researchLibrary.getState(),questionDrafts:questionDrafts.snapshot(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationContexts,publicationArchive,publicationState,publicationExplanations,explanationState});
   main.querySelector('.page-heading .actions')?.insertAdjacentHTML('beforeend',researchActions());
-  if(saveOpen&&main.querySelector('.context-save'))main.querySelector('.context-save').open=true;
   if(externalControlsOpen&&main.querySelector('#external-history-controls'))main.querySelector('#external-history-controls').open=true;
   researchDisclosures.restore(main);
   document.getElementById('ticker').hidden=true;
@@ -265,46 +269,49 @@ function render({focusHeading=false,preserveFocus=false}={}) {
   }).join('');
   document.getElementById('saved-count').textContent=state.saved.length;
   document.getElementById('mobile-saved-count').textContent=state.saved.length;
-  document.getElementById('saved-list').innerHTML=state.saved.length?state.saved.map(id=>`<div class="saved-item"><a href="${esc(indicatorHref(id,{...state,page:'watchlist'}))}">${esc(getSeries(id).short)}</a><button type="button" data-save="${id}" aria-label="Remove ${esc(getSeries(id).name)} from watchlist">×</button></div>`).join(''):'<p class="rail-note">No saved series.<br>Open an indicator to save it.</p>';
+  document.getElementById('saved-list').innerHTML=state.saved.length?state.saved.map(id=>`<div class="saved-item"><a href="${esc(indicatorHref(id,{...state,page:'watchlist'}))}">${esc(getSeries(id).short)}</a><button type="button" data-save="${id}" aria-label="Remove ${esc(getSeries(id).name)} from watchlist">×</button></div>`).join(''):'<p class="rail-note">No followed indicators.<br>Open an indicator and choose Follow.</p>';
   document.getElementById('source-notice').innerHTML=sourceNotice(dataStatus.sources);
   document.getElementById('snapshot-time').textContent=`OFFICIAL SNAPSHOT · ASSEMBLED ${dataStatus.generatedAt ?? 'UNAVAILABLE'}`;
   document.title=`${state.page==='indicator'?getSeries(state.seriesId).name:pageNames[state.page]} — Meridian`;
-  renderCurrentCharts();
+  document.title=`${main.querySelector('h1')?.textContent??pageNames[state.page]} — Meridian`;
+  renderCurrentCharts(inspection);prepareReadableTables(main);positionResearchSave(main);
+  if(state.researchFeedback?.packageId===state.packageId&&state.page==='research')actionFeedback(state.researchFeedback.message);
   if(focusHeading) {
     const heading=main.querySelector('h1');
     heading.tabIndex=-1;heading.focus({preventScroll:true});
     window.scrollTo({top:0,behavior:'instant'});
     const position=workspaceMemory.recall(state);
     if(position){
-      const links=[...main.querySelectorAll('a[href]')];
-      const previous=links.find(a=>a.getAttribute('href')===position.focusHref)??(/^#\/series\//.test(position.focusHref??'')?links.find(a=>a.getAttribute('href').split('?')[0]===position.focusHref.split('?')[0]):null);
-      previous?.focus({preventScroll:true});
+      workspaceMemory.restoreFocus(main,position);
       window.scrollTo({left:position.left,top:position.top,behavior:'instant'});
     }
   } else restoreFocus(focus);
 }
 
 function navigate(patch,{replace=false,preserveFocus=true}={}) {
-  const previous={page:state.page,seriesId:state.seriesId};
-  if(patch.page&&patch.page!==state.page)rememberWorkspace();
+  const previous={...state};
+  saveDrafts.capture(main);questionDrafts.capture(document);
+  if(destinationChanged(state,{...state,...patch}))rememberWorkspace();
   if(['page','seriesId','macroFamily','macroMeasure','vintageSeries','eventId','selected'].some(key=>key in patch&&patch[key]!==state[key]))delete state.freezeSelection;
   state={...state,...patch};
   if(state.page==='labor')Object.assign(state,{macroFamily:'labor',macroMeasure:parseRoute(routeFor(state)).macroMeasure});
   if(patch.selected&&state.returnTo)state.returnTo=updateWorkspaceSelection(state.returnTo,state.selected);
   const route=routeFor(state);
   if(location.hash!==route)history[replace?'replaceState':'pushState'](null,'',route);
-  render({focusHeading:previous.page!==state.page || previous.seriesId!==state.seriesId,preserveFocus});
+  render({focusHeading:destinationChanged(previous,state),preserveFocus});
 }
 
 window.addEventListener('hashchange',()=>{
   if(location.hash==='#main-content'){main.focus();return;}
-  const route=parseRoute(location.hash), oldPage=state.page, oldId=state.seriesId;
-  if(route.page!==state.page)rememberWorkspace();
+  const route=parseRoute(location.hash), previous={...state};
+  const focusedControl=document.activeElement,focusActiveTab=previous.page==='indicator'&&route.page==='indicator'&&previous.seriesId===route.seriesId&&previous.tab!==route.tab&&main.contains(focusedControl)&&focusedControl?.matches?.('[role="tab"][data-tab]');
+  if(destinationChanged(state,{...state,...route}))rememberWorkspace();
   if(route.page!=='indicator')route.seriesId=state.seriesId;
   if(!location.hash.includes('selected='))route.selected=state.selected;
   delete state.freezeSelection;
   state={...state,...route};
-  render({focusHeading:oldPage!==state.page || oldId!==state.seriesId});
+  render({focusHeading:destinationChanged(previous,state),preserveFocus:true});
+  if(focusActiveTab)document.getElementById(`detail-tab-${state.tab}`)?.focus({preventScroll:true});
 });
 
 function save(id) {
@@ -347,7 +354,7 @@ function applyPceAssumptions(){
 }
 function stored(result,label){
   if(!result.ok)throw new Error(result.reason==='duplicate-id'?'This package ID already identifies different frozen evidence.':`Research library ${result.reason??'save failed'}.`);
-  announce(`${label}${result.persisted?' saved in this browser.':' retained for this session; download pinned JSON for durable storage.'}`);
+  announce(`${label}${result.persisted?' saved in this browser.':' retained for this session. Export settings for Saved Views and watchlists; download JSON for Frozen Results before reloading.'}`);
 }
 function showCalendarPreview(force=false){
   if(!force&&!window.matchMedia('(max-width:736px)').matches)return;
@@ -358,26 +365,36 @@ function showCalendarPreview(force=false){
 }
 async function handleResearchAction(d){
   state.researchError='';
-  if('saveQuestion' in d){
+  if('editQuestion' in d||'closeQuestion' in d){
+    const id=d.editQuestion??d.closeQuestion,prior=researchLibrary.getWorkspace(id);if(!prior)throw new Error('Saved view unavailable.');
+    questionDrafts.capture(document);
+    if('editQuestion' in d)questionDrafts.edit(id,prior.researchQuestion);else questionDrafts.close(id);
+    render({preserveFocus:true,captureDrafts:false});document.getElementById(questionFieldId(id,'editQuestion' in d?'hypothesis':'edit'))?.focus({preventScroll:true});
+  }else if('questionAddCondition' in d||'questionRemoveCondition' in d){
+    const id=d.questionAddCondition??d.questionRemoveCondition;questionDrafts.capture(document);
+    if('questionAddCondition' in d)questionDrafts.addCondition(id);else questionDrafts.removeCondition(id,Number(d.conditionIndex));
+    render({preserveFocus:true,captureDrafts:false});
+  }else if('saveQuestion' in d){
     const prior=researchLibrary.getWorkspace(d.saveQuestion);if(!prior)throw new Error('Saved view unavailable.');
-    const input=name=>document.getElementById(`question-${name}-${prior.id}`).value.trim(),ids=value=>value.split(',').map(id=>id.trim()).filter(Boolean);
-    const conditionSeries=input('condition-series'),threshold=input('condition-value');
-    if(conditionSeries&&!threshold)throw new Error('Enter a condition threshold in the measurement’s native units.');
-    const question=parseResearchQuestion({version:1,hypothesis:input('hypothesis'),supportingSeriesIds:ids(input('support')),contradictingSeriesIds:ids(input('contradict')),baselinePackageId:'',reviewDate:input('review-date'),reviewEvent:input('review-event'),conditions:[...(conditionSeries?[{seriesId:conditionSeries,operator:input('condition-op'),value:Number(threshold)}]:[]),...(prior.researchQuestion?.conditions.slice(1)??[])]});
-    const selected=[...new Set([...question.supportingSeriesIds,...question.contradictingSeriesIds,...question.conditions.map(row=>row.seriesId)])];
-    if(!selected.length||selected.length>4)throw new Error('Choose one to four unique supporting, contradicting or condition measurements for the exact frozen baseline.');
-    const pkg=await createResearchPackage({name:`${prior.name.slice(0,60)} · question baseline`,state:{...prior.state,page:'explore',exploreMode:'compare',selected,comparison:'native',transform:'level',alignment:'exact'},context:{researchQuestion:question,scope:'Complete retained histories for the explicitly selected question evidence. Roles and thresholds are the researcher’s hypotheses, not agency interpretations.'}});
-    const baseline=await researchLibrary.pinPackage(pkg);stored(baseline,'Question baseline');
-    if(!baseline.persisted)throw new Error('The baseline is session-only. Download its JSON from Frozen results before reloading. The previous saved question was preserved.');
-    stored(await researchLibrary.saveWorkspace({...prior,researchQuestion:{...question,baselinePackageId:pkg.id}}),'Research question');
+    questionDrafts.capture(document);const entry=questionDrafts.get(prior.id,prior.researchQuestion);if(entry.status==='pending')return;
+    const initiatingFocus=rememberStableFocus(main,{document});
+    questionDrafts.pending(prior.id);render({preserveFocus:true,captureDrafts:false});
+    const result=await saveResearchQuestion({library:researchLibrary,workspace:prior,draft:entry.draft,createPackage:createResearchPackage,catalog:series,events:releases});
+    if(result.ok)questionDrafts.saved(prior.id,result.question);else questionDrafts.failed(prior.id,result);
+    render({preserveFocus:true,captureDrafts:false});
+    if(result.focusField)document.getElementById(questionFieldId(prior.id,result.focusField))?.focus();else restoreStableFocus(main,initiatingFocus,{document});
+    announce(result.message);
   }else if('saveWorkspace' in d){
     const prior=researchLibrary.getWorkspace(activeWorkspaceId),name=document.getElementById('research-name').value;
     const record=createWorkspace({name,state,...(prior?{id:prior.id,now:new Date(prior.createdAt),researchQuestion:prior.researchQuestion}:{})});
-    stored(await researchLibrary.saveWorkspace(record),'Workspace');activeWorkspaceId=record.id;researchLabel=record.name;
-  }else if('clearWorkspace' in d){activeWorkspaceId=null;researchLabel='';}
+    const scope=researchSaveScope(state),draft=saveDrafts.get(scope),initiatingFocus=rememberStableFocus(main,{document});saveDrafts.update(scope,{pending:'save',feedback:null});render({preserveFocus:true});
+    try{const result=await researchLibrary.saveWorkspace(record);stored(result,'Saved view');activeWorkspaceId=record.id;researchLabel=record.name;saveDrafts.update(scope,{name:record.name,feedback:{kind:result.persisted?'success':'warning',message:result.persisted?'Saved View saved in this browser.':'Saved View is session-only. Export settings for recovery before reloading.'}});}
+    catch(error){saveDrafts.update(scope,{feedback:{kind:'error',message:error.message},open:true});throw error;}
+    finally{draft.pending=false;render({preserveFocus:true});if(researchSaveScope(state)===scope)restoreStableFocus(main,initiatingFocus,{document});}
+  }else if('clearWorkspace' in d){activeWorkspaceId=null;researchLabel='';saveDrafts.reset(researchSaveScope(state));}
   else if('openWorkspace' in d){
     const record=researchLibrary.getWorkspace(d.openWorkspace);if(!record)throw new Error('Workspace unavailable.');
-    activeWorkspaceId=record.id;researchLabel=record.name;navigate(openWorkspace(record));announce('Workspace opened against the latest snapshot. UPDATE WORKSPACE saves configuration changes.');
+    activeWorkspaceId=record.id;researchLabel=record.name;saveDrafts.reset(researchSaveScope({...state,...openWorkspace(record)}));navigate(openWorkspace(record));announce('Saved View opened against the latest snapshot. UPDATE SAVED VIEW saves configuration changes.');
   }else if('renameWorkspace' in d){
     const record=researchLibrary.getWorkspace(d.renameWorkspace);if(!record)throw new Error('Workspace unavailable.');
     stored(await researchLibrary.saveWorkspace({...record,name:document.getElementById(`workspace-label-${record.id}`).value.trim()}),'Renamed workspace');
@@ -389,6 +406,7 @@ async function handleResearchAction(d){
     if('pinGdpMatrix' in d&&state.publicationSeries!=='gdp')throw new Error('The revision matrix requires GDP publication evidence.');
     const claims=claimsPublicationIds.includes(state.publicationSeries),cpi=cpiPublicationIds.includes(state.publicationSeries);
     let args,name;
+    if('pinResult' in d&&state.page!=='release'){const draft=saveDrafts.get(researchSaveScope(state),{selected:state.freezeSelection??freezeCandidates(state).slice(0,4)});state.freezeSelection=[...draft.selected];}
     if('pinGdpMatrix' in d){
       args=buildGdpMatrixPin(publicationArchive,state.publicationCutoff);name=`GDP revision matrix by ${args.context.gdpRevisionMatrix.cutoff}`;
     }else if('pinPublication' in d){
@@ -400,11 +418,12 @@ async function handleResearchAction(d){
       args=state.page==='release'?buildReleasePin(state,{archive:publicationArchive,publicationState,explanationArchive:publicationExplanations,explanationStatus:explanationState.status}):buildPinContext(state,{...historyController.context(state),changes:changesContext(),checkpoint:changeCheckpoint,failures:trackedFailures(),publicationContexts:{gdp:publicationController.context('gdp'),claims:publicationController.context('claimsAdvance'),cpi:publicationController.context('cpiMonthly')}});
       name=document.getElementById('research-name').value;
     }
+    const initiatingScope=researchSaveScope(state),initiatingFocus=rememberStableFocus(main,{document});
     pinBusy=true;render({preserveFocus:true});
     try{
       const pkg=await createResearchPackage({name,...args}),result=await researchLibrary.pinPackage(pkg);stored(result,'Frozen package');
-      navigate({page:'research',researchView:'packages',packageId:pkg.id});
-    }finally{pinBusy=false;}
+      navigate({page:'research',researchView:'packages',packageId:pkg.id,researchFeedback:{packageId:pkg.id,message:result.persisted?'Frozen Result saved with its original evidence.':'Frozen Result is session-only. Download JSON before reloading for recovery.'}});
+    }finally{pinBusy=false;if(researchSaveScope(state)===initiatingScope){render({preserveFocus:true});restoreStableFocus(main,initiatingFocus,{document});}}
   }else if('openPackage' in d)navigate({page:'research',researchView:'packages',packageId:d.openPackage});
   else if('removePackage' in d){stored(await researchLibrary.removePackage(d.removePackage),'Package removal');if(state.packageId===d.removePackage)navigate({packageId:''});}
   else if('packageJson' in d){const pkg=researchLibrary.getPackage(d.packageJson);if(!pkg)throw new Error('Package unavailable.');downloadJson(pkg);}
@@ -471,10 +490,10 @@ root.addEventListener('click',async event=>{
     downloadCsv(pceBaseEffectsCsv(getSeries(state.pceBaseIndex),pceScenarioOptions(state)),'meridian-pce-conditional-path.csv','Conditional arithmetic and exact historical indexes downloaded with all assumptions. Future rows are modeled, not official observations.');return;
   }
   if('sourceHealth' in d){const details=document.querySelector('#data-freshness .freshness-details');if(details){details.open=true;details.querySelector('summary')?.focus();details.scrollIntoView({block:'nearest'});}return;}
-  const researchKeys=['saveQuestion','saveWorkspace','clearWorkspace','pinResult','pinPublication','pinGdpMatrix','exportGdpMatrix','exportCoverage','openWorkspace','renameWorkspace','removeWorkspace','openPackage','removePackage','packageJson','packageCsv','packageAttachment','exportFrozenCurrentAccountGdpContributions','exportFrozenCurrentAccountGdpBalanceEffects','exportFrozenCurrentAccountGdpComponentEffects','exportFrozenCurrentAccountGdpAllComponentEffects','enableChanges','disableChanges','markChanges','reviewAllChanges','retryChanges','changePage','exportChanges','exportPublications','retryPublications','exportPublicationExplanations','retryPublicationExplanations'];
+  const researchKeys=['editQuestion','closeQuestion','questionAddCondition','questionRemoveCondition','saveQuestion','saveWorkspace','clearWorkspace','pinResult','pinPublication','pinGdpMatrix','exportGdpMatrix','exportCoverage','openWorkspace','renameWorkspace','removeWorkspace','openPackage','removePackage','packageJson','packageCsv','packageAttachment','exportFrozenCurrentAccountGdpContributions','exportFrozenCurrentAccountGdpBalanceEffects','exportFrozenCurrentAccountGdpComponentEffects','exportFrozenCurrentAccountGdpAllComponentEffects','enableChanges','disableChanges','markChanges','reviewAllChanges','retryChanges','changePage','exportChanges','exportPublications','retryPublications','exportPublicationExplanations','retryPublicationExplanations'];
   if(researchKeys.some(key=>key in d)){
     const before=location.hash;
-    try{await handleResearchAction(d);}catch(error){state.researchError=error.message;announce(`Research action unavailable: ${error.message}`);}
+    try{await handleResearchAction(d);}catch(error){state.researchError=error.message;if('saveWorkspace' in d||'pinResult' in d)saveDrafts.update(researchSaveScope(state),{feedback:{kind:'error',message:error.message},open:true});announce(`Research action unavailable: ${error.message}`);}
     if(location.hash===before)render({preserveFocus:true});return;
   }
   if('exportSettings' in d){
@@ -520,6 +539,8 @@ root.addEventListener('click',async event=>{
   }
   else if('range' in d)navigate({range:Number(d.range),window:'observations',startDate:'',endDate:''});
   else if('window' in d)navigate({window:d.window,startDate:'',endDate:''});
+  else if('comparisonResetRange' in d){navigate({window:'all',startDate:'',endDate:''});announce('Date range reset. Your measurements, comparison mode and alignment are preserved.');}
+  else if('focusField' in d){const field=document.getElementById(d.focusField);field?.focus({preventScroll:true});field?.scrollIntoView({block:'nearest'});}
   else if('comparisonMode' in d)navigate({comparison:d.comparisonMode});
   else if('tab' in d)navigate({tab:d.tab});
   else if('exploreMode' in d)navigate({exploreMode:d.exploreMode});
@@ -547,13 +568,13 @@ root.addEventListener('click',async event=>{
   else if('exportRefinancing' in d||'exportRefinancingScenario' in d)downloadCsv(refinancingCsv(dataStatus.sources.refinancing,{scenario:'exportRefinancingScenario' in d,horizonMonths:state.refinancingHorizon,shockBps:state.refinancingShock}),'meridian-refinancing.csv','Refinancing CSV downloaded with observed principal, generated identifiers and explicitly modeled assumptions.');
   else if('exportYieldCurves' in d)downloadCsv(yieldCurvesCsv(dataStatus.sources.yields,state),'meridian-yield-curves.csv','Selected historical curves downloaded; input URLs and calculated compensation are labeled.');
   else if('exportYieldIndicators' in d)exportCsv(['spread2s10s','spread3m10y','realYield10','inflationComp10','nominalYield2','nominalYield3m']);
+  else if('auctionHistoryPage' in d){
+    navigate({auctionHistoryPage:Math.max(0,Number(d.auctionHistoryPage)||0)});document.getElementById('auction-history')?.focus({preventScroll:true});
+  }
+  else if('auctionSelected' in d){const result=document.getElementById('auction-selected-result');result?.focus({preventScroll:true});result?.scrollIntoView({block:'start'});}
   else if('auctionId' in d){
-    navigate({auctionId:d.auctionId});
-    if('auctionHistoryPage' in d){
-      const history=document.getElementById('auction-history');
-      history?.focus({preventScroll:true});
-      history?.scrollIntoView({block:'start'});
-    }
+    navigate({auctionId:d.auctionId});const selected=dataStatus.sources.auctions?.auctions?.find(row=>row.id===d.auctionId);
+    announce(selected?`Selected auction ${selected.auctionDate} · ${selected.securityType} ${selected.securityTerm}. Comparison, exports and frozen evidence use this selection.`:'Selected auction updated.');
   }
   else if('exportAuctions' in d||'exportAuctionBenchmark' in d)downloadCsv(auctionsCsv(dataStatus.sources.auctions,{securityType:state.auctionType,auctionId:state.auctionId,benchmark:'exportAuctionBenchmark' in d}),'meridian-auctions.csv','Auction CSV downloaded with matching scope, observed results, calculated allocations and source provenance.');
   else if('exportMarket' in d)downloadCsv(marketFunctioningCsv(dataStatus.sources.marketFunctioning),'meridian-market.csv','Market CSV downloaded with reporting bases, missing and suppressed values, source titles and reuse conditions.');
@@ -578,10 +599,12 @@ root.addEventListener('click',async event=>{
 root.addEventListener('change',async event=>{
   const target=event.target;
   if(target.dataset&&'freezeSelect' in target.dataset){
-    const candidates=freezeCandidates(state),chosen=[...(state.freezeSelection??candidates.slice(0,4))],id=target.dataset.freezeSelect;
-    if(target.checked&&chosen.length>=4){target.checked=false;announce('Freeze result holds four primary measurements. Uncheck one before selecting another. Complete watchlist membership remains contextual metadata.');return;}
-    state.freezeSelection=target.checked?[...chosen,id]:chosen.filter(value=>value!==id);render({preserveFocus:true});return;
+    const candidates=freezeCandidates(state),scope=researchSaveScope(state),draft=saveDrafts.get(scope,{selected:candidates.slice(0,4)}),chosen=[...(state.freezeSelection??draft.selected)],id=target.dataset.freezeSelect;
+    if(target.checked&&chosen.length>=4){target.checked=false;const message='Freeze Result allows four primary histories. Uncheck a measurement before choosing another; existing selections are preserved.';saveDrafts.update(scope,{feedback:{kind:'error',message}});render({preserveFocus:true});announce(message);return;}
+    state.freezeSelection=target.checked?[...chosen,id]:chosen.filter(value=>value!==id);saveDrafts.update(scope,{selected:[...state.freezeSelection],feedback:null});render({preserveFocus:true});return;
   }
+  if(target.matches?.('[data-question-role],[data-question-condition-field]')){questionDrafts.capture(document);render({preserveFocus:true});return;}
+  if(target.id==='auction-type'){const selected=dataStatus.sources.auctions?.auctions?.find(row=>row.id===state.auctionId);navigate({auctionType:target.value,auctionHistoryPage:null,auctionId:target.value==='All'||selected?.securityType===target.value?state.auctionId:''});return;}
   if(target.id==='watchlist-sort' ||target.id==='watchlist-group'){state={...state,...(target.id==='watchlist-sort'?{watchlistSort:target.value}:{watchlistGroup:target.checked})};const durable=persist();render({preserveFocus:true});announce(durable?'Monitoring preferences saved.':'Monitoring preferences changed for this session; browser storage is unavailable.');return;}
   if(target.id==='watchlist-active'){
     try{state={...state,...selectNamedWatchlist(state,target.value)};delete state.freezeSelection;const durable=persist();render({preserveFocus:true});announce(durable?'Named watchlist restored with its ordering.':'Watchlist restored for this session; export settings for recovery.');}catch(error){announce(error.message);}return;
@@ -613,7 +636,7 @@ root.addEventListener('change',async event=>{
     try{navigate({changeSince:normalizedCutoff(target.value,changeState.history),changePage:1});}
     catch(error){state.researchError=error.message;render({preserveFocus:true});}return;
   }
-  if(target.id==='density-select') {
+  if(target.id==='density-select'||target.id==='density-select-mobile') {
     state.density=target.value;
     const durable=persist();render({preserveFocus:true});
     announce(durable?'Appearance saved in this browser.':'Appearance changed for this session; browser storage is unavailable.');
@@ -677,10 +700,12 @@ document.addEventListener('keydown',event=>{
   }
 });
 
+root.addEventListener('input',event=>{const target=event.target;if(target.matches?.('[data-freeze-query]')){saveDrafts.update(researchSaveScope(state),{query:target.value});filterFreezeCandidates(main,target.value);}else if(target.matches?.('[data-question-search]')){filterQuestionPicker(target);questionDrafts.capture(document);}});
+
 let resizeFrame;
 window.addEventListener('resize',()=>{
   cancelAnimationFrame(resizeFrame);
-  resizeFrame=requestAnimationFrame(()=>renderCurrentCharts());
+  resizeFrame=requestAnimationFrame(()=>{renderCurrentCharts();prepareReadableTables(main);positionResearchSave(main);});
 });
 
 watchDisclosureCharts(main,renderCurrentChartsIn);

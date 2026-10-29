@@ -32,8 +32,8 @@ test('catalog related context and return links preserve search settings',()=>{
 
 test('negative GDP contributions cannot be ratio indexed but baseline differences stay available',()=>{
  const state={...parseRoute('#/explore'),selected:['gdpImportsContribution','gdpExportsContribution'],exploreMode:'compare',comparison:'indexed',window:'all'};
- const html=renderPage(state);assert.match(html,/Comparison unavailable/);assert.match(html,/native|baseline/i);assert.match(html,/value="difference"/);assert.match(html,/data-comparison-mode="difference"/);
- const differences=renderPage({...state,comparison:'difference'});assert.doesNotMatch(differences,/Comparison unavailable/);assert.match(differences,/Change from baseline/);assert.match(differences,/data-panel-id=/);
+ const html=renderPage(state);assert.match(html,/Indexed comparison is unsupported/);assert.match(html,/cannot be ratio-indexed/);assert.match(html,/class="comparison-error" role="alert"/);assert.match(html,/data-export[^>]*disabled/);assert.match(html,/native|baseline/i);assert.match(html,/value="difference"/);assert.match(html,/data-comparison-mode="difference"/);
+ const differences=renderPage({...state,comparison:'difference'});assert.doesNotMatch(differences,/class="comparison-error"/);assert.match(differences,/Change from baseline/);assert.match(differences,/data-panel-id=/);
 });
 
 test('invalid custom bounds block charts and visibly disable export instead of silently widening',()=>{

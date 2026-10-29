@@ -93,7 +93,7 @@ test('as-known page honors exact UTC cutoff and does not show later revisions in
 test('Captured by controls describe an inclusive retrieval cutoff with exact UTC precision', () => {
   const html = vintagesPage({ vintageSeries: 'gdp', vintageCutoff: t1 }, fixture());
   assert.match(html, /<label for="vintage-cutoff">Captured by \(UTC\)/);
-  assert.match(html, /<h1>CAPTURED BY<\/h1>[\s\S]*Revision history at a UTC retrieval cutoff/);
+  assert.match(html, /<h1>RETRIEVAL HISTORY<\/h1>[\s\S]*Revision history at a UTC retrieval cutoff/);
   assert.ok(html.includes(`Captured by: ${t1}.`));
   assert.match(html, /Captures at the exact cutoff are included/);
   assert.match(html, /retrieval cutoff.*release date|release date.*retrieval cutoff/is);

@@ -1,11 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {parseRoute,routeFor} from '../src/router.js';
 import {claimsFact as fixtureClaimsFact} from './helpers/claims-publications-fixture.js';
 const claimsFact=(overrides={})=>{const row=fixtureClaimsFact(overrides);return {...row,id:`dol-${row.seriesId}-${row.period}-${row.releaseStage}-${row.publicationDate}`};};
 const api=await import('../src/release-page.js').catch(error=>{if(error.code==='ERR_MODULE_NOT_FOUND')return {};throw error;});
 const event={id:'claims-test',name:'Unemployment Insurance Weekly Claims',sourceId:'dol',program:'weekly-claims',date:'2026-03-19',time:'08:30',scheduledAt:'2026-03-19T12:30:00.000Z',scheduleBasis:'recurring-rule',sourceUrl:'https://oui.doleta.gov/unemploy/claims_arch.asp'};
 const state={page:'release',eventId:event.id,publicationSeries:'claimsAdvance',publicationPeriod:'',publicationCutoff:''};
 const archive={version:1,releases:[claimsFact({period:'2026-03-07',publicationDate:'2026-03-12',value:200}),claimsFact({period:'2026-03-07',publicationDate:'2026-03-19',releaseStage:'prior-week-revised',value:201}),claimsFact({period:'2026-03-14',publicationDate:'2026-03-19',value:202})]};
+
+test('release comparison names its preset pair while its return preserves the complete originating selection',()=>{
+ const selection=['claimsAdvance','unrate','cpi'],origin=routeFor({...parseRoute('#/series/claimsAdvance?window=custom&start=2025-01-01&end=2026-06-01'),selected:selection});
+ const contextual={...state,selected:selection,window:'custom',startDate:'2025-01-01',endDate:'2026-06-01',returnTo:origin};
+ const html=api.releasePage(contextual,{archive,publicationState:{status:'ready'},events:[event]});
+ const action=[...html.matchAll(/<a class="action" href="([^"]+)">([^<]+)<\/a>/g)].find(([,href])=>href.startsWith('#/explore?'));
+ assert.ok(action);assert.equal(action[2],'COMPARE WITH UNEMPLOYMENT');
+ const comparison=parseRoute(action[1].replaceAll('&amp;','&'));
+ assert.deepEqual(comparison.selected,['claimsAdvance','unrate']);
+ const returning=parseRoute(comparison.returnTo);assert.deepEqual(returning.selected,selection);assert.equal(returning.returnTo,origin);
+ assert.equal(returning.startDate,'2025-01-01');assert.equal(returning.endDate,'2026-06-01');
+});
 test('release workspace exposes all clocks and separate earlier and same-release priors',()=>{
  assert.equal(typeof api.releasePage,'function');
  const html=api.releasePage(state,{archive,publicationState:{status:'ready'},events:[event]});

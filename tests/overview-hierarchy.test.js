@@ -10,13 +10,13 @@ const state=extra=>({...defaults,saved:[],selected:[],...extra});
 const render=(extra={},context={})=>overviewPage(state(extra),{now:new Date('2026-10-23T12:00:00Z'),...context});
 const primary=(html,id)=>html.match(new RegExp(`data-overview-reading="${id}"[^]*?</a>`))?.[0];
 
-test('Overview has eight primary measurement homes with the approved hierarchy and native momentum charts',()=>{
+test('Overview has eight distinct primary reading cells and native momentum charts',()=>{
  const html=render();
  assert.match(html,/class="radar-page radar-overview overview-hierarchy"/);
  assert.equal((html.match(/data-overview-reading=/g)??[]).length,8);
- assert.equal((html.match(/class="oh-topic"/g)??[]).length,6);
+ assert.equal((html.match(/class="oh-topic"/g)??[]).length,8);
  for(const id of ['gdp','pceCore','payroll','unrate','policyTargetRange','yield','spread2s10s','interestRevenueRatio'])assert.ok(primary(html,id),id);
- for(const [earlier,later] of [['oh-snapshot','oh-catalysts'],['oh-catalysts','oh-momentum'],['oh-momentum','oh-support']])assert.ok(html.indexOf(earlier)<html.indexOf(later));
+ for(const [earlier,later] of [['oh-snapshot','oh-momentum'],['oh-momentum','oh-catalysts'],['oh-catalysts','oh-support']])assert.ok(html.indexOf(earlier)<html.indexOf(later));
  assert.match(primary(html,'gdp'),/q\/q SAAR/);
  assert.match(primary(html,'pceCore'),/y\/y/);
  assert.match(primary(html,'interestRevenueRatio'),/TTM/);
@@ -85,7 +85,7 @@ test('Overview reviewed archives keep historical period and clocks without repea
  const row=claimsFact({period:'2026-03-14',publicationDate:'2026-03-19',value:202});
  row.id=`dol-${row.seriesId}-${row.period}-${row.releaseStage}-${row.publicationDate}`;
  const html=render({}, {publicationContexts:{claims:{status:'ready',archive:{releases:[row]}},gdp:{status:'error',error:'<unsafe> archive'}}});
- const publications=html.slice(html.indexOf('data-overview-disclosure="publications"'),html.indexOf('class="oh-momentum"'));
+ const publications=html.slice(html.indexOf('data-overview-disclosure="publications"'),html.indexOf('class="oh-support"'));
  assert.match(publications,/reference 2026-03-14/);assert.match(publications,/Published 2026-03-19 · day precision/);assert.match(publications,/Captured 2026-10-22T22:00:00\.000Z/);
  assert.match(publications,/GDP: Publication evidence unavailable/);assert.match(publications,/&lt;unsafe&gt; archive/);
  assert.doesNotMatch(publications,/202k|new publication today|Released today/);

@@ -60,7 +60,7 @@ export async function createResearchLibrary(storage,{locks=globalThis.navigator?
   records={workspaces:[...legacy.workspaces],packages:[...legacy.packages]};durable={workspaces:[...legacy.workspaces],packages:[...legacy.packages]};
   for(const kind of Object.keys(limits))for(const record of records[kind])setStatus(kind,record.id,'durable');
  }
- const persist=async(kind,id,record)=>{
+ const persist=async(kind,id,record,{requireDurable=false}={})=>{
   let result;
   if(backend==='indexeddb'){
    if(invalidKeys.has(recordKey(kind,id)))result={persisted:false,reason:'invalid-record'};
@@ -81,8 +81,8 @@ export async function createResearchLibrary(storage,{locks=globalThis.navigator?
    });
   }catch{result={persisted:false,reason:'locking-unavailable'};}
   if(result.persisted){if(record)setStatus(kind,id,'durable');else delete durability[kind][id];}
-  else setStatus(kind,id,result.reason==='quota'||result.reason==='locking-unavailable'||result.reason==='limit'?'session':'failed',result.reason);
-  updateWarning(result.reason);return{ok:true,persisted:result.persisted,reason:result.reason??null};
+  else if(!requireDurable)setStatus(kind,id,result.reason==='quota'||result.reason==='locking-unavailable'||result.reason==='limit'?'session':'failed',result.reason);
+  if(result.persisted||!requireDurable)updateWarning(result.reason);return{ok:!requireDurable||result.persisted,persisted:result.persisted,reason:result.reason??null};
  };
  // Keep operations within one library in invocation order. The native write
  // transaction also serializes the compare/write across separate tabs.
@@ -92,11 +92,14 @@ export async function createResearchLibrary(storage,{locks=globalThis.navigator?
   getState:()=>deepFreeze({version:1,...records,backend,durability:structuredClone(durability),storageAvailable,sessionOnly:sessionOnly()||backend==='session',warning:[notice,warning].filter(Boolean).join(' ')}),
   listWorkspaces:()=>Object.freeze([...records.workspaces]),listPackages:()=>Object.freeze([...records.packages]),
   getWorkspace:id=>records.workspaces.find(row=>row.id===id),getPackage:id=>records.packages.find(row=>row.id===id),
-  saveWorkspace:input=>enqueue(async()=>{
+  saveWorkspace:(input,{requireDurable=false}={})=>enqueue(async()=>{
    const record=parseWorkspace(input),index=records.workspaces.findIndex(row=>row.id===record.id);
    if(index<0&&records.workspaces.length>=limits.workspaces)return{ok:false,persisted:false,reason:'limit'};
-   records.workspaces=index<0?[...records.workspaces,record]:records.workspaces.map((row,position)=>position===index?record:row);
-   return{...await persist('workspaces',record.id,record),record};
+   const replace=()=>{records.workspaces=index<0?[...records.workspaces,record]:records.workspaces.map((row,position)=>position===index?record:row);};
+   if(!requireDurable)replace();
+   const result=await persist('workspaces',record.id,record,{requireDurable});
+   if(requireDurable&&result.persisted)replace();
+   return{...result,record:requireDurable&&!result.persisted?records.workspaces[index]:record};
   }),
   removeWorkspace:id=>enqueue(async()=>{researchId(id);const result=await persist('workspaces',id,null);if(result.persisted)records.workspaces=records.workspaces.filter(row=>row.id!==id);return result;}),
   pinPackage:input=>enqueue(async()=>{

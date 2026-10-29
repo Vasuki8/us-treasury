@@ -33,7 +33,8 @@ test('trailing CSV endpoint values match chart selection and retain all supporti
 });
 
 test('app binds both trailing charts to retained package inputs only when the new optional field exists',async()=>{
- const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8'),start=source.indexOf('function renderCurrentCharts()'),end=source.indexOf('function researchActions()',start);
+ const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8'),start=source.indexOf('function renderCurrentCharts('),end=source.indexOf('function researchActions()',start);
+ assert.ok(start>=0&&end>start,'The integration probe extracts the current chart renderer, including its inspection argument.');
  let pkg=null;const calls=[],state=parseRoute('#/economy?family=external'),main={};
  const run=new Function('currentPackage','renderCharts','main','dataStatus','state','currentAccountGdpHistoryChartCatalog','currentAccountGdpBreakdownChartCatalog','currentAccountGdpTrailingChartCatalog','currentAccountGdpComparisonChartCatalog','currentAccountGdpContributionsChartCatalog',source.slice(start,end)+';return renderCurrentCharts;')(()=>pkg,(...args)=>calls.push(args),main,snapshot,state,currentAccountGdpHistoryChartCatalog,currentAccountGdpBreakdownChartCatalog,currentAccountGdpTrailingChartCatalog,currentAccountGdpComparisonChartCatalog,currentAccountGdpContributionsChartCatalog);
  run();assert.equal(Object.keys(calls.at(-1)[1].chartCatalogs['current-account-gdp-trailing'].catalog).length,5);

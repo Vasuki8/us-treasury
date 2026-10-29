@@ -4,6 +4,8 @@ import {macroCoveragePage} from '../src/macro-coverage-page.js';
 import {macroPage} from '../src/macro-page.js';
 import {creditContextPage} from '../src/credit-context-page.js';
 import {currentAccountGdpPanel} from '../src/current-account-gdp-view.js';
+import {creditContextGroups} from '../src/credit-context-registry.js';
+import {escapeHtml} from '../src/ui.js';
 import {coverageFamilies} from '../src/macro-registry.js';
 import {getSeries,periodLabel} from '../src/model.js';
 import {series,dataStatus} from '../src/data.js';
@@ -27,7 +29,8 @@ test('native economy families lead with compact readings and focused history bef
  for(const familyId of ['prices','activity','housing','policy']){
   const family=coverageFamilies[familyId],html=macroCoveragePage({macroFamily:familyId}),lead=visible(html);
   assert.match(html,/<section class="reading-group" aria-label="LATEST TOPIC READINGS">/);
-  ordered(html,['LATEST TOPIC READINGS','FOCUSED HISTORY',`data-page-disclosure="macro-coverage:${familyId}:research"`]);
+  if(familyId==='prices')ordered(html,['INFLATION · CURRENT READING &amp; HISTORY','data-chart','LATEST TOPIC READINGS',`data-page-disclosure="macro-coverage:${familyId}:research"`]);
+  else ordered(html,['LATEST TOPIC READINGS','FOCUSED HISTORY',`data-page-disclosure="macro-coverage:${familyId}:research"`]);
   if(familyId==='prices'){assert.match(lead,/YEAR OVER YEAR/);assert.match(lead,/3M ANNUALIZED/);assert.match(lead,/6M ANNUALIZED/);assert.equal((lead.match(/data-inflation-reading=/g)??[]).length,16);}
   for(const id of familyId==='prices'?[]:family.ids.slice(0,6)){const series=getSeries(id);assert.ok(lead.includes(series.unit),`${familyId}: ${series.unit}`);assert.ok(lead.includes(series.adjustment));const last=series.observations.at(-1);if(last)assert.ok(lead.includes(periodLabel(series,last.date)));}
   if(familyId!=='prices')assert.doesNotMatch(lead,/<table>/);
@@ -70,7 +73,8 @@ test('external ratio compacts both quarters while exact inputs and formula retai
 test('credit groups retain separate readings, exact source periods, missing values and visible reuse notices',()=>{
  const sources={bankCredit:{status:'error',fetchedAt:stamp,error:'Source <failure>',series:{bankLoans:{observations:[{date:'2026-10-07',value:null}]}}},lendingSurvey:{status:'ok',fetchedAt:stamp,series:{ciStandardsLarge:{observations:[{date:'2026-07-01',sourcePeriodLabel:'2026-09-30',value:0}]}}}};
  const html=creditContextPage(sources,{documents:[]}),lead=visible(html);
- assert.ok((html.match(/class="reading-group"/g)??[]).length>=6);
+ assert.equal((html.match(/class="panel workspace-analysis credit-evidence-group"/g)??[]).length,creditContextGroups.length,'Each source group keeps a separate evidence section');
+ for(const group of creditContextGroups){assert.equal(html.split(`</span>${escapeHtml(group.label)}</h2>`).length-1,1,`${group.label} has one heading`);assert.match(html,new RegExp(`data-page-disclosure="credit:${group.id}:evidence"`));}
  for(const text of ['Source &lt;failure&gt;','2026-10-07','2026-09-30','Unavailable','Net percent of domestic banks','USD billions','Meridian is not affiliated','same permissions','no combined liquidity score'])assert.ok(lead.includes(text),text);
  assert.match(html,/data-page-disclosure="credit:lendingSurvey:evidence"/);
  assert.equal((html.match(/data-export-credit/g)??[]).length,1);

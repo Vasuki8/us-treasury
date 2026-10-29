@@ -92,7 +92,8 @@ test('Comparison keeps native panels, exact-window controls, errors and export e
   const native=render({page:'explore',exploreMode:'compare',selected:['unrate','cpi'],window:'observations',range:6});
   for(const text of ['id="comparison-select"','id="window-start"','id="window-end"','Each series uses its own observation count','data-cursor-group="comparison"','no interpolation','DISPLAYED WINDOW','NO FILL','data-remove="unrate"'])assert.ok(native.includes(text),text);
   const invalid=render({page:'explore',exploreMode:'compare',selected:['unrate','cpi'],comparison:'indexed'});
-  assert.match(invalid,/Comparison unavailable/);
+  assert.match(invalid,/Indexed comparison is unsupported/);assert.match(invalid,/cannot be ratio-indexed/);
+  assert.match(invalid,/class="comparison-error" role="alert"/);assert.doesNotMatch(invalid,/data-comparison-reset-range/,'A valid range remains intact when the chosen mode is unsupported');
   assert.match(invalid,/data-comparison-mode="native"/);
   assert.match(invalid,/data-comparison-mode="difference"/);
   assert.match(invalid,/data-export disabled/);
