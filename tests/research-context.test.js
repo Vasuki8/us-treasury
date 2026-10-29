@@ -5,6 +5,22 @@ import {parseRoute} from '../src/router.js';import {dataStatus,series} from '../
 import {recordVintages,asKnownOn} from '../src/vintages.js';
 import {parseCsv} from '../scripts/sources/http.mjs';
 
+test('explicit one-year frozen requests preserve recorded route bytes and replay their captured window',async()=>{
+ const cases=[
+  ['#/series/unrate?window=1y','#/series/unrate'],
+  ['#/series/gdp?window=1y','#/series/gdp'],
+  ['#/series/sofr?window=1y','#/series/sofr'],
+  ['#/explore?mode=compare&selected=unrate,gdp&window=1y','#/explore?selected=unrate%2Cgdp&mode=compare'],
+ ];
+ for(const [hash,recordedRoute] of cases){
+  const args=buildPinContext(parseRoute(hash));assert.equal(args.context.route,recordedRoute);
+  const pkg=await createResearchPackage({name:'Explicit one year',id:'one-year-fixture',now:'2026-10-22T00:00:00.000Z',...args});
+  assert.equal(pkg.request.range.preset,'1y');assert.equal(pkg.workspace.window,'1y');
+  const bytes=exportResearchPackage(pkg),restored=await importResearchPackage(bytes);
+  assert.equal(exportResearchPackage(restored),bytes);assert.equal(restored.request.range.preset,'1y');
+ }
+});
+
 test('release freezing retains the matched official result rather than current default chart selections',async()=>{
  const state=parseRoute('#/release?publicationSeries=gdp&publicationPeriod=2026-01-01&publicationCutoff=2026-06-25');
  // Use the same normalized selection keys as the release workspace.

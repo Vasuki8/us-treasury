@@ -1,6 +1,8 @@
 import { getSeries, latest, formatValue, formatChange, periodLabel, BLS_DATA_NOTICE } from './model.js';
 import { DAILY_REFRESH_SCHEDULE, getFreshness } from './freshness.js';
 import { measurementChange } from './measurement-change.js';
+import {defaultWindowPreset} from './date-window.js';
+import {displayCurrencyUnit,displayUnitLabel,formatDisplayValue,formatDisplayChange} from './display-format.js';
 
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -56,9 +58,16 @@ export function panel(index, title, body, actions = '', note = '', extraClass = 
   return `<section class="panel${extraClass ? ` ${escapeHtml(extraClass)}` : ''}"><header class="panel-head"><h2><span class="index">${escapeHtml(index)}</span>${escapeHtml(title)}</h2><div class="actions">${actions}</div></header>${body}${note ? `<p class="panel-note">${escapeHtml(note)}</p>` : ''}</section>`;
 }
 
-export function chart(ids, { height = 180, kind = 'line', transform = 'level', range = 12, comparison = 'native',panelId='',cursorGroup='' } = {}) {
+export function chart(ids, {
+  height=180,kind='line',transform='level',range={preset:defaultWindowPreset(ids.map(getSeries))},
+  comparison='native',panelId='',cursorGroup='',
+}={}) {
   const names = ids.map(id => getSeries(id)?.name).filter(Boolean).join(', ');
-  return `<div class="chart" data-chart data-series="${escapeHtml(ids.join(','))}" data-kind="${escapeHtml(kind)}" data-transform="${escapeHtml(transform)}" data-range="${escapeHtml(typeof range==='object'?JSON.stringify(range):range)}" data-comparison="${escapeHtml(comparison)}" data-panel-id="${escapeHtml(panelId)}" data-cursor-group="${escapeHtml(cursorGroup)}" data-height="${escapeHtml(height)}"><p class="chart-fallback muted">${escapeHtml(kind === 'curve' ? 'Treasury yield curve' : names)} chart · official snapshot</p></div>`;
+  const window=escapeHtml(typeof range==='object'?JSON.stringify(range):range);
+  return `<div class="chart" data-chart data-series="${escapeHtml(ids.join(','))}" data-kind="${escapeHtml(kind)}"`
+    +` data-transform="${escapeHtml(transform)}" data-range="${window}" data-comparison="${escapeHtml(comparison)}"`
+    +` data-panel-id="${escapeHtml(panelId)}" data-cursor-group="${escapeHtml(cursorGroup)}" data-height="${escapeHtml(height)}">`
+    +`<p class="chart-fallback muted">${escapeHtml(kind==='curve'?'Treasury yield curve':names)} chart · official snapshot</p></div>`;
 }
 
 export function seriesLink(id, label, className = '') {
@@ -71,18 +80,28 @@ export function coverageBadge(series) {
   return series.coverageNote ? `<span class="pill" title="${escapeHtml(series.coverageNote)}">${series.id === 'claims' ? 'Historical feed' : 'Coverage note'}</span>` : '';
 }
 
-function compactChange(series,change){
+function compactChange(series,change,formatted=formatChange(series)){
  if(change.value===null)return 'Comparison unavailable';
- const label=series.id==='payrollAverage3m'?'Change in average gains':series.id==='payroll'?'Change in gains':['gdp','gdpTotalContribution','wages'].includes(series.id)?'Growth-rate change':'Change';
- return `${label} ${formatChange(series)} vs ${change.priorPeriod}`;
+ const growth=['gdp','gdpTotalContribution','wages'].includes(series.id);
+ const label=series.id==='payrollAverage3m'?'Change in average gains':series.id==='payroll'?'Change in gains':growth?'Growth-rate change':'Change';
+ return `${label} ${formatted} vs ${change.priorPeriod}`;
 }
 
-export function metrics(ids,{label='Headline indicators',showBasis=false}={}) {
+export function metrics(ids,{label='Headline indicators',showBasis=false,currencyUnit=displayCurrencyUnit(ids.map(getSeries))}={}) {
   return `<section class="metrics" aria-label="${escapeHtml(label)}">${ids.map(id => {
     const series = getSeries(id);
     if (!series) return '';
     const observation = latest(series),change=measurementChange(series);
-    return `<a class="metric" href="#/series/${encodeURIComponent(id)}"${series.error ? ` title="${escapeHtml(series.error)}"` : ''}><span class="metric-name">${escapeHtml(series.short)}</span><strong class="metric-value">${escapeHtml(formatValue(series, observation?.value))}</strong><span class="metric-change" title="${escapeHtml(change.text)}">${escapeHtml(compactChange(series,change))}</span><span class="metric-period">${escapeHtml(observation ? periodLabel(series, observation.date) : 'Unavailable')}${series.dataStatus === 'cached' ? ' · CACHED' : ''}</span>${showBasis?`<span class="metric-basis">${escapeHtml(seriesStatus(series))} · ${escapeHtml(series.unit)}</span>`:''}${coverageBadge(series)}<span class="metric-detail" aria-hidden="true">Details ↗</span></a>`;
+    const reading=formatDisplayValue(series,observation?.value,{currencyUnit});
+    const formattedChange=formatDisplayChange(series,{currencyUnit});
+    return `<a class="metric" href="#/series/${encodeURIComponent(id)}"${series.error?` title="${escapeHtml(series.error)}"`:''}>`
+      +`<span class="metric-name">${escapeHtml(series.short)}</span><strong class="metric-value">${escapeHtml(reading)}</strong>`
+      +`<span class="metric-change" title="${escapeHtml(change.text)}">${escapeHtml(compactChange(series,change,formattedChange))}</span>`
+      +`<span class="metric-period">${escapeHtml(observation?periodLabel(series,observation.date):'Unavailable')}`
+      +`${series.dataStatus==='cached'?' · CACHED':''}</span>`
+      +(showBasis?`<span class="metric-basis">${escapeHtml(seriesStatus(series))} · `
+        +`${escapeHtml(displayUnitLabel(series,{currencyUnit}))}</span>`:'')
+      +`${coverageBadge(series)}<span class="metric-detail" aria-hidden="true">Details ↗</span></a>`;
   }).join('')}</section>`;
 }
 

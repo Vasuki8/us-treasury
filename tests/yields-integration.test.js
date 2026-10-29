@@ -4,6 +4,24 @@ import {parseRoute,routeFor} from '../src/router.js';
 import {getSeries,toCsv} from '../src/model.js';
 import {assertCommercialData} from '../scripts/data-policy.mjs';
 import {parseCsv} from '../scripts/sources/http.mjs';
+import {readFile} from 'node:fs/promises';
+import {nearestCurveDate} from '../src/yields.js';
+import {yieldOverlayDates,yieldCurvesCsv} from '../src/yields-page.js';
+
+test('live date changes navigate, compare and export the snapped dates while incomplete edits preserve the prior date',async()=>{
+ const application=await readFile(new URL('../src/app.js',import.meta.url),'utf8');
+ const handler=/root\.addEventListener\('change',async event=>\{([^]*?)\n\}\);/.exec(application);assert.ok(handler);
+ const state=parseRoute('#/yields?curveA=2026-10-21&curveB=2026-10-16'),messages=[];
+ const source={curveHistory:['2026-10-16','2026-10-19','2026-10-21'].map(date=>({date,nominal:{'10Y':4},real:{'10Y':2}}))};
+ const run=new Function('nearestCurveDate','dataStatus','navigate','announce',`return async event=>{${handler[1]}};`)(
+  nearestCurveDate,{sources:{yields:source}},patch=>Object.assign(state,patch),message=>messages.push(message));
+ const target={id:'yield-curve-date-a',value:'2026-10-20',defaultValue:'2026-10-21',dataset:{},matches:()=>false};await run({target});
+ assert.equal(state.yieldDateA,'2026-10-19');assert.match(messages.at(-1),/2026-10-19/);
+ assert.deepEqual(yieldOverlayDates(source,parseRoute(routeFor(state))),['2026-10-19','2026-10-16']);
+ const [, ...rows]=parseCsv(yieldCurvesCsv(source,state));
+ assert.deepEqual([...new Set(rows.map(row=>row[0]))],['2026-10-19','2026-10-16']);
+ target.value='';await run({target});assert.equal(state.yieldDateA,'2026-10-19');assert.equal(target.value,target.defaultValue);
+});
 test('historical curve route preserves dated overlays and registered yield changes use basis points',()=>{
   const state=parseRoute('#/yields?curveA=2026-10-21&curveB=2025-10-21');
   assert.equal(state.page,'yields');assert.equal(state.yieldDateA,'2026-10-21');assert.equal(state.yieldDateB,'2025-10-21');assert.equal(routeFor(state),'#/yields?curveA=2026-10-21&curveB=2025-10-21');assert.equal(getSeries('realYield10')?.changeInBasisPoints,true);

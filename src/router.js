@@ -1,5 +1,6 @@
 import { series, releases } from './data.js';
 import {coverageFamilies} from './macro-registry.js';
+import {defaultWindowPreset} from './date-window.js';
 
 const validIds = ids => [...new Set(ids.filter(id => Object.hasOwn(series, id)))].slice(0, 4);
 const topics = ['All topics', ...new Set(Object.values(series).map(s => s.topic))];
@@ -84,7 +85,6 @@ export function parseRoute(hash = '') {
     state.refinancingHorizon=[3,12,24].includes(Number(p.get('horizon')))?Number(p.get('horizon')):12;
     state.refinancingShock=[25,50,100,200].includes(Number(p.get('shock')))?Number(p.get('shock')):100;
     state.range = p.get('range') === '6' ? 6 : 12;
-    state.window=['1y','3y','5y','all','custom'].includes(p.get('window'))?p.get('window'):!p.has('window')&&['6','12'].includes(p.get('range'))?'observations':'1y';
     state.startDate=(p.get('start')??'').slice(0,64);state.endDate=(p.get('end')??'').slice(0,64);
     state.returnTo=safeReturnTo(p.get('return'));
     state.transform = p.get('transform') === 'change' ? 'change' : 'level';
@@ -93,6 +93,8 @@ export function parseRoute(hash = '') {
     state.topic = topics.includes(p.get('topic')) ? p.get('topic') : 'All topics';
     state.frequency = frequencies.includes(p.get('frequency')) ? p.get('frequency') : 'All frequencies';
     if (p.has('selected')) state.selected = validIds(p.get('selected').split(','));
+    state.window=['1y','3y','5y','all','custom'].includes(p.get('window'))?p.get('window'):
+      !p.has('window')&&['6','12'].includes(p.get('range'))?'observations':defaultRouteWindow(state);
     state.exploreMode = ['compare','coverage'].includes(p.get('mode')) ? p.get('mode') : 'catalog';
     state.comparison = ['indexed','difference'].includes(p.get('comparison')) ? p.get('comparison') : 'native';
     state.alignment=p.get('alignment')==='quarter'?'quarter':'exact';
@@ -109,8 +111,9 @@ export function parseRoute(hash = '') {
   return state;
 }
 
-export function routeFor(input) {
+export function routeFor(input,{legacyWindow=false}={}) {
   const state = { ...defaults, ...input };
+  if(!Object.hasOwn(input,'window'))state.window=Object.hasOwn(input,'range')?'observations':defaultRouteWindow(state);
   const path = {release:'/release',credit:'/credit',research:"/research",macroCoverage:'/economy',overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',watchlist:'/watchlist',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',macro:'/macro',vintages:'/vintages',market:'/market'}[state.page] || '/overview';
   const p = new URLSearchParams();
   if(state.alignment==='quarter')p.set('alignment','quarter');
@@ -172,7 +175,7 @@ export function routeFor(input) {
   }
   if(state.page==='indicator'||returnPages.includes(state.page)||['release','research'].includes(state.page)){
     if(state.window==='observations')p.set('range',String(state.range===6?6:12));
-    else if(state.window!=='1y')p.set('window',state.window);
+    else if(state.window!=='1y'||!legacyWindow&&defaultRouteWindow(state)!=='1y')p.set('window',state.window);
     if(state.window==='custom'){p.set('start',state.startDate);p.set('end',state.endDate);}
     const returnTo=safeReturnTo(state.returnTo);if(returnTo&&state.page!=='watchlist')p.set('return',returnTo);
   }
@@ -194,3 +197,15 @@ export function navigationDestination(state={}){
  return `${page}:${detail}`;
 }
 export const destinationChanged=(previous,next)=>navigationDestination(previous)!==navigationDestination(next);
+
+export function defaultRouteWindow(state={}){
+ const id=state.page==='indicator'?state.seriesId:['macroCoverage','labor'].includes(state.page)?state.macroMeasure:
+  ['explore','watchlist'].includes(state.page)?state.selected?.[0]:null;
+ return defaultWindowPreset([series[id]]);
+}
+
+/** Re-evaluate an automatic entry after the destination's actual selection is known. */
+export function entryWindow(state,hash=''){
+ const params=new URLSearchParams(hash.split('?')[1]??'');
+ return params.has('window')||params.has('range')?state.window:defaultRouteWindow(state);
+}

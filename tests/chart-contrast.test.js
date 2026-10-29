@@ -41,10 +41,13 @@ test('funding boundaries and median retain 3:1 after both translucent bands stac
 });
 
 test('essential reference lines retain 3:1 at their declared opacity',()=>{
- const style=rule('.chart .value-reference',false),original=Number(chartSource.match(/class:'value-reference'.*?'stroke-opacity':'([^']+)'/)[1]);
- for(const[name,palette]of Object.entries(palettes)){
-  const panel=rgb(palette['--panel']),foreground=style.stroke?color(style.stroke,palette):rgb(palette['--text']);
-  meets(blend(foreground,panel,Number(style['stroke-opacity']??original)),panel,3,`${name} reference line`);
+ for(const reference of ['value-reference','zero-reference']){
+  const style=rule(`.chart .${reference}`,false);
+  const original=Number(chartSource.match(new RegExp(`class:'${reference}'[\\s\\S]*?'stroke-opacity':'([^']+)'`))[1]);
+  for(const[name,palette]of Object.entries(palettes)){
+   const panel=rgb(palette['--panel']),foreground=style.stroke?color(style.stroke,palette):rgb(palette['--text']);
+   meets(blend(foreground,panel,Number(style['stroke-opacity']??original)),panel,3,`${name} ${reference}`);
+  }
  }
 });
 

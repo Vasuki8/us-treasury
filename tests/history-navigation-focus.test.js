@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {parseRoute,destinationChanged} from '../src/router.js';
+import {parseRoute,destinationChanged,entryWindow} from '../src/router.js';
 import {rememberStableFocus,restoreStableFocus} from '../src/stable-focus.js';
 
 const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8');
@@ -25,7 +25,9 @@ function fixture(hash='#/series/cpi?window=3y'){
   if(options.focusHeading)heading.focus();else restoreStableFocus(main,snapshot,{document});
  };
  const env={document,state:{...parseRoute(hash),saved:[]},location,parseRoute,destinationChanged,main,render,window:{addEventListener(name,callback){assert.equal(name,'hashchange');handler=callback;}},rememberWorkspace(){remembered.push({...api.state()});}};
- api=new Function('env',`let {state,location,parseRoute,destinationChanged,main,render,window,rememberWorkspace,document}=env;${source.slice(start,end)};return{state:()=>state};`)(env);
+ env.entryWindow=entryWindow;
+ const code=`let {${Object.keys(env).join(',')}}=env;${source.slice(start,end)};return{state:()=>state};`;
+ api=new Function('env',code)(env);
  return{document,heading,main,calls,remembered,state:api.state,control:identity=>controls.find(node=>node.id===identity||node.dataset.window===identity),go:hash=>{location.hash=hash;handler();}};
 }
 

@@ -41,7 +41,10 @@ test('ordinary Overview, catalog, frozen packages and publication routes request
   assert.deepEqual(requiredSourceIds(parseRoute(route)),[],route);
  }
  assert.deepEqual(requiredSourceIds(parseRoute('#/series/unrate?window=all')),['bls']);
- assert.deepEqual(requiredSourceIds(parseRoute('#/series/unrate')),[],'the eager calendar year already covers the default view');
+ assert.deepEqual(requiredSourceIds(parseRoute('#/series/unrate')),['bls'],'the default five years requires full monthly history');
+ assert.deepEqual(requiredSourceIds(parseRoute('#/series/gdp')),['bea']);
+ assert.deepEqual(requiredSourceIds(parseRoute('#/series/unrate?window=1y')),[],'explicit one-year routes use the eager preview');
+ assert.deepEqual(requiredSourceIds(parseRoute('#/series/sofr')),[],'daily defaults retain the eager one-year view');
  assert.deepEqual(requiredSourceIds(parseRoute('#/explore?mode=compare&selected=unrate,gdp')),['bls','bea']);
  assert.deepEqual(requiredSourceIds(parseRoute('#/economy?family=external')),['beaIta','bea']);
 });

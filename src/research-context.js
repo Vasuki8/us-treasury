@@ -109,7 +109,9 @@ function capturedMeasurement(current,source,item,id,agency){
 export function buildPinContext(state,{historyState,catalog=series,sources=dataStatus.sources,snapshot=dataStatus,events=releases,now=new Date(),changes={},checkpoint={},failures=[],publicationContexts={}}={}){
  let selected=state.page==='indicator'?[state.seriesId]:['macroCoverage','labor'].includes(state.page)?[state.macroMeasure]:state.page==='watchlist'?state.saved:moduleIds[state.page]??state.selected;
  let capturedCatalog=catalog,capturedSources=sources;
- const context={page:state.page,route:routeFor(state),moduleSources:Object.fromEntries((sourceIds[state.page]??[]).filter(id=>sources[id]).map(id=>[id,sources[id]])),attachments:[],scope:'Selected registered measurements; explicitly retained supplementary inputs and CSVs when present.'};
+ const context={page:state.page,route:routeFor(state,{legacyWindow:true}),
+  moduleSources:Object.fromEntries((sourceIds[state.page]??[]).filter(id=>sources[id]).map(id=>[id,sources[id]])),
+  attachments:[],scope:'Selected registered measurements; explicitly retained supplementary inputs and CSVs when present.'};
  const assumptions={comparison:state.page==='explore'&&state.exploreMode==='compare'?state.comparison:'native',transform:state.page==='indicator'?state.transform:'level',missingDates:'No interpolation or frequency aggregation; unmatched dates remain unavailable.'};
  if(state.page==='explore'&&state.exploreMode==='coverage'){
   const inventory=buildCoverageInventory(catalog,{...state,publicationContexts});
@@ -223,7 +225,8 @@ export function buildReleasePin(state,{archive,publicationState,explanationArchi
  const view=event?matchReleaseEvidence(event,archive,selection):selectReleaseEvidence(archive,selection);
  if(view.status!=='verified')throw new Error(view.reason??'Verified release evidence unavailable.');
  const row=view.actual,args=row.seriesId==='gdp'?buildPublicationPin(archive,row.publicationDate,row.period,{explanationArchive,explanationStatus}):cpiPublicationIds.includes(row.seriesId)?buildCpiPublicationPin(archive,row.seriesId,row.publicationDate,row.period):buildClaimsPublicationPin(archive,row.seriesId,row.publicationDate,row.period);
- Object.assign(args.context,{releaseEvidence:view,releaseSchedule:event,releaseDelivery:releaseDelivery(event,row),releaseRoute:routeFor(state)});
+ Object.assign(args.context,{releaseEvidence:view,releaseSchedule:event,
+  releaseDelivery:releaseDelivery(event,row),releaseRoute:routeFor(state,{legacyWindow:true})});
  return args;
 }
 

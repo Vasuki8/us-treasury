@@ -2,6 +2,7 @@ import {series} from './data.js';
 import {coverageFamilies} from './macro-registry.js';
 import {searchSeries} from './search.js';
 import {freezeCandidates} from './research-context.js';
+import {defaultWindowPreset} from './date-window.js';
 
 const pageSources={
  credit:['bankCredit','lendingSurvey','fedBalance','onRrp','householdDebt','loanDelinquency'],
@@ -37,7 +38,8 @@ export function requiredSourceIds(state,{purpose='render',catalog=series,library
  }
  const result=[...(pageSources[state.page]??[])];
  if(state.page==='indicator'){
-  const window=state.window??'1y',count=state.range??12;
+  const window=state.window??(Object.hasOwn(state,'range')?'observations':defaultWindowPreset([catalog[state.seriesId]]));
+  const count=state.range??12;
   const needsFull=purpose!=='render'||state.tab==='revisions'||(window==='observations'
    ?(catalog[state.seriesId]?.observations.length??0)<count:window!=='1y');
   if(needsFull)result.push(...agencies([state.seriesId],catalog));

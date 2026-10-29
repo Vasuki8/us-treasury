@@ -53,7 +53,7 @@ test('Overview never synthesizes a target range from misaligned or unavailable b
   lower.observations=[{date:'2026-10-22',value:Infinity}];html=render();
   assert.doesNotMatch(html,/Infinity/);
   lower.observations=[{date:'2026-10-22',value:3.75}];html=render();
-  assert.match(primary(html,'policyTargetRange'),/3\.75–4\.00%/);
+  assert.match(primary(html,'policyTargetRange'),/3\.75–4%/);
  }finally{[lower.observations,upper.observations]=saved;}
 });
 

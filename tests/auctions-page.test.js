@@ -37,6 +37,31 @@ test('official auction rates retain three decimals so small FRN margins remain v
   }
 });
 
+test('monthly auction activity inherits five calendar years without narrowing full auction exports',()=>{
+  const data=fixture();data.series={auctionOfferingMonthly:{}};
+  const csv=ui().auctionsCsv(data),html=ui().auctionsPage({},data);
+  const chart=html.match(/<div class="chart" data-chart data-series="auctionOfferingMonthly"[^>]*>/)?.[0];
+  const range=chart?.match(/data-range="([^"]+)"/)?.[1];
+  assert.deepEqual(JSON.parse(range.replaceAll('&quot;','"')),{preset:'5y'});
+  assert.equal(ui().auctionsCsv(data),csv);
+});
+
+test('auction selection summary uses compact billions while official facts and CSV preserve source precision',()=>{
+  const data=fixture();
+  data.auctions[0].offeringAmount=45.12345e9;
+  Object.assign(data.auctions[1],{offeringAmount:39.12345e9,bidToCover:12.87654,highYield:4.237});
+  const original=JSON.stringify(data),csv=ui().auctionsCsv(data);
+  const html=ui().auctionsPage({auctionId:'note'},data);
+  const summary=html.match(/id="auction-selection-status"[\s\S]*?<\/p>/)?.[0];
+  assert.ok(summary.includes('$39.1B face offering · 12.9× bid-to-cover'));
+  assert.ok(html.includes('<dt>Nominal / TIPS high yield</dt><dd>4.237%</dd>'));
+  assert.ok(html.includes('<dt>Offering amount / face USD</dt><dd>$39.12B</dd>'));
+  assert.ok(html.includes('<td class="num">−$6.00B</td>'));
+  assert.equal(ui().auctionsCsv(data),csv);
+  assert.ok(csv.includes('39123450000'));
+  assert.equal(JSON.stringify(data),original);
+});
+
 test('auction and benchmark CSV exports preserve selected facts, missing results, types and the exact prior-peer set',()=>{
   const source=fixture();
   const table=parseCsv(ui().auctionsCsv(source,{securityType:'Note'})),headers=table.shift(),records=table.map(values=>Object.fromEntries(headers.map((key,index)=>[key,values[index]])));

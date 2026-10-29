@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseCsv} from '../scripts/sources/http.mjs';
+import {series} from '../src/data.js';
 let page;
 try{page=await import('../src/ownership-page.js');}catch(error){if(error.code!=='ERR_MODULE_NOT_FOUND'||!error.message.includes('ownership-page.js'))throw error;}
 const api=()=>{assert.ok(page,'Ownership page and export must exist');return page;};
@@ -10,6 +11,34 @@ const source=()=>({status:'ok',fetchedAt:'2026-10-22T02:39:16.095Z',z1:{asOf:'20
   soma:{title:'SOMA Holdings',asOf:'2026-10-14',principal:24,inflationCompensation:1,adjustedPrincipal:25,attribution:notice,termsUrl:terms,redistributionNotice:'Redistribute under the same permissions, conditions and restrictions.',history:[{date:'2026-10-07',principal:25,inflationCompensation:1,adjustedPrincipal:26},{date:'2026-10-14',principal:24,inflationCompensation:1,adjustedPrincipal:25}]},
   provenance:[{url:'https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip',retrievedAt:'2026-10-22T02:39:16.095Z',sha256:'a'.repeat(64)},{url:'https://markets.newyorkfed.org/api/soma/summary.json',retrievedAt:'2026-10-22T02:39:15.864Z',sha256:'b'.repeat(64)}],warnings:[],limitations:['TIC country holdings are not ingested; country figures can reflect custody locations.']});
 const rows=csv=>{const[headers,...data]=parseCsv(csv);return data.map(row=>Object.fromEntries(headers.map((key,i)=>[key,row[i]])));};
+
+test('quarterly ownership history requests five calendar years while ownership exports retain their full scope',()=>{
+  const data=source(),csv=api().ownershipCsv(data),html=api().ownershipPage(data);
+  const chart=html.match(/<div class="chart" data-chart data-series="foreignTreasuryHoldings,fedTreasuryHoldings"[^>]*>/)?.[0];
+  const range=chart?.match(/data-range="([^"]+)"/)?.[1];
+  assert.deepEqual(JSON.parse(range.replaceAll('&quot;','"')),{preset:'5y'});
+  assert.equal(api().ownershipCsv(data),csv);
+});
+
+test('ownership compact holdings keep one trillion unit even for small holdings while source tables and CSV stay exact',()=>{
+  const ids=['foreignTreasuryHoldings','fedTreasuryHoldings'],originals=ids.map(id=>series[id].observations);
+  const data=source(),original=JSON.stringify(data),csv=api().ownershipCsv(data);
+  try{
+    ids.forEach((id,index)=>{series[id].observations=[{date:'2026-06-30',value:index?0.000004567:0.012345}];});
+    const html=api().ownershipPage(data),headlines=[...html.matchAll(/class="metric-value">([^<]+)</g)].map(match=>match[1]);
+    assert.deepEqual(headlines,['$0.0123T','$0.00000457T']);
+    assert.ok(html.includes('<td class="num">$20.00B</td>'));
+    assert.equal(api().ownershipCsv(data),csv);
+    assert.equal(JSON.stringify(data),original);
+  }finally{ids.forEach((id,index)=>{series[id].observations=originals[index];});}
+});
+
+test('negative reported ownership positions keep native precision with the sign before currency',()=>{
+  const data=source();data.z1.sectors[0].value=-20.1234;
+  const html=api().ownershipPage(data);
+  assert.ok(html.includes('<td class="num">−$20.12B</td>'));
+  assert.doesNotMatch(html,/\$-/);
+});
 
 test('ownership page separates valuations and dates and preserves required SOMA title, notice and terms',()=>{
   const html=api().ownershipPage(source());

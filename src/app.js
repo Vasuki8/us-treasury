@@ -21,10 +21,12 @@ import {hydrateSource} from './data.js';
 import {createSourceLoader} from './source-loader.js';
 import {createSourceController,requiredSourceIds} from './source-controller.js';
 import {revealedCalendarState} from './calendar-scope.js';
-import { filterSeries, getSeries, latest, formatValue, formatChange, toCsv,periodLabel } from './model.js';
+import { filterSeries, getSeries, latest, toCsv,periodLabel } from './model.js';
+import {formatDisplayValue,formatDisplayChange} from './display-format.js';
 import {fiscalFinancingCsv} from './research-exports.js';
 import {refinancingCsv} from './refinancing-page.js';
 import {yieldCurvesCsv} from './yields-page.js';
+import {nearestCurveDate} from './yields.js';
 import {auctionsCsv} from './auctions-page.js';
 import {ownershipCsv} from './ownership-page.js';
 import {macroContributionsCsv} from './macro-page.js';
@@ -35,7 +37,7 @@ import { renderPage } from './pages.js';
 import { escapeHtml as esc, sourceNotice } from './ui.js';
 import { mountFreshnessBanner } from './freshness-controller.js';
 import { renderCharts,captureChartInspection } from './charts.js';
-import { parseRoute, routeFor,destinationChanged } from './router.js';
+import { parseRoute, routeFor,destinationChanged,entryWindow } from './router.js';
 import {readPreferences,writePreferences,normalizePreferences,saveNamedWatchlist,selectNamedWatchlist,removeNamedWatchlist} from './storage.js';
 import {exportResearchSettings,importResearchSettings,mergeResearchSettings,MAX_RESEARCH_SETTINGS_BYTES} from './research-settings.js';
 import {parseResearchQuestion} from './research-questions.js';
@@ -278,7 +280,9 @@ function render({focusHeading=false,preserveFocus=false,captureDrafts=true}={}) 
   syncCompactNavigation(root,state);
   document.getElementById('ticker').innerHTML=['yield','unrate','cpi','payroll'].map(id=>{
     const item=getSeries(id);
-    return `<a href="#/series/${id}"><span>${esc(item.code)}</span><strong>${esc(formatValue(item,latest(item)?.value))}</strong><span class="mono">${esc(formatChange(item))}</span></a>`;
+    return `<a href="#/series/${id}"><span>${esc(item.code)}</span>`
+      +`<strong>${esc(formatDisplayValue(item,latest(item)?.value))}</strong>`
+      +`<span class="mono">${esc(formatDisplayChange(item))}</span></a>`;
   }).join('');
   document.getElementById('saved-count').textContent=state.saved.length;
   document.getElementById('mobile-saved-count').textContent=state.saved.length;
@@ -307,6 +311,9 @@ function navigate(patch,{replace=false,preserveFocus=true}={}) {
   if(destinationChanged(state,{...state,...patch}))rememberWorkspace();
   if(['page','seriesId','macroFamily','macroMeasure','vintageSeries','eventId','selected'].some(key=>key in patch&&patch[key]!==state[key]))delete state.freezeSelection;
   state={...state,...patch};
+  const automaticOrigin=['overview','fiscal','refinancing','auctions','ownership','macro','credit','calendar'].includes(previous.page);
+  if(automaticOrigin&&patch.page&&patch.page!==previous.page
+    &&!Object.hasOwn(patch,'window')&&!Object.hasOwn(patch,'range'))state.window=entryWindow(state,location.hash);
   if(state.page==='labor')Object.assign(state,{macroFamily:'labor',macroMeasure:parseRoute(routeFor(state)).macroMeasure});
   if(patch.selected&&state.returnTo)state.returnTo=updateWorkspaceSelection(state.returnTo,state.selected);
   const route=routeFor(state);
@@ -321,6 +328,7 @@ window.addEventListener('hashchange',()=>{
   if(destinationChanged(state,{...state,...route}))rememberWorkspace();
   if(route.page!=='indicator')route.seriesId=state.seriesId;
   if(!location.hash.includes('selected='))route.selected=state.selected;
+  route.window=entryWindow(route,location.hash);
   delete state.freezeSelection;
   state={...state,...route};
   render({focusHeading:destinationChanged(previous,state),preserveFocus:true});
@@ -704,7 +712,14 @@ root.addEventListener('change',async event=>{
     announce(durable?'Appearance saved in this browser.':'Appearance changed for this session; browser storage is unavailable.');
     return;
   }
-  const fields={'topic-filter':'topic','frequency-filter':'frequency','transform-select':'transform','comparison-select':'comparison','alignment-select':'alignment','calendar-topic':'calendarTopic','yield-curve-date-a':'yieldDateA','yield-curve-date-b':'yieldDateB','auction-type':'auctionType','vintage-cutoff':'vintageCutoff','vintage-series':'vintageSeries'};
+  if(['yield-curve-date-a','yield-curve-date-b'].includes(target.id)){
+    const date=nearestCurveDate(dataStatus.sources.yields,target.value);
+    if(!date){target.value=target.defaultValue;return;}
+    navigate({[target.id==='yield-curve-date-a'?'yieldDateA':'yieldDateB']:date});announce(`Selected retained curve ${date}.`);return;
+  }
+  const fields={'topic-filter':'topic','frequency-filter':'frequency','transform-select':'transform','comparison-select':'comparison',
+    'alignment-select':'alignment','calendar-topic':'calendarTopic','auction-type':'auctionType',
+    'vintage-cutoff':'vintageCutoff','vintage-series':'vintageSeries'};
   if(target.id==='macro-family'&&Object.hasOwn(coverageFamilies,target.value))navigate({macroFamily:target.value,macroMeasure:coverageFamilies[target.value].defaultMeasure});
   else if(target.id==='macro-measure'&&coverageFamilies[state.macroFamily].ids.includes(target.value))navigate({macroMeasure:target.value});
   else if(target.id==='current-account-comparison-measure'&&state.macroFamily==='external'&&CURRENT_ACCOUNT_GDP_COMPARISON_MEASURES.some(item=>item.id===target.value))navigate({macroMeasure:target.value});

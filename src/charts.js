@@ -2,7 +2,7 @@ import { yieldCurve, dataStatus } from './data.js';
 import { getSeries, compareSeries, transformSeries, formatValue, periodLabel, observationCoverageLabel, isRoundedSourceObservation } from './model.js';
 import { selectCurveOverlays, NOMINAL_YIELD_TENORS } from './yields.js';
 import {createLinkedCursor} from './comparison-cursor.js';
-import {resolveDateWindow} from './date-window.js';
+import {resolveDateWindow,defaultWindowPreset} from './date-window.js';
 import {maturityYears,observationEvidence} from './chart-evidence.js';
 
 const ns = 'http://www.w3.org/2000/svg';
@@ -23,8 +23,8 @@ export function chartDateLabel(panels, date) {
   const frequencies = new Set(panels.map(panel => panel.series.frequency));
   return periodLabel(frequencies.size > 1 ? {frequency:'Daily'} : panels[0].series, date);
 }
-export function readChartRange(value) {
-  if(value===undefined)return 12;
+export function readChartRange(value,seriesList=[]) {
+  if(value===undefined)return {preset:defaultWindowPreset(seriesList)};
   try {const parsed=JSON.parse(value);if(typeof parsed==='number'&&Number.isFinite(parsed)||parsed&&typeof parsed==='object'&&!Array.isArray(parsed))return parsed;} catch { /* Invalid configuration must not widen the window. */ }
   return {preset:'custom',startDate:'invalid',endDate:'invalid'};
 }
@@ -34,6 +34,26 @@ function svgElement(name, attributes, parent, text) {
   if (text !== undefined) node.textContent = text;
   parent.append(node);
   return node;
+}
+
+function niceTicks(lo,hi){
+  const target=(hi-lo)/4,power=10**Math.floor(Math.log10(target));
+  const error=target/power,step=power*(error>=Math.sqrt(50)?10:error>=Math.sqrt(10)?5:error>=Math.sqrt(2)?2:1);
+  const first=Math.ceil(lo/step-1e-10),last=Math.floor(hi/step+1e-10),count=last-first+1;
+  if(!finite(step)||step<=0||!Number.isSafeInteger(first)||!Number.isSafeInteger(last)||count<1||count>10)return [];
+  return [...new Set(Array.from({length:count},(_,index)=>Number(((first+index)*step).toPrecision(15))))]
+    .filter(value=>finite(value)&&value>=lo&&value<=hi).map(value=>Object.is(value,-0)?0:value);
+}
+
+function appendMissingPeriods(container,panels){
+  for(const panel of panels)for(const row of panel.observations.filter(row=>!finite(row.value))){
+    const original=panel.series.observations?.find(observation=>observation.date===row.date)??row;
+    const notes=observationEvidence(panel.series,original);
+    const note=document.createElement('p');
+    note.setAttribute('class','panel-note chart-missing-period');
+    note.textContent=[`Missing period · ${panel.series.short} · ${periodLabel(panel.series,row.date)}`,...notes].join(' · ');
+    container.append(note);
+  }
 }
 
 function draw(container, panels, {height = 180, bars = false, curve = false, transformed = false,cursor=null,evidenceLabel='Official snapshot',yDomain,exactDomain=false,yReference,distribution=false,inspection} = {}) {
@@ -50,7 +70,11 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const width = Math.max(210, Math.round(container.clientWidth));
   const right = 20;
   const values = panels.flatMap(panel => panel.observations.flatMap(o => distribution?[o.value,o.percentile1,o.percentile25,o.percentile75,o.percentile99]:[o.value])).filter(finite);
-  if (!values.length) { container.textContent = 'No observations available for this chart.'; return; }
+  if (!values.length) {
+    container.textContent = 'No observations available for this chart.';
+    if(!curve)appendMissingPeriods(container,panels);
+    return;
+  }
   if(domain&&(values.some(value=>value<domain[0]||value>domain[1])||bars&&(domain[0]>0||domain[1]<0))){
     container.textContent='Chart configuration error: y-domain must cover every displayed value and any bar zero baseline.';return;
   }
@@ -69,17 +93,18 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const pad = exactDomain?0:Math.max((hi-lo)*.13,Math.abs(hi)*.015,.05);
   lo -= bars && !domain && lo === 0 ? 0 : pad;
   hi += pad;
-  if(domain&&(!finite(lo)||!finite(hi)||!finite(hi-lo)||hi<=lo)){
+  if(!finite(lo)||!finite(hi)||!finite(hi-lo)||hi<=lo){
     container.textContent='Chart configuration error: y-domain cannot be represented on a finite chart scale.';return;
   }
-  const tickValues = Array.from({length:4},(_,index)=>lo+(hi-lo)*index/3);
-  const tickFormat = new Intl.NumberFormat('en-US',{maximumFractionDigits:Math.abs(hi-lo)<3?2:1});
+  const tickValues=niceTicks(lo,hi);
+  if(!tickValues.length){container.textContent='Chart configuration error: y-domain cannot be represented on a finite chart scale.';return;}
+  const tickFormat = new Intl.NumberFormat('en-US',{maximumSignificantDigits:15});
   let tickLabels = tickValues.map(value=>tickFormat.format(value));
   // Reserve seven pixels per 11px monospace character, plus the tick gap and
   // edge padding. Keep ordinary axes stable and leave at least 100px to plot.
   const labelMargin = labels => Math.max(54,...labels.map(label=>label.length*7+12));
   const maximumLeft = Math.min(120,width-right-100);
-  if(labelMargin(tickLabels)>maximumLeft)tickLabels=tickValues.map(value=>value.toExponential(1));
+  if(labelMargin(tickLabels)>maximumLeft)tickLabels=tickValues.map(value=>value===0?'0':value.toExponential(1));
   const left = Math.min(maximumLeft,labelMargin(tickLabels));
   const unitLines = [], unitCharacters = Math.max(1,Math.floor((width-left-right)/7));
   let remainingUnit = panels[0].unit;
@@ -104,12 +129,17 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const unitLabel = svgElement('text',{x:left,y:14},svg);
   if(unitLines.length===1)unitLabel.textContent=unitLines[0];
   else unitLines.forEach((line,index)=>svgElement('tspan',{x:left,y:14+index*14},unitLabel,line));
-  for (let index=0;index<4;index++) {
+  for (let index=0;index<tickValues.length;index++) {
     const value = tickValues[index];
     svgElement('line',{x1:left,x2:width-right,y1:y(value),y2:y(value),class:'gridline'},svg);
     svgElement('text',{x:left-8,y:y(value)+4,'text-anchor':'end'},svg,tickLabels[index]);
   }
-  if(domain&&lo<=0&&hi>=0)svgElement('line',{x1:left,x2:width-right,y1:y(0),y2:y(0),class:'zero-reference',stroke:'currentColor','stroke-opacity':'.35','stroke-dasharray':'3 3','aria-hidden':'true'},svg);
+  if((domain||bars)&&lo<=0&&hi>=0){
+    svgElement('line',{
+      x1:left,x2:width-right,y1:y(0),y2:y(0),class:'zero-reference',stroke:'currentColor',
+      'stroke-opacity':'.6','stroke-dasharray':'3 3','aria-hidden':'true',
+    },svg);
+  }
   if(yReference!==undefined)svgElement('line',{x1:left,x2:width-right,y1:y(Number(yReference)),y2:y(Number(yReference)),class:'value-reference',stroke:'currentColor','stroke-opacity':'.5','stroke-dasharray':'4 4','aria-label':`Reference ${yReference}`},svg);
   const labelDates = curve ? ['1M','1Y','5Y','10Y','20Y','30Y'].filter(date=>orderedDates.includes(date)) : window
     ? [window.startDate, new Date(minX+(maxX-minX)/2).toISOString().slice(0,10), window.endDate]
@@ -160,6 +190,7 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const hit = svgElement('rect',{x:left,y:top,width:pw,height:ph,fill:'transparent'},svg);
   const readout = document.createElement('div');
   readout.id=id; readout.className=`chart-readout${curve?' curve-readout':''}`; container.append(readout);
+  if(!curve)appendMissingPeriods(container,panels);
   const inspected={date:null,svg};chartInspection.set(container,inspected);
   // If the exact observation leaves the window, inspect the latest visible date.
   const availableDates=cursor?.dates??orderedDates;
@@ -246,7 +277,7 @@ export function renderCharts(root,{catalog,chartCatalogs={},inspection}={}) {
     const lookup=id=>scoped?(Object.hasOwn(selectedCatalog,id)?selectedCatalog[id]:undefined):catalog?catalog[id]:getSeries(id);
     const evidenceLabel=scoped?binding.evidenceLabel.trim():catalog?'Frozen research snapshot':'Official snapshot';
     const {kind,transform='level',comparison='native'} = container.dataset;
-    const range=readChartRange(container.dataset.range), height=Number(container.dataset.height)||180;
+    const height=Number(container.dataset.height)||180;
     // Curve charts use the live yield feed; a scoped chart must never borrow it.
     if(scoped&&(kind==='history-curve'||kind==='curve')){container.textContent='Chart data unavailable: yield curves are not supplied by this chart catalog.';return;}
     if(kind==='history-curve'){
@@ -263,6 +294,7 @@ export function renderCharts(root,{catalog,chartCatalogs={},inspection}={}) {
       return;
     }
     const ids=(scoped?container.dataset.series??'':container.dataset.series).split(',').filter(Boolean);
+    const range=readChartRange(container.dataset.range,ids.map(lookup));
     if(scoped&&(!ids.length||ids.some(id=>!lookup(id)))){container.textContent='Chart data unavailable: one or more selected series are unavailable in the requested chart catalog.';return;}
     const distribution=kind==='funding-distribution';
     const fundingSpread=scoped&&container.dataset.chartCatalog==='funding'&&ids.length===1&&ids[0]==='sofrEffrSpread'&&kind==='line'&&transform==='level'&&comparison==='native';

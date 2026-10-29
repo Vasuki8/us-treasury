@@ -1,6 +1,7 @@
 import {cpiPublicationIds} from './cpi-publication-history.js';
 import {supportingDetails} from './page-hierarchy.js';
-import {getSeries,latest,formatValue,periodLabel,transformSeries,observationCoverageLabel} from './model.js';
+import {getSeries,latest,formatValue,formatChange,periodLabel,transformSeries,observationCoverageLabel} from './model.js';
+import {displayCurrencyUnit,displayUnitLabel,formatDisplayValue,formatDisplayChange} from './display-format.js';
 import {escapeHtml as esc,button,heading,panel,chart,table,emptyState,sourceLink,seriesStatus} from './ui.js';
 import {viewRange,workspaceReturn,indicatorHref,contextualHref} from './workspace-context.js';
 import {rangeControls,coverageSummary,measureLabel,changeLabel} from './research-controls.js';
@@ -52,6 +53,8 @@ function claimsContextLinks(current,state) {
 export function indicatorPage(state,historyContext={}) {
   const current=getSeries(state.seriesId)??getSeries('unrate');
   const observation=latest(current),previous=current.observations.at(-2);
+  const currencyUnit=displayCurrencyUnit([current]),options={currencyUnit};
+  const change=measurementChange(current),changeText=change.text.replace(formatChange(current),formatDisplayChange(current,options));
   const transformed=transformSeries(current,state.transform,viewRange(state));
   const available=transformed.observations.length>0;
   const related=relatedIndicators(current.id),back=workspaceReturn(state);
@@ -64,7 +67,19 @@ export function indicatorPage(state,historyContext={}) {
   const metadata=`<dl class="facts"><dt>Series</dt><dd class="mono cyan">${esc(current.code)}</dd><dt>Source IDs</dt><dd class="mono">${esc((current.source.seriesIds??[]).join(', ')||'—')}</dd></dl><p class="panel-note">See the Methodology tab for calculation and publication-date limits.</p>`;
   return `<div class="radar-page radar-indicator">${back?`<nav class="return-context" aria-label="Return to workspace">${link(back.label,back.href)}</nav>`:''}`
     +heading(current.name.toUpperCase(),`${current.code} · ${current.source.name} · ${current.adjustment}`,actions)
-    +`<div class="workspace-basis"><section class="indicator-snapshot" aria-label="Latest retained reading"><div class="indicator-reading"><p class="indicator-latest-label">Latest retained reading — independent of the selected history window and transformation</p><div class="indicator-native-reading"><strong class="big-value">${esc(formatValue(current,observation?.value))}</strong><span>Native unit<br><b>${esc(current.unit)}</b></span></div><p class="indicator-reference">OBSERVATION <b>${esc(observation?periodLabel(current,observation.date):'—')}</b></p><p class="indicator-change">${esc(measurementChange(current).text)}</p><p class="indicator-prior">PRIOR <b>${esc(formatValue(current,previous?.value))}</b> · ${esc(previous?periodLabel(current,previous.date):'Unavailable')}</p></div><dl class="indicator-provenance"><dt>Measurement</dt><dd>${esc(measureLabel(current))}</dd><dt>Source freshness</dt><dd>${current.dataStatus==='cached'?'Cached':current.dataStatus==='official'?'Captured':'Unavailable'}</dd><dt>Published</dt><dd>${esc(observation?.publishedAt??'Unknown')}</dd><dt>Retrieved</dt><dd>${esc(current.fetchedAt??'No successful retrieval')}</dd><dt>Source</dt><dd>${sourceLink(current)}</dd></dl></section>`
+    +`<div class="workspace-basis"><section class="indicator-snapshot" aria-label="Latest retained reading">`
+    +`<div class="indicator-reading"><p class="indicator-latest-label">`
+    +`Latest retained reading — independent of the selected history window and transformation</p>`
+    +`<div class="indicator-native-reading"><strong class="big-value">${esc(formatDisplayValue(current,observation?.value,options))}</strong>`
+    +`<span>${currencyUnit?'Display unit':'Native unit'}<br><b>${esc(displayUnitLabel(current,options))}</b></span></div>`
+    +`<p class="indicator-reference">OBSERVATION <b>${esc(observation?periodLabel(current,observation.date):'—')}</b></p>`
+    +`<p class="indicator-change">${esc(changeText)}</p><p class="indicator-prior">PRIOR `
+    +`<b>${esc(formatDisplayValue(current,previous?.value,options))}</b> · `
+    +`${esc(previous?periodLabel(current,previous.date):'Unavailable')}</p></div>`
+    +`<dl class="indicator-provenance"><dt>Measurement</dt><dd>${esc(measureLabel(current))}</dd><dt>Source freshness</dt>`
+    +`<dd>${current.dataStatus==='cached'?'Cached':current.dataStatus==='official'?'Captured':'Unavailable'}</dd>`
+    +`<dt>Published</dt><dd>${esc(observation?.publishedAt??'Unknown')}</dd><dt>Retrieved</dt>`
+    +`<dd>${esc(current.fetchedAt??'No successful retrieval')}</dd><dt>Source</dt><dd>${sourceLink(current)}</dd></dl></section>`
     +`<p class="panel-note indicator-definition">${esc(current.definition)}</p>`
     +(current.coverageNote?`<p class="panel-note amber">${esc(current.coverageNote)}</p>`:'')
     +(current.error?`<p class="panel-note amber" role="status">${esc(current.error)}</p>`:'')

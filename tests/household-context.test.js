@@ -55,5 +55,9 @@ test('household collectors preserve distinct source contracts, rates, provenance
   for(const id of ['householdDebtService','mortgageDebtService','consumerDebtService','bankCardDelinquency','bankMortgageDelinquency'])assert.equal(creditContextRegistry[id].comparisonClass,'rate');
   const bad=structuredClone(sources);bad.householdDebt.methodology='old-dsr-1980';assert.throws(()=>assertCreditContextData({sources:bad}),/methodology|credit/i);
   const csv=creditContextCsv(sources);assert.match(csv,/DSR_RATIO/);assert.match(csv,/STFBQDCC%STFBAILCC_XEOP_MA.Q/);assert.match(csv,/Percent of disposable personal income/);assert.match(csv,/Percent of end-of-quarter loans/);
-  const html=creditContextPage(sources,{documents:[]});assert.match(html,/metric-value">11\.11%/);assert.match(html,/metric-value">2\.85%/);
+  const html=creditContextPage(sources,{documents:[]});
+  const household=html.split('href="#/series/householdDebtService"')[1]?.split('</a>')[0]??'';
+  const delinquency=html.split('href="#/series/bankCardDelinquency"')[1]?.split('</a>')[0]??'';
+  assert.match(household,/<strong class="metric-value">11\.1%<\/strong>/);
+  assert.match(delinquency,/<strong class="metric-value">2\.85%<\/strong>/);
 });
