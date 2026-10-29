@@ -7,7 +7,7 @@ import {loadSnapshotHistory} from '../scripts/snapshot-storage.mjs';
 import {currentBlsSource} from './helpers/bls-current-source.js';
 const snapshot={...stored,vintages:await loadSnapshotHistory(stored,{directory:fileURLToPath(new URL('../src/',import.meta.url))})};
 
-test('all published datasets and provenance have a recorded commercial reuse review', () => {
+test('the bounded fixture datasets, retained captures and provenance pass commercial reuse review', () => {
   assert.doesNotThrow(() => assertCommercialData(snapshot));
 });
 

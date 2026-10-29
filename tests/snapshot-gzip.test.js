@@ -5,7 +5,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import * as storage from '../scripts/snapshot-storage.mjs';
-import { snapshot } from '../src/official-snapshot.js';
 
 const temporaryRoot = fileURLToPath(new URL('../test-results/', import.meta.url));
 const at = '2026-10-29T00:00:00.000Z';
@@ -77,13 +76,6 @@ test('gzip decoding bounds compressed input before decompressing it', () => {
 test('gzip decoding bounds expanded input before parsing it', () => {
   const oversized = gzipSync(Buffer.alloc(128 * 1024 ** 2 + 1, 32));
   assert.throws(() => storage.decodeStoredSnapshot(oversized), /output|limit|bytes|decompress/i);
-});
-
-test('gzip storage preserves the entire real snapshot and regenerates the same browser module', () => {
-  const before = storage.snapshotModule(snapshot);
-  const decoded = storage.decodeStoredSnapshot(storage.encodeStoredSnapshot(snapshot));
-  assert.deepEqual(decoded, snapshot);
-  assert.equal(storage.snapshotModule(decoded), before);
 });
 
 test('gzip writes retain archive bytes and reject pruned history without replacing the root', async t => {

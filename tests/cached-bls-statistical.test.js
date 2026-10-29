@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {fileURLToPath} from 'node:url';
+import {readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 import {snapshot as official} from '../src/official-snapshot.js';
-import {loadSnapshotHistory} from '../scripts/snapshot-storage.mjs';
-import {asKnownOn} from '../src/vintages.js';
+import {decodeStoredSnapshot} from '../scripts/snapshot-storage.mjs';
 import {registry} from '../src/registry.js';
 import {getFreshness} from '../src/freshness.js';
 import {OfficialSourceHttpError} from '../scripts/sources/http.mjs';
@@ -18,10 +18,12 @@ const registeredEndpoint='https://api.bls.gov/publicAPI/v2/timeseries/data/';
 const attempt='2026-10-24T23:42:00.000Z',now=new Date('2026-10-25T00:17:00.000Z');
 const unavailable=(status=503,url=endpoint,extra={})=>new OfficialSourceHttpError(status,url,extra);
 const failure=()=>({kind:'http',status:503,requestedUrl:endpoint,url:endpoint,redirected:false});
-// Last-good BLS capture at the fixed test clock; later live refreshes remain future captures.
+// Pinned last-good BLS capture; ordinary tests never hydrate the production archive.
 const priorBlsAt='2026-10-24T00:05:02.137Z';
-const blsHistory=await loadSnapshotHistory({vintageArchive:{version:1,captures:official.vintageArchive.captures.filter(row=>row.sourceId==='bls'&&row.capturedAt<=priorBlsAt)}},{directory:fileURLToPath(new URL('../src/',import.meta.url))});
-const pinnedBls=asKnownOn(blsHistory,priorBlsAt).sources.bls;
+const fixtureDirectory=new URL('./fixtures/ui-snapshot/',import.meta.url);
+const pinnedBytes=await readFile(new URL('cached-bls.json.gz',fixtureDirectory));
+const manifest=JSON.parse(await readFile(new URL('cached-bls-manifest.json',fixtureDirectory),'utf8'));
+const pinnedBls=decodeStoredSnapshot(pinnedBytes).sources.bls;
 const priorBls=()=>structuredClone(pinnedBls);
 const cachedBls=()=>({...priorBls(),status:'error',lastAttemptAt:attempt,error:'Official source HTTP 503 (api.bls.gov)',failure:failure()});
 const receipt=url=>({url,sha256:'a'.repeat(64),retrievedAt:attempt,lastModified:null});
@@ -43,6 +45,16 @@ function completedDaily(){
  for(const entry of getFreshness({}, {now}).entries){const [kind,id]=entry.id.split(':');(kind==='data'?value.sources:value.calendar.sources)[id]={status:'ok',fetchedAt:attempt,lastAttemptAt:attempt,error:null,failure:null};}
  value.sources.bls=cachedBls();return value;
 }
+
+test('the small cached BLS fixture pins the actual last-good capture and complete registered output family',()=>{
+ assert.equal(createHash('sha256').update(pinnedBytes).digest('hex'),manifest.sha256);
+ assert.equal(pinnedBytes.length,manifest.compressedBytes);
+ assert.ok(pinnedBytes.length<32*1024);
+ assert.equal(manifest.cutoff,priorBlsAt);
+ assert.equal(pinnedBls.fetchedAt,priorBlsAt);
+ assert.equal(Object.keys(pinnedBls.series).length,31);
+ assert.equal(manifest.seriesCount,31);
+});
 
 test('the cached-statistics exception admits the actual reviewed complete last-good BLS capture only',()=>{
  assert.doesNotThrow(()=>assertCommercialData({sources:{bls:priorBls()}}));

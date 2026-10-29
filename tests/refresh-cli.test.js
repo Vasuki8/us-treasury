@@ -6,14 +6,12 @@ import { promisify, isDeepStrictEqual } from 'node:util';
 import {encodeStoredSnapshot,decodeStoredSnapshot} from '../scripts/snapshot-storage.mjs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import {copyFixtureProject} from './helpers/snapshot-fixture.js';
 
 const execute=promisify(execFile);
 const root=fileURLToPath(new URL('../',import.meta.url));
 const scratchRoot=path.join(root,'test-results');
-// The expanded real-source archive now takes 119.5 s for a serial health check;
-// publication also verifies/writes the immutable archive. Preserve every source,
-// admission and byte-prefix assertion with headroom; early rejection stays 20 s.
-const publicationTimeout=240000;
+const publicationTimeout=20000;
 const independentCalendars=[
   ['calendar-bea.mjs','collectBeaCalendar','bea'],
   ['calendar-census.mjs','collectCensusCalendar','census'],
@@ -37,8 +35,7 @@ async function withCliFixture(run) {
   await mkdir(scratchRoot,{recursive:true});
   const directory=await mkdtemp(path.join(scratchRoot,'refresh-cli-'));
   try {
-    await cp(path.join(root,'scripts'),path.join(directory,'scripts'),{recursive:true});
-    await cp(path.join(root,'src'),path.join(directory,'src'),{recursive:true});
+    await copyFixtureProject(directory,['src','scripts','package.json']);
     // CLI tests replace the provider boundary; history stitching has its own
     // tests. Preserve the primitive's real parser/identifier exports for policy.
     await cp(path.join(directory,'scripts','sources','bls.mjs'),path.join(directory,'scripts','sources','bls-original.mjs'));

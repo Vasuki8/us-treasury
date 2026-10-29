@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "sourceSha256": "167946ea930d9a87ae538f4579665e15cd8a22013c52e3dba48f7c82d37fc913",
+  "sourceBytes": 49894669,
+  "sha256": "0ff350dc24bf9dadf1884b4086be80afad3da19c366678389916f9bbe9dda2e1",
+  "compressedBytes": 463693,
+  "jsonBytes": 4636707,
+  "sourceCount": 25,
+  "seriesCount": 145,
+  "captureCount": 25,
+  "caps": {
+    "Monthly": 24,
+    "Quarterly": 16,
+    "Weekly": 104,
+    "Daily": 64
+  }
+}

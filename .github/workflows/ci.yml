@@ -281,10 +281,55 @@ jobs:
         with:
           path: dist/
 
+  test_constrained:
+    name: Test on two CPUs with a 2048 MiB heap
+    needs: [refresh_check, refresh]
+    if: >-
+      ${{ !cancelled() && (needs.refresh_check.result == 'success' || needs.refresh_check.result == 'skipped') &&
+      (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') &&
+      (github.event_name != 'schedule' || needs.refresh.result == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_OPTIONS: '--max-old-space-size=2048'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.refresh.outputs.commit_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      - name: Install locked data-collector dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Verify inherited limits and run the suite within ten minutes
+        run: |
+          cpus=$(python3 -c 'import os; print(",".join(map(str, sorted(os.sched_getaffinity(0))[:2])))')
+          taskset --cpu-list "$cpus" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {availableParallelism} from 'node:os';
+          import {execFileSync} from 'node:child_process';
+          assert.equal(availableParallelism(), 2);
+          assert.equal(process.env.NODE_OPTIONS, '--max-old-space-size=2048');
+          const child=execFileSync(process.execPath,['-p','JSON.stringify([navigator.hardwareConcurrency,process.env.NODE_OPTIONS])']);
+          assert.deepEqual(JSON.parse(child),[2,'--max-old-space-size=2048']);
+          NODE
+          started=$SECONDS
+          timeout --kill-after=15s 600s taskset --cpu-list "$cpus" npm test
+          echo "Two-CPU suite elapsed: $((SECONDS - started)) seconds" | tee -a "$GITHUB_STEP_SUMMARY"
+
   deploy:
     name: Deploy GitHub Pages
-    needs: verify
-    if: ${{ !cancelled() && needs.verify.result == 'success' && vars.DEPLOY_TARGET != 'cloudflare' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') }}
+    needs: [verify, test_constrained]
+    if: >-
+      ${{ !cancelled() && needs.verify.result == 'success' && needs.test_constrained.result == 'success' &&
+      vars.DEPLOY_TARGET != 'cloudflare' && github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
@@ -329,8 +374,11 @@ jobs:
 
   deploy-cloudflare:
     name: Deploy Cloudflare
-    needs: verify
-    if: ${{ !cancelled() && needs.verify.result == 'success' && vars.DEPLOY_TARGET == 'cloudflare' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') }}
+    needs: [verify, test_constrained]
+    if: >-
+      ${{ !cancelled() && needs.verify.result == 'success' && needs.test_constrained.result == 'success' &&
+      vars.DEPLOY_TARGET == 'cloudflare' && github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:

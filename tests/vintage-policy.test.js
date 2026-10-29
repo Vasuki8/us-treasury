@@ -1,11 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {fileURLToPath} from 'node:url';
 import { assertVintageData } from '../scripts/vintage-policy.mjs';
 import { assertCommercialData } from '../scripts/data-policy.mjs';
-import {loadSnapshotHistory} from '../scripts/snapshot-storage.mjs';
-import {snapshot as stored} from '../src/official-snapshot.js';
-import {registry} from '../src/registry.js';
 import { asKnownOn, recordVintages } from '../src/vintages.js';
 
 const t1='2026-10-20T12:00:00.000Z',t2='2026-10-21T12:00:00.000Z';
@@ -190,13 +186,4 @@ test('housing provenance additions do not loosen another provider or the existin
   const censusUrl='https://www.census.gov/econ_getzippedfile/?programCode=MARTS';
   const census={id:'census',fetchedAt:t1,series:{retail:{sourceIds:['MARTS:44X72:SM:US:SA'],sourceUrl:censusUrl,observations:[{date:'2026-09-01',value:.5,publishedAt:null}]}},provenance:[{url:censusUrl,sha256:'b'.repeat(64),retrievedAt:t1,filename:'RESCONST-mf.csv'}]};
   assert.throws(()=>assertVintageData(recordVintages(null,{}, {census},{checkedAt:t2}),assertCommercialData),/member|provenance/i);
-});
-
-test('recording the real stored sources again preserves every existing immutable capture under the expanded registry',async()=>{
-  const history=await loadSnapshotHistory(stored,{directory:fileURLToPath(new URL('../src/',import.meta.url))});
-  const original=JSON.stringify(history);
-  const checkedAt=[...history.captures.map(c=>c.recordedAt),...Object.values(stored.sources).map(s=>s.fetchedAt)].filter(Boolean).sort().at(-1);
-  const replay=recordVintages(history,stored.sources,stored.sources,{checkedAt,seriesMetadata:registry});
-  assert.equal(JSON.stringify(replay),original,'reusing real retrieval keys must neither collide nor reinterpret old source metadata');
-  assert.equal(JSON.stringify(history),original,'the supplied archive remains untouched');
 });

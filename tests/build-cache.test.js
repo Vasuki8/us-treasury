@@ -1,17 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cp, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import {decodeStoredSnapshot,encodeStoredSnapshot} from '../scripts/snapshot-storage.mjs';
+import {importMapSource} from '../scripts/asset-references.mjs';
+import {copyFixtureProject} from './helpers/snapshot-fixture.js';
 
 const run = promisify(execFile);
-const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+function elements(html,name){
+  return [...html.matchAll(new RegExp(`<${name}\\b[^>]*>`,'gi'))].map(match=>({
+    index:match.index,
+    attributes:Object.fromEntries([...match[0].matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)]
+      .map(([,key,doubleQuoted,singleQuoted])=>[key.toLowerCase(),doubleQuoted??singleQuoted])),
+  }));
+}
+const stylesheet=html=>elements(html,'link').find(link=>link.attributes.rel==='stylesheet')?.attributes.href;
 
 async function fixture(t) {
   const root = await mkdtemp(path.join(tmpdir(), 'meridian-build-cache-'));
@@ -21,18 +30,16 @@ async function fixture(t) {
     assert(path.basename(target).startsWith('meridian-build-cache-'));
     await rm(target, { recursive: true, force: true });
   });
-  for (const name of ['src', 'scripts', 'index.html', 'styles.css', 'favicon.svg', 'package.json', 'server.mjs']) {
-    await cp(path.join(project, name), path.join(root, name), { recursive: true });
-  }
+  await copyFixtureProject(root);
   return root;
 }
 
 async function build(root) {
   await run(process.execPath, ['scripts/build.mjs'], { cwd: root });
   const html = await readFile(path.join(root, 'dist', 'index.html'), 'utf8');
-  const entry = html.match(/<script type="module" src="([^"]+)"/)[1];
+  const entry = elements(html,'script').find(script=>script.attributes.type==='module')?.attributes.src;
   assert.match(entry, /^\.\/assets\/src\/app\.[a-f0-9]{16}\.js$/, 'The entry needs its own content hash');
-  const map = JSON.parse(html.match(/<script type="importmap">([\s\S]*?)<\/script>/)[1]);
+  const map = JSON.parse(importMapSource(html));
   return { html, entry, imports: map.imports };
 }
 
@@ -58,7 +65,7 @@ test('each asset keeps its URL unless its own bytes change, including snapshot-o
   const styled = await build(root);
   assert.equal(styled.entry, refreshed.entry);
   assert.deepEqual(styled.imports, refreshed.imports);
-  assert.notEqual(styled.html.match(/href="([^\"]+\.css)"/)[1], refreshed.html.match(/href="([^\"]+\.css)"/)[1]);
+  assert.notEqual(stylesheet(styled.html),stylesheet(refreshed.html));
 });
 
 test('build packages only the entry and allowlisted versioned application files, which pass the HTTP smoke check', async t => {
@@ -67,8 +74,9 @@ test('build packages only the entry and allowlisted versioned application files,
   await mkdir(path.join(root, 'src', 'internal'), { recursive: true });
   await writeFile(path.join(root, 'src', 'internal', 'private.js'), 'not a public asset');
   const built = await build(root);
-  assert.match(built.html, /href="\.\/assets\/styles\.[a-f0-9]{16}\.css"/);
-  assert.match(built.html, /href="\.\/assets\/favicon\.[a-f0-9]{16}\.svg"/);
+  assert.match(stylesheet(built.html), /^\.\/assets\/styles\.[a-f0-9]{16}\.css$/);
+  const icon=elements(built.html,'link').find(link=>link.attributes.rel==='icon')?.attributes.href;
+  assert.match(icon, /^\.\/assets\/favicon\.[a-f0-9]{16}\.svg$/);
   const files = (await readdir(path.join(root, 'dist'), { recursive: true, withFileTypes: true })).filter(item => item.isFile());
   for (const item of files) {
     const relative = path.relative(path.join(root, 'dist'), path.join(item.parentPath, item.name)).replaceAll(path.sep, '/');
@@ -88,10 +96,12 @@ test('build packages only the entry and allowlisted versioned application files,
 test('the built import map has an exact CSP hash and the server applies it without weakening the dev policy', async t => {
   const root = await fixture(t);
   const built = await build(root);
-  const map = built.html.match(/<script type="importmap">([\s\S]*?)<\/script>/)[1];
+  const map = importMapSource(built.html);
   const digest = createHash('sha256').update(map).digest('base64');
-  assert(built.html.includes(`script-src 'self' 'sha256-${digest}'`));
-  assert(built.html.indexOf('type="importmap"') < built.html.indexOf('type="module"'));
+  const policy=elements(built.html,'meta').find(meta=>meta.attributes['http-equiv']?.toLowerCase()==='content-security-policy')?.attributes.content;
+  assert(policy?.includes(`script-src 'self' 'sha256-${digest}'`));
+  const scripts=elements(built.html,'script');
+  assert(scripts.find(script=>script.attributes.type==='importmap').index < scripts.find(script=>script.attributes.type==='module').index);
   const {createAppServer} = await import(pathToFileURL(path.join(root, 'server.mjs')).href);
   const server = createAppServer(path.join(root, 'dist'));
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
