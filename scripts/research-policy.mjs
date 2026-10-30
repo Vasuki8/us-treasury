@@ -1,5 +1,5 @@
-// Dataset-specific admissions. Evidence: docs/fiscal-source-review.md,
-// docs/yields-source-review.md. This does not license unrelated agency content.
+// Dataset-specific admissions. Evidence: docs/sources/fiscal-source-review.md,
+// docs/sources/yields-source-review.md. This does not license unrelated agency content.
 import {marketPolicies,matchesMarketFeed,assertMarketData} from './market-policy.mjs';
 import {normalizeVintageTimestamp} from '../src/vintages.js';
 import {SOMA_2014_GAP_URL,SOMA_2014_GAP_DATES} from '../src/ownership.js';

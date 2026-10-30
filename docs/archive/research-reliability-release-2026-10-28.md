@@ -48,7 +48,7 @@ The browser was restored to its normal 1280 × 720 viewport, Light theme and Com
 - **Market-implied policy pricing remains blocked:** a suitable accessible pricing feed and downstream rights are required. Official projections and observed policy rates are not market pricing.
 - Treasury announced-event coverage remains limited to the actual retained events through November 3, 2026, with its separate narrow refresh command and no invented event clocks.
 
-No unsupported panel, paid account or fabricated proxy was added. See the [requirement checklist](../research-reliability-checklist.md), [payroll/source acquisition record](../labor-inflation-evidence-source-review.md), [expectations/pricing dependencies](../expectations-policy-path-dependencies.md) and [Treasury schedule review](../treasury-calendar-source-review.md).
+No unsupported panel, paid account or fabricated proxy was added. See the [requirement checklist](../research-reliability-checklist.md), [payroll/source acquisition record](../sources/labor-inflation-evidence-source-review.md), [expectations/pricing dependencies](../expectations-policy-path-dependencies.md) and [Treasury schedule review](../sources/treasury-calendar-source-review.md).
 
 ## Reproducible evidence
 

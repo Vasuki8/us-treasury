@@ -53,7 +53,7 @@ Monthly inputs accept M01–M12 and exclude M13 annual averages. Quarterly input
 
 ## Longer histories and source anomalies
 
-Census already downloads the complete approved [MARTS ZIP](https://www.census.gov/econ_getzippedfile/?programCode=MARTS). Removing the 36-row retention slice preserves all 417 January 1992–September 2026 monthly observations in the verified capture. The exact previous-month calculation, advance-estimate footnote and README's Census/originating-program credit remain. No new Census endpoint or license scope is introduced; see the existing [data-source review](data-sources.md).
+Census already downloads the complete approved [MARTS ZIP](https://www.census.gov/econ_getzippedfile/?programCode=MARTS). Removing the 36-row retention slice preserves all 417 January 1992–September 2026 monthly observations in the verified capture. The exact previous-month calculation, advance-estimate footnote and README's Census/originating-program credit remain. No new Census endpoint or license scope is introduced; see the existing [data-source review](../data-sources.md).
 
 Gross and public debt use the same admitted [Debt to the Penny](https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/) fields and [Fiscal Data commercial copying/adaptation/redistribution terms](https://fiscaldata.treasury.gov/api-documentation/#license-and-authorization). Queries now request ten calendar years (`record_date >= current UTC year − 9, January 1` through the capture cutoff) with page size 10000; incomplete pagination fails. The verified captures contain 2,461 actual dates from 2017-01-03–2026-10-21. Missing days/weekends are not filled; newly retained history does not claim historical availability at the time.
 

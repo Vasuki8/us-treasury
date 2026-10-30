@@ -12,7 +12,7 @@ The source review considered making all blank-FRN totals unavailable. The implem
 
 No official API documentation found says that blank FRN means zero. Overall SOMA `total` includes agency debt, MBS and CMBS and excludes TIPS compensation; it is never substituted for Treasury holdings or used to impute an FRN amount. The known issuance boundary is the only structural exclusion. Invalid tokens, missing fields, malformed/duplicate dates, missing other required inputs and negative principal components continue to reject collection. Reported numeric zeros and signed TIPS compensation retain their meaning. Changes require valid aligned inputs and the exact preceding week in specialist exports; no missing week or value is filled.
 
-The [existing source/rights contract](ownership-source-review.md) and [New York Fed terms](https://www.newyorkfed.org/privacy/termsofuse.html) continue to apply. Source title, copyright, attribution, terms link, downstream conditions and identification of Meridian's calculations travel through series, CSV and frozen results. The pre-issuance qualification is a calculation rule based on issuer history, not a claim that the summary published zero FRNs.
+The [existing source/rights contract](sources/ownership-source-review.md) and [New York Fed terms](https://www.newyorkfed.org/privacy/termsofuse.html) continue to apply. Source title, copyright, attribution, terms link, downstream conditions and identification of Meridian's calculations travel through series, CSV and frozen results. The pre-issuance qualification is a calculation rule based on issuer history, not a claim that the summary published zero FRNs.
 
 ## Existing UI, exports and frozen scope
 

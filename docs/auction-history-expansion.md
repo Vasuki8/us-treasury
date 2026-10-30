@@ -10,7 +10,7 @@ April 7 is Treasury's documented introduction of NTAAPS. Earlier records lack se
 
 Peer comparisons preserve instrument, original term, reopening, cash-management, bill remaining-term and strictly earlier-date matching. They also stay on the same side of June 1, 2009, when bidder-reporting rules changed. Actual usable sample sizes remain visible. One January 26, 2009 bill has bidder amounts $10 million below competitive awards; the reported amounts are retained and the unreconciled shares remain withheld. Indirect bidders are not labeled foreign investors.
 
-The source's record date equals issue date in this capture. It is retained separately and is never treated as a publication timestamp. All 6,274 historical `publishedAt` values remain null. Monthly offerings measure gross face issuance activity, including rollovers, rather than net borrowing or debt outstanding. The full source and official interpretation references are documented in [the source contract](auctions-source-review.md).
+The source's record date equals issue date in this capture. It is retained separately and is never treated as a publication timestamp. All 6,274 historical `publishedAt` values remain null. Monthly offerings measure gross face issuance activity, including rollovers, rather than net borrowing or debt outstanding. The full source and official interpretation references are documented in [the source contract](sources/auctions-source-review.md).
 
 ## Access and exports
 

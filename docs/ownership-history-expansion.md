@@ -10,7 +10,7 @@ Every period's 25 selected sectors and three totals is numeric in the reviewed r
 
 The [official central-bank guide](https://www.federalreserve.gov/apps/fof/SeriesAnalyzer.aspx?s=LM713061103&t=) identifies fair-value stocks from combined quarterly reports beginning in 2012Q1 and H.4.1 as the earlier source. Pre-2012 Fed sector rows therefore carry a historical-source qualification, and the indicator definition and coverage note explain the method boundary. Published amounts are not adjusted or spliced. Current positions remain separate from weekly SOMA par-plus-TIPS holdings; changes in positions are not labeled purchases or sales.
 
-The [original source and rights review](ownership-source-review.md) remains applicable. The September 11, 2026 release date describes the current revised vintage, not original historical publication dates. Actual retrieval clocks and source SHA256 remain distinct. Each new registered observation resolves to its own numerical feed: the Z.1 ZIP or the SOMA API. Admission rejects wrong-feed, hash/clock mismatch and unmarked source overrides. Legacy captures retain their original receipt scope and CSV behavior.
+The [original source and rights review](sources/ownership-source-review.md) remains applicable. The September 11, 2026 release date describes the current revised vintage, not original historical publication dates. Actual retrieval clocks and source SHA256 remain distinct. Each new registered observation resolves to its own numerical feed: the Z.1 ZIP or the SOMA API. Admission rejects wrong-feed, hash/clock mismatch and unmarked source overrides. Legacy captures retain their original receipt scope and CSV behavior.
 
 ## Existing page and frozen-result scope
 

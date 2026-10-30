@@ -13,7 +13,7 @@ Reviewed October 26, 2026. The user selected core labor history after economist/
 
 Four bounded, keyless one-year POSTs to the existing BLS v1 endpoint returned HTTP 200 / `REQUEST_SUCCEEDED`, empty messages and twelve numeric M01–M12 rows each. January raw values were `29923`, `58.6`, `56.6` and `11.7` respectively. Actual accepted retrieval clocks span `2026-10-26T16:49:02.468Z`–`16:49:06.188Z`. Original bytes, request scope and SHA256 receipts are retained under ignored `tmp/labor-history-source-review/`. These probes establish the reviewed first-year observations; the full bootstrap must separately validate complete retained history and exact starts.
 
-The native source, units and rights are unchanged from the [BLS macro/labor admission](bls-macro-family-source-review.md) and [existing historical API review](unemployment-cpi-debt-history.md). BLS attribution, disclaimer, raw strings and actual receipt clocks remain in the app, CSV and portable results. No new vendor, key, paid service, output identifier or dependency is added. The private registered key remains confined to the existing trusted GitHub collection step.
+The native source, units and rights are unchanged from the [BLS macro/labor admission](bls-macro-family-source-review.md) and [existing historical API review](../unemployment-cpi-debt-history.md). BLS attribution, disclaimer, raw strings and actual receipt clocks remain in the app, CSV and portable results. No new vendor, key, paid service, output identifier or dependency is added. The private registered key remains confined to the existing trusted GitHub collection step.
 
 ## Interpretation and calculations
 
