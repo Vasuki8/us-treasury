@@ -1,5 +1,5 @@
 // Exact statistical admissions and conditions, reviewed in the BLS/DOL family
-// reviews, docs/data-sources.md, and docs/macro-coverage-source-review.md.
+// reviews, docs/data-sources.md, and docs/sources/macro-coverage-source-review.md.
 import {NY_FED_TERMS_URL,NY_FED_DATA_NOTICE,NY_FED_REFERENCE_RATE_NOTICE,NY_FED_PRODUCT_NOTICE} from '../src/market-functioning.js';
 import {matchesBlsApiFeed} from './bls-api-policy.mjs';
 import {assertBlsHistoryData,blsHistoryDefinition} from './bls-history-policy.mjs';

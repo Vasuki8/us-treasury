@@ -1,6 +1,7 @@
 import { series, releases } from './data.js';
 import {coverageFamilies} from './macro-registry.js';
 import {defaultWindowPreset} from './date-window.js';
+import {pagePaths} from './page-registry.js';
 
 const validIds = ids => [...new Set(ids.filter(id => Object.hasOwn(series, id)))].slice(0, 4);
 const topics = ['All topics', ...new Set(Object.values(series).map(s => s.topic))];
@@ -118,10 +119,7 @@ export function routeFor(input,{legacyWindow=false}={}) {
   const routeDefaults=legacyWindow?{...defaults,selected:['unrate','cpi'],macroFamily:'prices',macroMeasure:'cpiMonthly'}:defaults;
   const state = { ...routeDefaults, ...input };
   if(!Object.hasOwn(input,'window'))state.window=Object.hasOwn(input,'range')?'observations':defaultRouteWindow(state);
-  const path = {release:'/release',credit:'/credit',research:'/research',sources:'/sources',macroCoverage:'/economy',overview:'/overview',
-    labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',
-    watchlist:'/watchlist',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',
-    macro:'/macro',vintages:'/vintages',market:'/market'}[state.page] || '/overview';
+  const path = {...pagePaths,indicator:pagePaths.indicator+encodeURIComponent(state.seriesId)}[state.page] || '/overview';
   const p = new URLSearchParams();
   if(state.alignment==='quarter')p.set('alignment','quarter');
   if(['research','release'].includes(state.page)){

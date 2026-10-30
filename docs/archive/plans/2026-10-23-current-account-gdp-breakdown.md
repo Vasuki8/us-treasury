@@ -8,7 +8,7 @@
 
 **Tech stack:** Existing JavaScript modules, native SVG/HTML/CSS, Node test runner and GitHub Actions/Pages.
 
-**Spec:** User request in this chat; conventions and commercial scope in [current-account GDP source review](../../current-account-gdp-source-review.md) and [ITA source review](../../bea-current-account-source-review.md).
+**Spec:** User request in this chat; conventions and commercial scope in [current-account GDP source review](../../sources/current-account-gdp-source-review.md) and [ITA source review](../../sources/bea-current-account-source-review.md).
 
 ## Source mapping and rules
 

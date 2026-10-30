@@ -4,7 +4,7 @@ Reviewed October 25, 2026, Toronto local date. The user requested the free regis
 
 ## Source, scope and conditions
 
-The fresh-window primitive and weekly checker described here remain unchanged. The later [unemployment/CPI historical extension](unemployment-cpi-debt-history.md) adds a separate bounded registered bootstrap and retention wrapper for 13 existing outputs; its explicit scope supersedes this milestone's ten-year retention limit for those measurements only.
+The fresh-window primitive and weekly checker described here remain unchanged. The later [unemployment/CPI historical extension](../unemployment-cpi-debt-history.md) adds a separate bounded registered bootstrap and retention wrapper for 13 existing outputs; its explicit scope supersedes this milestone's ten-year retention limit for those measurements only.
 
 The primary remains the exact unregistered JSON POST `https://api.bls.gov/publicAPI/v1/timeseries/data/`. The newly reviewed backup is the exact registered JSON POST `https://api.bls.gov/publicAPI/v2/timeseries/data/`, using the user's key in the request body's `registrationkey` field. No query-string authentication, other hosts, redirects, CSV proxies or independent provider are admitted.
 

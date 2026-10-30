@@ -8,7 +8,7 @@
 
 **Tech stack:** Existing native JavaScript/SVG/HTML, Node test runner and GitHub Actions/Pages.
 
-**Spec/source mapping:** User request in this chat and [existing source review](../../current-account-gdp-source-review.md). BEA ITA Table 1.1 line 30 and lines 32–35 are seasonally adjusted quarterly current-dollar balances, not annualized; NIPA Table 1.1.5 A191RC is nominal GDP SAAR. Approved endpoints remain `https://apps.bea.gov/international/bp_web/tables/CSVNEW/Ita_T1.1.csv` and `https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt`. The existing BEA public-domain statistical-use approval covers commercial calculated display and export, with attribution and no implied endorsement. No additional sources, credentials or infrastructure.
+**Spec/source mapping:** User request in this chat and [existing source review](../../sources/current-account-gdp-source-review.md). BEA ITA Table 1.1 line 30 and lines 32–35 are seasonally adjusted quarterly current-dollar balances, not annualized; NIPA Table 1.1.5 A191RC is nominal GDP SAAR. Approved endpoints remain `https://apps.bea.gov/international/bp_web/tables/CSVNEW/Ita_T1.1.csv` and `https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt`. The existing BEA public-domain statistical-use approval covers commercial calculated display and export, with attribution and no implied endorsement. No additional sources, credentials or infrastructure.
 
 ## Calculation and product contract
 

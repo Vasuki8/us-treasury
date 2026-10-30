@@ -12,7 +12,7 @@
 
 ## Source and calculation contract
 
-- Reuse `beaIta/currentAccountBalance` (ITA Table 1.1 line 30, quarterly SA USD billions) and `bea/nominalGdp` (`A191RC`, NIPA Table 1.1.5 line 1, SAAR USD billions). Existing commercial display/calculation/export admissions apply; see [ratio source review](../../current-account-gdp-source-review.md).
+- Reuse `beaIta/currentAccountBalance` (ITA Table 1.1 line 30, quarterly SA USD billions) and `bea/nominalGdp` (`A191RC`, NIPA Table 1.1.5 line 1, SAAR USD billions). Existing commercial display/calculation/export admissions apply; see [ratio source review](../../sources/current-account-gdp-source-review.md).
 - Compute `100 × quarterly current account / (same-quarter nominal GDP SAAR / 4)`. Deficits stay negative. Label every chart/value as calculated, including keyboard readouts.
 - Cover the retained ITA quarter span; GDP-only quarters do not extend it. Missing/invalid/nonpositive inputs create null points with reasons. Explicit missing-quarter calculation rows keep line gaps and contain no invented official observations.
 - Reuse exact year/all/custom/count window semantics. Chart and historical CSV share selected dates, ratios and original quarterly inputs. Preserve full precision in CSV. Percentage-point changes require adjacent exact quarters within the export; never bridge nulls.

@@ -8,7 +8,7 @@
 
 **Tech stack:** Existing JavaScript/SVG/HTML/CSS, Node tests and GitHub Actions/Pages.
 
-**Spec/source mapping:** User request and [BEA source review](../../current-account-gdp-source-review.md). Existing approved ITA Table 1.1 line 30 and lines 32–35 are SA quarterly current-dollar balances, not annualized; NIPA Table 1.1.5 A191RC is nominal GDP SAAR. Exact feeds remain `https://apps.bea.gov/international/bp_web/tables/CSVNEW/Ita_T1.1.csv` and `https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt`. The existing scoped BEA statistical-use approval covers commercial calculation/display/export with attribution and no endorsement. No new source, credentials or infrastructure.
+**Spec/source mapping:** User request and [BEA source review](../../sources/current-account-gdp-source-review.md). Existing approved ITA Table 1.1 line 30 and lines 32–35 are SA quarterly current-dollar balances, not annualized; NIPA Table 1.1.5 A191RC is nominal GDP SAAR. Exact feeds remain `https://apps.bea.gov/international/bp_web/tables/CSVNEW/Ita_T1.1.csv` and `https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt`. The existing scoped BEA statistical-use approval covers commercial calculation/display/export with attribution and no endorsement. No new source, credentials or infrastructure.
 
 ## Contracts and review focus
 

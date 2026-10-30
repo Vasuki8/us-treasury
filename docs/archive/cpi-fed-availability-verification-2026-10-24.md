@@ -4,7 +4,7 @@ User-approved change: use another reliable CPI source without waiting for BLS we
 
 ## Source and method
 
-The selected source is the Cleveland Fed's explicitly linked headline/core CPI CSVs. Only aligned usable index-observation existence for the latest completed Eastern reference month is checked. The rounded indexes and annualized monthly changes are discarded. Source/CC BY-SA notices, actual response hashes, retrieval times and narrow availability metadata remain in operational reports. See [source review](../cleveland-cpi-availability-source-review.md).
+The selected source is the Cleveland Fed's explicitly linked headline/core CPI CSVs. Only aligned usable index-observation existence for the latest completed Eastern reference month is checked. The rounded indexes and annualized monthly changes are discarded. Source/CC BY-SA notices, actual response hashes, retrieval times and narrow availability metadata remain in operational reports. See [source review](../sources/cleveland-cpi-availability-source-review.md).
 
 Actual local identified requests accepted both files on October 24. The integrated check at `2026-10-24T11:48:29.530Z` returned HTTP 200 for both and aligned September 2026, with all 54 original CPI facts retained and no review candidates. Each file has 717 reference rows / 716 usable observations; October 2025 is excluded. No blocked BLS HTML/RSS endpoint is requested by the automatic CPI path.
 

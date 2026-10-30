@@ -12,7 +12,7 @@ The [numbered checklist](../research-reliability-checklist.md) records Implement
 
 Three source dependencies remain:
 
-- **Payroll publication evidence:** both the current Employment Situation route and the exact October 2 archive returned HTTP 403 through normal acquisition. Current API history cannot establish the same-release original estimates or prior-two-month revisions. A readable research-tool extract is not treated as captured publisher bytes. See [source acquisition evidence](../labor-inflation-evidence-source-review.md).
+- **Payroll publication evidence:** both the current Employment Situation route and the exact October 2 archive returned HTTP 403 through normal acquisition. Current API history cannot establish the same-release original estimates or prior-two-month revisions. A readable research-tool extract is not treated as captured publisher bytes. See [source acquisition evidence](../sources/labor-inflation-evidence-source-review.md).
 - **Consensus expectations:** an admitted timestamped provider with appropriate capture, storage and redistribution permissions is required.
 - **Market-implied policy path:** an accessible permitted contract/pricing source and downstream rights are required. Official projections and observed overnight rates are not substitutes. Both dependencies are detailed in [the source record](../expectations-policy-path-dependencies.md).
 

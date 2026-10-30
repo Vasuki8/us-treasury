@@ -1,4 +1,4 @@
-// Exact reviewed measurement scope: docs/economic-depth-source-review.md.
+// Exact reviewed measurement scope: docs/sources/economic-depth-source-review.md.
 import {matchesBlsApiFeed} from './bls-api-policy.mjs';
 const quarterly='https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt';
 const monthly='https://apps.bea.gov/national/Release/TXT/NipaDataM.txt';
