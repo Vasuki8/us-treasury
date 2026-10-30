@@ -15,7 +15,8 @@ const detail=(html,key)=>{
  assert.doesNotMatch(match[0].slice(0,match[0].indexOf('>')),/\bopen\b/,'Supporting research starts collapsed');
  return match[0];
 };
-const before=(html,a,b)=>{assert.ok(html.includes(a),a);assert.ok(html.includes(b),b);assert.ok(html.indexOf(a)<html.indexOf(b),`${a} precedes ${b}`);};
+const before=(html,a,b)=>{html=html.toLowerCase();a=a.toLowerCase();b=b.toLowerCase();assert.ok(html.includes(a),a);assert.ok(html.includes(b),
+  b);assert.ok(html.indexOf(a)<html.indexOf(b),`${a} precedes ${b}`);};
 const refinancing={status:'error',error:'Retained refinancing <error>',asOf:'2026-09-30',fetchedAt:'2026-10-22T02:00:00Z',unit:'USD billions',securities:[{securityId:'meridian-00000000000000000001',type:'Bill',principal:100,maturityDate:'2026-12-31'}],warnings:['Retained instrument warning']};
 const yields={status:'error',error:'Retained yield <error>',fetchedAt:'2026-10-22T02:00:00Z',curveHistory:[{date:'2026-01-02',nominal:{'2Y':3,'10Y':4},real:{'10Y':2}},{date:'2026-10-21',nominal:{'2Y':4,'10Y':5},real:{'10Y':2.5}}]};
 const ownership={status:'error',error:'Retained ownership <error>',fetchedAt:'2026-10-22T02:00:00Z',z1:{asOf:'2026-06-30',releaseDate:'2026-09-11',assets:20,liabilities:20,valuationDiscrepancy:0,reconciled:true,sectors:[{code:'LM713061103.Q',label:'Central bank',value:20,valuation:'market value'}],history:[{date:'2026-06-30',sectors:[{code:'LM713061103.Q',label:'Central bank',value:20,valuation:'market value'}],assets:20,liabilities:20,valuationDiscrepancy:0}]},soma:{asOf:'2026-10-14',principal:24,inflationCompensation:1,adjustedPrincipal:25,attribution:'Required SOMA source credit',redistributionNotice:'Required SOMA redistribution notice',history:[{date:'2026-10-14',principal:24,inflationCompensation:1,adjustedPrincipal:25}]}};
@@ -23,9 +24,11 @@ const ownership={status:'error',error:'Retained ownership <error>',fetchedAt:'20
 test('fiscal TTM analysis leads monthly research, with flow and source limits visible',()=>{
  const html=fiscalPage({status:'error',error:'Retained fiscal <error>',coverageNote:'Retained fiscal scope',series:{}}),main=visible(html);
  before(html,'TRAILING 12-MONTH FISCAL TRENDS','data-page-disclosure="fiscal:monthly-research"');
- assert.match(detail(html,'fiscal:monthly-research'),/MONTHLY OBSERVATIONS[\s\S]*LARGEST NAMED CATEGORY CHANGES[\s\S]*CASH BALANCE/);
- assert.match(detail(html,'fiscal:definitions-methods'),/DEBT DEFINITIONS[\s\S]*Methodology/);
- for(const phrase of ['fiscal-year-to-date','trailing 12-month','deficit is a flow','Retained fiscal &lt;error&gt;','Retained fiscal scope','not seasonally adjusted','not gross Treasury interest expense','data-export-fiscal-financing'])assert.ok(main.includes(phrase),phrase);
+ assert.match(detail(html,'fiscal:monthly-research'),/monthly observations[\s\S]*largest named category changes[\s\S]*cash balance/i);
+ assert.match(detail(html,'fiscal:definitions-methods'),/debt definitions[\s\S]*Methodology/i);
+ for(const phrase of ['fiscal-year-to-date','trailing 12-month','deficit is a flow','Retained fiscal &lt;error&gt;','not seasonally adjusted',
+  'not gross Treasury interest expense','data-export-fiscal-financing'])assert.ok(main.includes(phrase),phrase);
+ assert.match(detail(html,'fiscal:definitions-methods'),/Retained fiscal scope/);
  assert.match(html,/data-export-fiscal-financing/);
 });
 
@@ -33,7 +36,7 @@ test('observed refinancing precedes scenarios while essential assumptions and co
  const html=refinancingPage({refinancingHorizon:3,refinancingShock:50},refinancing),main=visible(html);
  before(html,'CONTRACTUAL MATURITIES','HIGHER / LOWER RATE SCENARIOS');
  before(html,'CURRENT INSTRUMENT MIX','HIGHER / LOWER RATE SCENARIOS');
- assert.match(detail(html,'refinancing:assumptions-methods'),/MODEL ASSUMPTIONS[\s\S]*SCOPE &amp; RECONCILIATION/);
+ assert.match(detail(html,'refinancing:assumptions-methods'),/model assumptions[\s\S]*scope &amp; reconciliation/i);
  for(const phrase of ['id="refinancing-horizon"','id="refinancing-shock"','4% hypothetical baseline','not observed rates or forecasts','FRNs can reset','TIPS','Retained refinancing &lt;error&gt;','Retained instrument warning','data-export-refinancing-scenario','not gross federal debt or debt held by the public alone','future inflation is unknown','currently outstanding principal','fully refinanced','7-day reset lag','zero-rate floor'])assert.ok(main.includes(phrase),phrase);
 });
 
@@ -57,9 +60,10 @@ test('auction selected results and peers lead history while competitive-share li
 test('Z.1 sector analysis leads reconciliation and SOMA keeps its own basis, dates and required notices open',()=>{
  const html=ownershipPage(ownership),main=visible(html);
  before(html,'OFFICIAL Z.1 SECTOR POSITIONS','data-page-disclosure="ownership:reconciliation"');
- assert.match(detail(html,'ownership:reconciliation'),/ASSET \/ LIABILITY RECONCILIATION/);
+ assert.match(detail(html,'ownership:reconciliation'),/asset \/ liability reconciliation/i);
  assert.match(detail(html,'ownership:methods'),/TIC country holdings/);
- for(const phrase of ['2026-06-30','2026-09-11','2026-10-14','market values','not added to Z.1','Required SOMA source credit','Required SOMA redistribution notice','New York Fed Terms of Use','Retained ownership &lt;error&gt;'])assert.ok(main.includes(phrase),phrase);
+ for(const phrase of ['30 Jun 2026','11 Sept 2026','14 Oct 2026','market values','not added to Z.1','Required SOMA source credit',
+  'Required SOMA redistribution notice','New York Fed Terms of Use','Retained ownership &lt;error&gt;'])assert.ok(main.includes(phrase),phrase);
 });
 
 test('market stocks, fails and rates remain distinct and source rights remain visible above supporting methods',()=>{

@@ -54,10 +54,23 @@ export function macroPage(source = dataStatus.sources.macroContributions) {
   const historyPanel=panel('02','HISTORICAL REAL GDP GROWTH',
     summary?chart(['gdpTotalContribution'],{height:220}):emptyState('Growth history unavailable.'),'',
     'Published BEA growth, percent q/q annualized; latest revised history, not first-release vintages.');
-  return header + capture + pending + (source?.error ? `<p class="panel-note amber">${esc(source.error)}</p>` : '')
+  return header + pending + (source?.error ? `<p class="panel-note amber">${esc(source.error)}</p>` : '')
     +readings+`<div class="grid g11 workspace-analysis">${contributionPanel}${historyPanel}</div>`
     + supportingDetails('macro:demand-detail', 'Published demand & investment detail', detail)
-    + supportingDetails('macro:methods', 'GDP contribution methods & limitations', panel('04', 'WHY IT MATTERS & LIMITATIONS', `<div class="explain"><p><strong>WHY IT MATTERS.</strong> Contributions distinguish consumption, investment, government and trade within measured real GDP growth. Changes in those published contributions describe the accounting sources of a change in the growth rate.</p><p><strong>LIMITATIONS.</strong> Accounting contributions do not establish economic causation. Investment includes inventories. Imports retain BEA’s published sign; a decline in imports can contribute positively to measured growth. Never sum chained-dollar GDP components to explain growth.</p><p><strong>Methodology.</strong> ${esc(methodology)}</p><p>${esc(source?.coverageNote ?? 'Coverage is unavailable until an official capture succeeds.')}</p><p>Missing values remain unavailable. Changes use the exact preceding quarter; annual and benchmark updates can revise earlier quarters. Actual historical release dates and first-reported values are not provided by this feed.</p><p>Source: <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer">U.S. Bureau of Economic Analysis, NIPA Table 1.1.2 ↗</a>. Official observations and calculated residuals carry separate export labels.</p></div>`));
+    + supportingDetails('macro:methods', 'About this data', capture+panel('04', 'WHY IT MATTERS & LIMITATIONS',
+   (`<div class="explain"><p><strong>WHY IT MATTERS.</strong> Contributions distinguish `+
+  `consumption, investment, government and trade within measured real GDP growth. Changes in `+
+  `those published contributions describe the accounting sources of a change in the growth `+
+  `rate.</p><p><strong>LIMITATIONS.</strong> Accounting contributions do not establish `+
+  `economic causation. Investment includes inventories. Imports retain BEA’s published sign; `+
+  `a decline in imports can contribute positively to measured growth. Never sum `+
+  `chained-dollar GDP components to explain growth.</p><p><strong>Methodology.</strong> ${esc(methodology)}</p><p>${esc(source?.coverageNote
+  ?? 'Coverage is unavailable until an official capture succeeds.')
+  }</p><p>Missing values remain unavailable. Changes use the exact preceding quarter; annual `+
+  `and benchmark updates can revise earlier quarters. Actual historical release dates and `+
+  `first-reported values are not provided by this feed.</p><p>Source: <a href="${sourceUrl
+  }" target="_blank" rel="noopener noreferrer">U.S. Bureau of Economic Analysis, NIPA Table `+
+  `1.1.2 ↗</a>. Official observations and calculated residuals carry separate export labels.</p></div>`)));
 }
 
 export function cpiEffectsCoveragePanel(source=dataStatus.sources.macroContributions){

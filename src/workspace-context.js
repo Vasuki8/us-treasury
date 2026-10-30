@@ -26,8 +26,14 @@ export function indicatorHref(seriesId,state={}) {
 export function workspaceReturn(state={}) {
   const href=safeReturnTo(state.returnTo);if(!href)return null;
   const route=parseRoute(href);
-  const labels={indicator:'INDICATOR',release:'RELEASE EVIDENCE',research:route.researchView==='publications'?'PUBLICATION HISTORY':route.researchView==='changes'?'CAPTURE CHANGES':route.researchView==='packages'?'FROZEN RESULTS':'SAVED VIEWS',overview:'OVERVIEW',watchlist:'WATCHLIST',labor:'LABOR',macroCoverage:route.macroFamily==='prices'?'INFLATION':'ECONOMY',fiscal:'FISCAL',refinancing:'REFINANCING',yields:'RATES & CURVES',auctions:'AUCTIONS',ownership:'OWNERSHIP',macro:'GDP CONTRIBUTIONS',vintages:'RETRIEVAL HISTORY',market:'MARKET FUNCTIONING',credit:'CREDIT & BANKING',calendar:'CALENDAR'};
-  return {href,label:'BACK TO '+(labels[route.page]??(route.exploreMode==='coverage'?'COVERAGE INVENTORY':route.exploreMode==='compare'?'COMPARISON':route.query?'RESULTS':'CATALOG'))};
+  const research=route.researchView==='publications'?'publication history':route.researchView==='changes'?'Capture changes'
+    :route.researchView==='packages'?'saved snapshots':'saved views';
+  const labels={indicator:'indicator',release:'release evidence',research,overview:'Overview',watchlist:'Watchlist',labor:'Labor',
+    macroCoverage:route.macroFamily==='prices'?'inflation':'Economy',fiscal:'Fiscal',refinancing:'refinancing',yields:'rates & curves',
+    auctions:'auctions',ownership:'ownership',macro:'GDP contributions',vintages:'Retrieval history',market:'market functioning',
+    credit:'credit & banking',calendar:'Calendar'};
+  const fallback=route.exploreMode==='coverage'?'coverage inventory':route.exploreMode==='compare'?'comparison':route.query?'results':'catalog';
+  return {href,label:'Back to '+(labels[route.page]??fallback)};
 }
 
 /** Update the selection throughout the bounded return journey. */

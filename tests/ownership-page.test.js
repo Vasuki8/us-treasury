@@ -42,7 +42,9 @@ test('negative reported ownership positions keep native precision with the sign 
 
 test('ownership page separates valuations and dates and preserves required SOMA title, notice and terms',()=>{
   const html=api().ownershipPage(source());
-  for(const text of ['DEBT OWNERSHIP','WHAT CHANGED','WHAT CONTRIBUTED','WHY IT MATTERS','LIMITATIONS','2026-06-30','2026-09-11','2026-10-14','market value','non-market basis','SOMA Holdings','TIC','custod','valuation discrepancy'])assert.ok(html.includes(text),text);
+  for(const text of ['DEBT OWNERSHIP','WHAT CHANGED','WHAT CONTRIBUTED','WHY IT MATTERS','LIMITATIONS','30 Jun 2026','11 Sept 2026',
+  '14 Oct 2026','market value','non-market basis','SOMA Holdings','TIC','custod',
+  'valuation discrepancy'])assert.ok(html.toLowerCase().includes(text.toLowerCase()),text);
   assert.ok(html.includes(notice));assert.ok(html.includes(terms));assert.match(html,/data-export-ownership/);
   assert.match(html,/not.*purchases|not.*sales/i);
   assert.match(html,/not added|not summed|never summed/i);

@@ -17,10 +17,10 @@ function fixture(){
 test('historical panel supplies explicit calculated chart binding, coverage, rights and accessible table',()=>{
  assert.equal(typeof view.currentAccountGdpHistoryPanel,'function');
  const sources=copy(),expected=currentAccountGdpHistory(sources,all),html=view.currentAccountGdpHistoryPanel(sources,all);
- assert.match(html,/HISTORICAL CURRENT ACCOUNT \/ GDP/);assert.match(html,/data-chart-catalog="current-account-gdp-history"/);
+ assert.match(html,/HISTORICAL CURRENT ACCOUNT \/ GDP/i);assert.match(html,/data-chart-catalog="current-account-gdp-history"/);
  assert.ok(html.includes(`Retained: ${expected.series.observations.length} quarters · ${expected.series.observations[0].date} to ${expected.series.observations.at(-1).date}`));
  assert.ok(html.includes(`Displayed: ${expected.observations.length} quarters`));
- assert.match(html,/Calculated metric/);assert.match(html,/CSV HISTORY &amp; INPUTS/);assert.match(html,/data-export-current-account-gdp-history/);
+ assert.match(html,/Calculated metric/);assert.match(html,/CSV HISTORY &amp; INPUTS/i);assert.match(html,/data-export-current-account-gdp-history/);
  assert.ok(html.includes(`First ${Math.min(50,expected.observations.length)} of ${expected.observations.length}`));assert.match(html,/100 ×/);assert.match(html,/retrieval/);assert.match(html,/bea.gov\/help\/faq\/147/);
 });
 
@@ -58,7 +58,7 @@ test('empty/invalid/error/cached states remain explicit, CSV preserves evidence 
  const sources=fixture();sources.bea.status='error';sources.bea.error='GDP <failed>';
  assert.match(view.currentAccountGdpHistoryPanel(sources,all),/Cached/);assert.match(view.currentAccountGdpHistoryPanel(sources,all),/GDP &lt;failed&gt;/);
  const frozen=view.currentAccountGdpHistoryPanel(sources,{preset:'1y'},{frozen:true});
- assert.match(frozen,/FROZEN HISTORICAL/);assert.doesNotMatch(frozen,/data-export-current-account-gdp-history/);assert.doesNotMatch(frozen,/data-window=/);
+ assert.match(frozen,/FROZEN HISTORICAL/i);assert.doesNotMatch(frozen,/data-export-current-account-gdp-history/);assert.doesNotMatch(frozen,/data-window=/);
  const [header,...rows]=parseCsv(csvView.currentAccountGdpHistoryCsv(sources,{preset:'1y'}));
  const row=Object.fromEntries(header.map((key,i)=>[key,rows.at(-1)[i]]));assert.equal(row.denominator_capture_status,'cached');assert.match(row.limitations,/revised/);
  assert.equal(row.denominator_publication_date,'');assert.equal(JSON.parse(row.denominator_provenance_json)[0].url,'https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt');

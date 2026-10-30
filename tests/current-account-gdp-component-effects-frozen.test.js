@@ -44,7 +44,10 @@ test('partial frozen component history keeps unavailable components and denomina
  const inputs=args.context[retained.inputContext].sources;assert.deepEqual(Object.keys(inputs.beaIta.series),['itaGoodsBalance']);assert.deepEqual(inputs.bea.series,{});
  const pkg=await createResearchPackage({name:'Unavailable frozen component history',...args}),restored=await importResearchPackage(exportResearchPackage(pkg));assert.deepEqual(restored.context.currentAccountGdpBreakdown.sources,inputs);
  const originalFetch=globalThis.fetch;globalThis.fetch=()=>{throw new Error('Frozen viewers must not fetch missing inputs.');};
- try{const html=renderFrozen(restored);assert.match(html,/FROZEN[^<]*COMPONENT|data-chart-catalog="current-account-gdp-component-effects"/);assert.doesNotMatch(html,/data-export-current-account-gdp-component-effects(?:[\s=>])/);const {currentAccountGdpComponentEffectsCsv}=await import('../src/current-account-gdp-component-effects-view.js');assert.match(currentAccountGdpComponentEffectsCsv(inputs,retained.range,retained.measure),/unavailable|missing/i);}finally{globalThis.fetch=originalFetch;}
+ try{const html=renderFrozen(restored);assert.match(html,/FROZEN[^<]*COMPONENT|data-chart-catalog="current-account-gdp-component-effects"/i);
+  assert.doesNotMatch(html,/data-export-current-account-gdp-component-effects(?:[\s=>])/);const {currentAccountGdpComponentEffectsCsv}=
+  await import('../src/current-account-gdp-component-effects-view.js');assert.match(currentAccountGdpComponentEffectsCsv(inputs,retained.range,
+  retained.measure),/unavailable|missing/i);}finally{globalThis.fetch=originalFetch;}
 });
 
 test('legacy frozen packages acquire no component-history panel, selection or reconstruction action',async()=>{

@@ -1,8 +1,9 @@
 import { getSeries, latest, formatValue, formatChange, periodLabel, BLS_DATA_NOTICE } from './model.js';
 import { DAILY_REFRESH_SCHEDULE, getFreshness } from './freshness.js';
-import { measurementChange } from './measurement-change.js';
+import { measurementChange,priorReadingLabel } from './measurement-change.js';
 import {defaultWindowPreset} from './date-window.js';
 import {displayCurrencyUnit,displayUnitLabel,formatDisplayValue,formatDisplayChange} from './display-format.js';
+import {humanTimestamp} from './ui-time.js';
 
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -12,6 +13,18 @@ export function escapeHtml(value) {
 
 const freshnessTimeFormat=new Intl.DateTimeFormat('en-US',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23',timeZone:'America/New_York',timeZoneName:'short'});
 const freshnessTime=value=>value?`<time datetime="${escapeHtml(value)}">${escapeHtml(freshnessTimeFormat.format(new Date(value)))}</time>`:'Not recorded';
+
+const acronyms=new Set(['US','U.S.','GDP','GDI','CPI','PCE','CSV','JSON','USD','BLS','BEA','DOL','ETA','FOMC','MTS','SAAR',
+ 'SOFR','EFFR','SOMA','FRN','TIPS','CNY','TTM','YTD','UTC','ET','H15','NY','API','CUSIP','NIPA','ITA','Z1']);
+export function sentenceCase(value){
+ const text=String(value??'');
+ if(/[a-z]/.test(text))return text;
+ let first=true;
+ return text.replace(/[A-Z][A-Z0-9.]*/g,word=>{
+  if(acronyms.has(word)||/\d/.test(word)){first=false;return word;}
+  const result=first?word[0]+word.slice(1).toLowerCase():word.toLowerCase();first=false;return result;
+ });
+}
 
 /** Recorded source retrievals remain distinct from attempts and snapshot assembly. */
 export function freshnessBanner(snapshot={}, options={}) {
@@ -39,7 +52,7 @@ export function freshnessBanner(snapshot={}, options={}) {
 }
 
 export function button(label, attrs = '', className = 'action') {
-  return `<button type="button" class="${escapeHtml(className)}" ${attrs}>${escapeHtml(label)}</button>`;
+  return `<button type="button" class="${escapeHtml(className)}" ${attrs}>${escapeHtml(sentenceCase(label))}</button>`;
 }
 
 function compactFreshnessBanner(snapshot,options) {
@@ -47,15 +60,33 @@ function compactFreshnessBanner(snapshot,options) {
  const relevant=affected.filter(item=>!options.relevantIds||options.relevantIds.includes(item.id));
  const counts=[freshness.stale.length?`${freshness.stale.length} collection jobs overdue`:null,freshness.cached.length?`${freshness.cached.length} cached`:null,freshness.unavailable.length?`${freshness.unavailable.length} unavailable`:null].filter(Boolean).join(' · ');
  const sources=freshness.entries.map(item=>`<li><strong>${escapeHtml(item.label)}</strong> · ${item.stale?'Daily refresh overdue · ':''}${item.status}<br>Last successful retrieval: ${freshnessTime(item.fetchedAt)} · Last attempt: ${freshnessTime(item.lastAttemptAt)}${item.error?`<p class="amber">${escapeHtml(item.error)}</p>`:''}</li>`).join('');
- return `<section class="freshness-banner compact-freshness" data-state="${freshness.state}" aria-label="Data freshness"><div class="snapshot-status"><span>Snapshot <time datetime="${escapeHtml(snapshot.generatedAt??'')}">${escapeHtml(snapshot.generatedAt?.replace('T',' ').replace('Z',' UTC')??'unavailable')}</time></span><details class="freshness-details"><summary>${escapeHtml(counts||'Source captures current')} · Refresh details</summary><p>Last successful source refresh: ${freshnessTime(freshness.lastSuccessfulRefresh)}. Latest attempt: ${freshnessTime(freshness.lastAttemptAt)}.</p><p>Daily target 23:37 UTC + 60 minutes. This describes collection jobs, not the age of the latest economic reference period or verified release coverage. A recent retrieval can contain an older reference period; a scheduled event does not verify publication. Reload to check for a newer deployed snapshot.</p><button type="button" class="action" data-reload-snapshot>Reload snapshot</button><ul class="freshness-source-list">${sources}</ul></details></div>${relevant.length?`<p class="view-source-warning"><strong>Affects this view:</strong> ${relevant.map(item=>`${escapeHtml(item.label)} — ${item.status==='cached'?'cached after failed refresh':'unavailable'}${item.error?' ('+escapeHtml(item.error)+')':''}`).join('; ')}. Last successful retrievals and attempts are in Refresh details; check the official source if timing matters.</p>`:''}</section>`;
+ const warnings=relevant.map(item=>`${escapeHtml(item.label)} — `
+  +`${item.status==='cached'?'cached after failed refresh':'unavailable'}${item.error?' ('+escapeHtml(item.error)+')':''}`).join('; ');
+ return `<section class="freshness-banner compact-freshness" data-state="${freshness.state}" aria-label="Data freshness">`
+  +`<div class="snapshot-status"><span><time datetime="${escapeHtml(snapshot.generatedAt??'')}">`
+  +`${escapeHtml(humanTimestamp(snapshot.generatedAt,{prefix:'Updated '})||'Snapshot unavailable')}</time></span>`
+  +`<details class="freshness-details"><summary>${escapeHtml(counts||'Source captures current')} · Refresh details</summary>`
+  +`<p>Last successful source refresh: ${freshnessTime(freshness.lastSuccessfulRefresh)}. `
+  +`Latest attempt: ${freshnessTime(freshness.lastAttemptAt)}.</p>`
+  +'<p>Daily target 23:37 UTC + 60 minutes. This describes collection jobs, '
+  +'not the age of the latest economic reference period or verified release coverage. '
+  +'A recent retrieval can contain an older reference period; a scheduled event does not verify publication. '
+  +'Reload to check for a newer deployed snapshot.</p>'
+  +'<button type="button" class="action" data-reload-snapshot>Reload snapshot</button>'
+  +`<ul class="freshness-source-list">${sources}</ul></details></div>`
+  +(relevant.length?`<p class="view-source-warning"><strong>Affects this view:</strong> ${warnings}. `
+   +'Last successful retrievals and attempts are in Refresh details; check the official source if timing matters.</p>':'')+'</section>';
 }
 
 export function heading(title, subtitle, actions = '') {
-  return `<header class="page-heading"><div><h1>${escapeHtml(title)}</h1><p class="subtitle">${escapeHtml(subtitle)}</p></div><div class="actions">${actions}</div></header>`;
+  return '<header class="page-heading"><div><h1>'+escapeHtml(sentenceCase(title))+'</h1>'
+    +`<p class="subtitle">${escapeHtml(subtitle)}</p></div><div class="actions">${actions}</div></header>`;
 }
 
 export function panel(index, title, body, actions = '', note = '', extraClass = '') {
-  return `<section class="panel${extraClass ? ` ${escapeHtml(extraClass)}` : ''}"><header class="panel-head"><h2><span class="index">${escapeHtml(index)}</span>${escapeHtml(title)}</h2><div class="actions">${actions}</div></header>${body}${note ? `<p class="panel-note">${escapeHtml(note)}</p>` : ''}</section>`;
+  return `<section class="panel${extraClass ? ` ${escapeHtml(extraClass)}` : ''}"><header class="panel-head"><h2>`
+    +`<span class="index">${escapeHtml(index)}</span>${escapeHtml(sentenceCase(title))}</h2>`
+    +`<div class="actions">${actions}</div></header>${body}${note ? `<p class="panel-note">${escapeHtml(note)}</p>` : ''}</section>`;
 }
 
 export function chart(ids, {
@@ -77,10 +108,12 @@ export function seriesLink(id, label, className = '') {
 }
 
 export function coverageBadge(series) {
-  return series.coverageNote ? `<span class="pill" title="${escapeHtml(series.coverageNote)}">${series.id === 'claims' ? 'Historical feed' : 'Coverage note'}</span>` : '';
+  return series.coverageNote ? `<span class="pill" title="${escapeHtml(series.coverageNote)}">`
+    +`${series.id === 'claims' ? 'Historical feed' : 'Notes'}</span>` : '';
 }
 
 function compactChange(series,change,formatted=formatChange(series)){
+ if(series.id==='payroll')return priorReadingLabel(series)+': '+formatValue(series,series.observations.at(-2)?.value);
  if(change.value===null)return 'Comparison unavailable';
  const growth=['gdp','gdpTotalContribution','wages'].includes(series.id);
  const label=series.id==='payrollAverage3m'?'Change in average gains':series.id==='payroll'?'Change in gains':growth?'Growth-rate change':'Change';
@@ -101,12 +134,15 @@ export function metrics(ids,{label='Headline indicators',showBasis=false,currenc
       +`${series.dataStatus==='cached'?' · CACHED':''}</span>`
       +(showBasis?`<span class="metric-basis">${escapeHtml(seriesStatus(series))} · `
         +`${escapeHtml(displayUnitLabel(series,{currencyUnit}))}</span>`:'')
-      +`${coverageBadge(series)}<span class="metric-detail" aria-hidden="true">Details ↗</span></a>`;
+      +`${coverageBadge(series)}<span class="metric-detail" aria-hidden="true">Details</span></a>`;
   }).join('')}</section>`;
 }
 
 export function table(headers, rows, caption = '') {
-  return `<div class="table-wrap"><table>${caption ? `<caption class="sr-only">${escapeHtml(caption)}</caption>` : ''}<thead><tr>${headers.map(header => `<th scope="col"${header?.numeric === true ? ' class="num"' : ''}>${escapeHtml(typeof header === 'object' ? header.label : header)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  const columns=headers.map(header=>`<th scope="col"${header?.numeric === true ? ' class="num"' : ''}>`
+    +`${escapeHtml(sentenceCase(typeof header === 'object' ? header.label : header))}</th>`).join('');
+  return `<div class="table-wrap"><table>${caption ? `<caption class="sr-only">${escapeHtml(caption)}</caption>` : ''}`
+    +`<thead><tr>${columns}</tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 export function seriesTable(ids) {
@@ -130,7 +166,7 @@ export function sourceLink(series) {
 }
 
 export function seriesStatus(series) {
-  return series.dataStatus === 'cached' ? `Cached ${series.observationType==='calculated'?'calculated metric':'official snapshot'}` : series.dataStatus === 'official' ? (series.observationType==='calculated'?'Calculated metric':'Official snapshot') : 'Unavailable';
+  return series.dataStatus === 'cached' ? 'Cached official snapshot' : series.dataStatus === 'official' ? 'Official snapshot' : 'Unavailable';
 }
 
 function secureSourceUrl(value) {
@@ -162,15 +198,71 @@ function newYorkFedNotices(sources) {
 }
 
 /** Required notices and last successful source captures accompany every route. */
-export function sourceNotice(sources = {}) {
+export function sourceNotice(sources = {},options={}) {
+  if(options.scoped||options.includeAll)return scopedSourceNotice(sources,options);
   const retrieved = sources.bls?.fetchedAt;
   const laborRetrieved=sources.laborEvidence?.fetchedAt;
-  const laborRetrieval=laborRetrieved?` Additional BLS real earnings and diffusion retrieved <time datetime="${escapeHtml(laborRetrieved)}">${escapeHtml(laborRetrieved)}</time>.`:'';
+  const laborRetrieval=laborRetrieved?` Additional BLS real earnings and diffusion retrieved <time datetime="${escapeHtml(laborRetrieved)}">${
+  escapeHtml(humanTimestamp(laborRetrieved))}</time>.`:'';
   const retrieval = retrieved
-    ? `BLS data retrieved <time datetime="${escapeHtml(retrieved)}">${escapeHtml(retrieved)}</time>.`
+    ? `BLS data retrieved <time datetime="${escapeHtml(retrieved)}">${escapeHtml(humanTimestamp(retrieved))}</time>.`
     : 'BLS retrieval unavailable.';
   const macroCredits=(sources.activity||sources.policyRates?'<p>Additional official statistics: <a href="https://www.federalreserve.gov/" target="_blank" rel="noopener noreferrer">Board of Governors of the Federal Reserve System</a>.</p>':'')+(sources.housing?'<p>Housing source: <a href="https://www.census.gov/construction/nrc/" target="_blank" rel="noopener noreferrer">U.S. Census Bureau, New Residential Construction</a>. Annual-rate estimates retain published units and precision.</p>':'');
   return `<p>Data sources: <a href="https://home.treasury.gov/" target="_blank" rel="noopener noreferrer">U.S. Treasury</a>, <a href="https://www.bls.gov/" target="_blank" rel="noopener noreferrer">Bureau of Labor Statistics</a>, <a href="https://www.bea.gov/" target="_blank" rel="noopener noreferrer">Bureau of Economic Analysis</a>, <a href="https://oui.doleta.gov/unemploy/claims.asp" target="_blank" rel="noopener noreferrer">U.S. Department of Labor, Employment and Training Administration</a> and <a href="https://www.census.gov/retail/index.html" target="_blank" rel="noopener noreferrer">U.S. Census Bureau, Advance Monthly Retail Trade Survey</a>. Meridian is an independent site and is not endorsed by these agencies.</p>${macroCredits}<p>${escapeHtml(BLS_DATA_NOTICE)} ${retrieval}${laborRetrieval} <a href="https://www.bls.gov/developers/termsOfService.htm" target="_blank" rel="noopener noreferrer">BLS data terms ↗</a></p>${newYorkFedNotices(sources)}`;
+}
+
+const agencyCredits={
+ treasury:['U.S. Treasury','https://home.treasury.gov/'],
+ bls:['Bureau of Labor Statistics','https://www.bls.gov/'],
+ bea:['Bureau of Economic Analysis','https://www.bea.gov/'],
+ dol:['U.S. Department of Labor, Employment and Training Administration','https://oui.doleta.gov/unemploy/claims.asp'],
+ census:['U.S. Census Bureau, Advance Monthly Retail Trade Survey','https://www.census.gov/retail/index.html'],
+ housing:['U.S. Census Bureau, New Residential Construction','https://www.census.gov/construction/nrc/'],
+ fed:['Board of Governors of the Federal Reserve System','https://www.federalreserve.gov/'],
+};
+const agencyFor=id=>['fiscal','refinancing','yields','auctions'].includes(id)?'treasury'
+ :['laborEvidence'].includes(id)?'bls':['pcePriceContributions','macroContributions','beaIta'].includes(id)?'bea'
+ :id==='dolAdvance'?'dol':['activity','policyRates','bankCredit','lendingSurvey','fedBalance','householdDebt','loanDelinquency']
+  .includes(id)?'fed':id;
+
+function additionalNotices(sources,{calendar=false}={}){
+ const groups=new Map();
+ for(const source of Object.values(sources)){
+  const entries=[source,...Object.values(source?.series??{}).filter(item=>item.observations?.length)];
+  for(const item of entries){
+   const texts=[item.attribution,item.sourceNotice,item.redistributionNotice,item.modificationNotice].filter(Boolean);
+   if(!texts.length)continue;
+   // Existing New York Fed series credits below retain their exact grouping and references.
+   const fed=!calendar&&item.observations&&[item.sourceUrl,item.licenseUrl,item.termsUrl]
+    .some(url=>/^https?:\/\/(?:[^/]+\.)?newyorkfed\.org\//i.test(url??''));
+   if(fed)continue;
+   const key=JSON.stringify(texts);if(groups.has(key))continue;
+   const url=secureSourceUrl(item.licenseUrl??item.termsUrl),title=item.sourceTitle??item.title??'';
+   groups.set(key,`<div class="source-credit">${title?`<p><strong>${escapeHtml(title)}</strong></p>`:''}`
+    +texts.map(value=>`<p>${escapeHtml(value)}</p>`).join('')
+    +(url?`<p><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Source terms ↗</a></p>`:'')+'</div>');
+  }
+ }
+ return [...groups.values()].join('');
+}
+
+function scopedSourceNotice(sources,{includeAll=false,calendarSources={}}={}){
+ const agencies=[...new Set(Object.keys(sources).map(agencyFor))].filter(id=>agencyCredits[id]);
+ const links=agencies.map(id=>{
+  const [name,url]=agencyCredits[id];
+  return `<a href="${url}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)} ↗</a>`;
+ }).join(' · ');
+ const original=includeAll?sourceNotice(sources):'';
+ const bls=Object.keys(sources).some(id=>agencyFor(id)==='bls');
+ const retrieval=sources.bls?.fetchedAt??sources.laborEvidence?.fetchedAt;
+ const credit=includeAll?'':(links?`<p>Data sources: ${links}. `
+  +'Meridian is an independent site and is not endorsed by these agencies.</p>':'')
+  +(bls?`<p>${escapeHtml(BLS_DATA_NOTICE)} `
+   +(retrieval?`BLS data retrieved <time datetime="${escapeHtml(retrieval)}">${escapeHtml(humanTimestamp(retrieval))}</time>. `:'')
+   +'<a href="https://www.bls.gov/developers/termsOfService.htm" target="_blank" rel="noopener noreferrer">BLS data terms ↗</a></p>':'')
+  +newYorkFedNotices(sources);
+ return original+credit+additionalNotices(sources)+additionalNotices(calendarSources,{calendar:true})
+  +(includeAll?'':'<p><a href="#/sources">Sources &amp; terms</a></p>');
 }
 
 /** Last successful retrieval and latest attempt remain separate after failures. */

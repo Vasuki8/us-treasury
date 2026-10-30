@@ -10,7 +10,7 @@ const sources=()=>({bankCredit:{status:'error',error:'HTTP 503 <retry>',fetchedA
 test('context page retains unavailable latest values, visible failures, source credit and different reporting bases',()=>{
   const html=ui().creditContextPage(sources(),{documents:[]});
   assert.match(html,/HTTP 503 &lt;retry&gt;/);assert.match(html,/CACHED/);assert.doesNotMatch(html,/14138\.532/);
-  assert.match(html,/2026-10-07/);assert.match(html,/Wednesday stocks/);assert.match(html,/Net percent/);assert.match(html,/operation/);
+  assert.match(html,/7 Oct 2026/);assert.match(html,/Wednesday stocks/);assert.match(html,/Net percent/);assert.match(html,/operation/);
   assert.match(html,/Federal Reserve Bank of New York/);assert.match(html,/Terms of Use/);assert.match(html,/Meridian is not affiliated/);
   assert.match(html,/data-export-credit/);assert.match(html,/Source: Board of Governors/);
   const range=html.match(/data-range="([^"]+)"/)?.[1];assert.deepEqual(readChartRange(range?.replaceAll('&quot;','"')),{preset:'3y'});

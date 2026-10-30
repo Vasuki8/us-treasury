@@ -1,0 +1,1470 @@
+{
+  "createdAt": "2026-10-30T15:35:56.755Z",
+  "base": "http://127.0.0.1:4225/",
+  "browser": "156.0.8078.74",
+  "executable": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "results": [
+    {
+      "name": "Overview",
+      "route": "overview",
+      "theme": "Light",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "metrics": {
+        "page": "overview",
+        "theme": "Light",
+        "density": "compact",
+        "title": "U.S. economy — Meridian",
+        "heading": "U.S. economy",
+        "preparedPage": true,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "document": {
+          "width": 1440,
+          "height": 2252
+        },
+        "noPageOverflow": true,
+        "overflowing": [],
+        "firstNumber": {
+          "selector": ".oh-reading .reading-value",
+          "text": "2.2%",
+          "top": 312.875,
+          "bottom": 343.921875,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": {
+          "columns": 4,
+          "columnWidths": "235.25px 235.25px 235.25px 235.25px",
+          "scrollWidth": 944,
+          "width": 944,
+          "autoFlow": "row"
+        },
+        "charts": [
+          {
+            "series": "pceMonthly,pceCoreMonthly",
+            "svg": true
+          },
+          {
+            "series": "payrollAverage3m",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/overview",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "overview-1440-light.jpg",
+      "bytes": 144136,
+      "sha256": "ae0b9100d545f0ce78398f58e1b9859f333e3af0a1c78e1ba4a40f838a42bf99"
+    },
+    {
+      "name": "Fiscal",
+      "route": "fiscal",
+      "theme": "Light",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "metrics": {
+        "page": "fiscal",
+        "theme": "Light",
+        "density": "compact",
+        "title": "Fiscal pressure — Meridian",
+        "heading": "Fiscal pressure",
+        "preparedPage": true,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "document": {
+          "width": 1440,
+          "height": 1920
+        },
+        "noPageOverflow": true,
+        "overflowing": [],
+        "firstNumber": {
+          "selector": "[data-fiscal-total-deficit] .metric-value",
+          "text": "$1.99T",
+          "top": 325.375,
+          "bottom": 356,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [
+          {
+            "series": "receiptsTtm,outlaysTtm,netInterestTtm",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/fiscal",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "fiscal-1440-light.jpg",
+      "bytes": 128305,
+      "sha256": "91900afb511116ff92c12dc6044c1ba150b963be57612b22a9986f9c2e93febd"
+    },
+    {
+      "name": "Labor",
+      "route": "economy/labor",
+      "theme": "Light",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "metrics": {
+        "page": "labor",
+        "theme": "Light",
+        "density": "compact",
+        "title": "Labor market — Meridian",
+        "heading": "Labor market",
+        "preparedPage": true,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "document": {
+          "width": 1440,
+          "height": 5894
+        },
+        "noPageOverflow": true,
+        "overflowing": [],
+        "firstNumber": {
+          "selector": ".labor-headlines .labor-metric>strong",
+          "text": "29k",
+          "top": 352.6875,
+          "bottom": 385.078125,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [
+          {
+            "series": "underemployment",
+            "svg": true
+          },
+          {
+            "series": "payroll",
+            "svg": true
+          },
+          {
+            "series": "unrate",
+            "svg": true
+          },
+          {
+            "series": "realHourlyEarnings",
+            "svg": true
+          },
+          {
+            "series": "realWeeklyEarnings",
+            "svg": true
+          },
+          {
+            "series": "privateDiffusion1m,privateDiffusion3m,privateDiffusion6m",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/economy/labor",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "labor-1440-light.jpg",
+      "bytes": 163435,
+      "sha256": "a5357431f273d394035dc5df8c870f464ef8f9366c50df3b11fd3ff2ea8ac33d"
+    },
+    {
+      "name": "Calendar",
+      "route": "calendar",
+      "theme": "Light",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "metrics": {
+        "page": "calendar",
+        "theme": "Light",
+        "density": "compact",
+        "title": "Economic calendar — Meridian",
+        "heading": "Economic calendar",
+        "preparedPage": true,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "document": {
+          "width": 1440,
+          "height": 1944
+        },
+        "noPageOverflow": true,
+        "overflowing": [],
+        "firstNumber": {
+          "selector": ".calendar-previous[data-previous-period],.calendar-event td.mono",
+          "text": "10:00 am ET",
+          "top": 640.21875,
+          "bottom": 713.0625,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/calendar",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "calendar-1440-light.jpg",
+      "bytes": 117515,
+      "sha256": "4c1da7cc21a045662e9f661a7e139e838f57e50779868b2be5a237bf0f5e8b19"
+    },
+    {
+      "name": "Explore",
+      "route": "explore",
+      "theme": "Light",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "metrics": {
+        "page": "explore",
+        "theme": "Light",
+        "density": "compact",
+        "title": "Explore data — Meridian",
+        "heading": "Explore data",
+        "preparedPage": true,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "document": {
+          "width": 1440,
+          "height": 3278
+        },
+        "noPageOverflow": true,
+        "overflowing": [],
+        "firstNumber": {
+          "selector": ".catalog-reading>strong",
+          "text": "2.2%",
+          "top": 605.75,
+          "bottom": 626.75,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/explore",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "explore-1440-light.jpg",
+      "bytes": 115326,
+      "sha256": "1c4fed11b891d0187408eb3f4ba3ad48ea3075ae331cfc56181e20d121fa159b"
+    },
+    {
+      "name": "Indicator",
+      "route": "series/unrate",
+      "theme": "Light",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "metrics": {
+        "page": "indicator",
+        "theme": "Light",
+        "density": "compact",
+        "title": "Unemployment rate — Meridian",
+        "heading": "Unemployment rate",
+        "preparedPage": true,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "document": {
+          "width": 1440,
+          "height": 3395
+        },
+        "noPageOverflow": true,
+        "overflowing": [],
+        "firstNumber": {
+          "selector": ".indicator-native-reading .big-value",
+          "text": "4.2%",
+          "top": 260,
+          "bottom": 296,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [
+          {
+            "series": "unrate",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/series/unrate",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "indicator-1440-light.jpg",
+      "bytes": 122136,
+      "sha256": "df13812de7313edba5f7021cffda63ed6b3db1164c59a61d973041ac1389a428"
+    },
+    {
+      "name": "Overview",
+      "route": "overview",
+      "theme": "Graphite",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "metrics": {
+        "page": "overview",
+        "theme": "Graphite",
+        "density": "compact",
+        "title": "U.S. economy — Meridian",
+        "heading": "U.S. economy",
+        "preparedPage": true,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "document": {
+          "width": 1440,
+          "height": 2252
+        },
+        "noPageOverflow": true,
+        "overflowing": [],
+        "firstNumber": {
+          "selector": ".oh-reading .reading-value",
+          "text": "2.2%",
+          "top": 312.875,
+          "bottom": 343.921875,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": {
+          "columns": 4,
+          "columnWidths": "235.25px 235.25px 235.25px 235.25px",
+          "scrollWidth": 944,
+          "width": 944,
+          "autoFlow": "row"
+        },
+        "charts": [
+          {
+            "series": "pceMonthly,pceCoreMonthly",
+            "svg": true
+          },
+          {
+            "series": "payrollAverage3m",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/overview",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "overview-1440-graphite.jpg",
+      "bytes": 142680,
+      "sha256": "dfc6632bf5fb6ed3175266f6d4d82b93de2596598a986e512189652d619ae5ab"
+    },
+    {
+      "name": "Fiscal",
+      "route": "fiscal",
+      "theme": "Graphite",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "metrics": {
+        "page": "fiscal",
+        "theme": "Graphite",
+        "density": "compact",
+        "title": "Fiscal pressure — Meridian",
+        "heading": "Fiscal pressure",
+        "preparedPage": true,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "document": {
+          "width": 1440,
+          "height": 1920
+        },
+        "noPageOverflow": true,
+        "overflowing": [],
+        "firstNumber": {
+          "selector": "[data-fiscal-total-deficit] .metric-value",
+          "text": "$1.99T",
+          "top": 325.375,
+          "bottom": 356,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [
+          {
+            "series": "receiptsTtm,outlaysTtm,netInterestTtm",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/fiscal",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "fiscal-1440-graphite.jpg",
+      "bytes": 129278,
+      "sha256": "dea22ca029d7529dc3cd8d07e8d1b1eb5550a9de058d44da929b864e34e94a36"
+    },
+    {
+      "name": "Labor",
+      "route": "economy/labor",
+      "theme": "Graphite",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "metrics": {
+        "page": "labor",
+        "theme": "Graphite",
+        "density": "compact",
+        "title": "Labor market — Meridian",
+        "heading": "Labor market",
+        "preparedPage": true,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "document": {
+          "width": 1440,
+          "height": 5894
+        },
+        "noPageOverflow": true,
+        "overflowing": [],
+        "firstNumber": {
+          "selector": ".labor-headlines .labor-metric>strong",
+          "text": "29k",
+          "top": 352.6875,
+          "bottom": 385.078125,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [
+          {
+            "series": "underemployment",
+            "svg": true
+          },
+          {
+            "series": "payroll",
+            "svg": true
+          },
+          {
+            "series": "unrate",
+            "svg": true
+          },
+          {
+            "series": "realHourlyEarnings",
+            "svg": true
+          },
+          {
+            "series": "realWeeklyEarnings",
+            "svg": true
+          },
+          {
+            "series": "privateDiffusion1m,privateDiffusion3m,privateDiffusion6m",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/economy/labor",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "labor-1440-graphite.jpg",
+      "bytes": 163785,
+      "sha256": "9e04eda442c6cd9f08cd6518665b836ef9744c431a08edfb6828676067fa6eaa"
+    },
+    {
+      "name": "Calendar",
+      "route": "calendar",
+      "theme": "Graphite",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "metrics": {
+        "page": "calendar",
+        "theme": "Graphite",
+        "density": "compact",
+        "title": "Economic calendar — Meridian",
+        "heading": "Economic calendar",
+        "preparedPage": true,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "document": {
+          "width": 1440,
+          "height": 1944
+        },
+        "noPageOverflow": true,
+        "overflowing": [],
+        "firstNumber": {
+          "selector": ".calendar-previous[data-previous-period],.calendar-event td.mono",
+          "text": "10:00 am ET",
+          "top": 640.21875,
+          "bottom": 713.0625,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/calendar",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "calendar-1440-graphite.jpg",
+      "bytes": 119108,
+      "sha256": "2dcd35999e6ee6a37885a8d4a87dca1e9fdfac374f9706009dc6b5f8df74ba21"
+    },
+    {
+      "name": "Explore",
+      "route": "explore",
+      "theme": "Graphite",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "metrics": {
+        "page": "explore",
+        "theme": "Graphite",
+        "density": "compact",
+        "title": "Explore data — Meridian",
+        "heading": "Explore data",
+        "preparedPage": true,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "document": {
+          "width": 1440,
+          "height": 3278
+        },
+        "noPageOverflow": true,
+        "overflowing": [],
+        "firstNumber": {
+          "selector": ".catalog-reading>strong",
+          "text": "2.2%",
+          "top": 605.75,
+          "bottom": 626.75,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/explore",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "explore-1440-graphite.jpg",
+      "bytes": 115959,
+      "sha256": "f3b26ffb569289ad66b57a634917c69d9374a6e99088dad843f2b958ccdc7687"
+    },
+    {
+      "name": "Indicator",
+      "route": "series/unrate",
+      "theme": "Graphite",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "metrics": {
+        "page": "indicator",
+        "theme": "Graphite",
+        "density": "compact",
+        "title": "Unemployment rate — Meridian",
+        "heading": "Unemployment rate",
+        "preparedPage": true,
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "document": {
+          "width": 1440,
+          "height": 3395
+        },
+        "noPageOverflow": true,
+        "overflowing": [],
+        "firstNumber": {
+          "selector": ".indicator-native-reading .big-value",
+          "text": "4.2%",
+          "top": 260,
+          "bottom": 296,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [
+          {
+            "series": "unrate",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/series/unrate",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "indicator-1440-graphite.jpg",
+      "bytes": 121852,
+      "sha256": "c6b179749c1e14b1d96327cc5712c56410a0bca027500a0dc315de2d249e93bb"
+    },
+    {
+      "name": "Overview",
+      "route": "overview",
+      "theme": "Light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "metrics": {
+        "page": "overview",
+        "theme": "Light",
+        "density": "compact",
+        "title": "U.S. economy — Meridian",
+        "heading": "U.S. economy",
+        "preparedPage": true,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "document": {
+          "width": 390,
+          "height": 5114
+        },
+        "noPageOverflow": true,
+        "overflowing": [
+          {
+            "selector": "section.research-savebar",
+            "right": 693.453125,
+            "text": "Save research×Research nameSave viewSave snapshotSave view keeps a reu"
+          }
+        ],
+        "firstNumber": {
+          "selector": ".oh-reading .reading-value",
+          "text": "2.2%",
+          "top": 433.53125,
+          "bottom": 464.578125,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": {
+          "columns": 2,
+          "columnWidths": "181.5px 181.5px",
+          "scrollWidth": 364,
+          "width": 364,
+          "autoFlow": "row"
+        },
+        "charts": [
+          {
+            "series": "pceMonthly,pceCoreMonthly",
+            "svg": true
+          },
+          {
+            "series": "payrollAverage3m",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/overview",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "overview-390-light.jpg",
+      "bytes": 45321,
+      "sha256": "60ec7992e0d6169fd631e348cec343effb7d43f5a8b033a666f4fb56e274a1fc"
+    },
+    {
+      "name": "Fiscal",
+      "route": "fiscal",
+      "theme": "Light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "metrics": {
+        "page": "fiscal",
+        "theme": "Light",
+        "density": "compact",
+        "title": "Fiscal pressure — Meridian",
+        "heading": "Fiscal pressure",
+        "preparedPage": true,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "document": {
+          "width": 390,
+          "height": 3604
+        },
+        "noPageOverflow": true,
+        "overflowing": [
+          {
+            "selector": "section.research-savebar",
+            "right": 682.671875,
+            "text": "Save research×Research nameSave viewSave snapshotSave view keeps a reu"
+          }
+        ],
+        "firstNumber": {
+          "selector": "[data-fiscal-total-deficit] .metric-value",
+          "text": "$1.99T",
+          "top": 493.875,
+          "bottom": 519.0625,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [
+          {
+            "series": "receiptsTtm,outlaysTtm,netInterestTtm",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/fiscal",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "fiscal-390-light.jpg",
+      "bytes": 45281,
+      "sha256": "d6c56bc1d2be84fc3af9740357f24964073640fed9129393c79a4ed73b30bf84"
+    },
+    {
+      "name": "Labor",
+      "route": "economy/labor",
+      "theme": "Light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "metrics": {
+        "page": "labor",
+        "theme": "Light",
+        "density": "compact",
+        "title": "Labor market — Meridian",
+        "heading": "Labor market",
+        "preparedPage": true,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "document": {
+          "width": 390,
+          "height": 11474
+        },
+        "noPageOverflow": true,
+        "overflowing": [
+          {
+            "selector": "section.research-savebar",
+            "right": 490.296875,
+            "text": "Save research×Research nameSave viewSave snapshotSave view keeps a reu"
+          }
+        ],
+        "firstNumber": {
+          "selector": ".labor-headlines .labor-metric>strong",
+          "text": "29k",
+          "top": 578.34375,
+          "bottom": 610.734375,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [
+          {
+            "series": "underemployment",
+            "svg": true
+          },
+          {
+            "series": "payroll",
+            "svg": true
+          },
+          {
+            "series": "unrate",
+            "svg": true
+          },
+          {
+            "series": "realHourlyEarnings",
+            "svg": true
+          },
+          {
+            "series": "realWeeklyEarnings",
+            "svg": true
+          },
+          {
+            "series": "privateDiffusion1m,privateDiffusion3m,privateDiffusion6m",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/economy/labor",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "labor-390-light.jpg",
+      "bytes": 45041,
+      "sha256": "4703fb460e055c7455d66ce45b84ad9c038c0c3fb54a04f30f9dbf4c5db637b9"
+    },
+    {
+      "name": "Calendar",
+      "route": "calendar",
+      "theme": "Light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "metrics": {
+        "page": "calendar",
+        "theme": "Light",
+        "density": "compact",
+        "title": "Economic calendar — Meridian",
+        "heading": "Economic calendar",
+        "preparedPage": true,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "document": {
+          "width": 390,
+          "height": 3507
+        },
+        "noPageOverflow": true,
+        "overflowing": [
+          {
+            "selector": "section.research-savebar",
+            "right": 470.09375,
+            "text": "Save research×Research nameSave viewSave snapshotSave view keeps a reu"
+          }
+        ],
+        "firstNumber": {
+          "selector": ".calendar-previous[data-previous-period],.calendar-event td.mono",
+          "text": "10:00 am ET",
+          "top": 1005.90625,
+          "bottom": 1103.90625,
+          "visibleInFirstViewport": false
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/calendar",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "calendar-390-light.jpg",
+      "bytes": 38099,
+      "sha256": "6926260a7d8c37a59bf7480a6727fa4310d3fed20dc7d39887c9be8ed0538b31"
+    },
+    {
+      "name": "Explore",
+      "route": "explore",
+      "theme": "Light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "metrics": {
+        "page": "explore",
+        "theme": "Light",
+        "density": "compact",
+        "title": "Explore data — Meridian",
+        "heading": "Explore data",
+        "preparedPage": true,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "document": {
+          "width": 390,
+          "height": 6703
+        },
+        "noPageOverflow": true,
+        "overflowing": [
+          {
+            "selector": "section.research-savebar",
+            "right": 477.71875,
+            "text": "Save research×Research nameSave viewSave snapshotSave view keeps a reu"
+          }
+        ],
+        "firstNumber": {
+          "selector": ".catalog-reading>strong",
+          "text": "2.2%",
+          "top": 808.875,
+          "bottom": 828.875,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/explore",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "explore-390-light.jpg",
+      "bytes": 39745,
+      "sha256": "013db411cbdddfa11e883a9ab1f10d13361f23b30756a111e0b25bc0495d80c9"
+    },
+    {
+      "name": "Indicator",
+      "route": "series/unrate",
+      "theme": "Light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "metrics": {
+        "page": "indicator",
+        "theme": "Light",
+        "density": "compact",
+        "title": "Unemployment rate — Meridian",
+        "heading": "Unemployment rate",
+        "preparedPage": true,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "document": {
+          "width": 390,
+          "height": 4450
+        },
+        "noPageOverflow": true,
+        "overflowing": [],
+        "firstNumber": {
+          "selector": ".indicator-native-reading .big-value",
+          "text": "4.2%",
+          "top": 465.5,
+          "bottom": 501.5,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [
+          {
+            "series": "unrate",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/series/unrate",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "indicator-390-light.jpg",
+      "bytes": 48597,
+      "sha256": "9354d772bf399e62ca44c069ea4cc5c1a1953d7b4dca071c6f6471602f371cae"
+    },
+    {
+      "name": "Overview",
+      "route": "overview",
+      "theme": "Graphite",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "metrics": {
+        "page": "overview",
+        "theme": "Graphite",
+        "density": "compact",
+        "title": "U.S. economy — Meridian",
+        "heading": "U.S. economy",
+        "preparedPage": true,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "document": {
+          "width": 390,
+          "height": 5095
+        },
+        "noPageOverflow": true,
+        "overflowing": [
+          {
+            "selector": "section.research-savebar",
+            "right": 693.453125,
+            "text": "Save research×Research nameSave viewSave snapshotSave view keeps a reu"
+          }
+        ],
+        "firstNumber": {
+          "selector": ".oh-reading .reading-value",
+          "text": "2.2%",
+          "top": 433.53125,
+          "bottom": 464.578125,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": {
+          "columns": 2,
+          "columnWidths": "181.5px 181.5px",
+          "scrollWidth": 364,
+          "width": 364,
+          "autoFlow": "row"
+        },
+        "charts": [
+          {
+            "series": "pceMonthly,pceCoreMonthly",
+            "svg": true
+          },
+          {
+            "series": "payrollAverage3m",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/overview",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "overview-390-graphite.jpg",
+      "bytes": 45122,
+      "sha256": "e1d896093dca29427627af96afaf7bf4311a22492d57794df9c4e2fffd4a7c40"
+    },
+    {
+      "name": "Fiscal",
+      "route": "fiscal",
+      "theme": "Graphite",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "metrics": {
+        "page": "fiscal",
+        "theme": "Graphite",
+        "density": "compact",
+        "title": "Fiscal pressure — Meridian",
+        "heading": "Fiscal pressure",
+        "preparedPage": true,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "document": {
+          "width": 390,
+          "height": 3584
+        },
+        "noPageOverflow": true,
+        "overflowing": [
+          {
+            "selector": "section.research-savebar",
+            "right": 682.671875,
+            "text": "Save research×Research nameSave viewSave snapshotSave view keeps a reu"
+          }
+        ],
+        "firstNumber": {
+          "selector": "[data-fiscal-total-deficit] .metric-value",
+          "text": "$1.99T",
+          "top": 493.875,
+          "bottom": 519.0625,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [
+          {
+            "series": "receiptsTtm,outlaysTtm,netInterestTtm",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/fiscal",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "fiscal-390-graphite.jpg",
+      "bytes": 45324,
+      "sha256": "5a6c03cbe5a6310823967699c76dc063734de1b41ac6dea66e2ca5b2d1e2fc5b"
+    },
+    {
+      "name": "Labor",
+      "route": "economy/labor",
+      "theme": "Graphite",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "metrics": {
+        "page": "labor",
+        "theme": "Graphite",
+        "density": "compact",
+        "title": "Labor market — Meridian",
+        "heading": "Labor market",
+        "preparedPage": true,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "document": {
+          "width": 390,
+          "height": 11455
+        },
+        "noPageOverflow": true,
+        "overflowing": [
+          {
+            "selector": "section.research-savebar",
+            "right": 490.296875,
+            "text": "Save research×Research nameSave viewSave snapshotSave view keeps a reu"
+          }
+        ],
+        "firstNumber": {
+          "selector": ".labor-headlines .labor-metric>strong",
+          "text": "29k",
+          "top": 578.34375,
+          "bottom": 610.734375,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [
+          {
+            "series": "underemployment",
+            "svg": true
+          },
+          {
+            "series": "payroll",
+            "svg": true
+          },
+          {
+            "series": "unrate",
+            "svg": true
+          },
+          {
+            "series": "realHourlyEarnings",
+            "svg": true
+          },
+          {
+            "series": "realWeeklyEarnings",
+            "svg": true
+          },
+          {
+            "series": "privateDiffusion1m,privateDiffusion3m,privateDiffusion6m",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/economy/labor",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "labor-390-graphite.jpg",
+      "bytes": 45226,
+      "sha256": "fe9fa174e78325bd51b1f9372a2702229db701204c39c5dc46fa075aa5b9873e"
+    },
+    {
+      "name": "Calendar",
+      "route": "calendar",
+      "theme": "Graphite",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "metrics": {
+        "page": "calendar",
+        "theme": "Graphite",
+        "density": "compact",
+        "title": "Economic calendar — Meridian",
+        "heading": "Economic calendar",
+        "preparedPage": true,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "document": {
+          "width": 390,
+          "height": 3487
+        },
+        "noPageOverflow": true,
+        "overflowing": [
+          {
+            "selector": "section.research-savebar",
+            "right": 470.09375,
+            "text": "Save research×Research nameSave viewSave snapshotSave view keeps a reu"
+          }
+        ],
+        "firstNumber": {
+          "selector": ".calendar-previous[data-previous-period],.calendar-event td.mono",
+          "text": "10:00 am ET",
+          "top": 1005.90625,
+          "bottom": 1103.90625,
+          "visibleInFirstViewport": false
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/calendar",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "calendar-390-graphite.jpg",
+      "bytes": 38430,
+      "sha256": "29e8b37968b7a1e8caf18ae418a592d27cd1776368d9a044e57c3d4d1db5ac04"
+    },
+    {
+      "name": "Explore",
+      "route": "explore",
+      "theme": "Graphite",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "metrics": {
+        "page": "explore",
+        "theme": "Graphite",
+        "density": "compact",
+        "title": "Explore data — Meridian",
+        "heading": "Explore data",
+        "preparedPage": true,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "document": {
+          "width": 390,
+          "height": 6683
+        },
+        "noPageOverflow": true,
+        "overflowing": [
+          {
+            "selector": "section.research-savebar",
+            "right": 477.71875,
+            "text": "Save research×Research nameSave viewSave snapshotSave view keeps a reu"
+          }
+        ],
+        "firstNumber": {
+          "selector": ".catalog-reading>strong",
+          "text": "2.2%",
+          "top": 808.875,
+          "bottom": 828.875,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/explore",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "explore-390-graphite.jpg",
+      "bytes": 39827,
+      "sha256": "05d0325448a635f6eee991920dc6650467b7a5aa0d89f199a1ef6e44fecb57d7"
+    },
+    {
+      "name": "Indicator",
+      "route": "series/unrate",
+      "theme": "Graphite",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "metrics": {
+        "page": "indicator",
+        "theme": "Graphite",
+        "density": "compact",
+        "title": "Unemployment rate — Meridian",
+        "heading": "Unemployment rate",
+        "preparedPage": true,
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "document": {
+          "width": 390,
+          "height": 4430
+        },
+        "noPageOverflow": true,
+        "overflowing": [],
+        "firstNumber": {
+          "selector": ".indicator-native-reading .big-value",
+          "text": "4.2%",
+          "top": 465.5,
+          "bottom": 501.5,
+          "visibleInFirstViewport": true
+        },
+        "rootFontSize": 14,
+        "fontMinimum": 13,
+        "fontOffenders": [],
+        "fontFamily": "system-ui, sans-serif",
+        "monospaceFamily": "ui-monospace, monospace",
+        "overviewGrid": null,
+        "charts": [
+          {
+            "series": "unrate",
+            "svg": true
+          }
+        ],
+        "cspViolations": []
+      },
+      "url": "http://127.0.0.1:4225/#/series/unrate",
+      "errors": [],
+      "httpErrors": [],
+      "failedRequests": [],
+      "issues": [],
+      "file": "indicator-390-graphite.jpg",
+      "bytes": 49238,
+      "sha256": "49db190828af2d76186e0e2c9398e693835fbb4f0e13b55b47deee5eda8f4303"
+    }
+  ],
+  "failures": [],
+  "totalJpegBytes": 2108766
+}

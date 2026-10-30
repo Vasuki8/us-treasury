@@ -15,7 +15,7 @@ import {parseCsv} from '../scripts/sources/http.mjs';
 
 test('external economy adds total and component trailing charts with a single shared control set',()=>{
  const html=macroCoveragePage(parseRoute('#/economy?family=external&section=trends&window=all'));
- assert.match(html,/TRAILING FOUR QUARTERS · CURRENT ACCOUNT \/ GDP/);
+ assert.match(html,/TRAILING FOUR QUARTERS · CURRENT ACCOUNT \/ GDP/i);
  assert.equal((html.match(/id="window-start"/g)??[]).length,1);
  assert.equal((html.match(/data-chart-catalog="current-account-gdp-trailing"/g)??[]).length,2);
  assert.match(html,/data-export-current-account-gdp-trailing/);

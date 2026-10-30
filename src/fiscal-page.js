@@ -1,8 +1,9 @@
 import {supportingDetails} from './page-hierarchy.js';
 import {dataStatus} from './data.js';
 import { fiscalGdpPanel } from './fiscal-gdp-view.js';
-import {fiscalContributors,fiscalCategoryChanges} from './fiscal.js';
-import {getSeries,latest,formatValue} from './model.js';
+import {fiscalContributors,fiscalCategoryChanges,deriveFiscalSeries} from './fiscal.js';
+import {getSeries,latest,formatValue,periodLabel} from './model.js';
+import {formatDisplayValue} from './display-format.js';
 import {heading,button,panel,metrics,chart,seriesTable,table,emptyState,escapeHtml as esc} from './ui.js';
 const money=value=>typeof value==='number'&&Number.isFinite(value)
   ?`${value<0?'−':''}$${Math.abs(value).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}B`:'Unavailable';
@@ -10,19 +11,36 @@ const row=(name,value,detail='')=>`<tr><th scope="row">${esc(name)}</th><td clas
 const contributorRow=(name,value,detail)=>`<tr><th scope="row">${esc(name)}<span class="fiscal-contributor-note">${esc(detail)}</span></th><td class="num">${esc(money(value))}</td></tr>`;
 export function fiscalPage(source=dataStatus.sources.fiscal){
   const attribution=fiscalContributors(source),capture=source?.monthly?.at(-1),categories=fiscalCategoryChanges(source);
+  const derived=deriveFiscalSeries(source),receipts=latest(derived.receiptsTtm),outlays=latest(derived.outlaysTtm);
+  const total=receipts?.date===outlays?.date&&Number.isFinite(receipts?.value)&&Number.isFinite(outlays?.value)
+    ?outlays.value-receipts.value:null;
+  const totalCard='<div class="metric" data-fiscal-total-deficit><span class="metric-name">Total deficit</span>'
+    +`<strong class="metric-value">${esc(formatDisplayValue({format:'billions'},total,{currencyUnit:'T'}))}</strong>`
+    +`<span class="metric-period">${esc(periodLabel(getSeries('outlaysTtm'),outlays?.date))} · Trailing 12 months</span>`
+    +'<span class="metric-basis">Outlays − receipts · USD trillions</span></div>';
   const contributors=attribution?`<p class="panel-note">${esc(attribution.date.slice(0,7))} versus ${esc(attribution.priorDate.slice(0,7))} · Monthly, USD billions. Positive contributions widen the deficit; negative contributions narrow it.</p>${table(['ACCOUNTING CONTRIBUTOR',{label:'DEFICIT CHANGE',numeric:true}],contributorRow('Receipts',attribution.receipts,'The sign of the receipts change is reversed.')+contributorRow('Primary outlays',attribution.primaryOutlays,'Outlays excluding net budget interest.')+contributorRow('Net budget interest',attribution.netInterest,'Net budget cost, not gross Treasury interest expense.')+contributorRow('Total deficit change',attribution.deficitChange,'Sum of the three accounting contributors.'))}`:emptyState('Year-over-year attribution unavailable.','Matching current and year-ago monthly receipts, outlays and net interest are required.');
   const financing=capture?`<p class="panel-note">Reference month ${esc(capture.date.slice(0,7))} · fiscal year ${esc(capture.fiscalYear)}.</p>`+table(['MTS MONTHLY FINANCING',{label:'USD BILLIONS',numeric:true},'BASIS'],row('Budget deficit',capture.deficit,'Positive deficit; negative surplus.')+row('Borrowing from the public',capture.borrowingPublic,'Cash financing flow, not change in gross debt.')+row('Cash balance reduction',capture.cashReduction,'A cash balance increase has the opposite sign.')+row('Other financing',capture.otherFinancing,'Other means of financing under MTS definitions.')+row('Calculated source residual',capture.financingResidual,'Reported deficit minus the three reported financing lines.')):emptyState('Monthly financing unavailable.','No deficit-to-debt-change equality is inferred.');
   const publicDebt=getSeries('publicDebt'),grossDebt=getSeries('debt');
   const debt=`<div class="definitions"><div class="definition"><h3>Gross debt and debt held by the public</h3><p>Gross debt: ${esc(formatValue(grossDebt,latest(grossDebt)?.value))}, ${esc(latest(grossDebt)?.date??'unavailable')}. Debt held by the public: ${esc(formatValue(publicDebt,latest(publicDebt)?.value))}, ${esc(latest(publicDebt)?.date??'unavailable')}. Each stock retains its own observation date.</p><p>Gross debt includes intragovernmental holdings. Debt held by the public includes Federal Reserve holdings; it is broader than private investors’ holdings.</p></div><div class="definition"><h3>The deficit is not the change in debt</h3><p>The budget deficit is a flow. Borrowing also reflects the Treasury cash balance and other financing adjustments. Gross debt additionally includes intragovernmental changes. The financing table uses aligned MTS monthly definitions; daily debt changes are not substituted for it.</p></div></div>`;
+  const basis=(`<section class="fiscal-basis" aria-label="Fiscal source and basis"><p `+
+  `class="panel-note"><strong>SOURCE &amp; BASIS.</strong> Monthly Treasury Statement · ${source?.fetchedAt?`MTS retrieved ${esc
+  (source.fetchedAt)} · ${source.status==='ok'?'Captured':'CACHED'}.`:'Fiscal source unavailable.'
+  } Actual release date: unknown unless supplied by the source.</p><p `+
+  `class="panel-note">Exact trailing 12-month totals, distinct from fiscal-year-to-date `+
+  `values. Monthly flows are seasonal and not seasonally adjusted.</p><p class="panel-note">${esc(source?.coverageNote
+  ??'Fiscal observations are unavailable until a validated official capture succeeds.')}${source?.error?` <span class="amber" role="alert">${esc
+  (source.error)}</span>`:''}</p></section>`);
   return `<div class="fiscal-workspace">`+heading('FISCAL PRESSURE','Receipts, spending and net budget interest · official observations + calculated metrics',button('COMPARE TRENDS','data-compare="receiptsTtm,outlaysTtm,netInterestTtm"')+button('CSV FISCAL','data-export-fiscal')+button('CSV FINANCING','data-export-fiscal-financing'))
-    +`<section class="fiscal-basis" aria-label="Fiscal source and basis"><p class="panel-note"><strong>SOURCE &amp; BASIS.</strong> Monthly Treasury Statement · ${source?.fetchedAt?`MTS retrieved ${esc(source.fetchedAt)} · ${source.status==='ok'?'Captured':'CACHED'}.`:'Fiscal source unavailable.'} Actual release date: unknown unless supplied by the source.</p><p class="panel-note">Exact trailing 12-month totals, distinct from fiscal-year-to-date values. Monthly flows are seasonal and not seasonally adjusted.</p><p class="panel-note">${esc(source?.coverageNote??'Fiscal observations are unavailable until a validated official capture succeeds.')}${source?.error?` <span class="amber" role="alert">${esc(source.error)}</span>`:''}</p></section>`
+    +(source?.error?`<p class="panel-note amber" role="alert">${esc(source.error)}</p>`:'')
     +`<div class="fiscal-summary"><section class="fiscal-ttm" aria-label="Trailing 12-month fiscal activity">`
-    +`<h2>ANNUAL FISCAL ACTIVITY</h2>${metrics(
+    +(`<h2>Annual fiscal activity</h2>${totalCard}${metrics(
       ['receiptsTtm','outlaysTtm','primaryDeficitTtm','netInterestTtm','interestRevenueRatio'],
       {label:'Trailing 12-month fiscal readings',showBasis:true,currencyUnit:'T'},
-    )}<p class="fiscal-reading-note">Net budget interest is not gross Treasury interest expense. `
+    )}<p class="fiscal-reading-note">Exact trailing 12-month totals, distinct from `+
+  `fiscal-year-to-date values. Monthly flows are seasonal and not seasonally adjusted. Net `+
+  `budget interest is not gross Treasury interest expense. `)
     +`Positive deficits are shortfalls; negative values are surpluses.</p></section>`
-    +`<aside class="fiscal-stock" aria-label="Daily public debt stock"><h2>DEBT STOCK <span>Daily observation</span></h2>`
+    +`<aside class="fiscal-stock" aria-label="Daily public debt stock"><h2>Debt stock <span>Daily observation</span></h2>`
     +metrics(['publicDebt'],{label:'Daily public debt reading',showBasis:true,currencyUnit:'T'})
     +`<p class="fiscal-reading-note">Includes Federal Reserve holdings. `
     +`The deficit is a flow, distinct from the change in debt.</p></aside></div>`
@@ -31,6 +49,22 @@ export function fiscalPage(source=dataStatus.sources.fiscal){
     +supportingDetails('fiscal:monthly-research','Monthly flows, category changes & cash financing',panel('03','MONTHLY OBSERVATIONS',seriesTable(['receipts','outlays','netInterest','budgetDeficit','primaryDeficit']),'','Receipts, outlays and net budget interest are official observations; deficits are calculated. Positive deficits are shortfalls; negative values are surpluses.')
     +panel('04','LARGEST NAMED CATEGORY CHANGES',categories.length?table(['RECEIPT / OUTLAY CATEGORY',{label:'DEFICIT CONTRIBUTION',numeric:true},'GROUP'],categories.slice(0,8).map(item=>row(item.name,item.deficitContribution,item.group)).join('')):emptyState('Comparable category changes unavailable.'),'','Largest absolute same-month year-over-year changes among matching source categories. This selected list is not a complete additive decomposition; unmatched or missing categories are omitted.')
     +panel('05','CASH BALANCE & OTHER FINANCING',financing,'','Deficit = borrowing from the public + cash balance reduction + other financing + calculated source residual. Source discrepancies remain visible.'))
-    +supportingDetails('fiscal:definitions-methods','Debt definitions & fiscal methodology',panel('06','DEBT DEFINITIONS',debt)
-    +panel('07','WHY IT MATTERS & LIMITATIONS',`<div class="explain"><p><strong>WHY IT MATTERS.</strong> Net interest relative to receipts describes how much current revenue is absorbed by net budget interest. Primary balances separate this cost from other spending and receipts. These are fiscal accounting measures, not predictions of default or yields.</p><p><strong>LIMITATIONS.</strong> The U.S. fiscal year begins October 1; trailing 12-month windows can cross fiscal years. Timing shifts and legislation can affect comparisons; this accounting decomposition does not identify causes.</p><p><strong>Methodology.</strong> Deficit = outlays − receipts. Primary deficit = deficit − net budget interest. Interest / revenue = 100 × TTM net interest / TTM receipts; a missing month or zero denominator produces no ratio. Release dates are distinct from month-end reference dates and retrieval dates.</p><p><a href="https://fiscaldata.treasury.gov/datasets/monthly-treasury-statement/" target="_blank" rel="noopener noreferrer">Treasury Monthly Treasury Statement ↗</a> · <a href="https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/" target="_blank" rel="noopener noreferrer">Debt to the Penny ↗</a>. Units, calculations, source identifiers and retrievals accompany each indicator and CSV.</p></div>`))+'</div>';
+    +supportingDetails('fiscal:definitions-methods','About this data',basis+panel('06','DEBT DEFINITIONS',debt)
+    +panel('07','WHY IT MATTERS & LIMITATIONS',(`<div class="explain"><p><strong>WHY IT MATTERS.</strong> Net interest relative to receipts `+
+  `describes how much current revenue is absorbed by net budget interest. Primary balances `+
+  `separate this cost from other spending and receipts. These are fiscal accounting measures, `+
+  `not predictions of default or yields.</p><p><strong>LIMITATIONS.</strong> The U.S. fiscal `+
+  `year begins October 1; trailing 12-month windows can cross fiscal years. Timing shifts and `+
+  `legislation can affect comparisons; this accounting decomposition does not identify `+
+  `causes.</p><p><strong>Derived.</strong> The total deficit card uses aligned trailing `+
+  `12-month outlays minus receipts; missing inputs remain `+
+  `unavailable.</p><p><strong>Methodology.</strong> Deficit = outlays − receipts. Primary `+
+  `deficit = deficit − net budget interest. Interest / revenue = 100 × TTM net interest / TTM `+
+  `receipts; a missing month or zero denominator produces no ratio. Release dates are `+
+  `distinct from month-end reference dates and retrieval dates.</p><p><a `+
+  `href="https://fiscaldata.treasury.gov/datasets/monthly-treasury-statement/" `+
+  `target="_blank" rel="noopener noreferrer">Treasury Monthly Treasury Statement ↗</a> · <a `+
+  `href="https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/" target="_blank" `+
+  `rel="noopener noreferrer">Debt to the Penny ↗</a>. Units, calculations, source identifiers `+
+  `and retrievals accompany each indicator and CSV.</p></div>`)))+'</div>';
 }

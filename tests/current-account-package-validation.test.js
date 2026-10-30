@@ -88,7 +88,7 @@ test('valid missing balances, gaps and an unavailable source remain renderable r
   for (const currentAccountInputs of [missing, { status: 'unavailable', series: {}, error: 'No capture' }]) {
     const pkg = await importResearchPackage(withContext(currentAccountInputs));
     const html = researchPage({ ...parseRoute('#/research?view=packages'), packageId: pkg.id }, { library: { packages: [pkg] } });
-    assert.match(html, /FROZEN CURRENT ACCOUNT/);
+    assert.match(html, /FROZEN CURRENT ACCOUNT/i);
     assert.match(html, /Unavailable|unavailable/);
     assert.doesNotMatch(html, /data-export-current-account/);
   }

@@ -20,7 +20,7 @@ test('Overview has eight distinct primary reading cells and native momentum char
  assert.match(primary(html,'gdp'),/q\/q SAAR/);
  assert.match(primary(html,'pceCore'),/y\/y/);
  assert.match(primary(html,'interestRevenueRatio'),/TTM/);
- assert.match(primary(html,'payroll'),/Change in gains/);
+ assert.match(primary(html,'payroll'),/Prior month:/);
  assert.match(html,/data-series="pceMonthly,pceCoreMonthly"/);
  assert.match(html,/data-series="payrollAverage3m"/);
  assert.doesNotMatch(html,/data-series="payroll"/);
@@ -36,7 +36,7 @@ test('Overview latest readings ignore inherited historical windows while retaini
  try{
   const html=render({window:'custom',startDate:'2025-01-01',endDate:'2025-01-01',transform:'change'}),reading=primary(html,'payroll');
   assert.ok(reading.includes(formatValue(current,177)));
-  assert.match(reading,/Sep 2026/);assert.match(reading,/Change in gains \+77k vs Jan 2025/);
+  assert.match(reading,/Sep 2026/);assert.match(reading,/Prior retained reading: 100k/);
   assert.match(html,/href="#\/series\/payroll(?:\?|\")/);
  }finally{current.observations=saved;}
 });
@@ -62,7 +62,7 @@ test('Overview supports each activity measure and distinct weekly claim referenc
  for(const id of ['realSpendingMonthly','realDisposableIncomeMonthly','industrialProduction','claimsAdvance','continuedClaimsAdvance','effr','publicDebt','policyTargetLower'])assert.ok(html.includes(`#/series/${id}`),id);
  const claims=html.slice(html.indexOf('data-overview-disclosure="weekly-claims"'),html.indexOf('data-overview-disclosure="my-research"'));
  for(const id of ['claimsAdvance','continuedClaimsAdvance'])assert.ok(claims.includes(latest(getSeries(id)).date));
- assert.match(claims,/ESTIMATE ROLE/);assert.match(claims,/Advance/);assert.match(claims,/Reported publication 2026-10-22 · day precision/);
+ assert.match(claims,/Estimate role/);assert.match(claims,/Advance/);assert.match(claims,/Reported publication 22 Oct 2026 · day precision/);
  assert.doesNotMatch(claims,/Verified|verified/);
  const current=getSeries('continuedClaimsAdvance'),saved=current.observations;
  try{current.observations=[{date:'2026-10-03',value:1700,releaseStage:'prior-week-revised'}];assert.match(render(),/Prior week · revised in same release/);}finally{current.observations=saved;}
@@ -75,7 +75,8 @@ test('Overview groups four distinct future programs using supplied now and prese
   dataStatus.calendar.sources.bls={...source,status:'error',fetchedAt:'2026-10-22T22:00:00Z'};
   const html=render({saved:['unrate']});
   assert.equal((html.match(/class="oh-event-day"/g)??[]).length,2);assert.equal((html.match(/class="oh-event"/g)??[]).length,4);
-  assert.match(html,/Time not supplied/);assert.match(html,/CACHED SCHEDULE/);assert.match(html,/FOLLOWING/);assert.match(html,/LISTED SCHEDULE/);
+  assert.doesNotMatch(html,/Time not supplied/);
+  assert.match(html,/Cached schedule/);assert.match(html,/Following/);assert.match(html,/Listed schedule/);
   assert.doesNotMatch(html,/Program e|market surprise score|consensus forecast/);
   assert.match(html,/schedule does not confirm a result/);
  }finally{releases.splice(0,releases.length,...saved);dataStatus.calendar.sources.bls=source;}
@@ -86,7 +87,9 @@ test('Overview reviewed archives keep historical period and clocks without repea
  row.id=`dol-${row.seriesId}-${row.period}-${row.releaseStage}-${row.publicationDate}`;
  const html=render({}, {publicationContexts:{claims:{status:'ready',archive:{releases:[row]}},gdp:{status:'error',error:'<unsafe> archive'}}});
  const publications=html.slice(html.indexOf('data-overview-disclosure="publications"'),html.indexOf('class="oh-support"'));
- assert.match(publications,/reference 2026-03-14/);assert.match(publications,/Published 2026-03-19 · day precision/);assert.match(publications,/Captured 2026-10-22T22:00:00\.000Z/);
+ assert.match(publications,/reference 14 Mar 2026/);
+ assert.match(publications,/Published 19 Mar 2026 · day precision/);
+ assert.match(publications,/Captured 6:00 pm ET, 22 Oct/);
  assert.match(publications,/GDP: Publication evidence unavailable/);assert.match(publications,/&lt;unsafe&gt; archive/);
  assert.doesNotMatch(publications,/202k|new publication today|Released today/);
  assert.match(publications,/Historical publications captured recently are not new releases today/);

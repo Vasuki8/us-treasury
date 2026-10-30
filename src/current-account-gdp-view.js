@@ -3,6 +3,7 @@ import {currentAccountGdpContext,currentAccountGdpHistory} from './current-accou
 import {BEA_ITA_URL,BEA_ITA_LICENSE,currentAccountRegistry} from './current-account-registry.js';
 import {csvCell,tabularCsv} from './model.js';
 import {panel,table,button,escapeHtml as esc} from './ui.js';
+import {humanTimestamp} from './ui-time.js';
 
 const GDP_URL='https://apps.bea.gov/national/Release/TXT/NipaDataQ.txt';
 const CREDIT='Source: U.S. Bureau of Economic Analysis. Ratio calculated by Meridian.';
@@ -26,7 +27,11 @@ export function currentAccountGdpInput(source={},id){
 function inputs(sources,numeratorId='currentAccountBalance'){return {numerator:currentAccountGdpInput(sources?.beaIta,numeratorId),denominator:currentAccountGdpInput(sources?.bea,'nominalGdp')};}
 function sourceStatus(details,label,frozen,compact=false){
  const status=details.status==='official'?'Official capture':details.status==='cached'?'Cached input':'Unavailable';
- return `<p class="panel-note"><strong>${esc(label)} · ${esc(frozen?'Recorded '+status:status)}</strong> · Retrieved ${esc(details.retrievedAt??'not recorded')}.${details.source?.error?` <span class="amber">${esc(details.source.error)}</span>`:''}${compact?'':` <a href="${esc(safeUrl(details.url,label==='Nominal GDP'?GDP_URL:BEA_ITA_URL))}" target="_blank" rel="noopener noreferrer">${esc(details.title)} ↗</a>`}</p>`;
+ return `<p class="panel-note"><strong>${esc(label)} · ${esc(frozen?'Recorded '+status:status)}</strong> · Retrieved `
+  +`${esc(humanTimestamp(details.retrievedAt)||'not recorded')}.`
+  +`${details.source?.error?` <span class="amber">${esc(details.source.error)}</span>`:''}`
+  +(compact?'':` <a href="${esc(safeUrl(details.url,label==='Nominal GDP'?GDP_URL:BEA_ITA_URL))}"`
+   +` target="_blank" rel="noopener noreferrer">${esc(details.title)} ↗</a>`)+'</p>';
 }
 export function currentAccountGdpSourceStatus(sources={}, {frozen=false,numeratorId='currentAccountBalance'}={}){
  const id=Object.hasOwn(currentAccountRegistry,numeratorId)?numeratorId:'currentAccountBalance',label=id==='currentAccountBalance'?'Current account':currentAccountRegistry[id].name;
@@ -38,22 +43,30 @@ export function currentAccountGdpSourceStatus(sources={}, {frozen=false,numerato
 export function currentAccountGdpPanel(sources={}, {frozen=false,compact=false}={}){
  const result=currentAccountGdpContext(sources),{numerator,denominator}=inputs(sources);
  const rows=[result.current,result.previous].map(point=>`<tr><th scope="row">${esc(quarter(point.date))}${point.reason?`<span class="table-code amber">${esc(point.reason)}</span>`:''}</th><td class="num">${esc(percent(point.value))}</td><td class="num">${esc(amount(point.currentAccountBalance))}</td><td class="num">${esc(amount(point.nominalGdpSaar))}</td><td class="num">${esc(amount(point.nominalGdpQuarter))}</td></tr>`).join('');
- const summary=`<p class="panel-note"><strong>${frozen?'Frozen calculated metric · recorded inputs':'Calculated metric · captured BEA inputs'}</strong>. ${esc(quarter(result.date))}: ${esc(percent(result.current.value))} of nominal GDP. Change from the exact preceding quarter: ${esc(number(result.change))} percentage points.</p>`;
+ const summary=`<p class="panel-note"><strong>${frozen?'Derived · recorded inputs':'Derived · captured BEA inputs'}</strong>. ${esc(quarter
+  (result.date))}: ${esc(percent(result.current.value))} of nominal GDP. Change from the exact preceding quarter: ${esc(number(result.change))
+  } percentage points.</p>`;
  const evidence=table(['REFERENCE QUARTER',{label:'RATIO / NOMINAL GDP',numeric:true},{label:'CURRENT ACCOUNT · QUARTER',numeric:true},{label:'NOMINAL GDP · SAAR',numeric:true},{label:'GDP · SAAR ÷ 4',numeric:true}],rows,'Calculated current-account-to-GDP ratio with exact-quarter inputs and annual-rate conversion')
   +`<p class="panel-note"><strong>Calculation:</strong> ${esc(result.formula)}. Numerator and denominator use USD billions; only GDP is divided by four. Negative is deficit, positive surplus.</p>`;
- const readings=readingGroup('CURRENT ACCOUNT RATIO READINGS',`<div class="metrics">${[result.current,result.previous].map((point,index)=>`<div class="metric"><span class="metric-name">${index?'Exact preceding quarter':'Latest retained quarter'}</span><strong class="metric-value">${esc(percent(point.value))}</strong><span class="metric-period">${esc(quarter(point.date))}</span><span class="metric-basis">Percent of nominal GDP · calculated</span>${point.reason?`<span class="metric-change amber">${esc(point.reason)}</span>`:''}</div>`).join('')}</div>`,'Quarterly current-account balance / (nominal GDP SAAR ÷ 4). Both flows use USD billions; only GDP is divided by four. Negative is deficit, positive surplus.');
+ const readings=readingGroup('CURRENT ACCOUNT RATIO READINGS',`<div class="metrics">${[result.current,result.previous].map((point,index)=>
+  `<div class="metric"><span class="metric-name">${index?'Exact preceding quarter':'Latest retained quarter'
+  }</span><strong class="metric-value">${esc(percent(point.value))}</strong><span class="metric-period">${esc(quarter(point.date))
+  }</span><span class="metric-basis">Percent of nominal GDP</span>${point.reason?`<span class="metric-change amber">${esc(point.reason)}</span>`:
+  ''}</div>`).join('')}</div>`,('Quarterly current-account balance / (nominal GDP SAAR ÷ 4). Both flows use USD billions; '+
+  'only GDP is divided by four. Negative is deficit, positive surplus.'));
  const contextEvidence=`<p class="panel-note">${frozen?'These recorded quarters are retained in the frozen result.':'This latest-quarter context is separate from the focused history window.'}</p>`
   +sourceStatus(numerator,'Current account',frozen)+sourceStatus(denominator,'Nominal GDP',frozen)
   +`<p class="panel-note">ITA table release date: ${esc(sources?.beaIta?.tableReleaseDate??'unknown')}; it does not date the GDP input. GDP publication date: ${esc(result.current.denominatorObservation?.publishedAt??'unknown')}. Publication dates and retrieval dates remain distinct. Inputs can have different retrieval vintages; either input can revise.</p>`
   +`<p class="panel-note">This compares the international balance with the size of domestic production. It is not an exact GDP accounting component or a causal explanation. ${esc(result.notice)}</p>`;
  const sourceCredit=`<p class="panel-note">${CREDIT} <a href="${esc(safeUrl(numerator.license,BEA_ITA_LICENSE))}" target="_blank" rel="noopener noreferrer">ITA reuse terms ↗</a> · <a href="${esc(safeUrl(denominator.license,BEA_ITA_LICENSE))}" target="_blank" rel="noopener noreferrer">GDP reuse terms ↗</a></p>`;
  const inputEvidence=supportingDetails(`current-account-gdp:${frozen?'frozen:':''}inputs`,'Exact quarterly inputs & ratio formula',evidence);
- const body=compact?readings
-  +`<p class="panel-note"><strong>Calculated metric.</strong> Change from the exact preceding quarter: ${esc(number(result.change))} percentage points. Latest-quarter context is independent of the history window.</p>`
-  +sourceStatus(numerator,'Current account',frozen,true)+sourceStatus(denominator,'Nominal GDP',frozen,true)
-  +`<p class="panel-note">ITA table release date: ${esc(sources?.beaIta?.tableReleaseDate??'unknown')}; GDP publication date: ${esc(result.current.denominatorObservation?.publishedAt??'unknown')}. Reference quarters, publication and retrieval clocks are distinct; revised inputs can have different retrieval vintages.</p><p class="panel-note">This ratio is not an exact GDP accounting component and is not a causal explanation. ${CREDIT}</p>`
-  +inputEvidence+supportingDetails('current-account-gdp:context-evidence','Ratio context, methods & source evidence',contextEvidence+sourceCredit)
-  :summary+readings+contextEvidence+inputEvidence+sourceCredit;
+ const failures=[numerator,denominator].filter(item=>item.source?.error)
+  .map(item=>`<p class="panel-note amber" role="status">${esc(item.source.error)}</p>`).join('');
+ const body=readings
+  +`<p class="panel-note">Change from the exact preceding quarter: ${esc(number(result.change))} percentage points.</p>`
+  +'<p class="panel-note">This ratio is not an exact GDP accounting component or a causal explanation.</p>'
+  +failures+inputEvidence+supportingDetails('current-account-gdp:context-evidence','About this data',
+   summary+contextEvidence+sourceCredit);
  return panel('G',`${frozen?'FROZEN ':''}CURRENT ACCOUNT / NOMINAL GDP`,body,frozen?'':button('CSV RATIO & INPUTS',`data-export-current-account-gdp${!result.date?' disabled title="A retained current-account quarter is required."':''}`));
 }
 

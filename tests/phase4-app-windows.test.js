@@ -39,6 +39,16 @@ test('actual bare hash navigation resolves the window after retaining the real s
  }
 });
 
+test('the first catalog selection chooses its frequency default without replacing explicit windows',()=>{
+ for(const [id,window] of [['gdp','5y'],['yield','1y']]){
+  const view=app('#/explore');view.navigate({selected:[id]});assert.equal(view.state().window,window);
+ }
+ for(const request of ['window=1y','window=custom&start=2024-01-01&end=2025-01-01','range=6']){
+  const view=app('#/explore?'+request),expected=view.state().window;
+  view.navigate({selected:['gdp']});assert.equal(view.state().window,expected);
+ }
+});
+
 test('actual app transitions preserve explicit origin, saved-view and controlled module windows',async()=>{
  const requests=['window=1y','window=custom&start=2024-01-01&end=2025-01-01','range=6'];
  for(const request of requests){

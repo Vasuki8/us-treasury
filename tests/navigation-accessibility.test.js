@@ -28,13 +28,22 @@ test('phone navigation keeps the density preference reachable through More',asyn
 test('release return points to the originating indicator and Calendar remains a separate destination',()=>{
  const origin=routeFor({...parseRoute('#/series/cpi?window=all&tab=methodology')});
  const html=releasePage({...parseRoute('#/release?publicationSeries=cpi'),returnTo:origin},{publicationState:{status:'loading'}});
- assert.ok(html.includes(origin.replaceAll('&','&amp;')));assert.match(html,/BACK TO INDICATOR/);assert.match(html,/>OPEN CALENDAR</);assert.doesNotMatch(html,/RETURN TO CALENDAR/);
+ const region=html.match(/<nav\b[^>]*aria-label="Return to originating view"[^>]*>([^]*?)<\/nav>/)?.[1]??'';
+ const links=[...region.matchAll(/<a\b([^>]*)>([^<]*)<\/a>/g)]
+  .map(([,attributes,label])=>({href:attrs(attributes).href?.replaceAll('&amp;','&'),label}));
+ assert.deepEqual(links,[{href:origin,label:'Back to indicator'},{href:'#/calendar',label:'Open calendar'}]);
 });
 
 test('research destinations have one shared sibling navigation with distinct evidence titles',()=>{
  for(const state of [{page:'research',researchView:'publications'},{page:'research',researchView:'packages'},{page:'vintages'}]){
   const html=researchNavigation(state);
-  for(const label of ['Publication History','Retrieval History','Capture Changes','Saved Views','Frozen Results','Watchlist'])assert.ok(html.includes(label),label);
+  const links=new Map([...html.matchAll(/<a\b([^>]*)>([^<]*)<\/a>/g)]
+   .map(([,attributes,label])=>[attrs(attributes).href,label]));
+  for(const [href,label] of [
+   ['#/research?view=publications','Publication history'],['#/vintages','Retrieval history'],
+   ['#/research?view=changes','Capture changes'],['#/research','Saved views'],
+   ['#/research?view=packages','Saved snapshots'],['#/watchlist','Watchlist'],['#/sources','Sources &amp; terms'],
+  ])assert.equal(links.get(href),label);
   assert.equal((html.match(/aria-current="page"/g)??[]).length,1);
  }
 });

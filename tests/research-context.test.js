@@ -5,15 +5,17 @@ import {parseRoute} from '../src/router.js';import {dataStatus,series} from '../
 import {recordVintages,asKnownOn} from '../src/vintages.js';
 import {parseCsv} from '../scripts/sources/http.mjs';
 
-test('explicit one-year frozen requests preserve recorded route bytes and replay their captured window',async()=>{
+test('new explicit one-year pins retain empty implicit selections and replay their captured window',async()=>{
  const cases=[
-  ['#/series/unrate?window=1y','#/series/unrate'],
-  ['#/series/gdp?window=1y','#/series/gdp'],
-  ['#/series/sofr?window=1y','#/series/sofr'],
+  ['#/series/unrate?window=1y','#/series/unrate?selected='],
+  ['#/series/gdp?window=1y','#/series/gdp?selected='],
+  ['#/series/sofr?window=1y','#/series/sofr?selected='],
   ['#/explore?mode=compare&selected=unrate,gdp&window=1y','#/explore?selected=unrate%2Cgdp&mode=compare'],
  ];
  for(const [hash,recordedRoute] of cases){
-  const args=buildPinContext(parseRoute(hash));assert.equal(args.context.route,recordedRoute);
+  const state=parseRoute(hash);
+  if(state.page==='indicator')assert.deepEqual(state.selected,[],'opening an indicator does not preselect a comparison');
+  const args=buildPinContext(state);assert.equal(args.context.route,recordedRoute);
   const pkg=await createResearchPackage({name:'Explicit one year',id:'one-year-fixture',now:'2026-10-22T00:00:00.000Z',...args});
   assert.equal(pkg.request.range.preset,'1y');assert.equal(pkg.workspace.window,'1y');
   const bytes=exportResearchPackage(pkg),restored=await importResearchPackage(bytes);

@@ -1,7 +1,7 @@
 import { series, releases, dataStatus } from './data.js';
 import { getSeries, latest, formatValue, formatChange, periodLabel } from './model.js';
-import { heading, panel, chart, table, button, seriesStatus, escapeHtml as esc } from './ui.js';
-import { measurementChange } from './measurement-change.js';
+import {heading,panel,chart,table,button,seriesStatus,sentenceCase,escapeHtml as esc} from './ui.js';
+import {measurementChange,priorReadingLabel} from './measurement-change.js';
 import { dailyBrief, nextCatalysts } from './research-brief.js';
 import { releaseCoverage, releaseCoveragePanel } from './release-coverage.js';
 import { calendarRelatedIds } from './macro-calendar.js';
@@ -10,8 +10,10 @@ import { watchlistMonitor, monitorUpdateLabel } from './watchlist-monitor.js';
 import { indicatorHref } from './workspace-context.js';
 import {inflationHorizonTable} from './inflation-comparison.js';
 import {displayCurrencyUnit,displayUnitLabel,formatDisplayValue,formatDisplayChange} from './display-format.js';
+import {humanDate,humanTimestamp} from './ui-time.js';
 
-const a=(text,href,className='action')=>`<a class="${esc(className)}" href="${esc(href)}">${esc(text)}</a>`;
+const a=(text,href,className='action')=>`<a class="${esc(className)}" href="${esc(href)}">`
+ +`${esc(sentenceCase(/^https?:/.test(href)?text:text.replace(/ ↗[︎]?/g,'')))}</a>`;
 const detail=(id,state,label,className='')=>a(label??getSeries(id)?.short??id,indicatorHref(id,{...state,page:'overview'}),className);
 const disclosure=(key,label,body,tail='',className='supporting-details')=>`<details class="${esc(className)}" data-overview-disclosure="${esc(key)}"><summary>${esc(label)}${tail?`<span>${esc(tail)}</span>`:''}</summary>${body}</details>`;
 const compactUnits={gdp:'q/q SAAR',privateDomesticDemandGrowth:'q/q SAAR',pceCore:'y/y',payroll:'Thousands of jobs',unrate:'Percent',policyTargetLower:'Percent',policyTargetUpper:'Percent',effr:'Percent',yield:'Percent',spread2s10s:'Basis points',interestRevenueRatio:'% of receipts · TTM',publicDebt:'USD trillions'};
@@ -20,8 +22,10 @@ function reading(id,state,{label,primary=true,compact=false}={}){
  const current=getSeries(id);if(!current)return '';
  const row=latest(current),change=measurementChange(current);
  const currencyUnit=displayCurrencyUnit([current]),options={currencyUnit};
- const changeLabel=id==='payroll'?'Change in gains':id==='gdp'?'Growth-rate change':'Change';
- const delta=change.value===null?'Prior comparison unavailable':`${changeLabel} ${formatDisplayChange(current,options)} vs ${change.priorPeriod}`;
+ const changeLabel=id==='gdp'?'Growth-rate change':'Change';
+ const prior=current.observations.at(-2);
+ const delta=id==='payroll'?`${priorReadingLabel(current)}: ${formatDisplayValue(current,prior?.value,options)}`
+  :change.value===null?'Prior comparison unavailable':`${changeLabel} ${formatDisplayChange(current,options)} vs ${change.priorPeriod}`;
  const unit=currencyUnit?displayUnitLabel(current,options):compactUnits[id]??current.unit;
  const title=change.text.replace(formatChange(current),formatDisplayChange(current,options));
  return `<a class="oh-reading" data-overview-${primary?'reading':'support-reading'}="${esc(id)}"`
@@ -30,7 +34,6 @@ function reading(id,state,{label,primary=true,compact=false}={}){
   +`<strong class="reading-value">${esc(formatDisplayValue(current,row?.value,options))}</strong>`
   +`<span class="reading-unit">${esc(unit)} · ${esc(row?periodLabel(current,row.date):'Unavailable')}`
   +`${current.dataStatus==='cached'?' · CACHED':''}${current.dataStatus==='unavailable'?' · UNAVAILABLE':''}</span>`
-  +`${!compact&&current.observationType==='calculated'?'<span class="reading-basis">Calculated measure</span>':''}`
   +`${compact?'':`<span class="reading-change" title="${esc(title)}">${esc(delta)}</span>`}`
   +`${current.error?`<span class="reading-change amber">${esc(current.error)}</span>`:''}</a>`;
 }
@@ -42,7 +45,7 @@ function policyReading(state){
  }
  const change=measurementChange(upper),formatted=formatDisplayChange(upper);
  const delta=change.value===null?'Upper-bound prior comparison unavailable':`Upper bound ${formatted} vs ${change.priorPeriod}`;
- return `<a class="oh-reading" data-overview-reading="policyTargetRange"`
+ return `<a class="oh-reading" data-overview-reading="policyTargetRange" data-series="policyTargetLower,policyTargetUpper"`
   +` href="${esc(indicatorHref('policyTargetUpper',{...state,page:'overview'}))}">`
   +`<span class="reading-label">Fed funds target range</span><strong class="reading-value">`
   +`${esc(formatDisplayValue(lower,low.value).replace(/%$/,''))}–${esc(formatDisplayValue(upper,high.value))}</strong>`
@@ -52,7 +55,7 @@ function policyReading(state){
 }
 
 function topic(title,href,body,extra=''){
- return `<article class="oh-topic"><h3>${a(title+' ↗︎',href,'')}</h3>${body}${extra}</article>`;
+ return `<article class="oh-topic"><h3>${a(title,href,'')}</h3>${body}${extra}</article>`;
 }
 
 function supportingRows(ids,state,{claims=false}={}){
@@ -60,8 +63,14 @@ function supportingRows(ids,state,{claims=false}={}){
  return table(['MEASUREMENT',{label:'LATEST',numeric:true},'REFERENCE','UNIT',claims?'ESTIMATE ROLE':'PERIOD CHANGE'],ids.map(id=>{
   const current=getSeries(id);if(!current)return '';
   const row=latest(current),reference=row?periodLabel(current,row.date):'Unavailable';
-  const publication=claims?`<span class="table-code muted">Reported publication ${esc(row?.publishedAt??'unknown')}${row?.publicationDatePrecision==='day'?' · day precision':''}</span>`:'';
-  return `<tr><th scope="row">${detail(id,state)}<span class="table-code muted">${esc(current.code)}${current.dataStatus==='cached'?' · CACHED':''}${current.dataStatus==='unavailable'?' · UNAVAILABLE':''}</span>${current.error?`<span class="table-code amber">${esc(current.error)}</span>`:''}</th><td class="num mono">${esc(formatValue(current,row?.value))}</td><td><span${row?.date?` title="${esc(row.date)}"`:''}>${esc(reference)}</span>${publication}</td><td>${esc(current.unit)}</td><td>${esc(claims?(roles[row?.releaseStage]??'Role not supplied'):measurementChange(current).text)}</td></tr>`;
+  const publication=claims&&row?.publishedAt?'<span class="table-code muted">'
+   +`Reported publication ${esc(humanDate(row.publishedAt))}${row.publicationDatePrecision==='day'?' · day precision':''}</span>`:'';
+  return `<tr data-series="${esc(id)}"><th scope="row">${detail(id,state)}<span class="table-code muted">${esc(current.code)}`
+   +`${current.dataStatus==='cached'?' · Cached':''}${current.dataStatus==='unavailable'?' · Unavailable':''}</span>`
+   +(current.error?`<span class="table-code amber">${esc(current.error)}</span>`:'')
+   +`</th><td class="num mono">${esc(formatValue(current,row?.value))}</td>`
+   +`<td><span${row?.date?` title="${esc(row.date)}"`:''}>${esc(reference)}</span>${publication}</td>`
+   +`<td>${esc(current.unit)}</td><td>${esc(claims?(roles[row?.releaseStage]??'Role not supplied'):measurementChange(current).text)}</td></tr>`;
  }).join(''),claims?'Latest reported initial and continued weekly claims, with distinct reference weeks and source estimate roles':'Supporting activity and income measurements in native units');
 }
 
@@ -69,7 +78,12 @@ function publicationEvidence(brief,context){
  const familyLabel=id=>({gdp:'GDP',claims:'Initial & continued claims',cpi:'CPI'})[id]??id;
  const states=Object.entries(brief.publicationStates).map(([id,status])=>`${familyLabel(id)}: ${status==='ready'?'reviewed archive loaded':status==='loading'?'Publication evidence loading':status==='error'?'Publication evidence unavailable':'Publication evidence not loaded'}`).join(' · ');
  const errors=Object.entries(context.publicationContexts??{}).filter(([,value])=>value?.status==='error'&&value.error).map(([id,value])=>`<p class="panel-note amber">${esc(familyLabel(id))}: ${esc(value.error)}</p>`).join('');
- const rows=brief.publications.map(row=>`<div class="oh-evidence-row">${a(row.name,row.href,'')}<span>${esc(row.estimate??'Published estimate')} · reference ${esc(row.period??'not supplied')}</span><span>Published ${esc(row.publicationDate)} · day precision</span>${disclosure(`publication-retrieval-${row.id}`,'Retrieval evidence',`<p class="panel-note">Captured ${esc(row.retrievedAt??'not recorded')}. The publication day and retrieval time are separate.</p>`,'','')}</div>`).join('');
+ const rows=brief.publications.map(row=>`<div class="oh-evidence-row">${a(row.name,row.href,'')}`
+  +`<span>${esc(row.estimate??'Published estimate')}${row.period?` · reference ${esc(humanDate(row.period))}`:''}</span>`
+  +`<span>Published ${esc(humanDate(row.publicationDate))} · day precision</span>`
+  +disclosure(`publication-retrieval-${row.id}`,'Retrieval evidence',
+   `<p class="panel-note">Captured ${esc(humanTimestamp(row.retrievedAt)||'not recorded')}. `
+    +'The publication day and retrieval time are separate.</p>','','')+'</div>').join('');
  return disclosure('publications','Published results · GDP, claims & CPI',`<p class="panel-note">${esc(states)}. Latest retained reference for each reviewed measurement, ordered by publication day.</p>${errors}${rows||'<p class="panel-note">No verified publication is available in the loaded evidence. Current revised readings and collection receipts are not substituted.</p>'}<p class="panel-note">Historical publications captured recently are not new releases today. CPI facts are published Table A percentages, separate from index-derived history. Payrolls and PCE publication archives are not covered here.</p>`,'','oh-evidence');
 }
 
@@ -77,15 +91,27 @@ function catalystPanel(state,context,brief){
  const events=nextCatalysts(releases,{now:context.now??new Date()});let priorDate='';
  const rows=events.map(event=>{
   const day=event.date===priorDate?'':`<div class="oh-event-day">${esc(releaseDate(event.date))}</div>`;priorDate=event.date;
-  const source=dataStatus.calendar?.sources?.[event.sourceId],scheduleWarning=source?.status==='ok'?'':source?.fetchedAt?' · CACHED SCHEDULE':' · SCHEDULE SOURCE UNAVAILABLE';
-  const basis={'recurring-rule':'AGENCY RULE','published-exception':'AGENCY EXCEPTION','calendar-estimate':'ESTIMATED','listed-date':'LISTED SCHEDULE','secondary-calendar':'NY FED CALENDAR'}[event.scheduleBasis]??'SCHEDULED';
+  const source=dataStatus.calendar?.sources?.[event.sourceId];
+  const scheduleWarning=source?.status==='ok'?'':source?.fetchedAt?' · Cached schedule':' · Schedule source unavailable';
+  const basis={'recurring-rule':'Agency rule','published-exception':'Agency exception','calendar-estimate':'Estimated',
+   'listed-date':'Listed schedule','secondary-calendar':'NY Fed calendar'}[event.scheduleBasis]??'Scheduled';
   const following=calendarRelatedIds(event).some(id=>(state.saved??[]).includes(id));
   const official=/^https:\/\//i.test(event.sourceUrl??'')?` <a href="${esc(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">${event.provider==='new-york-fed'?'NY Fed calendar':'Official schedule'} ↗︎</a>`:'';
-  const evidence=`<p class="panel-note">Scheduled publication timing; a schedule does not confirm a result. ${esc(scheduleBasisNote(event))}${official}</p>${source?.fetchedAt?`<p class="panel-note">Schedule captured ${esc(source.fetchedAt)}.</p>`:''}${calendarSourceNotice(source)}${source?.error?`<p class="panel-note amber">${esc(source.error)}</p>`:''}`;
-  return day+`<article class="oh-event">${a(event.name,`#/calendar?event=${encodeURIComponent(event.id)}&month=${event.date.slice(0,7)}`,'')}<small>${esc(scheduledTime(event))}${event.periodLabel?` · ${esc(event.periodLabel)}`:''}${following?' · FOLLOWING':''}</small>${disclosure(`schedule-${event.id}`,`${event.agency??event.sourceId} · ${basis}${scheduleWarning}`,evidence,'','')}</article>`;
+ const evidence='<p class="panel-note">Scheduled publication timing; a schedule does not confirm a result. '
+  +`${esc(scheduleBasisNote(event))}${official}</p>`
+  +(source?.fetchedAt?`<p class="panel-note">Schedule captured ${esc(humanTimestamp(source.fetchedAt))}.</p>`:'')
+  +calendarSourceNotice(source)+(source?.error?`<p class="panel-note amber">${esc(source.error)}</p>`:'');
+ const timing=[scheduledTime(event),event.periodLabel,following?'Following':''].filter(Boolean).map(esc).join(' · ');
+ return day+`<article class="oh-event" data-calendar-source="${esc(event.sourceId)}">`
+  +a(event.name,`#/calendar?event=${encodeURIComponent(event.id)}&month=${event.date.slice(0,7)}`,'')
+  +`<small>${timing}</small>`
+  +disclosure(`schedule-${event.id}`,`${event.agency??event.sourceId} · ${basis}${scheduleWarning}`,evidence,'','')+'</article>';
  }).join('');
- const body=(rows||'<p class="panel-note">No supported upcoming events are retained. Check the full calendar and official schedules.</p>')+`<div class="oh-chart-footer">${a('CALENDAR ↗︎','#/calendar','link-button')}<span class="muted">Eastern Time</span></div>`;
- return `<aside class="oh-catalysts">${panel('','NEXT CATALYSTS',body,'','Selected distinct programs. Routine debt dates remain in the full calendar; schedules do not confirm results.','oh-catalyst-panel')}${publicationEvidence(brief,context)}</aside>`;
+ const body=(rows||'<p class="panel-note">No supported upcoming events are retained. Check the full calendar and official schedules.</p>')
+  +`<div class="oh-chart-footer">${a('Calendar','#/calendar','link-button')}<span class="muted">Eastern Time</span></div>`;
+ return '<aside class="oh-catalysts">'+panel('','Next catalysts',body,'',
+  'Selected distinct programs. Routine debt dates remain in the full calendar; schedules do not confirm results.','oh-catalyst-panel')
+  +publicationEvidence(brief,context)+'</aside>';
 }
 
 function research(brief,state,context){
@@ -121,11 +147,21 @@ export function overviewPage(state={},context={}){
   'Thousands of jobs · three-month average of monthly payroll gains; establishment jobs differ from household people measures.','oh-chart-panel');
  const horizons=disclosure('inflation-horizons','Inflation horizons',
   `<div class="oh-inflation-comparison">${inflationHorizonTable({...state,page:'overview'})}</div>`,'Monthly · annual · annualized');
- const momentum=`<section class="oh-momentum"><div class="oh-section-label"><h2>MOMENTUM</h2></div>`
+ const momentum=`<section class="oh-momentum"><div class="oh-section-label"><h2>Momentum</h2></div>`
   +`<div class="oh-plots">${inflationMomentum}${payrollMomentum}</div>${horizons}</section>`;
  const support=disclosure('activity-income','Activity & income',supportingRows(['realSpendingMonthly','realDisposableIncomeMonthly','industrialProduction'],state)+`<p class="panel-note">Different scope and reporting lags provide context; correlated changes do not prove causation.</p><div class="oh-research-links">${button('COMPARE INCOME & SPENDING','data-compare="realDisposableIncomeMonthly,realSpendingMonthly"')}</div>`,'3 measurements')
   +disclosure('weekly-claims','Weekly claims',supportingRows(['claimsAdvance','continuedClaimsAdvance'],state,{claims:true})+'<p class="panel-note">Initial and continued claims refer to different weeks. Reported publication days come from the current source feed; reviewed archived evidence is separate in Published results above. Revised history and full release provenance remain on each detail page.</p>','Distinct reference weeks')
   +research(brief,state,context)
-  +disclosure('data-methods','Data & methods',`<p class="panel-note">Snapshot assembled ${esc(dataStatus.generatedAt??'unknown')}. Latest reference periods are shown with each measurement. Successful collection does not establish publication. Collection failures and retained-source status are in Refresh details above.</p>${releaseCoveragePanel(releaseCoverage(series,dataStatus,{events:releases,publicationContexts:context.publicationContexts,now:context.now??new Date()}),{disclosure:false,hrefFor:id=>indicatorHref(id,{...state,page:'overview'})})}<div class="oh-research-links">${a('PUBLISHED ESTIMATES','#/research?view=publications')}</div>`,'Reference periods & provenance');
- return `<div class="radar-page radar-overview overview-hierarchy">${heading('U.S. economy','Latest readings, with each measure’s own date and unit.')}<div class="oh-desk"><section class="oh-snapshot"><div class="oh-section-label"><h2>ECONOMIC CONDITIONS</h2><span class="oh-snapshot-hint">Scroll readings →</span></div><div class="oh-topic-grid" role="region" tabindex="0" aria-label="Economy at a glance">${cards}</div><div class="oh-context">${snapshotContext}</div></section>${momentum}${catalystPanel(state,context,brief)}<section class="oh-support" aria-label="Supporting research">${support}</section></div></div>`;
+  +disclosure('data-methods','About this data',`<p class="panel-note">Snapshot assembled ${esc(humanTimestamp(dataStatus.generatedAt)||'unknown')}. `
+   +'Latest reference periods are shown with each measurement. Successful collection does not establish publication. '
+   +'Collection failures and retained-source status are in Refresh details above.</p>'
+   +releaseCoveragePanel(releaseCoverage(series,dataStatus,{events:releases,publicationContexts:context.publicationContexts,
+    now:context.now??new Date()}),{disclosure:false,hrefFor:id=>indicatorHref(id,{...state,page:'overview'})})
+   +`<div class="oh-research-links">${a('Published estimates','#/research?view=publications')}</div>`,'Reference periods & provenance');
+ return '<div class="radar-page radar-overview overview-hierarchy">'
+  +heading('U.S. economy','Latest readings, with each measure’s own date and unit.')
+  +'<div class="oh-desk"><section class="oh-snapshot"><div class="oh-section-label"><h2>Economic conditions</h2></div>'
+  +`<div class="oh-topic-grid" role="region" aria-label="Economy at a glance">${cards}</div>`
+  +`<div class="oh-context">${snapshotContext}</div></section>${momentum}${catalystPanel(state,context,brief)}`
+  +`<section class="oh-support" aria-label="Supporting research">${support}</section></div></div>`;
 }

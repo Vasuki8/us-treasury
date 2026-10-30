@@ -31,7 +31,14 @@ function externalNavigation(state,active){
 function externalMethods(state,readings,research){
  const link=(section,label)=>`<a href="${esc(routeFor({...state,externalView:section}))}">${esc(label)}</a>`;
  return readings+panel('M','DATA & METHODS',`<div class="explain"><p><strong>Native accounting.</strong> Goods + services + primary income + secondary income reconcile to the current-account balance, subject to source rounding. ITA balances are seasonally adjusted quarterly USD billions, not annualized. NIPA exports, imports and trade use different definitions and annual-rate units.</p><p><strong>GDP ratios.</strong> Quarterly ratios match the exact reference quarter. Nominal GDP at SAAR is divided by four once; the current-account balance is not annualized. Trailing four-quarter ratios require four consecutive quarters. Missing inputs remain unavailable; no interpolation or older-quarter substitution is made.</p><p><strong>Change analysis.</strong> Contributions and balance-versus-denominator effects describe accounting arithmetic. They are not causal explanations, market surprises, investment signals or measures of foreign debt.</p><p><strong>Evidence.</strong> Current revised histories can change. Reference periods, table release dates and retrieval timestamps are separate. A dataset release date does not establish the first publication of each historical observation.</p></div>`)
-  +research+panel('CSV','EXPORTS & SOURCE INPUTS',`<p class="panel-note">CSV MEASURE exports the selected native measure and exact window from the page header. Each analysis panel retains its own CSV with formulas, missing values, source inputs and retrieval provenance.</p><div class="explain"><p>${link('summary','Summary: native current/prior accounting and latest-quarter ratio inputs ↗')}</p><p>${link('trends','Trends: ratio history, comparison, component breakdown and trailing-quarter inputs ↗')}</p><p>${link('decomposition','Decomposition: contributions, balance/GDP effects, all-component and selected-component inputs ↗')}</p></div><p class="panel-note">Freezing this workspace preserves all existing current-account calculation inputs and exports, including analysis in the other sections.</p>`);
+  +research+panel('CSV','EXPORTS & SOURCE INPUTS',(`<p class="panel-note">CSV MEASURE exports the selected native measure and exact window `+
+  `from the page header. Each analysis panel retains its own CSV with formulas, missing `+
+  `values, source inputs and retrieval provenance.</p><div class="explain"><p>${link('summary',
+  'Summary: native current/prior accounting and latest-quarter ratio inputs')}</p><p>${link('trends',
+  'Trends: ratio history, comparison, component breakdown and trailing-quarter inputs')}</p><p>${link('decomposition',
+  'Decomposition: contributions, balance/GDP effects, all-component and selected-component inputs')
+  }</p></div><p class="panel-note">Freezing this workspace preserves all existing `+
+  `current-account calculation inputs and exports, including analysis in the other sections.</p>`));
 }
 
 function compactFamilyReadings(ids,focused,currencyUnit){
@@ -42,7 +49,7 @@ function compactFamilyReadings(ids,focused,currencyUnit){
    +`<strong class="metric-value">${esc(formatDisplayValue(s,observation?.value,options))}</strong>`
    +`<span class="metric-period">${esc(observation?periodLabel(s,observation.date):'Unavailable')} · ${esc(s.frequency)}</span>`
    +`<span class="metric-basis">${esc(displayUnitLabel(s,options))} · ${esc(s.adjustment)}</span>`
-   +`<span class="metric-change">${esc(seriesStatus(s))}</span><span class="metric-detail" aria-hidden="true">Details ↗</span></a>`;
+   +`<span class="metric-change">${esc(seriesStatus(s))}</span><span class="metric-detail" aria-hidden="true">Details</span></a>`;
  }).join('');
  return `<div class="metrics compact-family-readings">${cards}</div>`;
 }
@@ -95,12 +102,13 @@ export function macroCoveragePage(state={}, {embedded=false}={}){
  const focusedBody=focusedControls+errors+`<p class="panel-note"><strong>LIMITATIONS.</strong> ${esc(family.limitations)}</p>`
   +history+sourceCoverage+`<p class="panel-note"><strong>WHAT CHANGED.</strong> ${esc(changed)}</p>`+coverageSummary(shown);
  const focusedHistory=panel('',familyId==='prices'?'INFLATION · CURRENT READING & HISTORY':'FOCUSED HISTORY',focusedBody,
-  `<a class="action" href="${esc(detail)}">DETAILS & DATA TABLE ↗</a>`,
+  `<a class="action" href="${esc(detail)}">DETAILS & DATA TABLE</a>`,
   `${current.frequency} · ${current.unit} · ${current.adjustment}`,'workspace-analysis');
  const exportNote=`<p class="panel-note">CSV MEASURE exports the focused history's exact window in native units, including source identifiers, calculation, rights notices and retrieval provenance. All history means retained observations; new captures do not establish historical publication vintages.</p>`;
  const familyContext=familyId==='prices'?supportingDetails('macro-coverage:prices:cpi-effects','CPI effects · source coverage',cpiEffectsCoveragePanel()):familyId==='policy'?supportingDetails('macro-coverage:policy:fomc','FOMC decisions, minutes & projections',fomcContext(dataStatus.calendar?.sources?.fomc)):'';
  const priceResearch=familyId==='prices'?renderPcePriceContributions(dataStatus.sources.pcePriceContributions,{range})+supportingDetails('inflation:conditional-base-effects','Conditional PCE base effects · assumptions & arithmetic',pceBaseEffectsView(getSeries(state.pceBaseIndex??'pceIndex'),pceScenarioOptions(state))):'';
- if(familyId!=='external')return title+(familyId==='prices'?focusedHistory+readings:readings+focusedHistory)+priceResearch+familyContext+supportingDetails(`macro-coverage:${familyId}:research`,'Research context, methods & sources',fullReadings+research+exportNote);
+ if(familyId!=='external')return title+(familyId==='prices'?focusedHistory+readings:readings+focusedHistory)+priceResearch+familyContext
+  +supportingDetails(`macro-coverage:${familyId}:research`,'About this data',fullReadings+research+exportNote);
  const active=externalSections.some(([id])=>id===state.externalView)?state.externalView:'summary';
  const controlPanel=panel('','SHARED HISTORY CONTROLS',controls+rangeControls(focused,[id])+`<p class="panel-note">Measure and date window carry across sections. Latest-quarter accounting and ratio context in Summary remain independent of the history window.</p>`);
  const sharedControls=active==='summary'?`<details class="supporting-details" id="external-history-controls" data-page-disclosure="macro-coverage:external:history-controls"${shown.error?' open':''}><summary>History controls · ${esc(current.name)} · ${esc(shown.window.label)}</summary>${controlPanel}</details>`:controlPanel;

@@ -1,6 +1,15 @@
 import { formatChange, periodLabel } from './model.js';
 
 const finite=Number.isFinite;
+
+/** A missing reference month does not become the prior month merely because it is retained. */
+export function priorReadingLabel(series){
+ const month=date=>/^\d{4}-(?:0[1-9]|1[0-2])-\d{2}$/.test(date??'')
+  ?Number(date.slice(0,4))*12+Number(date.slice(5,7)):NaN;
+ const current=series?.observations?.at(-1),prior=series?.observations?.at(-2);
+ return series?.frequency==='Monthly'&&month(current?.date)-month(prior?.date)===1?'Prior month':'Prior retained reading';
+}
+
 /** A subtraction describes the measurement that changed, never an economic surprise. */
 export function measurementChange(series) {
  const current=series?.observations?.at(-1),prior=series?.observations?.at(-2);

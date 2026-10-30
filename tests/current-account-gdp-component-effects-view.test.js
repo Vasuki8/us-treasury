@@ -1,3 +1,4 @@
+import {humanTimestamp} from '../src/ui-time.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {currentAccountGdpTrailingFixture} from './helpers/current-account-gdp-trailing-fixture.js';
@@ -12,7 +13,8 @@ const records=csv=>{const [headers,...rows]=parseCsv(csv);return rows.map(row=>O
 
 test('component panel has a labeled four-component selector, two three-line charts, shared dates and exact latest readings',()=>{
  const html=currentAccountGdpComponentEffectsPanel(currentAccountGdpTrailingFixture(),range,{measure:'itaServicesBalance'});
- assert.match(html,/COMPONENT BALANCE &amp; GDP EFFECT HISTORY/);assert.match(html,/id="current-account-effect-component"/);assert.match(html,/aria-label="Effect history component"/);assert.match(html,/value="itaServicesBalance" selected/);
+ assert.match(html,/COMPONENT BALANCE &amp; GDP EFFECT HISTORY/i);assert.match(html,/id="current-account-effect-component"/);assert.match(html,
+  /aria-label="Effect history component"/);assert.match(html,/value="itaServicesBalance" selected/);
  assert.equal((html.match(/<option /g)??[]).length,4);assert.equal((html.match(/data-chart-catalog="current-account-gdp-component-effects"/g)??[]).length,2);
  assert.match(html,/itaServicesBalanceQuarterlyBalanceEffect,itaServicesBalanceQuarterlyGdpEffect,itaServicesBalanceQuarterlyRatioChange/);
  assert.match(html,/itaServicesBalanceTrailingBalanceEffect,itaServicesBalanceTrailingGdpEffect,itaServicesBalanceTrailingRatioChange/);
@@ -22,7 +24,8 @@ test('component panel has a labeled four-component selector, two three-line char
 
 test('component-only selection explicitly defaults to Goods and displays the selected component source clock',()=>{
  const sources=currentAccountGdpTrailingFixture();sources.beaIta.series.itaServicesBalance.provenance=[{...sources.beaIta.provenance[0],retrievedAt:'2026-10-23T22:22:22.000Z'}];
- const html=currentAccountGdpComponentEffectsPanel(sources,range,{measure:'itaServicesBalance'});assert.match(html,/Services balance/);assert.match(html,/2026-10-23T22:22:22.000Z/);
+ const html=currentAccountGdpComponentEffectsPanel(sources,range,{measure:'itaServicesBalance'});assert.match(html,/Services balance/);
+  assert.match(html,new RegExp(humanTimestamp("2026-10-23T22:22:22.000Z")));
  const fallback=currentAccountGdpComponentEffectsPanel(sources,range,{measure:'currentAccountBalance'});assert.match(fallback,/defaults to Goods/i);assert.match(fallback,/value="itaGoodsBalance" selected/);
 });
 

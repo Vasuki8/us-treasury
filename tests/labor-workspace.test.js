@@ -26,9 +26,9 @@ test('canonical and legacy Labor routes retain valid focus, exact window, table 
 test('Labor detail and comparison returns preserve query, measure, window, selection and workspace position',()=>{
  const state=parseRoute('#/economy/labor?measure=weeklyHours&window=all&group=jobs&q=hours&selected=payroll,weeklyHours');
  const href=routeFor(state),detail=parseRoute(indicatorHref('weeklyHours',state));
- assert.equal(workspaceReturn(detail).label,'BACK TO LABOR');assert.equal(workspaceReturn(detail).href,href);
+ assert.equal(workspaceReturn(detail).label,'Back to Labor');assert.equal(workspaceReturn(detail).href,href);
  const compare={...state,page:'explore',exploreMode:'compare',returnTo:href},nested=parseRoute(indicatorHref('weeklyHours',compare));
- assert.equal(workspaceReturn(parseRoute(workspaceReturn(nested).href)).label,'BACK TO LABOR');
+ assert.equal(workspaceReturn(parseRoute(workspaceReturn(nested).href)).label,'Back to Labor');
  const changed=parseRoute(updateWorkspaceSelection(href,['unrate','underemployment']));
  assert.deepEqual(changed.selected,['unrate','underemployment']);assert.equal(changed.macroMeasure,'weeklyHours');
  assert.equal(safeReturnTo('#/economy/laboratory'),null);assert.equal(safeReturnTo('#/economy/labor/../../research'),null);

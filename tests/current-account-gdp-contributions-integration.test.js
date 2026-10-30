@@ -13,7 +13,7 @@ import {currentAccountGdpContributionsChartCatalog,currentAccountGdpContribution
 
 test('external contributions reuse one date-control set and stay outside other macro families',()=>{
  const html=macroCoveragePage(parseRoute('#/economy?family=external&section=decomposition&window=1y'));
- assert.match(html,/COMPONENT CONTRIBUTIONS TO RATIO CHANGES/);assert.equal((html.match(/id="window-start"/g)??[]).length,1);
+ assert.match(html,/COMPONENT CONTRIBUTIONS TO RATIO CHANGES/i);assert.equal((html.match(/id="window-start"/g)??[]).length,1);
  assert.doesNotMatch(macroCoveragePage(parseRoute('#/economy?family=prices')),/data-chart-catalog="current-account-gdp-contributions"/);
 });
 

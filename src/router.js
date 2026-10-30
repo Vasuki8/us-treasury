@@ -7,7 +7,7 @@ const topics = ['All topics', ...new Set(Object.values(series).map(s => s.topic)
 const frequencies = ['All frequencies', 'Daily', 'Weekly', 'Monthly', 'Quarterly'];
 export const defaults = {
   page: 'overview', seriesId: 'unrate', range: 12, transform: 'level', tab: 'data',
-  query: '', topic: 'All topics', frequency: 'All frequencies', selected: ['unrate', 'cpi'],
+  query: '', topic: 'All topics', frequency: 'All frequencies', selected: [],catalogPage:1,
   exploreMode: 'catalog', comparison: 'native', alignment:'exact',calendarMonth: 'upcoming', day: 'all', calendarTopic: 'All topics',
   watchOnly: false, eventId: '',calendarView:'macro',externalView:'summary',
   refinancingHorizon:12,refinancingShock:100,
@@ -16,7 +16,7 @@ export const defaults = {
   auctionType:'All',auctionId:'',auctionHistoryPage:null,
   vintageCutoff:null,vintageSeries:'gdp',
   window:'1y',startDate:'',endDate:'',returnTo:null,
-  macroFamily:'prices',macroMeasure:'cpiMonthly',laborGroup:'all',
+  macroFamily:'activity',macroMeasure:'realSpendingMonthly',laborGroup:'all',
   researchView:'workspaces',packageId:'',changeSince:'',changePage:1,publicationCutoff:'',publicationPeriod:'',publicationSeries:'gdp',publicationMode:'quarter',
 };
 
@@ -61,6 +61,7 @@ export function parseRoute(hash = '') {
     else if (path === '/market') state.page = 'market';
     else if (path === '/watchlist') state.page = 'watchlist';
     else if (path === '/research') state.page = 'research';
+    else if (path === '/sources') state.page = 'sources';
     state.researchView=['packages','changes','publications'].includes(p.get('view'))?p.get('view'):'workspaces';
     state.packageId=/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(p.get('package')??'')?p.get('package'):'';
     state.changeSince=(p.get('since')??'').slice(0,64);state.changePage=Math.max(1,Math.min(10000,Number.parseInt(p.get('changePage'),10)||1));
@@ -69,7 +70,8 @@ export function parseRoute(hash = '') {
     state.publicationSeries=['claimsAdvance','continuedClaimsAdvance','cpi','cpiCore','cpiMonthly','cpiCoreMonthly'].includes(p.get('publicationSeries'))?p.get('publicationSeries'):'gdp';
     state.publicationMode=state.publicationSeries==='gdp'&&p.get('publicationMode')==='matrix'?'matrix':'quarter';
     state.vintageCutoff=p.has('cutoff')?p.get('cutoff').slice(0,64):null;
-    state.macroFamily=state.page==='labor'?'labor':Object.hasOwn(coverageFamilies,p.get('family'))?p.get('family'):'prices';
+    state.macroFamily=state.page==='labor'?'labor':
+      Object.hasOwn(coverageFamilies,p.get('family'))?p.get('family'):defaults.macroFamily;
     state.macroMeasure=coverageFamilies[state.macroFamily].ids.includes(p.get('measure'))?p.get('measure'):coverageFamilies[state.macroFamily].defaultMeasure;
     state.laborGroup=['jobs','people','pay','claims'].includes(p.get('group'))?p.get('group'):'all';
     state.externalView=['trends','decomposition','methods'].includes(p.get('section'))?p.get('section'):'summary';
@@ -93,6 +95,7 @@ export function parseRoute(hash = '') {
     state.topic = topics.includes(p.get('topic')) ? p.get('topic') : 'All topics';
     state.frequency = frequencies.includes(p.get('frequency')) ? p.get('frequency') : 'All frequencies';
     if (p.has('selected')) state.selected = validIds(p.get('selected').split(','));
+    state.catalogPage=Math.max(1,Math.min(10000,Number.parseInt(p.get('catalogPage'),10)||1));
     state.window=['1y','3y','5y','all','custom'].includes(p.get('window'))?p.get('window'):
       !p.has('window')&&['6','12'].includes(p.get('range'))?'observations':defaultRouteWindow(state);
     state.exploreMode = ['compare','coverage'].includes(p.get('mode')) ? p.get('mode') : 'catalog';
@@ -112,9 +115,13 @@ export function parseRoute(hash = '') {
 }
 
 export function routeFor(input,{legacyWindow=false}={}) {
-  const state = { ...defaults, ...input };
+  const routeDefaults=legacyWindow?{...defaults,selected:['unrate','cpi'],macroFamily:'prices',macroMeasure:'cpiMonthly'}:defaults;
+  const state = { ...routeDefaults, ...input };
   if(!Object.hasOwn(input,'window'))state.window=Object.hasOwn(input,'range')?'observations':defaultRouteWindow(state);
-  const path = {release:'/release',credit:'/credit',research:"/research",macroCoverage:'/economy',overview:'/overview',labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',watchlist:'/watchlist',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',macro:'/macro',vintages:'/vintages',market:'/market'}[state.page] || '/overview';
+  const path = {release:'/release',credit:'/credit',research:'/research',sources:'/sources',macroCoverage:'/economy',overview:'/overview',
+    labor:'/economy/labor',indicator:`/series/${encodeURIComponent(state.seriesId)}`,calendar:'/calendar',explore:'/explore',
+    watchlist:'/watchlist',fiscal:'/fiscal',refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',
+    macro:'/macro',vintages:'/vintages',market:'/market'}[state.page] || '/overview';
   const p = new URLSearchParams();
   if(state.alignment==='quarter')p.set('alignment','quarter');
   if(['research','release'].includes(state.page)){
@@ -156,13 +163,16 @@ export function routeFor(input,{legacyWindow=false}={}) {
     if(state.refinancingShock!==100)p.set('shock',String(state.refinancingShock));
   }
   if (state.page === 'indicator'||['release','research'].includes(state.page)&&safeReturnTo(state.returnTo)) {
-    if(safeReturnTo(state.returnTo)||validIds(state.selected||[]).join(',')!==defaults.selected.join(','))p.set('selected',validIds(state.selected||[]).join(','));
+    if(safeReturnTo(state.returnTo)||validIds(state.selected||[]).join(',')!==routeDefaults.selected.join(',')){
+      p.set('selected',validIds(state.selected||[]).join(','));
+    }
     if(['indexed','difference'].includes(state.comparison))p.set('comparison',state.comparison);
     if (state.transform === 'change') p.set('transform', 'change');
     if (state.tab !== 'data') p.set('tab', state.tab);
   }
   if (state.page === 'explore') {
     p.set('selected', validIds(state.selected || []).join(','));
+    if(!legacyWindow&&state.catalogPage>1)p.set('catalogPage',String(Math.min(10000,state.catalogPage)));
     if (state.query) p.set('q', state.query);
     if (state.topic !== 'All topics') p.set('topic', state.topic);
     if (state.frequency !== 'All frequencies') p.set('frequency', state.frequency);
@@ -196,7 +206,12 @@ export function navigationDestination(state={}){
  const detail=page==='macroCoverage'?state.macroFamily??defaults.macroFamily:page==='indicator'?state.seriesId??defaults.seriesId:page==='research'?`${state.researchView??defaults.researchView}:${state.researchView==='packages'?state.packageId??'':''}`:page==='release'?`${state.eventId??''}:${state.publicationSeries??'gdp'}:${state.publicationPeriod??''}:${state.publicationCutoff??''}`:page==='explore'?state.exploreMode??defaults.exploreMode:'';
  return `${page}:${detail}`;
 }
-export const destinationChanged=(previous,next)=>navigationDestination(previous)!==navigationDestination(next);
+export function destinationChanged(previous={},next={}){
+ if(navigationDestination(previous)!==navigationDestination(next))return true;
+ const catalog=state=>state.page==='explore'&&(state.exploreMode??defaults.exploreMode)==='catalog';
+ return catalog(previous)&&catalog(next)&&(previous.catalogPage??1)!==(next.catalogPage??1)
+  &&['query','topic','frequency'].every(key=>(previous[key]??defaults[key])===(next[key]??defaults[key]));
+}
 
 export function defaultRouteWindow(state={}){
  const id=state.page==='indicator'?state.seriesId:['macroCoverage','labor'].includes(state.page)?state.macroMeasure:

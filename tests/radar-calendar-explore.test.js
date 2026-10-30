@@ -19,7 +19,8 @@ test('Calendar exposes the selected preview as a reachable named region with ful
   assert.match(html,/id="calendar-selected-preview"[^>]*aria-label="Selected scheduled event"/);
   assert.match(html,/data-calendar-preview aria-controls="calendar-selected-preview"/);
   const preview=html.slice(html.indexOf('id="calendar-selected-preview"'));
-  for(const text of ['Weekly claims','Week ended Oct 31, 2026','08:30 EST','CACHED SCHEDULE','AGENCY RULE','HTTP 503','2026-10-20T12:00:00Z','OFFICIAL SCHEDULE','OPEN RELEASE EVIDENCE','data-save="claimsAdvance"'])assert.ok(preview.includes(text),text);
+  for(const text of ['Weekly claims','Week ended Oct 31, 2026','8:30 am ET','Cached schedule','Agency rule',
+    'HTTP 503','8:00 am ET, 20 Oct','Official schedule','Open release evidence','data-save="claimsAdvance"'])assert.ok(preview.includes(text),text);
   assert.match(preview,/past scheduled time does not establish/);
   assert.ok(html.indexOf('data-event="radar-claims"')<html.indexOf('data-event="radar-later"'));
   assert.equal((html.match(/scope="rowgroup"/g)||[]).length,2);
@@ -33,7 +34,7 @@ test('Calendar unmatched Watchlist preserves recovery and schedule-source contex
 
 test('Calendar preview shows basis once for captured schedules and separately from cached state',()=>fixture(()=>{
   const event=releases.find(item=>item.id==='radar-claims');
-  for(const [sourceId,scheduleBasis,label] of [['dol','recurring-rule','AGENCY RULE'],['treasury','calendar-estimate','ESTIMATED']]) {
+  for(const [sourceId,scheduleBasis,label] of [['dol','recurring-rule','Agency rule'],['treasury','calendar-estimate','Estimated']]) {
     Object.assign(event,{sourceId,scheduleBasis});
     dataStatus.calendar.sources[sourceId]={status:'ok',fetchedAt:'2026-10-20T12:00:00Z'};
     let preview=render({page:'calendar',calendarMonth:'2026-11',eventId:'radar-claims'}).split('id="calendar-selected-preview"')[1];
@@ -43,7 +44,7 @@ test('Calendar preview shows basis once for captured schedules and separately fr
     assert.match(preview,/Schedule basis and retrieval/);
     dataStatus.calendar.sources[sourceId].status='error';
     preview=render({page:'calendar',calendarMonth:'2026-11',eventId:'radar-claims'}).split('id="calendar-selected-preview"')[1];
-    assert.match(preview,/CACHED SCHEDULE/);
+    assert.match(preview,/Cached schedule/);
     assert.ok(preview.includes(`<span class="calendar-basis">${label}</span>`),'cache state does not replace the basis');
   }
 }));
@@ -54,7 +55,9 @@ test('Catalog keeps native unit and reference period with the latest reading and
   assert.match(reading,/Percent/);
   assert.match(reading,/Reference period/);
   assert.match(reading,/<time datetime="\d{4}-\d{2}-\d{2}">/);
-  for(const text of ['id="catalog-search"','id="topic-filter"','id="frequency-filter"','id="catalog-result-count"','data-select="unrate"','data-remove="unrate"','SELECTED 1/4','SERIES CATALOG','Inflation momentum','Labor breadth','Policy versus funding','Real income versus spending'])assert.ok(html.includes(text),text);
+  for(const text of ['id="catalog-search"','id="topic-filter"','id="frequency-filter"','id="catalog-result-count"',
+    'data-select="unrate"','data-remove="unrate"','Selected 1/4','Series catalog','Inflation momentum','Labor breadth',
+    'Policy versus funding','Real income versus spending'])assert.ok(html.includes(text),text);
 });
 
 test('Catalog search and selection precede secondary starter questions without losing starter links',()=>{
@@ -73,9 +76,9 @@ test('Catalog discloses ordinary coverage but keeps errors and critical history 
     current.coverageNote='Historical observations retain their own <capture> dates.';
     current.error='HTTP 503 <retry>';
     let html=render({page:'explore',query:'UNRATE'});
-    const disclosure=html.match(/<details class="catalog-coverage-details">([^]*?)<\/details>/);
+    const disclosure=html.match(/<details\b[^>]*class="catalog-coverage-details"[^>]*>([^]*?)<\/details>/);
     assert.ok(disclosure,'ordinary coverage remains available through a native closed disclosure');
-    assert.match(disclosure[1],/<summary>Historical feed coverage<\/summary>/);
+    assert.match(disclosure[1],/<summary>Notes &amp; source evidence<\/summary>/);
     assert.match(disclosure[1],/Historical observations retain their own &lt;capture&gt; dates/);
     assert.match(html.replace(disclosure[0],''),/HTTP 503 &lt;retry&gt;/);
     claims.coverageNote='Historical feed may lag the latest advance release.';
@@ -98,7 +101,7 @@ test('Comparison keeps native panels, exact-window controls, errors and export e
   assert.match(invalid,/data-comparison-mode="difference"/);
   assert.match(invalid,/data-export disabled/);
   const empty=render({page:'explore',exploreMode:'compare',selected:[]});
-  assert.match(empty,/No series selected/);assert.match(empty,/OPEN CATALOG/);
+  assert.match(empty,/No series selected/);assert.match(empty,/Open catalog/);
   const difference=render({page:'explore',exploreMode:'compare',selected:['unrate'],comparison:'difference',window:'all'});
   assert.match(difference,/Change from baseline/);assert.match(difference,/BASELINE DIFFERENCE/);
 });

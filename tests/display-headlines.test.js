@@ -20,7 +20,9 @@ test('overview and labor headlines share compact values while labor evidence row
     const overview=overviewPage(state),labor=laborPage(state);
     assert.match(overview,/data-overview-reading="payroll"[^]*?reading-value">1,230k/);
     assert.match(labor,/labor-metric-name[^]*?<strong>1,230k<\/strong>/);
-    assert.match(labor,/Change in monthly job gains: \+1,110k/);
+    const headlines=labor.match(/<section\b[^>]*aria-label="Latest headline indicators"[^>]*>([^]*?)<\/section>/)?.[1]??'';
+    assert.ok(headlines.includes('Prior month: 123k'));
+    assert.match(labor,/labor-row-change"[^>]*>\+1,111k/);
     assert.match(labor,/labor-row-value">1,235k/);
   });
 });
@@ -30,7 +32,7 @@ test('indicator headline, prior and change share one scale while the table keeps
     const html=indicatorPage({...state,seriesId:'nominalGdp'});
     assert.match(html,/big-value">\$32\.7T/);
     assert.match(html,/Display unit<br><b>Trillions of current dollars \(SAAR\)/);
-    assert.match(html,/indicator-prior">PRIOR <b>\$32\.0T/);
+    assert.match(html,/indicator-prior">Prior <b>\$32\.0T/);
     assert.match(html,/indicator-change">[^<]*\+\$0\.680T/);
     assert.match(html,/\$32,680\.46B/);
   });

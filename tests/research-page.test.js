@@ -22,13 +22,18 @@ test('saved views show page-aware summaries and an editable research-question re
  const record=createWorkspace({id:'rates-question',name:'Rate view',state:{page:'yields',yieldDateA:'2026-01-02',yieldDateB:'2026-10-01'},researchQuestion:{hypothesis:'Rates <hypothesis>',supportingSeriesIds:['sofr'],conditions:[{seriesId:'sofr',operator:'>=',value:4}]}});
  const questionDrafts=createQuestionDrafts();questionDrafts.edit(record.id,record.researchQuestion);
  const html=researchPage(parseRoute('#/research'),{questionDrafts:questionDrafts.snapshot(),library:{workspaces:[record],packages:[],durability:{workspaces:{'rates-question':{status:'session',reason:'quota'}}}}});
- for(const text of ['Rates &amp; curves','2026-01-02','2026-10-01','Rates &lt;hypothesis&gt;','data-save-question="rates-question"','question-hypothesis-rates-question','question-support-rates-question','question-contradict-rates-question','question-review-date-rates-question','question-review-event-rates-question','question-condition-series-rates-question','question-condition-op-rates-question','question-condition-value-rates-question','Session-only','Frozen baseline unavailable','data-export-settings'])assert.ok(html.includes(text),text);
+ for(const text of ['Rates &amp; curves','2026-01-02','2026-10-01','Rates &lt;hypothesis&gt;','data-save-question="rates-question"',
+  'question-hypothesis-rates-question','question-support-rates-question','question-contradict-rates-question',
+  'question-review-date-rates-question','question-review-event-rates-question','question-condition-series-rates-question',
+  'question-condition-op-rates-question','question-condition-value-rates-question','Session-only','Frozen baseline unavailable',
+  'data-export-settings'])assert.ok(html.toLowerCase().includes(text.toLowerCase()),text);
  assert.doesNotMatch(html,/<hypothesis>/);
 });
 test('frozen viewer shows captured inputs, exact observations and original export actions',async()=>{
  const pkg=await createResearchPackage({name:'Pinned <GDP>',state:{...parseRoute('#/series/gdp?window=all'),selected:['gdp']},catalog:series,context:{attachments:[]}});
  const html=researchPage({...parseRoute('#/research?view=packages'),packageId:pkg.id},{library:{workspaces:[],packages:[pkg]}});
- for(const text of ['Pinned &lt;GDP&gt;','READ-ONLY','Checksum','does not authenticate','source','CSV','JSON','Frozen'])assert.ok(html.includes(text),text);
+ for(const text of ['Pinned &lt;GDP&gt;','READ-ONLY','Checksum','does not authenticate','source','CSV','JSON',
+  'Frozen'])assert.ok(html.toLowerCase().includes(text.toLowerCase()),text);
  assert.match(html,/data-package-csv/);assert.match(html,/data-package-json/);assert.match(html,/data-chart/);assert.match(html,/Captured by|retrieval/i);
 });
 
@@ -62,7 +67,9 @@ test('publication explanations are dated, scoped, attributed and separate from c
  const row=publicationArchive.releases[2],publicationExplanations={version:1,explanations:[{publicationId:row.id,seriesId:row.seriesId,period:row.period,estimate:row.estimate,publicationDate:row.publicationDate,kind:'revision',summary:'Reviewed <revision> summary.',details:['Official source detail.'],annualUpdate:null,sourceUrl:row.releaseEvidenceUrl,sourceTitle:'Dated release',sourceSection:'Sources of revisions',licenseUrl:row.licenseUrl,attribution:row.attribution,provenance:[{retrievedAt:'2026-10-22T18:00:00.000Z',sha256:'a'.repeat(64)}]}]};
  const state=parseRoute('#/research?view=publications&period=2026-01-01&publishedBy=2026-06-25');
  const html=researchPage(state,{publicationArchive,publicationExplanations,explanationState:{status:'ready'}});
- for(const text of ['BEA REVISION EXPLANATIONS','Reviewed &lt;revision&gt; summary.','Official source detail.','Source: U.S. Bureau of Economic Analysis.','2026-10-22T18:00:00.000Z','data-export-publication-explanations','2026-06-25','not reviewed'])assert.ok(html.includes(text),text);
+ for(const text of ['BEA REVISION EXPLANATIONS','Reviewed &lt;revision&gt; summary.','Official source detail.',
+  'Source: U.S. Bureau of Economic Analysis.','2026-10-22T18:00:00.000Z','data-export-publication-explanations','2026-06-25',
+  'not reviewed'])assert.ok(html.toLowerCase().includes(text.toLowerCase()),text);
  assert.doesNotMatch(html,/<revision>/);assert.match(html,/paraphrase/i);
  const early=researchPage({...state,publicationCutoff:'2026-05-28'},{publicationArchive,publicationExplanations,explanationState:{status:'ready'}});
  assert.doesNotMatch(early,/Reviewed &lt;revision&gt;/);assert.match(early,/No reviewed BEA explanation/);
@@ -121,7 +128,8 @@ test('pinned explanations remain readable frozen evidence and malformed imported
   const pkg=await importResearchPackage(exportResearchPackage(await createResearchPackage({name:'Pinned evidence',state:{selected:['gdp'],range:1},context:{publicationExplanations,publicationExplanationStatus}})));
   return researchPage({...parseRoute('#/research?view=packages'),packageId:pkg.id},{library:{packages:[pkg]}});
  };
- const html=await make([entry]);assert.match(html,/FROZEN BEA EXPLANATIONS/);assert.match(html,/<p>Captured BEA explanation\.<\/p>/);assert.match(html,/retained|not authenticated/i);
+ const html=await make([entry]);assert.match(html,/Frozen BEA explanations/);assert.match(html,/<p>Captured BEA explanation\.<\/p>/);
+  assert.match(html,/retained|not authenticated/i);
  for(const malformed of [null,'<script>',[null,1,'x',{summary:'<img src=x>',period:null}]])assert.match(await make(malformed),/READ-ONLY/);
  for(const patch of [{attribution:{toString:null}},{sourceSection:{toString:null}},{provenance:[{retrievedAt:{toString:null}}]},{details:[{toString:null}]},{annualUpdate:{summary:{toString:null}}}])assert.match(await make([{...entry,...patch}]),/READ-ONLY/);
  assert.match(await make([entry],{toString:null}),/Capture status: Unavailable/);
@@ -134,7 +142,7 @@ test('storage recovery directs each research destination to the recoverable arti
   assert.match(saved,/Export settings/);assert.match(saved,/Saved Views.*watchlists/);
   assert.doesNotMatch(saved,/Download.*JSON|pinned/i,'A saved configuration has no frozen package JSON to download');
   const frozen=warningFor('packages',library);
-  assert.match(frozen,/Download JSON.*each Frozen Result/);assert.doesNotMatch(frozen,/Export settings/);
+  assert.match(frozen,/Download JSON.*each Saved snapshot/);assert.doesNotMatch(frozen,/Export settings/);
   for(const view of ['changes','publications']){
    const mixed=warningFor(view,library);
    assert.match(mixed,/Export settings.*saved configurations/);assert.match(mixed,/Download JSON.*frozen evidence/);
@@ -147,8 +155,9 @@ test('frozen-result display uses consistent terminology without rewriting legacy
  const pkg=await createResearchPackage({name:'Legacy retained result',state:{selected:['gdp'],range:1}}),original=JSON.stringify(pkg);
  const state={...parseRoute('#/research?view=packages')},library={packages:[pkg]};
  const index=researchPage(state,{library}),selected=researchPage({...state,packageId:pkg.id},{library});
- assert.match(index,/FROZEN RESULT LIBRARY/);assert.match(index,/NAME \/ FROZEN UTC/);assert.match(index,/Import frozen result \(JSON\)/);
- assert.match(selected,/FROZEN UTC/);assert.match(index,new RegExp(`data-open-package="${pkg.id}"`));assert.match(selected,new RegExp(`data-package-json="${pkg.id}"`));
+ assert.match(index,/Saved snapshot library/);assert.match(index,/Name \/ saved/);assert.match(index,/Import saved snapshot \(JSON\)/);
+ assert.match(selected,/Saved <b>/);assert.match(index,new RegExp(`data-open-package="${pkg.id}"`));assert.match(selected,
+  new RegExp(`data-package-json="${pkg.id}"`));
  for(const html of [index,selected])assert.doesNotMatch(html,/PINNED|Pinning|pinned package|pinned records|pinned JSON/);
  assert.equal(JSON.stringify(pkg),original);
 });

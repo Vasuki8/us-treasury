@@ -1,3 +1,4 @@
+import {humanDate} from './ui-time.js';
 import {readingGroup,supportingDetails} from './page-hierarchy.js';
 import {dataStatus} from './data.js';
 import {NOMINAL_YIELD_TENORS,REAL_YIELD_TENORS,selectCurveOverlays,H15_3M_GAP_NOTE,yieldComparisonShortcuts,selectedYieldChanges,yieldEventComparisons} from './yields.js';
@@ -35,14 +36,60 @@ export function yieldsPage(state={},source=dataStatus.sources.yields){
     +'<p class="panel-note" id="yield-date-help">Date choices snap to the nearest retained trading day; ties choose the earlier date.</p>'
     +shortcutControls+(curves.some(curve=>!curve.available)?
       '<p class="panel-note amber">A selected date is unavailable. No other date is substituted.</p>':''):'';
-  const curveTable=current?table(['TENOR',{label:`${current.date} NOMINAL`,numeric:true},{label:`${prior?.date??'Unavailable'} NOMINAL`,numeric:true},{label:'CHANGE / BP',numeric:true}],NOMINAL_YIELD_TENORS.map(tenor=>`<tr><th scope="row">${esc(tenor)}</th><td class="num">${esc(display(current.nominal[tenor]))}</td><td class="num">${esc(display(prior?.nominal[tenor]))}</td><td class="num">${esc(display(finite(current.nominal[tenor])&&finite(prior?.nominal[tenor])?100*(current.nominal[tenor]-prior.nominal[tenor]):null,' bp'))}</td></tr>`).join('')):emptyState('No verified historical curves available.');
-  const matched=current&&prior?table(['TENOR / MEASURE',{label:current.date,numeric:true},{label:prior.date,numeric:true},{label:'CHANGE / BP',numeric:true}],REAL_YIELD_TENORS.flatMap(tenor=>Object.entries(selectedYieldChanges(source,current.date,prior.date,{tenor})).map(([measure,values])=>`<tr><th scope="row">${esc(tenor)} · ${esc({nominal:'Nominal',real:'Real',inflationCompensation:'Inflation compensation'}[measure])}</th><td class="num">${esc(display(values.a,measure==='inflationCompensation'?' bp':'%'))}</td><td class="num">${esc(display(values.b,measure==='inflationCompensation'?' bp':'%'))}</td><td class="num">${esc(display(values.changeBps,' bp'))}</td></tr>`)).join('')):emptyState('Matched yield observations unavailable.');
-  return heading('RATES & CURVES','Treasury par curves · same-date spreads and matched nominal / real yields',button('CSV CURVES',`data-export-yield-curves${curves.some(curve=>curve.available)?'':' disabled'}`)+button('CSV INDICATORS','data-export-yield-indicators'))
-    +`<div class="workspace-basis"><p class="panel-note"><strong>WHAT CHANGED.</strong> Select two actual observation dates to compare historical nominal, real and inflation-compensation changes. Captured ${esc(source.fetchedAt??'unavailable')} · ${source.status==='ok'?'Official source capture':source.fetchedAt?'CACHED':'Unavailable'}. Release instants are not supplied.</p><p class="panel-note">Current revised Treasury par-yield history · no reconstructed original release vintages.${source.error?` <span class="amber">${esc(source.error)}</span>`:''}</p></div>`
+  const curveTable=current?table(['TENOR',{label:`${humanDate(current.date)} NOMINAL`,numeric:true},{label:`${humanDate(prior?.date)
+  ||'Unavailable'} NOMINAL`,numeric:true},{label:'CHANGE / BP',numeric:true}],
+  NOMINAL_YIELD_TENORS.map(tenor=>`<tr><th scope="row">${esc(tenor)}</th><td class="num">${esc(display(current.nominal[tenor]))
+  }</td><td class="num">${esc(display(prior?.nominal[tenor]))}</td><td class="num">${esc(display(finite(current.nominal[tenor])&&finite(prior
+  ?.nominal[tenor])?100*(current.nominal[tenor]-prior.nominal[tenor]):null,' bp'))}</td></tr>`).join('')):emptyState
+  ('No verified historical curves available.');
+  const matched=current&&prior?table(['TENOR / MEASURE',{label:humanDate(current.date),numeric:true},{label:humanDate(prior.date),numeric:true},
+  {label:'CHANGE / BP',numeric:true}],REAL_YIELD_TENORS.flatMap(tenor=>Object.entries(selectedYieldChanges(source,current.date,prior.date,
+  {tenor})).map(([measure,values])=>`<tr><th scope="row">${esc(tenor)} · ${esc({nominal:'Nominal',real:'Real',
+  inflationCompensation:'Inflation compensation'}[measure])}</th><td class="num">${esc(display(values.a,
+  measure==='inflationCompensation'?' bp':'%'))}</td><td class="num">${esc(display(values.b,
+  measure==='inflationCompensation'?' bp':'%'))}</td><td class="num">${esc(display(values.changeBps,
+  ' bp'))}</td></tr>`)).join('')):emptyState('Matched yield observations unavailable.');
+  const collection=(`<div class="workspace-basis"><p class="panel-note"><strong>WHAT CHANGED.</strong> Select `+
+  `two actual observation dates to compare historical nominal, real and `+
+  `inflation-compensation changes. Captured ${esc(source.fetchedAt
+  ??'unavailable')} · ${source.status==='ok'?'Official source capture':source.fetchedAt?'CACHED':'Unavailable'
+  }. Release instants are not supplied.</p><p class="panel-note">Current revised Treasury `+
+  `par-yield history · no reconstructed original release vintages.${source.error?` <span class="amber">${esc(source.error)}</span>`:''}</p></div>`);
+  return (source?.error?`<p class="panel-note amber">${esc(source.error)}</p>`:'')+heading('RATES & CURVES',
+  'Treasury par curves · same-date spreads and matched nominal / real yields',button('CSV CURVES',
+  `data-export-yield-curves${curves.some(curve=>curve.available)?'':' disabled'}`)+button('CSV INDICATORS','data-export-yield-indicators'))
     +readingGroup('Selected curve comparison',controls+panel('00','HISTORICAL CURVE OVERLAYS',(dates.length?`<div class="chart" data-chart data-kind="history-curve" data-dates="${esc(dates.join(','))}" data-height="260"><p class="muted">Historical Treasury nominal par curves</p></div>`:emptyState('No verified curves captured.')),'','Percent · solid A / dashed B · maturity axis uses elapsed years; exact values available by pointer or keyboard.')
-    +`<div class="grid g11 workspace-analysis">${panel('01','SELECTED-DATE RATE CHANGES',curveTable,'','100 × (Curve A − Curve B), basis points; exact selected observation dates, missing tenors remain unavailable. Published fitted par yields are reference measures, not executable quotes or average outstanding-debt costs. These are par yields, not zero-coupon yields. Selected dates crossing December 6, 2021 span a Treasury fitting-method change; methods and exceptions are below.')}${panel('02','SELECTED NOMINAL / REAL / COMPENSATION CHANGES',matched,'','Both selected dates · change = Curve A − Curve B, in basis points for all three measures. Compensation = 100 × (nominal − real), matching tenor and date; its change equals the nominal change minus the real change. This is not pure expected inflation.')}</div>`,`Selected observations: Curve A ${dates[0]??'unavailable'} · Curve B ${dates[1]??'unavailable'}. Nominal and real par yields are percent; differences are basis points.`)
+    +`<div class="grid g11 workspace-analysis">${panel('01','SELECTED-DATE RATE CHANGES',curveTable,'',
+  ('100 × (Curve A − Curve B), basis points; exact selected observation dates, missing tenors '+
+  'remain unavailable. Published fitted par yields are reference measures, not executable '+
+  'quotes or average outstanding-debt costs. These are par yields, not zero-coupon yields. '+
+  'Selected dates crossing December 6, 2021 span a Treasury fitting-method change; methods '+
+  'and exceptions are below.'))}${panel('02','SELECTED NOMINAL / REAL / COMPENSATION CHANGES',matched,'',
+  ('Both selected dates · change = Curve A − Curve B, in basis points for all three measures. '+
+  'Compensation = 100 × (nominal − real), matching tenor and date; its change equals the '+
+  'nominal change minus the real change. This is not pure expected inflation.'))}</div>`,`Selected observations: Curve A ${humanDate(dates[0])
+  ||'unavailable'} · Curve B ${humanDate(dates[1])||'unavailable'}. Nominal and real par yields are percent; differences are basis points.`)
     +readingGroup('Current retained rate context',panel('03','CURRENT RETAINED RATE CONTEXT',metrics(['spread2s10s','spread3m10y','realYield10','inflationComp10']),'','Current retained observations use their own dates; these readings do not track the selected historical Curve A or Curve B dates.')
     +panel('04','CURVE SPREADS',chart(['spread2s10s','spread3m10y'],{height:210}),'','Basis points: 100 × (10Y − 2Y), and 100 × (10Y − 3M), exact same observation date.'),'Retained indicators use their own dates; they do not move with selected historical curve dates.')
     +supportingDetails('yields:policy-context','Policy & overnight funding context',panel('05','POLICY & OVERNIGHT CONTEXT',metrics(['policyTargetLower','policyTargetUpper','effr','sofr']),'','Current retained observations use their own dates; not a decomposition of selected-date yields.'))
-    +supportingDetails('yields:source-coverage','Historical coverage & source exceptions',`<p class="panel-note">${esc(source.coverageNote??'Yield history not captured.')}</p>`)+supportingDetails('yields:methods','Curve interpretation & methodology',panel('06','WHAT CONTRIBUTED / WHY IT MATTERS / LIMITATIONS',`<div class="explain"><p><strong>WHAT CONTRIBUTED.</strong> Real par yields and inflation compensation provide context for nominal yields. Inflation compensation includes inflation-risk and liquidity effects. The curves alone cannot identify causal contributions from monetary policy, growth, inflation or investor demand.</p><p><strong>WHY IT MATTERS.</strong> Curve slope and real rates help compare borrowing conditions across maturities.</p><p><strong>LIMITATIONS.</strong> Nominal and real curves have distinct underlying securities and cash flows; their difference is not an exact economic decomposition or a pure forecast of inflation. Retention begins in 2003 and uses currently published revised history, with no reconstructed original release vintages. On December 1, 2008, Treasury changed the TIPS curve knot points from all securities to the most recently auctioned TIPS; earlier published rates remain official. The December 6, 2021 spline-method change applies to both curves.</p><p><strong>Term premium.</strong> ACM model estimates are not integrated pending dataset-specific workbook/input admission. Subtracting an ACM component from a different Treasury curve would not create an exact decomposition. A model estimate must remain labeled as modeled.</p><p><a href="https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology" target="_blank" rel="noopener noreferrer">Treasury curve methodology ↗</a> · source credit: U.S. Treasury, Office of Debt Management.</p></div>`));
+    +supportingDetails('yields:source-coverage','Historical coverage & source exceptions',`<p class="panel-note">${esc(source.coverageNote
+  ??'Yield history not captured.')}</p>`)+supportingDetails('yields:methods','About this data',collection+panel('06',
+  'WHAT CONTRIBUTED / WHY IT MATTERS / LIMITATIONS',(`<div class="explain"><p><strong>WHAT CONTRIBUTED.</strong> Real par yields and inflation `+
+  `compensation provide context for nominal yields. Inflation compensation includes `+
+  `inflation-risk and liquidity effects. The curves alone cannot identify causal `+
+  `contributions from monetary policy, growth, inflation or investor `+
+  `demand.</p><p><strong>WHY IT MATTERS.</strong> Curve slope and real rates help compare `+
+  `borrowing conditions across maturities.</p><p><strong>LIMITATIONS.</strong> Nominal and `+
+  `real curves have distinct underlying securities and cash flows; their difference is not an `+
+  `exact economic decomposition or a pure forecast of inflation. Retention begins in 2003 and `+
+  `uses currently published revised history, with no reconstructed original release vintages. `+
+  `On December 1, 2008, Treasury changed the TIPS curve knot points from all securities to `+
+  `the most recently auctioned TIPS; earlier published rates remain official. The December 6, `+
+  `2021 spline-method change applies to both curves.</p><p><strong>Term premium.</strong> ACM `+
+  `model estimates are not integrated pending dataset-specific workbook/input admission. `+
+  `Subtracting an ACM component from a different Treasury curve would not create an exact `+
+  `decomposition. A model estimate must remain labeled as modeled.</p><p><a `+
+  `href="https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-stati`+
+  `stics/treasury-yield-curve-methodology" target="_blank" rel="noopener noreferrer">Treasury `+
+  `curve methodology ↗</a> · source credit: U.S. Treasury, Office of Debt Management.</p></div>`)));
 }

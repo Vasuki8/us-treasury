@@ -7,10 +7,11 @@ import {vintagesPage} from '../src/vintages-page.js';
 import {watchlistPage} from '../src/watchlist-page.js';
 import {researchPage} from '../src/research-page.js';
 import {releasePage} from '../src/release-page.js';
-import {defaults} from '../src/router.js';
+import {defaults,parseRoute} from '../src/router.js';
 import {getSeries} from '../src/model.js';
 import {publicationArchive} from '../src/publication-archive.js';
 import {createResearchPackage} from '../src/research-packages.js';
+import {humanTimestamp} from '../src/ui-time.js';
 
 const state=overrides=>({...defaults,saved:[],...overrides});
 // Native closed disclosures remove their descendants; open frozen analyses stay visible.
@@ -23,7 +24,10 @@ function visible(html){
  }
  return result;
 }
-const group=(html,label)=>{const result=html.match(new RegExp('<section class="reading-group" aria-label="'+label+'">([\\s\\S]*?)</section>'));assert.ok(result,`Missing named reading group: ${label}`);return result[1];};
+const group=(html,label)=>{
+ const result=html.match(new RegExp('<section\\b[^>]*aria-label="'+label+'"[^>]*>([\\s\\S]*?)</section>'));
+ assert.ok(result,`Missing named reading group: ${label}`);return result[1];
+};
 const before=(html,first,second)=>assert.ok(html.indexOf(first)>=0&&html.indexOf(first)<html.indexOf(second),`${first} must precede ${second}`);
 
 test('Indicator retains native reading and clocks beside its working history in every detail tab',()=>{
@@ -51,8 +55,8 @@ test('Comparison groups measurement basis without hiding the controls, no-fill s
 test('Calendar keeps filters and scope limitations together ahead of the working schedule',()=>{
  const html=calendarPage(state({calendarView:'all',calendarMonth:'upcoming'})),basis=group(html,'Schedule scope');
  for(const id of ['calendar-scope','calendar-month','calendar-day','calendar-topic','calendar-watch-only'])assert.ok(basis.includes(`id="${id}"`),id);
- assert.match(basis,/Individually announced auctions and issue\/settlement dates/);
- assert.match(basis,/later announcements are not covered/);
+ assert.match(html,/data-page-disclosure="calendar:context"/);
+ assert.match(html,/later announcements are not covered/);
  before(html,'aria-label="Schedule scope"','id="calendar-selected-preview"');
  assert.match(visible(html),/data-reset-calendar/);
 });
@@ -79,11 +83,15 @@ test('Watchlist puts each native unit with its latest value and keeps storage an
  assert.doesNotMatch(lead,/data-watch-move="gdp"|data-save="gdp"/,'Order and removal controls appear in deliberate edit mode');
 });
 
-test('Frozen result basis is compact while original charts, exports and attachment order remain visible',async()=>{
+test('Saved snapshot basis is compact while original charts, exports and attachment order remain visible',async()=>{
  const pkg=await createResearchPackage({name:'Retained layout',state:{selected:['gdp'],range:1},context:{attachments:[{name:'First.csv',type:'text/csv',content:'value\n1'},{name:'Second.csv',type:'text/csv',content:'value\n2'}]}});
  const original=JSON.stringify(pkg),html=researchPage({researchView:'packages',packageId:pkg.id},{library:{packages:[pkg]}}),lead=visible(html);
- const basis=group(html,'Frozen result basis');
- for(const text of ['FROZEN UTC','WINDOW','VALUES','independent of the current snapshot'])assert.ok(basis.includes(text),text);
+ const basis=group(html,'Saved snapshot basis');
+ const context=new Map([...basis.matchAll(/<span>([^<]+)<b>([^<]+)<\/b><\/span>/g)]
+  .map(([,label,value])=>[label.trim().toLowerCase(),value]));
+ assert.equal(context.get('saved'),humanTimestamp(pkg.createdAt));
+ assert.equal(context.get('window'),pkg.resolvedWindow.label);assert.equal(context.get('values'),pkg.request.transform);
+ assert.ok(basis.includes('independent of the current snapshot'));
  for(const text of ['data-chart','data-package-json','data-package-csv','does not authenticate','Imported source claims remain unverified'])assert.ok(lead.includes(text),text);
  before(lead,'data-package-attachment="0"','data-package-attachment="1"');
  assert.equal(JSON.stringify(pkg),original,'Rendering never mutates retained inputs');
@@ -102,8 +110,17 @@ test('Release result groups published measurement basis and keeps clock and expl
  const row=publicationArchive.releases.find(item=>item.seriesId==='gdp');
  const html=releasePage({publicationSeries:'gdp',publicationPeriod:row.period,publicationCutoff:row.publicationDate},{archive:publicationArchive,explanationState:{status:'error',error:'Explanation failed'}}),lead=visible(html),basis=group(html,'Published result basis');
  assert.match(basis,/Verified official result/);assert.match(basis,/day precision/);assert.ok(basis.includes(row.adjustment));
- for(const text of ['Expected schedule','Verified publication','Evidence retrieved','data-retry-publication-explanations','RETURN TO CALENDAR','PUBLICATION HISTORY / CSV / FREEZE'])assert.ok(lead.includes(text),text);
- before(html,'VERIFIED OFFICIAL RESULT','AGENCY EXPLANATION');
+ for(const text of ['Expected schedule','Verified publication','Evidence retrieved','data-retry-publication-explanations']){
+  assert.ok(lead.includes(text),text);
+ }
+ const links=[...lead.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/g)]
+  .map(([,href,label])=>({state:parseRoute(href.replaceAll('&amp;','&')),label}));
+ assert.ok(links.some(link=>link.state.page==='calendar'));
+ const publication=links.find(link=>link.state.page==='research'&&link.state.researchView==='publications');
+ assert.ok(publication);assert.equal(publication.state.publicationPeriod,row.period);
+ assert.equal(publication.state.publicationCutoff,row.publicationDate);
+ assert.equal(publication.label,'Publication history / CSV / Save snapshot');
+ before(html,'aria-label="Published result basis"','data-retry-publication-explanations');
 });
 
 test('Working result wrappers stay balanced so supporting actions remain within their page',()=>{

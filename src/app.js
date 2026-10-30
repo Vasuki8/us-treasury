@@ -35,6 +35,8 @@ import {marketFunctioningCsv} from './market-functioning-page.js';
 import {mountCompactNavigation,syncCompactNavigation} from './compact-navigation.js';
 import { renderPage } from './pages.js';
 import { escapeHtml as esc, sourceNotice } from './ui.js';
+import {pageSourceScope} from './page-source-scope.js';
+import {humanTimestamp} from './ui-time.js';
 import { mountFreshnessBanner } from './freshness-controller.js';
 import { renderCharts,captureChartInspection } from './charts.js';
 import { parseRoute, routeFor,destinationChanged,entryWindow } from './router.js';
@@ -240,6 +242,7 @@ function renderCurrentChartsIn(container,inspection){
  renderCharts(container,{...(pkg?{catalog:pkg.catalog}:{}),chartCatalogs,...(inspection?{inspection}:{})});
 }
 function researchActions(){
+ if(state.page==='sources')return '';
  const alert=changeCheckpoint.enabled&&dataStatus.generatedAt>changeCheckpoint.snapshotAt?'<p class="panel-note amber" role="status">A newer snapshot is available since your local change checkpoint. <a href="#/research?view=changes">Review captured changes and collector failures</a>. A new snapshot does not itself establish a new economic release.</p>':'';
  if(state.page==='research')return alert;
  const active=researchLibrary.getWorkspace(activeWorkspaceId),name=researchLabel||active?.name||`${pageNames[state.page]} research`,candidates=state.page==='release'?[]:freezeCandidates(state),scope=researchSaveScope(state);
@@ -287,8 +290,10 @@ function render({focusHeading=false,preserveFocus=false,captureDrafts=true}={}) 
   document.getElementById('saved-count').textContent=state.saved.length;
   document.getElementById('mobile-saved-count').textContent=state.saved.length;
   document.getElementById('saved-list').innerHTML=state.saved.length?state.saved.map(id=>`<div class="saved-item"><a href="${esc(indicatorHref(id,{...state,page:'watchlist'}))}">${esc(getSeries(id).short)}</a><button type="button" data-save="${id}" aria-label="Remove ${esc(getSeries(id).name)} from watchlist">×</button></div>`).join(''):'<p class="rail-note">No followed indicators.<br>Open an indicator and choose Follow.</p>';
-  document.getElementById('source-notice').innerHTML=sourceNotice(dataStatus.sources);
-  document.getElementById('snapshot-time').textContent=`OFFICIAL SNAPSHOT · ASSEMBLED ${dataStatus.generatedAt ?? 'UNAVAILABLE'}`;
+  const notices=pageSourceScope(state,main.innerHTML);
+  document.getElementById('source-notice').innerHTML=state.page==='sources'?'':sourceNotice(notices.sources,
+    {scoped:true,calendarSources:notices.calendarSources});
+  document.getElementById('snapshot-time').textContent=humanTimestamp(dataStatus.generatedAt,{prefix:'Updated '})||'Snapshot unavailable';
   document.title=`${state.page==='indicator'?getSeries(state.seriesId).name:pageNames[state.page]} — Meridian`;
   document.title=`${main.querySelector('h1')?.textContent??pageNames[state.page]} — Meridian`;
   renderCurrentCharts(inspection);prepareReadableTables(main);positionResearchSave(main);
@@ -311,6 +316,8 @@ function navigate(patch,{replace=false,preserveFocus=true}={}) {
   if(destinationChanged(state,{...state,...patch}))rememberWorkspace();
   if(['page','seriesId','macroFamily','macroMeasure','vintageSeries','eventId','selected'].some(key=>key in patch&&patch[key]!==state[key]))delete state.freezeSelection;
   state={...state,...patch};
+  if(['explore','watchlist'].includes(previous.page)&&!(previous.selected?.length)&&patch.selected?.length
+    &&!Object.hasOwn(patch,'window')&&!Object.hasOwn(patch,'range'))state.window=entryWindow(state,location.hash);
   const automaticOrigin=['overview','fiscal','refinancing','auctions','ownership','macro','credit','calendar'].includes(previous.page);
   if(automaticOrigin&&patch.page&&patch.page!==previous.page
     &&!Object.hasOwn(patch,'window')&&!Object.hasOwn(patch,'range'))state.window=entryWindow(state,location.hash);
@@ -480,8 +487,9 @@ async function handleResearchAction(d){
           },
         });
       }
-      const pkg=await createResearchPackage({name,...args}),result=await researchLibrary.pinPackage(pkg);stored(result,'Frozen package');
-      navigate({page:'research',researchView:'packages',packageId:pkg.id,researchFeedback:{packageId:pkg.id,message:result.persisted?'Frozen Result saved with its original evidence.':'Frozen Result is session-only. Download JSON before reloading for recovery.'}});
+      const pkg=await createResearchPackage({name,...args}),result=await researchLibrary.pinPackage(pkg);stored(result,'Saved snapshot');
+      navigate({page:'research',researchView:'packages',packageId:pkg.id,researchFeedback:{packageId:pkg.id,message:result.persisted?
+  'Snapshot saved with its original evidence.':'Snapshot is session-only. Download JSON before reloading for recovery.'}});
     }finally{pinBusy=false;if(researchSaveScope(state)===initiatingScope){render({preserveFocus:true});restoreStableFocus(main,initiatingFocus,{document});}}
   }else if('openPackage' in d)navigate({page:'research',researchView:'packages',packageId:d.openPackage});
   else if('removePackage' in d){stored(await researchLibrary.removePackage(d.removePackage),'Package removal');if(state.packageId===d.removePackage)navigate({packageId:''});}
@@ -617,7 +625,7 @@ root.addEventListener('click',async event=>{
   else if('publicationMode' in d)navigate({publicationMode:d.publicationMode==='matrix'?'matrix':'quarter',publicationPeriod:''});
   else if('remove' in d)navigate({selected:state.selected.filter(id=>id!==d.remove)});
   else if('day' in d)navigate({day:d.day});
-  else if('resetFilters' in d)navigate({query:'',topic:'All topics',frequency:'All frequencies'});
+  else if('resetFilters' in d)navigate({query:'',topic:'All topics',frequency:'All frequencies',catalogPage:1});
   else if('resetCalendar' in d)navigate({calendarView:'macro',calendarMonth:'upcoming',day:'all',calendarTopic:'All topics',watchOnly:false,eventId:''});
   else if('export' in d)exportCsv();
   else if('exportMacroMeasure' in d)exportCsv([state.macroMeasure]);
@@ -670,7 +678,10 @@ root.addEventListener('change',async event=>{
   const target=event.target;
   if(target.dataset&&'freezeSelect' in target.dataset){
     const candidates=freezeCandidates(state),scope=researchSaveScope(state),draft=saveDrafts.get(scope,{selected:candidates.slice(0,4)}),chosen=[...(state.freezeSelection??draft.selected)],id=target.dataset.freezeSelect;
-    if(target.checked&&chosen.length>=4){target.checked=false;const message='Freeze Result allows four primary histories. Uncheck a measurement before choosing another; existing selections are preserved.';saveDrafts.update(scope,{feedback:{kind:'error',message}});render({preserveFocus:true});announce(message);return;}
+    if(target.checked&&chosen.length>=4){target.checked=false;const message=
+  ('Save snapshot allows four primary histories. Uncheck a measurement before choosing '+
+  'another; existing selections are preserved.');saveDrafts.update(scope,{feedback:{kind:'error',message}});render({preserveFocus:true});announce
+  (message);return;}
     state.freezeSelection=target.checked?[...chosen,id]:chosen.filter(value=>value!==id);saveDrafts.update(scope,{selected:[...state.freezeSelection],feedback:null});render({preserveFocus:true});return;
   }
   if(target.matches?.('[data-question-role],[data-question-condition-field]')){questionDrafts.capture(document);render({preserveFocus:true});return;}
@@ -730,7 +741,9 @@ root.addEventListener('change',async event=>{
   else if(target.id==='calendar-scope')navigate({calendarView:target.value,day:'all',eventId:''});
   else if(target.id==='calendar-month')navigate({calendarMonth:target.value,day:'all',eventId:''});
   else if(target.id==='calendar-day')navigate({day:target.value,eventId:''});
-  else if(fields[target.id])navigate({[fields[target.id]]:target.value,...(target.id==='calendar-topic'?{eventId:''}:{})});
+  else if(fields[target.id])navigate({[fields[target.id]]:target.value,
+    ...(['topic-filter','frequency-filter'].includes(target.id)?{catalogPage:1}:{}),
+    ...(target.id==='calendar-topic'?{eventId:''}:{})});
   else if(target.id==='calendar-watch-only')navigate({watchOnly:target.checked,eventId:''});
   else if(target.matches('[data-select]')) {
     const id=target.dataset.select;
@@ -741,7 +754,7 @@ root.addEventListener('change',async event=>{
 
 root.addEventListener('input',event=>{
   if(event.target.id==='research-name')researchLabel=event.target.value;
-  if(event.target.id==='catalog-search')navigate({query:event.target.value},{replace:true});
+  if(event.target.id==='catalog-search')navigate({query:event.target.value,catalogPage:1},{replace:true});
   if(event.target.id==='labor-query')navigate({query:event.target.value},{replace:true});
 });
 

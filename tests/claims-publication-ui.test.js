@@ -10,7 +10,8 @@ test('publication routes preserve safe series/week/cutoff while original GDP lin
 });
 test('weekly publication view renders roles, measurement selection, scoped actions and source-noted seasonal limits',()=>{
  const html=researchPage(state(),{publicationArchive:claimsFixture(),publicationState:{status:'ready'}});
- for(const text of ['OFFICIAL CLAIMS PUBLICATION HISTORY','Reference week','publication-series','claimsAdvance','continuedClaimsAdvance','CSV THIS WEEK','Revised prior','Advance','day precision','seasonal-factor'])assert.ok(html.includes(text),text);
+ for(const text of ['OFFICIAL CLAIMS PUBLICATION HISTORY','Reference week','publication-series','claimsAdvance','continuedClaimsAdvance',
+  'CSV THIS WEEK','Revised prior','Advance','day precision','seasonal-factor'])assert.ok(html.toLowerCase().includes(text.toLowerCase()),text);
  assert.doesNotMatch(html,/REAL GDP GROWTH|BEA EXPLANATIONS|%<\/td>/);assert.match(html,/https:\/\/oui.doleta.gov\/press\/2026\/031926.pdf/);
  const before=researchPage(state({publicationCutoff:'2026-03-11'}),{publicationArchive:claimsFixture(),publicationState:{status:'ready'}});assert.match(before,/No selected publication/);assert.doesNotMatch(before,/Source reports annual/);
  const prior=researchPage(state({publicationPeriod:'2025-12-27',publicationCutoff:'2026-01-08'}),{publicationArchive:claimsFixture(),publicationState:{status:'ready'}});assert.match(prior,/Original advance.*not retained/i);
@@ -32,5 +33,6 @@ test('claims publication pins freeze only selected facts, exact CSV, roles and d
  assert.match(args.catalog.claimsAdvance.short,/archived publication/i);assert.doesNotMatch(args.catalog.claimsAdvance.short,/latest release/i);
  const pkg=await createResearchPackage({id:'synthetic-claims-history',name:'Claims published by date',...args}),text=exportResearchPackage(pkg),csv=pkg.context.attachments[0].content;
  archive.releases.length=0;const imported=await importResearchPackage(text);assert.equal(exportResearchPackage(imported),text);assert.equal(imported.context.attachments[0].content,csv);assert.match(csv,/prior-week-revised/);assert.doesNotMatch(csv,/continuedClaimsAdvance/);assert.equal(researchPackageCsv(imported),pkg.csv);
- const html=researchPage({...state(),researchView:'packages',packageId:pkg.id},{library:{packages:[imported]}});assert.match(html,/READ-ONLY/);assert.match(html,/claims-publication-history.csv/);assert.doesNotMatch(html,/FROZEN BEA EXPLANATIONS/);
+ const html=researchPage({...state(),researchView:'packages',packageId:pkg.id},{library:{packages:[imported]}});assert.match(html,/READ-ONLY/);
+  assert.match(html,/claims-publication-history.csv/);assert.doesNotMatch(html,/FROZEN BEA EXPLANATIONS/i);
 });

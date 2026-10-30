@@ -1,5 +1,6 @@
 import {releaseMeasurements,selectReleaseEvidence} from './release-evidence.js';
 import {publicationFamily as family} from './publication-controller.js';
+import {isTreasuryBill} from './calendar-scope.js';
 const labels={'first-capture':'First captured coverage','new-period':'New reference period','historical-backfill':'Historical backfill','value-change':'Observed change between retrievals','metadata-change':'Metadata update','observation-metadata-change':'Observation metadata update','coverage-removal':'Coverage removed'};
 const newest=(field)=>(a,b)=>String(b[field]??'').localeCompare(String(a[field]??''));
 /** Curated overview only; the chronological full calendar remains unfiltered. */
@@ -7,7 +8,16 @@ export function nextCatalysts(events,{now=new Date(),limit=4}={}) {
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
  const end=new Date(Date.parse(today+'T12:00:00Z')+29*86400000).toISOString().slice(0,10);
  const seen=new Set();
- return [...events].filter(event=>event.date>=today&&event.date<=end&&event.sourceId!=='treasury'&&(!event.scheduledAt||Date.parse(event.scheduledAt)>=now.getTime())).sort((a,b)=>a.date.localeCompare(b.date)||String(a.time??'').localeCompare(String(b.time??''))).filter(event=>{const key=`${event.sourceId}|${event.program??event.name}`;if(seen.has(key))return false;seen.add(key);return true;}).slice(0,limit);
+ const headline=new Set(['gdp','consumer-price-index','employment-situation','personal-income-outlays','weekly-claims','fomc-decision']);
+ return [...events].filter(event=>event.date>=today&&event.date<=end&&event.sourceId!=='treasury'&&!isTreasuryBill(event)
+  &&(!event.scheduledAt||Date.parse(event.scheduledAt)>=now.getTime()))
+  .sort((a,b)=>Number(headline.has(b.program))-Number(headline.has(a.program))
+   ||a.date.localeCompare(b.date)||String(a.time??'').localeCompare(String(b.time??'')))
+  .filter(event=>{
+   const key=`${event.sourceId}|${event.program??event.name}`;
+   if(seen.has(key))return false;
+   seen.add(key);return true;
+  }).slice(0,limit);
 }
 /** Publication evidence, latest revised readings and collection history are separate clocks. */
 export function dailyBrief({catalog={},changes=[],failures=[],publicationContexts={}}={}) {

@@ -29,7 +29,9 @@ test('refinancing compact exposure uses trillions while exact maturity tables an
 
 test('refinancing page preserves source dates and exposes accessible scenario controls with both directions',()=>{
   const html=api().refinancingPage({refinancingHorizon:3,refinancingShock:50},source());
-  for(const text of ['REFINANCING','WHAT CHANGED','WHAT CONTRIBUTED','WHY IT MATTERS','LIMITATIONS','2026-09-30','2026-10-22T02:27:14.574Z','3 months','12 months','24 months','Bill','FRN','TIPS','4%','hypothetical','+50','−50','Original','Federal Financing Bank'])assert.ok(html.includes(text),text);
+  for(const text of ['REFINANCING','WHAT CHANGED','WHAT CONTRIBUTED','WHY IT MATTERS','LIMITATIONS','2026-09-30','2026-10-22T02:27:14.574Z',
+  '3 months','12 months','24 months','Bill','FRN','TIPS','4%','hypothetical','+50','−50','Original',
+  'Federal Financing Bank'])assert.ok(html.toLowerCase().includes(text.toLowerCase()),text);
   assert.match(html,/<label[^>]*for="refinancing-horizon"/);
   assert.match(html,/<select[^>]*id="refinancing-horizon"[^>]*>[\s\S]*?<option value="3" selected/);
   assert.match(html,/<label[^>]*for="refinancing-shock"/);
@@ -79,6 +81,6 @@ test('refinancing maturity bars use the exact retained monthly principal and kee
  assert.match(html,/class="maturity-ladder-chart"/);
  assert.match(html,/Monthly contractual principal/);
  assert.match(html,/data-page-disclosure="refinancing:maturity-table"/);
- assert.match(html,/<title>2026-10-31: \$100\.00B<\/title>/);
- assert.match(html,/CUMULATIVE PRINCIPAL/);
+ assert.match(html,/<title>31 Oct 2026: \$100\.00B<\/title>/);
+ assert.match(html,/cumulative principal/i);
 });

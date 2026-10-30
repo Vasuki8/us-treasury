@@ -1,6 +1,7 @@
 import {releases,series} from './data.js';
 import {calendarRelatedIds} from './macro-calendar.js';
 export const isTreasuryEvent=event=>['treasury','treasury-auctions'].includes(event?.sourceId);
+export const isTreasuryBill=event=>event?.sourceId==='treasury-auctions'&&/bill/i.test(event.securityType??'');
 
 /** Keep a revealed legacy link's visible scope when the next filter removes its event. */
 export function revealedCalendarState(state,options){
@@ -19,6 +20,7 @@ export function calendarScope(state,{events=releases,catalog=series,now=new Date
   &&(!state.watchOnly||related(event).some(id=>saved.includes(id)));
  const explicit=ordered.find(event=>event.id===state.eventId&&matchesFilters(event)&&(!months.includes(state.calendarMonth)||event.date.startsWith(state.calendarMonth+'-')));
  let view=['treasury','all'].includes(state.calendarView)?state.calendarView:'macro',revealed=false;
+ if(explicit&&isTreasuryBill(explicit)&&view!=='treasury'){view='treasury';revealed=true;}
  if(explicit&&view!=='all'&&isTreasuryEvent(explicit)!==(view==='treasury')){view=isTreasuryEvent(explicit)?'treasury':'macro';revealed=true;}
  let month=months.includes(state.calendarMonth)?state.calendarMonth:'upcoming';
  let startDate,endDate;
@@ -35,7 +37,8 @@ export function calendarScope(state,{events=releases,catalog=series,now=new Date
   const [year,number]=month.split('-').map(Number);endDate=new Date(Date.UTC(year,number,0)).toISOString().slice(0,10);revealed=true;
  }
  const windowEvents=ordered.filter(event=>event.date>=startDate&&event.date<=endDate);
- const viewEvents=windowEvents.filter(event=>view==='all'||isTreasuryEvent(event)===(view==='treasury'));
+ const viewEvents=windowEvents.filter(event=>(view==='treasury'||!isTreasuryBill(event))
+  &&(view==='all'||isTreasuryEvent(event)===(view==='treasury')));
  const days=[...new Set(viewEvents.map(event=>event.date))];
  const filtered=viewEvents.filter(matchesFilters);
  const selected=filtered.find(event=>event.id===state.eventId)??(view==='treasury'?filtered.find(event=>event.sourceId!=='treasury'):null)??filtered[0];

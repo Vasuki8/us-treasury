@@ -1,3 +1,4 @@
+import {humanDate} from './ui-time.js';
 import {readingGroup,supportingDetails} from './page-hierarchy.js';
 import {dataStatus} from './data.js';
 import {auctionAllocations,benchmarkAuction,auctionResultState,auctionResultCoverage} from './auctions.js';
@@ -51,27 +52,73 @@ export function auctionsPage(state={},source=dataStatus.sources.auctions){
   const page=Number.isInteger(state.auctionHistoryPage)?Math.max(0,Math.min(pageCount-1,state.auctionHistoryPage)):selectedPage;
   const visibleRows=rows.slice(page*pageSize,(page+1)*pageSize);
   const pageButton=(label,index,disabled)=>button(label,`data-auction-history-page="${index}"${disabled?' disabled':''}`);
-  const pager=pageCount>1?`<div class="toolbar" role="group" aria-label="Auction history pages"><span class="small muted">History page ${page+1} of ${pageCount} · ${esc(visibleRows.at(-1)?.auctionDate)} to ${esc(visibleRows[0]?.auctionDate)}</span><div class="actions">${pageButton('NEWEST',0,page===0)}${pageButton('NEWER',Math.max(0,page-1),page===0)}${pageButton('OLDER',Math.min(pageCount-1,page+1),page===pageCount-1)}${pageButton('OLDEST',pageCount-1,page===pageCount-1)}</div></div>`:'';
+  const pager=pageCount>1?(`<div class="toolbar" role="group" aria-label="Auction history pages"><span class="small `+
+  `muted">History page ${page
+  +1} of ${pageCount} · ${esc(humanDate(visibleRows.at(-1)?.auctionDate))} to ${esc(humanDate(visibleRows[0]?.auctionDate))
+  }</span><div class="actions">${pageButton('NEWEST',0,page===0)}${pageButton('NEWER',Math.max(0,page-1),page===0)}${pageButton('OLDER',Math.min
+  (pageCount-1,page+1),page===pageCount-1)}${pageButton('OLDEST',pageCount-1,page===pageCount-1)}</div></div>`):'';
   const controls=`<div class="toolbar"><label for="auction-type">Security type <select id="auction-type">${types.map(value=>`<option value="${value}"${value===type?' selected':''}>${value}</option>`).join('')}</select></label><span class="small muted">${rows.length} matching records · ${visibleRows.length} shown; CSV includes all matching records.</span></div>`;
-  const history=rows.length?table(['AUCTION / EASTERN DATE','SECURITY',{label:'FACE OFFERING',numeric:true},{label:'BID-TO-COVER',numeric:true},'STATE'],visibleRows.map(row=>`<tr${row.id===selected?.id?' class="selected-row"':''}><th scope="row">${button(row.auctionDate,`data-auction-id="${esc(row.id)}" aria-pressed="${row.id===selected?.id}"`,'link-button')}</th><td>${esc(row.securityType)} · ${esc(row.securityTerm)}<span class="table-code muted">Original ${esc(row.originalTerm??'unknown')} · ${row.reopening===true?'reopening':row.reopening===false?'new issue':'reopening unknown'}${row.cashManagement?' · cash management':''}</span></td><td class="num">${esc(money(row.offeringAmount))}</td><td class="num">${esc(number(row.bidToCover))}</td><td><span class="pill">${esc(auctionResultState(row).label)}</span></td></tr>`).join(''),'Select a Treasury auction; auction dates are separate from issue and maturity dates.')+pager:emptyState('No auctions match these filters.','Choose another security type. Missing observations are not replaced with another instrument.');
-  const details=selected?`<h3 class="detail-title">${esc(selected.auctionDate)} · ${esc(selected.securityType)} · ${esc(selected.securityTerm)}</h3><p class="panel-note"><strong>${esc(selectedState.label)}</strong> · ${esc(selectedState.note)}</p><p class="panel-note">Original term ${esc(selected.originalTerm??'unknown')} · ${selected.reopening===true?'reopening':selected.reopening===false?'new issue':'reopening unknown'}${selected.cashManagement?' · cash-management bill':''}.</p><dl class="facts"><dt>Offering amount / face USD</dt><dd>${esc(money(selected.offeringAmount))}</dd><dt>Official bid-to-cover</dt><dd>${esc(number(selected.bidToCover))}${finite(selected.bidToCover)?'×':''}</dd><dt>Announcement date</dt><dd>${esc(selected.announcementDate??'Unknown')}</dd><dt>Issue date</dt><dd>${esc(selected.issueDate??'Unknown')}</dd><dt>Maturity date</dt><dd>${esc(selected.maturityDate??'Unknown')}</dd><dt>Result release timestamp</dt><dd>Unknown</dd><dt>Nominal / TIPS high yield</dt><dd>${esc(rate(selected.highYield))}</dd><dt>Bill high discount rate</dt><dd>${esc(rate(selected.highDiscountRate))}</dd><dt>FRN high discount margin</dt><dd>${esc(rate(selected.highDiscountMargin))}</dd></dl><p class="panel-note">${externalLink(selected.resultUrl??selected.sourceUrl,selected.resultUrl?'Official auction result':'Official auction data')}. TIPS yields are real yields; nominal yields, bill discount rates and FRN margins have different meanings. No auction tail is inferred without a reliable, licensed, timestamp-matched when-issued quote.</p>`:emptyState('No auction selected.','A verified record is required before presenting results.');
+  const history=rows.length?table(['AUCTION / EASTERN DATE','SECURITY',{label:'FACE OFFERING',numeric:true},{label:'BID-TO-COVER',numeric:true},
+  'STATE'],visibleRows.map(row=>`<tr${row.id===selected?.id?' class="selected-row"':''}><th scope="row">${button(humanDate(row.auctionDate),
+  `data-auction-id="${esc(row.id)}" aria-pressed="${row.id===selected?.id}"`,
+  'link-button')}</th><td>${esc(row.securityType)} · ${esc(row.securityTerm)}<span class="table-code muted">Original ${esc(row.originalTerm
+  ??'unknown')} · ${row.reopening===true?'reopening':row.reopening===false?'new issue':'reopening unknown'}${row.cashManagement?
+  ' · cash management':''}</span></td><td class="num">${esc(money(row.offeringAmount))}</td><td class="num">${esc(number(row.bidToCover))
+  }</td><td><span class="pill">${esc(auctionResultState(row).label)}</span></td></tr>`).join(''),
+  'Select a Treasury auction; auction dates are separate from issue and maturity dates.')+pager:emptyState('No auctions match these filters.',
+  'Choose another security type. Missing observations are not replaced with another instrument.');
+  const details=selected?(`<h3 class="detail-title">${esc(humanDate(selected.auctionDate))} · ${esc(selected.securityType)} · ${esc
+  (selected.securityTerm)}</h3><p class="panel-note"><strong>${esc(selectedState.label)}</strong> · ${esc(selectedState.note)
+  }</p><p class="panel-note">Original term ${esc(selected.originalTerm??'unknown')} · ${selected.reopening===true?'reopening':
+  selected.reopening===false?'new issue':'reopening unknown'}${selected.cashManagement?' · cash-management bill':''
+  }.</p><dl class="facts"><dt>Offering amount / face USD</dt><dd>${esc(money(selected.offeringAmount))}</dd><dt>Official bid-to-cover</dt><dd>${
+  esc(number(selected.bidToCover))}${finite(selected.bidToCover)?'×':''}</dd>${selected.announcementDate?`<dt>Announcement date</dt><dd>${esc
+  (humanDate(selected.announcementDate))}</dd>`:''}${selected.issueDate?`<dt>Issue date</dt><dd>${esc(humanDate(selected.issueDate))}</dd>`:''}${
+  selected.maturityDate?`<dt>Maturity date</dt><dd>${esc(humanDate(selected.maturityDate))}</dd>`:''}<dt>Nominal / TIPS high yield</dt><dd>${esc
+  (rate(selected.highYield))}</dd><dt>Bill high discount rate</dt><dd>${esc(rate(selected.highDiscountRate))
+  }</dd><dt>FRN high discount margin</dt><dd>${esc(rate(selected.highDiscountMargin))}</dd></dl><p class="panel-note">${externalLink
+  (selected.resultUrl??selected.sourceUrl,selected.resultUrl?'Official auction result':'Official auction data')
+  }. TIPS yields are real yields; nominal yields, bill discount rates and FRN margins have `+
+  `different meanings. No auction tail is inferred without a reliable, licensed, `+
+  `timestamp-matched when-issued quote.</p>`):emptyState('No auction selected.','A verified record is required before presenting results.');
   const selectionSummary=selected?'<div class="auction-selection-summary">'
     +'<p id="auction-selection-status" role="status" aria-live="polite" aria-atomic="true">'
-    +`<strong>Selected: ${esc(selected.auctionDate)} · ${esc(selected.securityType)} · ${esc(selected.securityTerm)}</strong>`
+    +`<strong>Selected: ${esc(humanDate(selected.auctionDate))} · ${esc(selected.securityType)} · ${esc(selected.securityTerm)}</strong>`
     +`<span>${esc(formatDisplayValue({format:'number',unit:'USD'},selected.offeringAmount,{currencyUnit:'B'}))} face offering · `
     +`${esc(formatDisplayValue({format:'number'},selected.bidToCover))}${finite(selected.bidToCover)?'× bid-to-cover':''}`
     +` · ${esc(selectedState.label)}</span></p>`
     +button('View selected auction','data-auction-selected aria-controls="auction-selected-result"')
     +(selectedPage!==page?`<span class="small muted">Selected row is on history page ${selectedPage+1}; `
       +'browsing this page keeps that result selected.</span>':'')+'</div>':'';
-  return heading('AUCTION DEMAND','Official auction facts · calculated bidder shares · matched historical comparisons',button('CSV AUCTIONS','data-export-auctions')+button('CSV MATCHED BENCHMARK','data-export-auction-benchmark'))
-    +`<div class="workspace-basis"><p class="panel-note"><strong>WHAT CHANGED.</strong> Select a result to compare its offering size, bid-to-cover and competitive award shares with prior matching auctions. Latest verified complete results: <strong>${esc(coverage.latestVerifiedDate??'unavailable')}</strong> · latest reported result date ${esc(coverage.latestReportedDate??'unavailable')}. ${coverage.counts.missing} elapsed auctions with results not retained · ${coverage.counts.incomplete} incomplete results · ${coverage.counts.announced} announced. ${esc(status(source))} · retrieved ${esc(source?.fetchedAt??'No successful capture')} · coverage ${esc(source?.coverageStart??'unknown')} through ${esc(source?.coverageEnd??'unknown')}. ${source?.error?`<span class="amber">${esc(source.error)}</span>`:''}</p></div>`
+  const collection=(`<div class="workspace-basis"><p class="panel-note"><strong>WHAT CHANGED.</strong> Select a `+
+  `result to compare its offering size, bid-to-cover and competitive award shares with prior `+
+  `matching auctions. Latest verified complete results: <strong>${esc(coverage.latestVerifiedDate
+  ??'unavailable')}</strong> · latest reported result date ${esc(coverage.latestReportedDate
+  ??'unavailable')}. ${coverage.counts.missing} elapsed auctions with results not retained · ${coverage.counts.incomplete
+  } incomplete results · ${coverage.counts.announced} announced. ${esc(status(source))} · retrieved ${esc(source?.fetchedAt
+  ??'No successful capture')} · coverage ${esc(source?.coverageStart??'unknown')} through ${esc(source?.coverageEnd??'unknown')}. ${source
+  ?.error?`<span class="amber">${esc(source.error)}</span>`:''}</p></div>`);
+  return (source?.error?`<p class="panel-note amber">${esc(source.error)}</p>`:'')+heading('AUCTION DEMAND',
+  'Official auction facts · calculated bidder shares · matched historical comparisons',button('CSV AUCTIONS','data-export-auctions')
+  +button('CSV MATCHED BENCHMARK','data-export-auction-benchmark'))
     +readingGroup('Selected auction comparison',controls
     +`<div class="grid g11 workspace-analysis" id="auction-selected-result" tabindex="-1">${panel('01','SELECTED AUCTION',details)}${panel('02','PRIOR MATCHING RESULTS',selected?benchmarkTable(source,selected):emptyState('Matching benchmark unavailable.'))}</div>`
     +panel('03','WHAT CONTRIBUTED — COMPETITIVE AWARD COMPOSITION',selected?allocationTable(selected):emptyState('Award composition unavailable.'),'','Bidder composition describes who submitted accepted competitive bids. It does not establish why auction demand changed.'),'Auction dates are Eastern dates, separate from announcement, issue and maturity dates. Result release timestamps are unknown; capture time is not publication time.')
     +panel('04','AUCTION HISTORY',`<div id="auction-history" tabindex="-1">${selectionSummary}${pager}${history}</div>`)
     +supportingDetails('auctions:monthly-activity','Gross monthly offering activity',panel('05','GROSS MONTHLY OFFERING ACTIVITY',source?.series?.auctionOfferingMonthly?chart(['auctionOfferingMonthly'],{height:190}):emptyState('Monthly offering totals unavailable.'),'','All security types, independent of the history filter. USD billions of face amounts for records with reported results, including rollovers. Current and awaiting-result months are partial; these are not net borrowing or cash proceeds.'))
-    +supportingDetails('auctions:methods','Auction interpretation, coverage & methodology',panel('06','WHY IT MATTERS & LIMITATIONS',`<div class="explain"><p><strong>WHY IT MATTERS.</strong> Bid-to-cover describes bids relative to awards under the agency definition; allocation shares show competitive award composition. Comparable prior auctions provide context, without proving a cause or predicting future yields.</p><p><strong>LIMITATIONS.</strong> ${esc(limitation)} Missing allocation amounts remain missing. Unreconciled categories are withheld; incomplete category lists are labeled partial. New issues, reopenings, cash-management bills, FRNs and TIPS are compared only within their stated classes.</p><p>Source record dates can equal future issue dates and are not treated as result release timestamps. Retrieval dates do not establish when a result first became public.</p><p>${esc(source?.coverageNote??'No verified Treasury auction capture is available.')}</p><p>${externalLink('https://fiscaldata.treasury.gov/datasets/treasury-securities-auctions-data/','Treasury Fiscal Data, Bureau of the Fiscal Service')} · ${externalLink('https://www.treasurydirect.gov/help-center/faqs/auction-faqs/','TreasuryDirect bidder definitions')}</p></div>`));
+    +supportingDetails('auctions:methods','About this data',collection+panel('06','WHY IT MATTERS & LIMITATIONS',
+  (`<div class="explain"><p><strong>WHY IT MATTERS.</strong> Bid-to-cover describes bids `+
+  `relative to awards under the agency definition; allocation shares show competitive award `+
+  `composition. Comparable prior auctions provide context, without proving a cause or `+
+  `predicting future yields.</p><p><strong>LIMITATIONS.</strong> ${esc(limitation)
+  } Missing allocation amounts remain missing. Unreconciled categories are withheld; `+
+  `incomplete category lists are labeled partial. New issues, reopenings, cash-management `+
+  `bills, FRNs and TIPS are compared only within their stated classes.</p><p>Source record `+
+  `dates can equal future issue dates and are not treated as result release timestamps. `+
+  `Retrieval dates do not establish when a result first became public.</p><p>${esc(source?.coverageNote
+  ??'No verified Treasury auction capture is available.')}</p><p>${externalLink
+  ('https://fiscaldata.treasury.gov/datasets/treasury-securities-auctions-data/','Treasury Fiscal Data, Bureau of the Fiscal Service')} · ${
+  externalLink('https://www.treasurydirect.gov/help-center/faqs/auction-faqs/','TreasuryDirect bidder definitions')}</p></div>`)));
 }
 
 export const MAX_GENERATED_AUCTIONS_CSV_BYTES=32*1024*1024;

@@ -1,3 +1,4 @@
+import {humanDate} from '../src/ui-time.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {renderPage} from '../src/pages.js';
@@ -47,10 +48,10 @@ test('weekly desk keeps own weeks and same-release priors distinct from revised 
  const html=render(),desk=html.slice(html.indexOf('id="labor-weekly"'),html.indexOf('id="labor-trends"'));
  for(const id of ['claimsAdvance','continuedClaimsAdvance']){
   const s=series[id];for(const observation of s.observations)assert.ok(desk.includes(periodLabel(s,observation.date)));
-  assert.ok(desk.includes(latest(s).publishedAt));assert.match(desk,new RegExp(`publicationSeries=${id}`));
+  assert.ok(desk.includes(humanDate(latest(s).publishedAt)));assert.match(desk,new RegExp(`publicationSeries=${id}`));
   const row=html.match(new RegExp(`<tr[^>]*data-series-row="${id}"[\\s\\S]*?</tr>`))?.[0];assert.ok(row);assert.doesNotMatch(row,/<svg/);
  }
- assert.match(desk,/Same-release prior/);assert.match(desk,/day precision/);assert.match(desk,/Revised history ends/);
+ assert.match(desk,/Same-release prior/);assert.match(desk,/Published/);assert.match(desk,/Revised history ends/);
  assert.match(desk,/not spliced/);assert.match(desk,/Prior previously published/);
 });
 
@@ -88,7 +89,7 @@ test('core charts share quarterly and weekly focus dates for calendar presets an
 
 test('focused methodology link opens methodology and preserves the exact Labor return context',()=>{
  const state={...parseRoute('#/economy/labor?measure=eciCompensation&window=custom&start=2025-04-01&end=2026-04-01'),saved:[]};
- const html=renderPage(state),href=html.match(/href="([^"]+)">Methodology &amp; source notes ↗<\/a>/)?.[1];
+ const html=renderPage(state),href=html.match(/href="([^"]+)">Methodology &amp; source notes<\/a>/)?.[1];
  assert.ok(href);const target=parseRoute(href.replaceAll('&amp;','&'));
  assert.equal(target.page,'indicator');assert.equal(target.seriesId,'eciCompensation');assert.equal(target.tab,'methodology');
  assert.equal(target.returnTo,routeFor(state));assert.equal(target.window,'custom');assert.equal(target.startDate,'2025-04-01');assert.equal(target.endDate,'2026-04-01');

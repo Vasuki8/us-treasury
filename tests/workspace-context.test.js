@@ -43,18 +43,19 @@ test('indicator return links retain catalog filters, comparison selection and da
  assert.equal(detail.seriesId,'publicDebt');assert.equal(detail.page,'indicator');assert.equal(detail.window,'all');
  assert.deepEqual(detail.selected,original.selected,'opening the detail URL fresh retains the actual comparison selection');
  assert.equal(detail.comparison,original.comparison,'adding a measure after a copied link retains comparison mode');
- assert.equal(back.href,routeFor(original));assert.match(back.label,/RESULTS/);
+ assert.equal(back.href,routeFor(original));assert.equal(back.label,'Back to results');
  const restored=parseRoute(back.href);for(const key of ['query','topic','frequency','selected','window'])assert.deepEqual(restored[key],original[key]);
 });
 
 test('watchlist is a real route with safe return access through comparisons',()=>{
  const origin=parseRoute('#/watchlist?comparison=difference&window=all');assert.equal(origin.page,'watchlist');
- const detail=parseRoute(indicatorHref('sofr',origin));assert.match(workspaceReturn(detail).label,/WATCHLIST/);
+ const detail=parseRoute(indicatorHref('sofr',origin));assert.equal(workspaceReturn(detail).label,'Back to Watchlist');
  const comparison={...detail,page:'explore',exploreMode:'compare',selected:['sofr','effr']};
- assert.match(workspaceReturn(parseRoute(routeFor(comparison))).label,/WATCHLIST/);
+ assert.equal(workspaceReturn(parseRoute(routeFor(comparison))).label,'Back to Watchlist');
  const comparisonDetail=parseRoute(indicatorHref('effr',comparison));
  const returnedComparison=parseRoute(workspaceReturn(comparisonDetail).href);
- assert.match(workspaceReturn(returnedComparison).label,/WATCHLIST/,'comparison retains its ultimate watchlist origin after detail inspection');
+ assert.equal(workspaceReturn(returnedComparison).label,'Back to Watchlist',
+  'comparison retains its ultimate watchlist origin after detail inspection');
  assert.equal(returnedComparison.window,'all');
  const returnedWatchlist=parseRoute(workspaceReturn(returnedComparison).href);
  assert.equal(returnedWatchlist.comparison,'difference');
@@ -63,7 +64,8 @@ test('watchlist is a real route with safe return access through comparisons',()=
  assert.deepEqual(updated.selected,newSelection);
  assert.deepEqual(parseRoute(workspaceReturn(updated).href).selected,newSelection,'adding from a detail updates both return destinations');
  const catalog={...origin,page:'explore',returnTo:routeFor(origin)};
- assert.match(workspaceReturn(parseRoute(workspaceReturn(parseRoute(indicatorHref('sofr',catalog))).href)).label,/WATCHLIST/,'catalog keeps the same bounded origin');
+ const catalogOrigin=workspaceReturn(parseRoute(workspaceReturn(parseRoute(indicatorHref('sofr',catalog))).href));
+ assert.equal(catalogOrigin.label,'Back to Watchlist','catalog keeps the same bounded origin');
 });
 
 test('return routes stay in approved workspaces with at most one watchlist origin',()=>{

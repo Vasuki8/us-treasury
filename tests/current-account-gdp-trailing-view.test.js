@@ -1,3 +1,4 @@
+import {humanTimestamp} from '../src/ui-time.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseCsv} from '../scripts/sources/http.mjs';
@@ -8,11 +9,13 @@ const all={preset:'all'},records=csv=>{const [headers,...rows]=parseCsv(csv);ass
 test('trailing panel supplies separate total and four-component charts, exact window and derived labels',()=>{
  assert.equal(typeof view.currentAccountGdpTrailingPanel,'function');
  const html=view.currentAccountGdpTrailingPanel(fixture(),all);
- assert.match(html,/TRAILING FOUR QUARTERS · CURRENT ACCOUNT \/ GDP/);
+ assert.match(html,/TRAILING FOUR QUARTERS · CURRENT ACCOUNT \/ GDP/i);
  assert.equal((html.match(/data-chart-catalog="current-account-gdp-trailing"/g)??[]).length,2);
  assert.match(html,/currentAccountTrailingToGdp/);assert.match(html,/itaGoodsBalanceTrailingToGdp,itaServicesBalanceTrailingToGdp,itaPrimaryIncomeBalanceTrailingToGdp,itaSecondaryIncomeBalanceTrailingToGdp/);
  assert.match(html,/Q3 2025.*Q2 2026/);assert.match(html,/ratio of sums/i);assert.match(html,/overlap/i);assert.match(html,/Rounding residual/);
- assert.match(html,/CSV TRAILING &amp; INPUTS/);assert.match(html,/2026-10-23T04:21:42.080Z/);assert.match(html,/2026-10-23T02:56:31.625Z/);assert.match(html,/bea.gov\/help\/faq\/147/);
+ assert.match(html,/CSV TRAILING &amp; INPUTS/i);assert.match(html,new RegExp(humanTimestamp("2026-10-23T04:21:42.080Z")));assert.match(html,
+  new RegExp(humanTimestamp("2026-10-23T02:56:31.625Z")));
+  assert.match(html,/bea.gov\/help\/faq\/147/);
  assert.doesNotMatch(html,/id="window-start"/);
  const binding=view.currentAccountGdpTrailingChartCatalog(fixture())['current-account-gdp-trailing'];
  assert.equal(Object.keys(binding.catalog).length,5);assert.match(binding.evidenceLabel,/Calculated/);
@@ -50,7 +53,8 @@ test('trailing states are explicit and frozen panels omit live actions and share
  assert.match(view.currentAccountGdpTrailingPanel(fixture(),{preset:'custom',startDate:'2030-01-01',endDate:'2030-04-01'}),/No retained quarters/);
  const sources=fixture();sources.bea.status='error';sources.bea.error='<blocked>';
  assert.match(view.currentAccountGdpTrailingPanel(sources,all),/Cached input/);assert.match(view.currentAccountGdpTrailingPanel(sources,all),/&lt;blocked&gt;/);
- const frozen=view.currentAccountGdpTrailingPanel(sources,all,{frozen:true});assert.match(frozen,/FROZEN TRAILING/);assert.doesNotMatch(frozen,/data-export-current-account-gdp-trailing|data-window=/);
+ const frozen=view.currentAccountGdpTrailingPanel(sources,all,{frozen:true});assert.match(frozen,/FROZEN TRAILING/i);assert.doesNotMatch(frozen,
+  /data-export-current-account-gdp-trailing|data-window=/);
  assert.match(view.currentAccountGdpTrailingChartCatalog(sources,{frozen:true})['current-account-gdp-trailing'].evidenceLabel,/Frozen/);
  const invalid={preset:'custom',startDate:'bad',endDate:'bad'};assert.match(view.currentAccountGdpTrailingPanel(sources,invalid),/unavailable/i);
  assert.equal(records(view.currentAccountGdpTrailingCsv(sources,invalid)).filter(row=>row.record_type==='ratio').length,0);
