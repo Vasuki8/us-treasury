@@ -2,12 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {OfficialSourceHttpError} from '../scripts/sources/http.mjs';
+import {assertNyFedBlsCalendar} from '../scripts/bls-alternate-policy.mjs';
+import {refreshSnapshot} from '../scripts/sources/refresh.mjs';
 
 let adapter;
 try {adapter=await import('../scripts/sources/calendar-nyfed-bls.mjs');}
 catch(error){if(error.code!=='ERR_MODULE_NOT_FOUND'||!error.message.includes('calendar-nyfed-bls.mjs'))throw error;}
 const nyfed=()=>{assert.ok(adapter,'The New York Fed BLS calendar adapter must exist');return adapter;};
 const anchor='https://www.newyorkfed.org/research/calendars/nationalecon_cal.html';
+const octoberUrl='https://www.newyorkfed.org/research/calendars/i-oct26.html';
 const novemberUrl='https://www.newyorkfed.org/research/calendars/i-nov26.html';
 const decemberUrl='https://www.newyorkfed.org/research/calendars/i-dec26.html';
 const januaryUrl='https://www.newyorkfed.org/research/calendars/i-jan27.html';
@@ -18,7 +21,113 @@ const page=(month,weeks,next='',modern=false)=>`<!doctype html><title>Economic I
 const november=(next=decemberUrl)=>page('November 2026',[[2,[3,entry('JOLTS')],4,5,[6,entry('Employment Situation')]],[9,[10,entry('Consumer Price Index')],11,12,13]],next);
 const october=()=>page('October 2026',[[null,null,null,1,[2,entry('Employment Situation')]],[12,13,[14,entry('Consumer Price Index')],15,16]],novemberUrl,true);
 const december=(next=januaryUrl)=>page('December 2026',[[null,[1,entry('JOLTS')],2,3,[4,entry('Employment Situation')]],[7,8,9,[10,entry('Consumer Price Index')],11]],next);
-const january=()=>page('January 2027',[[4,5,6,7,[8,entry('Employment Situation')]],[11,12,[13,entry('Consumer Price Index')],14,15]]);
+const january=(next='')=>page('January 2027',[[4,5,6,7,[8,entry('Employment Situation')]],
+ [11,12,[13,entry('Consumer Price Index')],14,15]],next);
+function withPrevious(html,url=octoberUrl){
+ return html.replace('<td class="ts-data-table-head">',
+  `<td><a href="${url}">PREVIOUS MONTH</a></td><td class="ts-data-table-head">`);
+}
+
+test('New York Fed parses only an unambiguous reviewed sequential previous-month link',()=>{
+ const parsed=nyfed().parseNyFedBlsCalendar(withPrevious(november(),'./i-oct26.html'),{url:anchor});
+ assert.equal(parsed.previousUrl,octoberUrl);assert.equal(parsed.nextUrl,decemberUrl);
+ for(const html of [
+  withPrevious(withPrevious(november())),withPrevious(november(),novemberUrl),withPrevious(november(),anchor),
+  withPrevious(november(),'https://vendor.example/i-oct26.html'),withPrevious(november(),octoberUrl+'?copy=1'),
+  withPrevious(november()).replace(`href="${octoberUrl}"`,''),
+  withPrevious(november()).replace(`href="${octoberUrl}"`,`href="${octoberUrl}" href="${octoberUrl}"`),
+ ])assert.throws(()=>nyfed().parseNyFedBlsCalendar(html,{url:anchor}),/previous|sequential|ambiguous|source URL/i);
+});
+
+test('New York Fed acquires the current month when its index advances early without duplicating the index month',async()=>{
+ const pages=new Map([[anchor,withPrevious(november())],[octoberUrl,october()],[decemberUrl,december()]]);
+ const requests=[],pauses=[];
+ const result=await nyfed().collectNyFedBlsCalendar({now:new Date('2026-10-30T19:00:00Z'),pause:async ms=>pauses.push(ms),
+  fetchImpl:async url=>{requests.push(url);assert.ok(pages.has(url),'Only published discovered pages may be requested');
+   return new Response(pages.get(url));},
+ });
+ assert.deepEqual(requests,[anchor,octoberUrl,decemberUrl]);assert.deepEqual(pauses,[1000,1000]);
+ assert.equal(result.indexMonth,'2026-11');assert.deepEqual(result.coveredMonths,['2026-10','2026-11','2026-12']);
+ assert.deepEqual(result.unavailableMonths,[]);assert.equal(result.coverageStart,'2026-10-01');assert.equal(result.coverageEnd,'2026-12-31');
+ assert.equal(result.events.length,8);assert.equal(result.fetchedAt,result.provenance.at(-1).retrievedAt);
+ assert.deepEqual(result.provenance.map(item=>item.url),requests);
+ for(const event of result.events){
+  const expected={'2026-10':octoberUrl,'2026-11':anchor,'2026-12':decemberUrl}[event.date.slice(0,7)];
+  assert.equal(event.sourceUrl,expected);assert.equal(event.period,null);assert.equal(event.scheduleBasis,'secondary-calendar');
+ }
+});
+
+test('advanced-index calendar capture passes admission and the required-refresh guard with truthful receipts',async t=>{
+ t.mock.timers.enable({apis:['Date'],now:new Date('2026-10-30T19:00:00Z')});
+ const pages=new Map([[anchor,withPrevious(november())],[octoberUrl,october()],[decemberUrl,december()]]);
+ const collect=({now})=>nyfed().collectNyFedBlsCalendar({now,pause:async()=>{},fetchImpl:async url=>{
+  assert.ok(pages.has(url));return new Response(pages.get(url));
+ }});
+ const next=await refreshSnapshot({calendarCollectors:{bls:collect},now:new Date(),requireAll:true});
+ const source=next.calendar.sources.bls;
+ assert.equal(source.status,'ok');assertNyFedBlsCalendar(source);
+ assert.equal(source.indexMonth,'2026-11');assert.equal(source.coverageStart,'2026-10-01');
+ assert.ok(source.provenance.every(row=>row.retrievedAt==='2026-10-30T19:00:00.000Z'));
+});
+
+test('advanced-index discovery preserves the required current-month failure safeguards and prior capture',async t=>{
+ t.mock.timers.enable({apis:['Date'],now:new Date('2026-10-30T19:00:00Z')});
+ const old=await nyfed().collectNyFedBlsCalendar({pause:async()=>{},fetchImpl:async url=>
+  new Response(url===anchor?october():url===novemberUrl?november():december())});
+ const previous={calendar:{sources:{bls:{...old,status:'ok'}}}},before=structuredClone(previous);
+ const failures=[
+  ['404',()=>new Response('Not found',{status:404})],['403',()=>new Response('Denied',{status:403})],
+  ['missing-page redirect',()=>new Response('',{status:302,headers:{location:'/errors/404'}})],
+  ['other redirect',()=>new Response('',{status:301,headers:{location:novemberUrl}})],
+  ['wrong month',()=>new Response(november())],['invalid table',()=>new Response('<html>Challenge</html>')],
+ ];
+ for(const [name,response]of failures)for(const mode of [{requireAll:true},{allowCachedBlsData:true}]){
+  const requests=[];
+  const collect=({now})=>nyfed().collectNyFedBlsCalendar({now,pause:async()=>{},fetchImpl:async url=>{
+   requests.push(url);return url===anchor?new Response(withPrevious(november())):response();
+  }});
+  await assert.rejects(refreshSnapshot({previous,calendarCollectors:{bls:collect},now:new Date(),...mode}),
+   /Required official refresh failed; snapshot was not replaced.*bls calendar/,name);
+  assert.deepEqual(requests,[anchor,octoberUrl],name);assert.deepEqual(previous,before,name);
+ }
+});
+
+test('advanced-index discovery rejects missing navigation and indexes more than one month away',async()=>{
+ for(const [html,time]of [
+  [november(),'2026-10-30T12:00:00Z'],[withPrevious(december(),novemberUrl),'2026-10-30T12:00:00Z'],
+  [october(),'2026-12-01T12:00:00Z'],
+ ]){
+  const requests=[];
+  await assert.rejects(nyfed().collectNyFedBlsCalendar({now:new Date(time),pause:async()=>{},fetchImpl:async url=>{
+   requests.push(url);return new Response(html);
+  }}),/month|link/i);
+  assert.deepEqual(requests,[anchor]);
+ }
+});
+
+test('advanced-index discovery respects Eastern month and December-to-January boundaries',async t=>{
+ t.mock.timers.enable({apis:['Date'],now:new Date('2026-12-31T23:00:00Z')});
+ const requests=[],february='https://www.newyorkfed.org/research/calendars/i-feb27.html';
+ const advanced=withPrevious(january(february),decemberUrl);
+ const source=await nyfed().collectNyFedBlsCalendar({pause:async()=>{},fetchImpl:async url=>{
+  requests.push(url);return url===anchor?new Response(advanced):url===decemberUrl?new Response(december()):new Response('',{status:404});
+ }});
+ assert.deepEqual(requests,[anchor,decemberUrl,february]);assertNyFedBlsCalendar(source);
+ assert.equal(source.indexMonth,'2027-01');assert.deepEqual(source.coveredMonths,['2026-12','2027-01']);
+ assert.deepEqual(source.unavailableMonths,['2027-02']);assert.equal(source.coverageEnd,'2027-01-31');
+ for(const [time,start,expected]of [
+  ['2026-11-01T03:59:59Z','2026-10-01',[anchor,octoberUrl,decemberUrl]],
+  ['2026-11-01T04:00:00Z','2026-11-01',[anchor,decemberUrl,januaryUrl]],
+ ]){
+  t.mock.timers.setTime(Date.parse(time));
+  const urls=[];
+  const result=await nyfed().collectNyFedBlsCalendar({now:new Date(time),pause:async()=>{},fetchImpl:async url=>{
+   urls.push(url);return new Response(url===anchor?withPrevious(november()):url===octoberUrl?october():
+    url===decemberUrl?december():january());
+  }});
+  assert.equal(result.coverageStart,start);assert.deepEqual(urls,expected);assertNyFedBlsCalendar(result);
+ }
+});
 
 test('New York Fed parses legacy markup with explicit provider, times and no invented reference periods',()=>{
  const result=nyfed().parseNyFedBlsCalendar(november(),{url:novemberUrl,expectedMonth:'2026-11'});
