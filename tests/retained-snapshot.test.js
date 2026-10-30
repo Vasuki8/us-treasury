@@ -61,6 +61,84 @@ function auctionArgs(input,route){
  return buildPinContext(parseRoute(route),{catalog,sources:{...dataStatus.sources,auctions:input}});
 }
 
+function assertRetainedContributions(source,history){
+ const captures=history.captures.filter(row=>row.sourceId==='macroContributions');
+ const retained={version:history.version,captures},replay=cutoff=>asKnownOn(retained,cutoff).sources.macroContributions;
+ const backfill=captures.find(row=>row.capturedAt==='2026-10-24T03:06:14.124Z');
+ assert.ok(backfill,'the original admitted backfill remains in immutable capture history');
+ assert.equal(backfill.recordedAt,'2026-10-24T03:06:15.081Z');
+ const original=replay(backfill.capturedAt);
+ assert.equal(original.coverageStart,'1947-04-01');assert.equal(original.coverageEnd,'2026-04-01');
+ const fields={
+  total:['gdpTotalContribution',2.2],consumption:['gdpConsumptionContribution',2.51],investment:['gdpInvestmentContribution',.82],
+  government:['gdpGovernmentContribution',-.01],exports:['gdpExportsContribution',.56],imports:['gdpImportsContribution',-1.66],
+  fixedInvestment:['gdpFixedInvestmentContribution',1.35],inventories:['gdpInventoriesContribution',-.53],
+  consumptionGoods:['gdpConsumptionGoodsContribution',.94],consumptionServices:['gdpConsumptionServicesContribution',1.57],
+ };
+ const historicalDates=Array.from({length:317},(_,i)=>new Date(Date.UTC(1947,3+i*3,1)).toISOString().slice(0,10));
+ const ids=Object.values(fields).map(([id])=>id).sort();
+ assert.deepEqual(Object.keys(original.series).sort(),ids);assert.deepEqual(Object.keys(source.series).sort(),ids);
+ const q2=Object.fromEntries(Object.entries(fields).map(([field,[id]])=>[field,original.series[id].observations.at(-1).value]));
+ assert.equal(Math.round(100*(q2.total-q2.consumption-q2.investment-q2.government-q2.exports-q2.imports))/100,-.02);
+ const earlier=captures.filter(row=>row.capturedAt<backfill.capturedAt);
+ assert.ok(earlier.length>=2);
+ const beforeBackfill=replay(earlier.at(-1).capturedAt),latest=captures.at(-1),current=replay(source.fetchedAt);
+ assert.equal(latest.capturedAt,source.fetchedAt);
+ assert.ok(earlier.every(row=>row.capturedAt<latest.capturedAt));
+ const previous=asKnownOn({version:history.version,captures:captures.slice(0,-1)},source.fetchedAt).sources.macroContributions;
+ assert.equal(source.status,'ok');assert.match(source.coverageEnd,/^\d{4}-(01|04|07|10)-01$/);
+ assert.ok(source.coverageEnd>='2026-04-01','current coverage cannot lose the admitted backfill endpoint');
+ const quarters=(Number(source.coverageEnd.slice(0,4))-1947)*4+(Number(source.coverageEnd.slice(5,7))-4)/3+1;
+ // Count from 1947 Q2, then apply the collector's existing 400-quarter retention bound.
+ const dates=Array.from({length:Math.min(quarters,400)},(_,i)=>
+  new Date(Date.UTC(1947,3+3*(Math.max(0,quarters-400)+i),1)).toISOString().slice(0,10));
+ assert.equal(source.coverageStart,dates[0]);assert.deepEqual(source.quarterly.map(row=>row.date),dates);
+ assert.equal(source.provenance[0].retrievedAt,source.fetchedAt);
+ assert.match(source.coverageNote,/first captured on the actual retrieval date/i);
+ for(const [field,[id,value]]of Object.entries(fields)){
+  const originalRows=original.series[id].observations,rows=source.series[id].observations;
+  assert.deepEqual(originalRows.map(row=>row.date),historicalDates,id);
+  assert.equal(originalRows.at(-1).value,value,id);
+  assert.equal(backfill.series[id].upserts.length,281,id);assert.deepEqual(backfill.series[id].deletedDates,[],id);
+  assert.deepEqual(beforeBackfill.series[id].observations.map(row=>row.date),historicalDates.slice(-36),id);
+  assert.deepEqual(rows.map(row=>row.date),dates,id);
+  assert.ok(rows.every(row=>row.publishedAt===null&&Object.hasOwn(row,'sourceValue')),id);
+  assert.deepEqual(source.quarterly.map(row=>row[field]),rows.map(row=>row.value),id);
+  assert.deepEqual(current.series[id].observations,rows,id);
+  const dropped=previous.series[id].observations.filter(row=>row.date<dates[0]).map(row=>row.date);
+  assert.deepEqual(latest.series[id]?.deletedDates??[],dropped,id);
+ }
+ for(const row of source.quarterly){
+  const headline=[row.consumption,row.investment,row.government,row.exports,row.imports];
+  const complete=[row.total,...headline].every(Number.isFinite);
+  const residual=complete?(Math.round(100*(row.total-headline.reduce((sum,value)=>sum+value,0)))/100||0):null;
+  assert.equal(row.complete,complete,row.date);assert.equal(row.reconciliationResidual,residual,row.date);
+ }
+}
+
+// Synthetic quarters exercise refresh growth without changing any retained snapshot or immutable capture.
+function futureContributions(original,history,additionalQuarters){
+ const source=structuredClone(original),last=new Date(original.coverageEnd+'T00:00:00Z');
+ for(let i=1;i<=additionalQuarters;i++){
+  const date=new Date(Date.UTC(last.getUTCFullYear(),last.getUTCMonth()+3*i,1)).toISOString().slice(0,10);
+  source.quarterly.push({...original.quarterly.at(-1),date});
+  for(const [id,item]of Object.entries(source.series))item.observations.push({...original.series[id].observations.at(-1),date});
+ }
+ source.quarterly=source.quarterly.slice(-400);
+ for(const item of Object.values(source.series))item.observations=item.observations.slice(-400);
+ source.coverageStart=source.quarterly[0].date;source.coverageEnd=source.quarterly.at(-1).date;
+ source.fetchedAt=new Date(Math.max(Date.UTC(Number(source.coverageEnd.slice(0,4))+1,0,1),Date.parse(original.fetchedAt)+86400000))
+  .toISOString();
+ source.provenance=source.provenance.map(row=>({...row,retrievedAt:source.fetchedAt}));
+ const revised=source.quarterly.find(row=>row.date==='2026-04-01')??source.quarterly.at(-1);
+ revised.imports=Math.round((revised.imports-.09)*100)/100;revised.exports=Math.round((revised.exports+.09)*100)/100;
+ for(const [id,value]of [['gdpImportsContribution',revised.imports],['gdpExportsContribution',revised.exports]]){
+  Object.assign(source.series[id].observations.find(row=>row.date===revised.date),{value,sourceValue:String(value)});
+ }
+ const next=recordVintages(history,{}, {macroContributions:source},{checkedAt:source.fetchedAt,seriesMetadata:registry});
+ return {source,history:next};
+}
+
 // Only this worker decodes the growing canonical root. Ordinary npm tests use the bounded fixture.
 test('retained production snapshot preserves admission, history and portable evidence at full scale',async t=>{
  const bytes=await readFile(new URL('../src/official-snapshot.json.gz',import.meta.url)).catch(error=>{
@@ -159,27 +237,45 @@ test('retained production snapshot preserves admission, history and portable evi
  });
 
  await t.test('retained contribution backfill has all approved history with original capture clocks and earlier captures intact',async()=>{
-  const source=snapshot.sources.macroContributions;
-  assert.equal(source.status,'ok');assert.equal(source.coverageStart,'1947-04-01');assert.equal(source.coverageEnd,'2026-04-01');
-  assert.equal(source.quarterly.length,317);assert.equal(Object.keys(source.series).length,10);
-  for(const series of Object.values(source.series)){
-   assert.equal(series.observations.length,317);assert.equal(series.observations[0].date,'1947-04-01');assert.equal(series.observations[0].publishedAt,null);
-   assert.ok(series.observations.every(row=>Object.hasOwn(row,'sourceValue')));
-  }
-  assert.equal(source.provenance[0].retrievedAt,source.fetchedAt);assert.match(source.coverageNote,/first captured on the actual retrieval date/i);
-  assert.equal(source.quarterly.at(-1).imports,-1.66);
-  assert.equal(source.quarterly.at(-1).fixedInvestment,1.35);
-  assert.equal(source.quarterly.at(-1).reconciliationResidual,-.02);
-  const captures=history.captures.filter(row=>row.sourceId==='macroContributions');
-  const latest=captures.at(-1);assert.equal(latest.capturedAt,source.fetchedAt);assert.deepEqual(latest.series.gdpTotalContribution?.deletedDates??[],[]);
-  const backfill=captures.find(row=>row.capturedAt==='2026-10-24T03:06:14.124Z');
-  assert.ok(backfill,'the original admitted backfill remains in immutable capture history');
-  assert.equal(backfill.series.gdpTotalContribution.upserts.length,281);assert.deepEqual(backfill.series.gdpTotalContribution.deletedDates,[]);
-  assert.equal(asKnownOn(history,source.fetchedAt).sources.macroContributions.series.gdpTotalContribution.observations.length,317);
-  const earlier=captures.filter(row=>row.capturedAt<backfill.capturedAt);
-  assert.ok(earlier.length>=2);
-  assert.equal(asKnownOn(history,earlier.at(-1).capturedAt).sources.macroContributions.series.gdpTotalContribution.observations.length,36);
-  assert.ok(earlier.every(row=>row.capturedAt<latest.capturedAt));
+  assertRetainedContributions(snapshot.sources.macroContributions,history);
+ });
+
+ await t.test('retained contribution checks accept new quarters and legitimate current revisions',async t=>{
+  const retained={version:history.version,captures:history.captures.filter(row=>row.sourceId==='macroContributions')};
+  for(const additional of [1,3,84])await t.test(`${additional} later quarters`,()=>{
+   const candidate=futureContributions(snapshot.sources.macroContributions,retained,additional);
+   assertRetainedContributions(candidate.source,candidate.history);
+  });
+ });
+
+ await t.test('retained contribution checks reject damaged historical or current evidence',async t=>{
+  const retained={version:history.version,captures:history.captures.filter(row=>row.sourceId==='macroContributions')};
+  const candidate=futureContributions(snapshot.sources.macroContributions,retained,1);
+  const backfill=input=>input.history.captures.find(row=>row.capturedAt==='2026-10-24T03:06:14.124Z');
+  const cases=[
+   ['missing original backfill',input=>{input.history.captures=input.history.captures.filter(row=>row!==backfill(input));}],
+   ['lost original backfilled row',input=>backfill(input).series.gdpTotalContribution.upserts.shift()],
+   ['altered immutable Q2 value',input=>{
+    for(const capture of input.history.captures.filter(row=>row.capturedAt<=backfill(input).capturedAt)){
+     for(const row of capture.series.gdpImportsContribution?.upserts??[])if(row.date==='2026-04-01')row.value=99;
+    }
+   }],
+   ['lost earlier capture coverage',input=>input.history.captures[0].series.gdpTotalContribution.upserts.shift()],
+   ['missing current interior quarter',input=>{
+    input.source.quarterly.splice(10,1);
+    for(const item of Object.values(input.source.series))item.observations.splice(10,1);
+   }],
+   ['current replay mismatch',input=>{
+    input.source.series.gdpTotalContribution.observations[0].value+=1;input.source.quarterly[0].total+=1;
+    input.source.series.gdpConsumptionContribution.observations[0].value+=1;input.source.quarterly[0].consumption+=1;
+   }],
+   ['lost raw source value',input=>{delete input.source.series.gdpTotalContribution.observations[0].sourceValue;}],
+   ['changed original recording clock',input=>{backfill(input).recordedAt='2026-10-24T03:06:14.124Z';}],
+  ];
+  for(const [name,corrupt]of cases)await t.test(name,()=>{
+   const changed=structuredClone(candidate);corrupt(changed);
+   assert.throws(()=>assertRetainedContributions(changed.source,changed.history),{code:'ERR_ASSERTION'});
+  });
  });
 
  await t.test('all retained official current-account quarters match exact nominal GDP quarters, covering at least 266 quarters', () => {
