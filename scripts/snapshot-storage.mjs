@@ -9,6 +9,7 @@ import { currentSnapshotAssets } from './current-snapshot.mjs';
 const MAX_CAPTURE_BYTES = 64 * 1024 * 1024;
 const MAX_ARCHIVE_BYTES = 512 * 1024 * 1024;
 const MAX_STORED_BYTES = 20 * 1024 * 1024;
+const BROWSER_HISTORY_PART_BYTES = 16 * 1024 * 1024;
 const MAX_STORED_CONTENT_BYTES = 128 * 1024 * 1024;
 const MAX_CAPTURES = 100000;
 const HASH = /^[a-f0-9]{64}$/;
@@ -296,8 +297,10 @@ export function browserSnapshotAssets(fullSnapshot) {
     if (group.latestCaptureAt === null || normalized > group.latestCaptureAt) group.latestCaptureAt = normalized;
     if (latestCaptureAt === null || normalized > latestCaptureAt) latestCaptureAt = normalized;
   });
-  const descriptor = (bytes, extension) => {
-    const sha256 = digest(bytes), basename = `history-${sha256}.json${extension}`;
+  const descriptor = (bytes, extension, format='json') => {
+    if(bytes.length>=MAX_STORED_BYTES)fail('public history resource exceeds the 20 MiB file limit');
+    if(extension==='.gz'&&(compressedBytes+=bytes.length)>MAX_ARCHIVE_BYTES)fail('public archive compressed bytes exceed output limit');
+    const sha256 = digest(bytes), basename = `history-${sha256}.${format}${extension}`;
     files.set(basename, bytes);
     return { url: `./${basename}`, sha256, bytes: bytes.length };
   };
@@ -305,9 +308,21 @@ export function browserSnapshotAssets(fullSnapshot) {
     const group = groups.get(sourceId);
     const fallback = Buffer.from(jsonValue({ version: 1, sourceId, captureIndexes: group.captureIndexes, captures: group.captures }));
     if ((contentBytes += fallback.length) > MAX_ARCHIVE_BYTES) fail('public archive content bytes exceed output limit');
-    const compressed = canonicalGzip(fallback);
-    if ((compressedBytes += compressed.length) > MAX_ARCHIVE_BYTES) fail('public archive compressed bytes exceed output limit');
-    return [sourceId, { captureCount: group.captures.length, latestCaptureAt: group.latestCaptureAt, seriesIds: [...group.seriesIds].sort(), compressed: descriptor(compressed, '.gz'), fallback: descriptor(fallback, '') }];
+    const compressed=fallback.length<MAX_STORED_BYTES?canonicalGzip(fallback):null;
+    let resources;
+    if(compressed&&compressed.length<MAX_STORED_BYTES){
+      resources={compressed:descriptor(compressed,'.gz'),fallback:descriptor(fallback,'')};
+    }else{
+      const parts=[];
+      for(let offset=0;offset<fallback.length;offset+=BROWSER_HISTORY_PART_BYTES){
+        const bytes=fallback.subarray(offset,offset+BROWSER_HISTORY_PART_BYTES);
+        parts.push({compressed:descriptor(canonicalGzip(bytes),'.gz','bin'),fallback:descriptor(bytes,'','bin')});
+      }
+      resources={contentBytes:fallback.length,contentSha256:digest(fallback),parts};
+    }
+    return [sourceId,{
+      captureCount:group.captures.length,latestCaptureAt:group.latestCaptureAt,seriesIds:[...group.seriesIds].sort(),...resources,
+    }];
   }));
   const { vintages: _history, vintageArchive: _storedArchive, historyArchive: _oldArchive, ...current } = fullSnapshot;
   const snapshot = { ...current, historyArchive: { version: 2, captureCount: history.captures.length, latestCaptureAt, sources } };

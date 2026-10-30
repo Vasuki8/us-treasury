@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {moduleAssetReferences, staticModuleReferences, parseImportMap, resolveModuleReference} from '../scripts/asset-references.mjs';
+import {isBuiltAsset,moduleAssetReferences,staticModuleReferences,parseImportMap,resolveModuleReference} from '../scripts/asset-references.mjs';
 import {readFile} from 'node:fs/promises';
 test('static discovery includes imports and re-exports while excluding lazy modules and history descriptors', () => {
   const source = [
@@ -26,6 +26,17 @@ test('asset discovery includes static modules and both lazy archive variants wit
 });
 test('asset discovery follows literal lazy module imports for publication archive verification',()=>{
  assert.deepEqual(moduleAssetReferences(`const load=()=>import('./publication-archive.js'); const same=import( './publication-archive.js' ); const opaque=import(variable);`),['./publication-archive.js']);
+});
+
+test('asset discovery follows every binary history part and recognizes only content-addressed build paths',()=>{
+ const a='a'.repeat(64),b='b'.repeat(64);
+ const files=[`./history-${a}.bin`,`./history-${b}.bin.gz`];
+ const source=`export const historyArchive={sources:{treasury:{parts:[{fallback:{url:'${files[0]}'},compressed:{url:'${files[1]}'}}]}}};`;
+ assert.deepEqual(moduleAssetReferences(source),files);
+ for(const file of files)assert.equal(isBuiltAsset('assets/src/'+file.slice(2)),true);
+ for(const file of [`history-${a}.bin`,`assets/src/history-${a}.BIN`,`assets/src/history-short.bin`,`assets/src/nested/history-${a}.bin`]){
+  assert.equal(isBuiltAsset(file),false,file);
+ }
 });
 test('the claims archive remains a discoverable literal lazy asset while retries may use a query',async()=>{
  const source=await readFile(new URL('../src/claims-publication-loader.js',import.meta.url),'utf8');

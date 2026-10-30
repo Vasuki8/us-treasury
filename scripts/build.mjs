@@ -42,7 +42,7 @@ inputs.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
 const assets = new Map(), imports = {};
 for (const {name, bytes} of inputs) {
   if (bytes.length >= 20 * 1024 ** 2) throw new Error(`${name} must be below the 20 MiB build asset limit (${bytes.length} bytes).`);
-  const generated = /^src\/(?:history-[a-f0-9]{64}\.json(?:\.gz)?|source-[a-f0-9]{64}\.js)$/.test(name);
+  const generated = /^src\/(?:history-[a-f0-9]{64}\.(?:json|bin)(?:\.gz)?|source-[a-f0-9]{64}\.js)$/.test(name);
   const extension = path.extname(name), digest = createHash('sha256').update(bytes).digest('hex').slice(0, 16);
   const target = `assets/${generated ? name : name.slice(0, -extension.length) + '.' + digest + extension}`;
   assets.set(name, target);

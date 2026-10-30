@@ -295,3 +295,29 @@ test('browser projection accepts a hydrated stored root and handles a verified e
   assert.equal(empty.files.size, 0);
   assert.throws(() => browserSnapshotAssets(stored), /hydrated/i);
 });
+
+test('oversized single captures are split into exact bounded browser history assets',()=>{
+ const full=fixture(),capture=full.vintages.captures[0];
+ capture.metadata.sourceNotice+=' Exact retained UTF-8: café, € and 🙂. ';
+ const partition={version:1,sourceId:'test',captureIndexes:[0,1],captures:full.vintages.captures};
+ // Reproduce the failed refresh's exact source-bundle size, including a capture larger than the file limit.
+ capture.metadata.sourceNotice+='x'.repeat(21896584-Buffer.byteLength(JSON.stringify(partition)));
+ const expected=Buffer.from(JSON.stringify(partition)),result=browserSnapshotAssets(full);
+ assert.equal(expected.length,21896584);
+ for(const [name,bytes]of result.files)assert.ok(bytes.length<20*1024**2,`${name}: ${bytes.length} bytes`);
+ const descriptor=result.snapshot.historyArchive.sources.test;
+ assert.equal(descriptor.contentBytes,expected.length);assert.equal(descriptor.contentSha256,digest(expected));
+ assert.equal(descriptor.parts.length,2);
+ for(const kind of ['fallback','compressed']){
+  const parts=descriptor.parts.map(part=>{
+   const resource=part[kind],bytes=result.files.get(resource.url.slice(2));
+   assert.equal(bytes.length,resource.bytes);assert.equal(digest(bytes),resource.sha256);
+   assert.match(resource.url,kind==='fallback'?/^\.\/history-[a-f0-9]{64}\.bin$/:/^\.\/history-[a-f0-9]{64}\.bin\.gz$/);
+   return kind==='compressed'?gunzipSync(bytes):bytes;
+  });
+  const joined=Buffer.concat(parts);assert.deepEqual(joined,expected);
+  const decoded=JSON.parse(joined.toString('utf8'));assert.deepEqual(decoded,partition);
+  for(const cutoff of at)assert.deepEqual(asKnownOn(decoded,cutoff),asKnownOn(full.vintages,cutoff));
+ }
+ assert.deepEqual(browserSnapshotAssets(full).files,result.files,'part boundaries and hashes must be deterministic');
+});

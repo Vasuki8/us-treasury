@@ -34,13 +34,13 @@ export function createAppServer(root = projectRoot) {
     const asset = pathname === '/' ? 'index.html' : pathname.slice(1);
     const allowed = ['index.html','styles.css','favicon.svg'].includes(asset)
       || /^src\/[a-zA-Z0-9_-]+\.js$/.test(asset)
-      || /^src\/(?:history-[a-f0-9]{64}\.json(?:\.gz)?|source-[a-f0-9]{64}\.js)$/.test(asset)
+      || /^src\/(?:history-[a-f0-9]{64}\.(?:json|bin)(?:\.gz)?|source-[a-f0-9]{64}\.js)$/.test(asset)
       || isBuiltAsset(asset);
     if (!allowed) { res.writeHead(404); res.end('Not found'); return; }
     try {
       let data;
       if(asset==='src/official-snapshot.js')data=Buffer.from((await projection()).module);
-      else if (/^src\/(?:history-[a-f0-9]{64}\.json(?:\.gz)?|source-[a-f0-9]{64}\.js)$/.test(asset)) {
+      else if (/^src\/(?:history-[a-f0-9]{64}\.(?:json|bin)(?:\.gz)?|source-[a-f0-9]{64}\.js)$/.test(asset)) {
         data=(await projection()).files.get(asset.slice(4));
         if(!data){res.writeHead(404);res.end('Not found');return;}
       }else data=await readFile(path.join(root, asset));

@@ -5,6 +5,7 @@ const identifier = value => typeof value === 'string' && /^[A-Za-z][A-Za-z0-9_-]
 const bytesOf = value => value instanceof Uint8Array ? value : new Uint8Array(value);
 const hex = value => [...new Uint8Array(value)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 const MAX_ARCHIVE_BYTES = 512 * 1024 * 1024;
+const MAX_PART_BYTES = 20 * 1024 * 1024 - 1;
 
 async function readBounded(stream, limit) {
   const reader = stream.getReader(), chunks = [];
@@ -32,12 +33,36 @@ const nativeDecompress = typeof globalThis.DecompressionStream === 'function'
   ? (bytes, limit) => readBounded(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')), limit)
   : null;
 
-function resource(entry, extension) {
+function resource(entry, extension, maximum = MAX_ARCHIVE_BYTES) {
   if (!object(entry) || !new RegExp(`^\\./history-[a-f0-9]{64}\\.${extension}$`).test(entry.url)
-    || !/^[a-f0-9]{64}$/.test(entry.sha256) || !Number.isSafeInteger(entry.bytes) || entry.bytes < 1 || entry.bytes > MAX_ARCHIVE_BYTES) throw new Error('Invalid history archive resource descriptor');
+    || !/^[a-f0-9]{64}$/.test(entry.sha256) || !Number.isSafeInteger(entry.bytes)
+    || entry.bytes < 1 || entry.bytes > maximum) throw new Error('Invalid history archive resource descriptor');
   const base = new URL('./', import.meta.url), url = new URL(entry.url, import.meta.url);
   if (url.origin !== base.origin || new URL('./', url).href !== base.href) throw new Error('History archive must remain in this deployment');
   return { ...entry, url };
+}
+
+function sourceResources(entry) {
+  if (!Object.hasOwn(entry,'parts')) {
+    if (Object.hasOwn(entry,'contentBytes') || Object.hasOwn(entry,'contentSha256')) throw new Error('Ambiguous history source descriptor');
+    return { compressed:resource(entry.compressed,'json\\.gz'), fallback:resource(entry.fallback,'json') };
+  }
+  if (Object.hasOwn(entry,'compressed') || Object.hasOwn(entry,'fallback') || !Array.isArray(entry.parts)
+    || entry.parts.length < 2 || entry.parts.length > 100000 || !Number.isSafeInteger(entry.contentBytes)
+    || entry.contentBytes < 1 || entry.contentBytes > MAX_ARCHIVE_BYTES || !/^[a-f0-9]{64}$/.test(entry.contentSha256)) {
+    throw new Error('Invalid multipart history source descriptor');
+  }
+  let contentBytes = 0;
+  const parts = entry.parts.map(part => {
+    if (!object(part) || Object.keys(part).length !== 2 || !Object.hasOwn(part,'compressed') || !Object.hasOwn(part,'fallback')) {
+      throw new Error('Invalid history part descriptor');
+    }
+    const resources = { compressed:resource(part.compressed,'bin\\.gz',MAX_PART_BYTES), fallback:resource(part.fallback,'bin',MAX_PART_BYTES) };
+    contentBytes += resources.fallback.bytes;
+    return resources;
+  });
+  if (contentBytes !== entry.contentBytes) throw new Error('Multipart history content byte total mismatch');
+  return { parts };
 }
 
 function validateDescriptor(descriptor) {
@@ -51,9 +76,11 @@ function validateDescriptor(descriptor) {
       || new Set(entry.seriesIds).size !== entry.seriesIds.length) throw new Error('Invalid history source descriptor');
     captureCount += entry.captureCount;
     latest = latest === null || entry.latestCaptureAt > latest ? entry.latestCaptureAt : latest;
-    const resources = { compressed:resource(entry.compressed, 'json\\.gz'), fallback:resource(entry.fallback, 'json') };
-    compressedBytes += resources.compressed.bytes;
-    fallbackBytes += resources.fallback.bytes;
+    const resources = sourceResources(entry);
+    for (const part of resources.parts ?? [resources]) {
+      compressedBytes += part.compressed.bytes;
+      fallbackBytes += part.fallback.bytes;
+    }
     if (compressedBytes > MAX_ARCHIVE_BYTES || fallbackBytes > MAX_ARCHIVE_BYTES) throw new Error('History manifest resources exceed the archive byte limit');
     sources.set(id, { ...entry, ...resources });
     for (const seriesId of entry.seriesIds) {
@@ -137,8 +164,8 @@ export function createHistoryLoader(descriptor, { fetchImpl = globalThis.fetch, 
     if (!cryptoImpl?.subtle) throw new Error('History archive integrity verification is unavailable');
     if (hex(await cryptoImpl.subtle.digest('SHA-256', bytes)) !== expected.sha256) throw new Error('History archive SHA256 mismatch');
   }
-  async function retrieve(sourceId, entry) {
-    const resources = entry.descriptor, selected = decompress ? resources.compressed : resources.fallback;
+  async function retrieveBytes(resources) {
+    const selected = decompress ? resources.compressed : resources.fallback;
     const response = await fetchImpl(selected.url, { credentials:'same-origin', redirect:'error' });
     if (!response.ok) throw new Error(`History archive request failed (HTTP ${response.status ?? 'unknown'})`);
     if (response.url && new URL(response.url).href !== selected.url.href) throw new Error('History archive response left this deployment');
@@ -146,6 +173,19 @@ export function createHistoryLoader(descriptor, { fetchImpl = globalThis.fetch, 
     await verify(fetched, selected);
     const decoded = decompress ? bytesOf(await decompress(fetched, resources.fallback.bytes)) : fetched;
     if (decompress) await verify(decoded, resources.fallback);
+    return decoded;
+  }
+  async function retrieve(sourceId, entry) {
+    const resources = entry.descriptor;
+    let decoded;
+    if (resources.parts) {
+      const chunks = [];
+      for (const part of resources.parts) chunks.push(await retrieveBytes(part));
+      decoded = new Uint8Array(resources.contentBytes);
+      let offset = 0;
+      for (const chunk of chunks) { decoded.set(chunk,offset); offset += chunk.byteLength; }
+      await verify(decoded,{ bytes:resources.contentBytes, sha256:resources.contentSha256 });
+    } else decoded = await retrieveBytes(resources);
     const history = validateHistory(JSON.parse(new TextDecoder('utf-8', { fatal:true }).decode(decoded)), sourceId, resources, manifest.captureCount);
     // An index belongs to exactly one source, including sources verified by an
     // earlier selection. Check the whole group before retaining any of its keys.

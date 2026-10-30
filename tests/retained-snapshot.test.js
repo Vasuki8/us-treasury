@@ -206,10 +206,19 @@ test('retained production snapshot preserves admission, history and portable evi
   const reconstructed=[];
   for(const [sourceId,descriptor] of Object.entries(projected.historyArchive.sources)){
    for(const kind of ['fallback','compressed']){
-    const file=descriptor[kind],content=result.files.get(file.url.slice(2));
-    assert.equal(content.length,file.bytes);
-    assert.equal(createHash('sha256').update(content).digest('hex'),file.sha256);
-    const partition=JSON.parse(kind==='compressed'?gunzipSync(content):content);
+    const decoded=(descriptor.parts??[descriptor]).map(part=>{
+     const file=part[kind],content=result.files.get(file.url.slice(2));
+     assert.ok(content.length<20*1024**2,'every history part must remain below the deployment file limit');
+     assert.equal(content.length,file.bytes);
+     assert.equal(createHash('sha256').update(content).digest('hex'),file.sha256);
+     return kind==='compressed'?gunzipSync(content):content;
+    });
+    const content=Buffer.concat(decoded);
+    if(descriptor.parts){
+     assert.equal(content.length,descriptor.contentBytes);
+     assert.equal(createHash('sha256').update(content).digest('hex'),descriptor.contentSha256);
+    }
+    const partition=JSON.parse(content);
     assert.equal(partition.sourceId,sourceId);
     assert.equal(partition.captures.length,descriptor.captureCount);
     partition.captures.forEach((capture,index)=>{
