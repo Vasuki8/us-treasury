@@ -50,7 +50,9 @@ test('GDP accounting results lead supporting subdetail and methods while critica
 
 test('credit source metrics and errors remain open with one persistent source-evidence disclosure per group',()=>{
  const group=creditContextGroups[0],html=creditContextPage({[group.id]:{status:'error',fetchedAt:stamp,error:'Source failure',series:{[group.ids[0]]:{observations:[{date:'2026-10-07',value:null}]}}}},{documents:[]});
- const lead=visible(html);assert.match(lead,/Source failure/);assert.match(lead,/Unavailable/);assert.match(lead,/data-chart/);assert.match(lead,/latest three years/);
+ const lead=visible(html),metric=lead.split(`href="#/series/${group.ids[0]}"`)[1]?.split('</a>')[0]??'';
+ assert.match(lead,/Source failure/);assert.match(metric,/<strong class="metric-value">—<\/strong>/);
+ assert.match(lead,/data-chart/);assert.match(lead,/latest three years/);
  for(const item of creditContextGroups)assert.match(disclosureContent(html,`credit:${item.id}:evidence`),/Definitions|definition|Source/i);
  assert.equal((html.match(/latest three years per source group/g)??[]).length,1);
 });

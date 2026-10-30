@@ -9,6 +9,7 @@ import { releaseDate, scheduledTime, scheduleBasisNote, calendarSourceNotice } f
 import { watchlistMonitor, monitorUpdateLabel } from './watchlist-monitor.js';
 import { indicatorHref } from './workspace-context.js';
 import {inflationHorizonTable} from './inflation-comparison.js';
+import {displayCurrencyUnit,displayUnitLabel,formatDisplayValue,formatDisplayChange} from './display-format.js';
 
 const a=(text,href,className='action')=>`<a class="${esc(className)}" href="${esc(href)}">${esc(text)}</a>`;
 const detail=(id,state,label,className='')=>a(label??getSeries(id)?.short??id,indicatorHref(id,{...state,page:'overview'}),className);
@@ -18,9 +19,20 @@ const compactUnits={gdp:'q/q SAAR',privateDomesticDemandGrowth:'q/q SAAR',pceCor
 function reading(id,state,{label,primary=true,compact=false}={}){
  const current=getSeries(id);if(!current)return '';
  const row=latest(current),change=measurementChange(current);
+ const currencyUnit=displayCurrencyUnit([current]),options={currencyUnit};
  const changeLabel=id==='payroll'?'Change in gains':id==='gdp'?'Growth-rate change':'Change';
- const delta=change.value===null?'Prior comparison unavailable':`${changeLabel} ${formatChange(current)} vs ${change.priorPeriod}`;
- return `<a class="oh-reading" data-overview-${primary?'reading':'support-reading'}="${esc(id)}" href="${esc(indicatorHref(id,{...state,page:'overview'}))}" title="${esc(current.name)} · ${esc(current.unit)}"><span class="reading-label">${esc(label??current.short)}</span><strong class="reading-value">${esc(id==='pceCore'&&Number.isFinite(row?.value)?`${row.value.toFixed(1)}%`:formatValue(current,row?.value))}</strong><span class="reading-unit">${esc(compactUnits[id]??current.unit)} · ${esc(row?periodLabel(current,row.date):'Unavailable')}${current.dataStatus==='cached'?' · CACHED':''}${current.dataStatus==='unavailable'?' · UNAVAILABLE':''}</span>${!compact&&current.observationType==='calculated'?'<span class="reading-basis">Calculated measure</span>':''}${compact?'':`<span class="reading-change" title="${esc(change.text)}">${esc(delta)}</span>`}${current.error?`<span class="reading-change amber">${esc(current.error)}</span>`:''}</a>`;
+ const delta=change.value===null?'Prior comparison unavailable':`${changeLabel} ${formatDisplayChange(current,options)} vs ${change.priorPeriod}`;
+ const unit=currencyUnit?displayUnitLabel(current,options):compactUnits[id]??current.unit;
+ const title=change.text.replace(formatChange(current),formatDisplayChange(current,options));
+ return `<a class="oh-reading" data-overview-${primary?'reading':'support-reading'}="${esc(id)}"`
+  +` href="${esc(indicatorHref(id,{...state,page:'overview'}))}" title="${esc(current.name)} · ${esc(current.unit)}">`
+  +`<span class="reading-label">${esc(label??current.short)}</span>`
+  +`<strong class="reading-value">${esc(formatDisplayValue(current,row?.value,options))}</strong>`
+  +`<span class="reading-unit">${esc(unit)} · ${esc(row?periodLabel(current,row.date):'Unavailable')}`
+  +`${current.dataStatus==='cached'?' · CACHED':''}${current.dataStatus==='unavailable'?' · UNAVAILABLE':''}</span>`
+  +`${!compact&&current.observationType==='calculated'?'<span class="reading-basis">Calculated measure</span>':''}`
+  +`${compact?'':`<span class="reading-change" title="${esc(title)}">${esc(delta)}</span>`}`
+  +`${current.error?`<span class="reading-change amber">${esc(current.error)}</span>`:''}</a>`;
 }
 
 function policyReading(state){
@@ -28,8 +40,15 @@ function policyReading(state){
  if(!low?.date||low.date!==high?.date||!Number.isFinite(low.value)||!Number.isFinite(high.value)){
   return `<div class="oh-pair" data-overview-reading="policyTargetRange">${reading('policyTargetLower',state,{label:'Target range · lower bound',primary:false})}${reading('policyTargetUpper',state,{label:'Target range · upper bound',primary:false})}</div>`;
  }
- const change=measurementChange(upper),delta=change.value===null?'Upper-bound prior comparison unavailable':`Upper bound ${formatChange(upper)} vs ${change.priorPeriod}`;
- return `<a class="oh-reading" data-overview-reading="policyTargetRange" href="${esc(indicatorHref('policyTargetUpper',{...state,page:'overview'}))}"><span class="reading-label">Fed funds target range</span><strong class="reading-value">${esc(formatValue(lower,low.value).replace(/%$/,''))}–${esc(formatValue(upper,high.value))}</strong><span class="reading-unit">Percent · ${esc(periodLabel(upper,high.date))}${[lower,upper].some(s=>s.dataStatus==='cached')?' · CACHED':''}</span><span class="reading-basis">Official target bounds</span><span class="reading-change" title="${esc(change.text)}">${esc(delta)}</span></a>`;
+ const change=measurementChange(upper),formatted=formatDisplayChange(upper);
+ const delta=change.value===null?'Upper-bound prior comparison unavailable':`Upper bound ${formatted} vs ${change.priorPeriod}`;
+ return `<a class="oh-reading" data-overview-reading="policyTargetRange"`
+  +` href="${esc(indicatorHref('policyTargetUpper',{...state,page:'overview'}))}">`
+  +`<span class="reading-label">Fed funds target range</span><strong class="reading-value">`
+  +`${esc(formatDisplayValue(lower,low.value).replace(/%$/,''))}–${esc(formatDisplayValue(upper,high.value))}</strong>`
+  +`<span class="reading-unit">Percent · ${esc(periodLabel(upper,high.date))}`
+  +`${[lower,upper].some(s=>s.dataStatus==='cached')?' · CACHED':''}</span><span class="reading-basis">Official target bounds</span>`
+  +`<span class="reading-change" title="${esc(change.text.replace(formatChange(upper),formatted))}">${esc(delta)}</span></a>`;
 }
 
 function topic(title,href,body,extra=''){
@@ -92,7 +111,18 @@ export function overviewPage(state={},context={}){
  const snapshotContext=disclosure('growth-demand','Domestic demand',reading('privateDomesticDemandGrowth',state,{label:'Private domestic final demand',primary:false,compact:true})+'<p class="panel-note oh-growth-note">Private consumption and fixed investment; excludes inventories, government and net exports.</p>','','oh-context-details')
   +disclosure('policy-effective','Effective rate',reading('effr',state,{label:'Effective federal funds rate',primary:false})+`<p class="panel-note">Effective rates and target bounds can refer to different days. Inspect ${detail('policyTargetLower',state,'lower bound')} or ${detail('policyTargetUpper',state,'upper bound')}.</p>`,'','oh-context-details')
   +disclosure('fiscal-debt','Debt stock',reading('publicDebt',state,{label:'Debt held by public',primary:false}),'','oh-context-details');
- const momentum=`<section class="oh-momentum"><div class="oh-section-label"><h2>MOMENTUM</h2></div><div class="oh-plots">${panel('','Monthly inflation',chart(['pceMonthly','pceCoreMonthly'],{height:235}),button('Compare','data-compare="pceMonthly,pceCoreMonthly"','link-button'),'Percent month over month · headline and core PCE. Year-over-year inflation is a different horizon.','oh-chart-panel')}${panel('','Payroll momentum',chart(['payrollAverage3m'],{kind:'bar',height:235}),button('Labor breadth','data-compare="unrate,underemployment,participation"','link-button')+detail('payrollAverage3m',state,'Data ↗︎','link-button'),'Thousands of jobs · three-month average of monthly payroll gains; establishment jobs differ from household people measures.','oh-chart-panel')}</div>${disclosure('inflation-horizons','Inflation horizons',`<div class="oh-inflation-comparison">${inflationHorizonTable({...state,page:'overview'})}</div>`,'Monthly · annual · annualized')}</section>`;
+ const summaryWindow={preset:'1y'};
+ const inflationMomentum=panel('','Monthly inflation',chart(['pceMonthly','pceCoreMonthly'],{height:235,range:summaryWindow}),
+  button('Compare','data-compare="pceMonthly,pceCoreMonthly"','link-button'),
+  'Percent month over month · headline and core PCE. Year-over-year inflation is a different horizon.','oh-chart-panel');
+ const payrollMomentum=panel('','Payroll momentum',chart(['payrollAverage3m'],{kind:'bar',height:235,range:summaryWindow}),
+  button('Labor breadth','data-compare="unrate,underemployment,participation"','link-button')
+   +detail('payrollAverage3m',state,'Data ↗︎','link-button'),
+  'Thousands of jobs · three-month average of monthly payroll gains; establishment jobs differ from household people measures.','oh-chart-panel');
+ const horizons=disclosure('inflation-horizons','Inflation horizons',
+  `<div class="oh-inflation-comparison">${inflationHorizonTable({...state,page:'overview'})}</div>`,'Monthly · annual · annualized');
+ const momentum=`<section class="oh-momentum"><div class="oh-section-label"><h2>MOMENTUM</h2></div>`
+  +`<div class="oh-plots">${inflationMomentum}${payrollMomentum}</div>${horizons}</section>`;
  const support=disclosure('activity-income','Activity & income',supportingRows(['realSpendingMonthly','realDisposableIncomeMonthly','industrialProduction'],state)+`<p class="panel-note">Different scope and reporting lags provide context; correlated changes do not prove causation.</p><div class="oh-research-links">${button('COMPARE INCOME & SPENDING','data-compare="realDisposableIncomeMonthly,realSpendingMonthly"')}</div>`,'3 measurements')
   +disclosure('weekly-claims','Weekly claims',supportingRows(['claimsAdvance','continuedClaimsAdvance'],state,{claims:true})+'<p class="panel-note">Initial and continued claims refer to different weeks. Reported publication days come from the current source feed; reviewed archived evidence is separate in Published results above. Revised history and full release provenance remain on each detail page.</p>','Distinct reference weeks')
   +research(brief,state,context)

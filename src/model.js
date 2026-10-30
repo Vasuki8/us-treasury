@@ -1,5 +1,5 @@
 import { series } from './data.js';
-import { resolveDateWindow, windowObservations } from './date-window.js';
+import { resolveDateWindow, windowObservations, defaultWindowPreset } from './date-window.js';
 import { indexEligibilityError } from './comparison-policy.js';
 import { searchSeries } from './search.js';
 import {quarterObservationMap,referenceQuarter} from './reference-quarter.js';
@@ -44,8 +44,8 @@ export function formatValue(s, value) {
   }).format(Object.is(value, -0) ? 0 : value);
   switch (s.format) {
     case 'percent': return `${number}%`;
-    case 'trillions': return `$${number}T`;
-    case 'billions': return `$${number}B`;
+    case 'trillions': return `${value<0?'−':''}$${number.replace(/^-/, '')}T`;
+    case 'billions': return `${value<0?'−':''}$${number.replace(/^-/, '')}B`;
     case 'basisPoints': return `${number} bp`;
     case 'percentagePoints': return `${number} pp`;
     case 'thousands': return `${number}k`;
@@ -103,7 +103,7 @@ function coverage(s, observations) {
  * Transform the full history before slicing, so the first displayed change can
  * refer to an observation just outside the requested range. No gaps are filled.
  */
-export function transformSeries(s, mode = 'level', range = 12, resolved = null) {
+export function transformSeries(s, mode = 'level', range = {preset:defaultWindowPreset([s])}, resolved = null) {
   if (!s) return { series: s, observations: [], unit: '' };
   if (!['level', 'change'].includes(mode)) throw new RangeError(`Unknown transform: ${mode}`);
   const observations = s.observations.map((o, index, all) => ({
@@ -127,12 +127,13 @@ export function transformSeries(s, mode = 'level', range = 12, resolved = null) 
  * levels may be ratio-indexed at the first shared positive finite baseline.
  * Exact dates must match; source frequencies are never aggregated or filled.
  */
-export function compareSeries(ids, mode = 'native', range = 12, catalog = series) {
+export function compareSeries(ids, mode = 'native', range, catalog = series) {
   const lookup = id => Object.hasOwn(catalog, id) ? catalog[id] : undefined;
   if (!['native', 'indexed', 'difference'].includes(mode)) return { panels: [], error: `Unknown comparison mode: ${mode}` };
   const selected = [...new Set(ids)];
   if (!selected.length) return { panels: [], error: null };
   if (selected.some((id) => !lookup(id))) return { panels: [], error: 'One or more selected series are unknown or unavailable.' };
+  range??={preset:defaultWindowPreset(selected.map(lookup))};
   const window = resolveDateWindow(range, selected.map(lookup));
   if (window.error) return { panels: [], error: window.error, window };
   const panels = selected.map((id) => transformSeries(lookup(id), 'level', range, window));

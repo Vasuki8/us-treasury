@@ -2,6 +2,28 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseRoute,routeFor,safeReturnTo} from '../src/router.js';
 import {indicatorHref,workspaceReturn,viewRange,createWorkspaceMemory,updateWorkspaceSelection} from '../src/workspace-context.js';
+import {createWorkspace,openWorkspace} from '../src/research-workspaces.js';
+import {renderPage} from '../src/pages.js';
+
+test('direct page rendering uses frequency defaults while explicit legacy inputs retain observation counts',()=>{
+ assert.match(renderPage({page:'indicator',seriesId:'gdp'}),/data-window="5y" aria-pressed="true"/);
+ assert.match(renderPage({page:'indicator',seriesId:'sofr'}),/data-window="1y" aria-pressed="true"/);
+ assert.match(renderPage({page:'indicator',seriesId:'gdp',range:6}),/data-range="6" aria-pressed="true"/);
+});
+
+test('omitted windows follow the focused frequency and explicit windows survive routes and saved views',()=>{
+ const cases=[['#/series/gdp','5y'],['#/series/unrate','5y'],['#/series/sofr','1y'],['#/series/claims','1y'],
+  ['#/explore?mode=compare&selected=gdp,sofr','5y'],['#/explore?mode=compare&selected=sofr,gdp','1y'],
+  ['#/economy?family=prices&measure=cpi','5y']];
+ for(const [hash,expected] of cases)assert.equal(parseRoute(hash).window,expected,hash);
+ for(const window of ['1y','3y','5y','all','custom','observations']){
+  const state={...parseRoute('#/series/gdp'),window,range:6,
+   startDate:window==='custom'?'2020-01-01':'',endDate:window==='custom'?'2025-01-01':''};
+  assert.equal(parseRoute(routeFor(state)).window,window);
+  const record=createWorkspace({name:'Retained window',id:'window-fixture',now:'2026-10-22T00:00:00.000Z',state});
+  assert.equal(openWorkspace(record).window,window);
+ }
+});
 
 test('calendar windows, custom dates and baseline differences round-trip without replacing old observation links',()=>{
  for(const window of ['1y','3y','5y','all','custom']){

@@ -5,7 +5,9 @@ import { getSeries } from '../src/model.js';
 import { series } from '../src/data.js';
 
 test('chart range decoding preserves calendar descriptors and fails closed on malformed attributes',()=>{
-  assert.equal(readChartRange('6'),6);assert.equal(readChartRange(undefined),12);
+  assert.equal(readChartRange('6'),6);assert.deepEqual(readChartRange(undefined),{preset:'1y'});
+  for(const frequency of ['Monthly','Quarterly'])assert.deepEqual(readChartRange(undefined,[{frequency}]),{preset:'5y'});
+  for(const frequency of ['Daily','Weekly'])assert.deepEqual(readChartRange(undefined,[{frequency}]),{preset:'1y'});
   assert.deepEqual(readChartRange('{"preset":"custom","startDate":"2026-09-01","endDate":"2026-09-30"}'),{preset:'custom',startDate:'2026-09-01',endDate:'2026-09-30'});
   for(const value of ['oops','null','[]','"all"'])assert.equal(readChartRange(value).startDate,'invalid');
 });
@@ -83,7 +85,7 @@ test('large positive and negative axis readings fit inside narrow and wide SVGs 
    for(const [index,container]of containers.entries()){
     const rendered=nodes(container),svg=rendered.find(node=>node.tag==='svg'),ticks=rendered.filter(node=>node.tag==='text'&&node.attributes['text-anchor']==='end'&&Number(node.attributes.y)<170);
     assert.equal(svg.attributes.viewBox,`0 0 ${width} 180`);
-    assert.equal(ticks.length,4);
+    assert.ok(ticks.length>=2&&ticks.length<=7,'A readable set of nice ticks replaces arbitrary thirds.');
     for(const tick of ticks)assert.ok(Number(tick.attributes.x)-tick.textContent.length*6.6>=4,`${tick.textContent} must fit within the SVG at ${width}px`);
     assert.ok(paths[index].width>=100,'The smallest chart retains at least 100px for observations.');
     for(const x of paths[index].xs)assert.ok(x>=paths[index].left-.01&&x<=paths[index].left+paths[index].width+.01);

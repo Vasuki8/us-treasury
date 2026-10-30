@@ -5,6 +5,8 @@ export function isIsoDate(value) {
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
+export const defaultWindowPreset = (seriesList=[]) => ['Monthly','Quarterly'].includes(seriesList[0]?.frequency)?'5y':'1y';
+
 function dateBounds(seriesList) {
   let startDate = null, endDate = null;
   for (const s of seriesList) {

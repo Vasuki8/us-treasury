@@ -5,6 +5,7 @@ import {NY_FED_TERMS_URL,NY_FED_DATA_NOTICE,NY_FED_PRODUCT_NOTICE} from './marke
 import {tabularCsv} from './model.js';
 import {heading,button,panel,chart,table,emptyState,escapeHtml as esc} from './ui.js';
 import {resolveDateWindow,windowObservations} from './date-window.js';
+import {formatDisplayValue,displayUnitLabel} from './display-format.js';
 
 /** The compact page, its CSV and its frozen inputs share exact source dates. */
 export function creditWindowSources(sources){
@@ -18,15 +19,21 @@ export function creditWindowSources(sources){
 }
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
 const status=source=>source?.fetchedAt?(source.status==='ok'?'CAPTURED':'CACHED'):'UNAVAILABLE';
-function format(id,value){
- if(!finite(value))return 'Unavailable';
- if(creditContextRegistry[id].format!=='billions')return `${value.toFixed(creditContextRegistry[id].precision)}%`;
- const digits=Math.abs(value)>=1000?1:Math.abs(value)>=1?2:3;
- return `${value.toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits})}B`;
-}
-function headlineValue(id,value){return finite(value)&&creditContextRegistry[id].format==='billions'&&Math.abs(value)>=1000?`$${(value/1000).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}T`:format(id,value);}
 function notice(source){const text=source?.series?.onRrpAccepted?.sourceNotice??'';return text||`${NY_FED_DATA_NOTICE} ${NY_FED_PRODUCT_NOTICE}`;}
-function metrics(source,ids){return `<section class="metrics" aria-label="Banking and policy observations">${ids.map(id=>{const definition=creditContextRegistry[id],row=source?.series?.[id]?.observations?.at(-1);return `<a class="metric" href="#/series/${id}"><span class="metric-name">${esc(definition.name)}</span><strong class="metric-value">${esc(headlineValue(id,row?.value))}</strong>${creditContextRegistry[id].format==='billions'&&finite(row?.value)?`<span class="metric-exact">Exact retained value: ${esc(row.value.toLocaleString('en-US',{maximumFractionDigits:10}))}B</span>`:''}<span class="metric-period">${esc(row?.date??'No reference date')} · ${esc(definition.frequency)}${row?.sourcePeriodLabel?` · Source label ${esc(row.sourcePeriodLabel)}`:''}</span><span class="metric-basis">${esc(definition.unit)} · ${esc(definition.adjustment)}</span><span class="metric-detail" aria-hidden="true">Details ↗</span></a>`;}).join('')}</section>`;}
+function metrics(source,ids){
+ return `<section class="metrics" aria-label="Banking and policy observations">`+ids.map(id=>{
+  const definition=creditContextRegistry[id],row=source?.series?.[id]?.observations?.at(-1);
+  const exact=definition.format==='billions'&&finite(row?.value)
+   ?`<span class="metric-exact">Exact retained value: ${esc(row.value.toLocaleString('en-US',{maximumFractionDigits:10}))}B</span>`:'';
+  const value=formatDisplayValue(definition,row?.value,{currencyUnit:'T'});
+  return `<a class="metric" href="#/series/${id}"><span class="metric-name">${esc(definition.name)}</span>`
+   +`<strong class="metric-value">${esc(value)}</strong>${exact}`
+   +`<span class="metric-period">${esc(row?.date??'No reference date')} · ${esc(definition.frequency)}`
+   +`${row?.sourcePeriodLabel?` · Source label ${esc(row.sourcePeriodLabel)}`:''}</span>`
+   +`<span class="metric-basis">${esc(displayUnitLabel(definition,{currencyUnit:'T'}))} · ${esc(definition.adjustment)}</span>`
+   +`<span class="metric-detail" aria-hidden="true">Details ↗</span></a>`;
+ }).join('')+'</section>';
+}
 function groupPanel(group,index,sources){
   const source=sources?.[group.id],hasData=group.ids.some(id=>source?.series?.[id]?.observations?.length);
   const credit=group.id==='onRrp'?`<p>${esc(notice(source))}</p><p><a href="https://www.newyorkfed.org/markets/desk-operations/reverse-repo" target="_blank" rel="noopener noreferrer">Reverse Repo Operations ↗</a> · <a href="${NY_FED_TERMS_URL}" target="_blank" rel="noopener noreferrer">Terms of Use ↗</a></p>`:`<p>Source: Board of Governors of the Federal Reserve System. <a href="${esc(creditContextRegistry[group.ids[0]].source.url)}" target="_blank" rel="noopener noreferrer">${esc(source?.series?.[group.ids[0]]?.sourceTitle??group.label)} ↗</a> · <a href="${BOARD_TERMS_URL}" target="_blank" rel="noopener noreferrer">Board source terms ↗</a></p>`;

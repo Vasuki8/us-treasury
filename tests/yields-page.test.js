@@ -7,11 +7,13 @@ const fixture={status:'ok',fetchedAt:'2026-10-22T03:00:00Z',curveHistory:[{date:
 test('yield page exposes actual overlay dates and distinguishes inflation compensation and model limitations',()=>{
   assert.ok(page,'Yield explanation page exists');const html=page.yieldsPage({},fixture);
   for(const phrase of ['RATES &amp; CURVES','WHAT CHANGED','WHAT CONTRIBUTED','WHY IT MATTERS','LIMITATIONS','inflation compensation','not pure expected inflation','not an exact','2026-10-21','data-export-yield-curves'])assert.ok(html.toLowerCase().includes(phrase.toLowerCase()),phrase);
-  assert.match(html,/id="yield-curve-date-a"/);assert.match(html,/data-kind="history-curve"/);
+  assert.match(html,/id="yield-curve-date-a" type="date" min="2026-01-02" max="2026-10-21" value="2026-10-21"/);
+  assert.match(html,/id="yield-curve-date-b" type="date" min="2026-01-02" max="2026-10-21" value="2026-01-02"/);
+  assert.match(html,/data-kind="history-curve"/);
 });
 test('unavailable selected dates remain selected and explicit instead of showing another curve date',()=>{
   const html=page.yieldsPage({yieldDateA:'2026-10-20',yieldDateB:'2026-10-20'},fixture);
-  assert.match(html,/<option value="2026-10-20" selected>2026-10-20 — unavailable<\/option>/);
+  assert.match(html,/id="yield-curve-date-a" type="date"[^>]*value="2026-10-20"/);assert.match(html,/A selected date is unavailable/);
   assert.match(html,/data-export-yield-curves disabled/);
 });
 test('curve CSV rows identify the actual input feed kind and keep missing rates blank',()=>{

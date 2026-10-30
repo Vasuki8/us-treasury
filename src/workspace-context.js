@@ -1,9 +1,9 @@
 import {stableLinkIdentity,findStableLink} from './stable-focus.js';
-import {parseRoute,routeFor,safeReturnTo,returnPages} from './router.js';
+import {parseRoute,routeFor,safeReturnTo,returnPages,defaultRouteWindow} from './router.js';
 
 /** One range descriptor feeds chart, table and CSV. Numeric deep links stay explicit. */
 export function viewRange(state={}) {
-  const window=state.window??(Object.hasOwn(state,'range')?'observations':'1y');
+  const window=state.window??(Object.hasOwn(state,'range')?'observations':defaultRouteWindow(state));
   const range=window==='observations'?state.range??12:{preset:window,startDate:state.startDate??'',endDate:state.endDate??''};
   return state.alignment==='quarter'?{...(typeof range==='number'?{preset:'observations',count:range}:range),alignment:'quarter'}:range;
 }
@@ -12,10 +12,15 @@ export function pceScenarioOptions(state={}){
 }
 
 export function indicatorHref(seriesId,state={}) {
+  const destination={...state,page:'indicator',seriesId,tab:'data',transform:'level'};
+  const summaryPages=['overview','fiscal','refinancing','auctions','ownership','macro','credit','calendar'];
+  if(summaryPages.includes(state.page)&&state.window===defaultRouteWindow(state)){
+    destination.window=defaultRouteWindow(destination);
+  }
   const origin=safeReturnTo(state.returnTo);
   const terminalOrigin=state.page==='explore'&&origin?.split('?')[0]!=='#/explore'?origin:null;
   const returnTo=['release','research','vintages'].includes(state.page)?routeFor(state):returnPages.includes(state.page)?routeFor({...state,returnTo:terminalOrigin}):origin;
-  return routeFor({...state,page:'indicator',seriesId,tab:'data',transform:'level',returnTo});
+  return routeFor({...destination,returnTo});
 }
 
 export function workspaceReturn(state={}) {

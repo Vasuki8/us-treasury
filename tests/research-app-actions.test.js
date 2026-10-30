@@ -1,7 +1,7 @@
 import {rememberStableFocus,restoreStableFocus} from '../src/stable-focus.js';
 import {createResearchSaveDrafts,researchSaveScope,positionResearchSave} from '../src/research-save.js';
 import {createQuestionDrafts,saveResearchQuestion,questionFieldId} from '../src/question-drafts.js';
-import {destinationChanged} from '../src/router.js';
+import {destinationChanged,entryWindow} from '../src/router.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -75,6 +75,7 @@ async function app(hash='#/series/gdp?window=all',{
  Object.assign(env,{requiredSourceIds,sourceController,actionFeedback(){}});
  if(sourceController)env.dataStatus={...dataStatus,sourceArchive:{version:1,sources:{}}};
  const change=/root\.addEventListener\('change',async event=>\{([^]*?)\n\}\);/.exec(source);assert.ok(change,'App change delegation must exist');
+ env.entryWindow=entryWindow;
  const code=`let {${Object.keys(env).join(',')}}=env;\n`
   +section('function trackedChanges()','function syncPublications(')
   +section('function currentPackage()','function researchActions()')

@@ -3,6 +3,7 @@ import {renderLaborEvidence,laborUncertaintyNote} from './economic-evidence.js';
 import {series,releases,dataStatus} from './data.js';
 import {coverageFamilies} from './macro-registry.js';
 import {getSeries,latest,formatValue,formatChange,periodLabel,transformSeries} from './model.js';
+import {formatDisplayValue,formatDisplayChange} from './display-format.js';
 import {measurementChange} from './measurement-change.js';
 import {calendarRelatedIds} from './macro-calendar.js';
 import {calendarSourceNotice} from './calendar-presentation.js';
@@ -34,7 +35,17 @@ function spark(id){
  return `<svg class="labor-spark" viewBox="0 0 100 29" preserveAspectRatio="none" role="img" aria-label="${esc(s.short)} · last ${rows.length} retained observations"><path d="${path}"/></svg>`;
 }
 
-function headlines(state){return `<section class="labor-headlines" aria-label="Latest headline indicators">${['payroll','unrate','participation','wages'].map(id=>{const s=getSeries(id),o=latest(s),change=measurementChange(s);return `<article class="labor-metric">${detail(id,state,s.short,'labor-metric-name')}<strong>${esc(formatValue(s,o?.value))}</strong><span class="labor-small">${esc(periodLabel(s,o?.date))} · ${esc(status(s))}</span><span class="labor-reading-basis">${esc(unit(s))} · ${esc(s.adjustment)}</span><p>${esc(change.label)}: ${esc(formatChange(s))}</p>${spark(id)}${sourceError(s)}</article>`;}).join('')}</section>`;}
+function headlines(state){
+ const cards=['payroll','unrate','participation','wages'].map(id=>{
+  const s=getSeries(id),o=latest(s),change=measurementChange(s);
+  return `<article class="labor-metric">${detail(id,state,s.short,'labor-metric-name')}`
+   +`<strong>${esc(formatDisplayValue(s,o?.value))}</strong>`
+   +`<span class="labor-small">${esc(periodLabel(s,o?.date))} · ${esc(status(s))}</span>`
+   +`<span class="labor-reading-basis">${esc(unit(s))} · ${esc(s.adjustment)}</span>`
+   +`<p>${esc(change.label)}: ${esc(formatDisplayChange(s))}</p>${spark(id)}${sourceError(s)}</article>`;
+ }).join('');
+ return `<section class="labor-headlines" aria-label="Latest headline indicators">${cards}</section>`;
+}
 
 function releaseRadar(state,now){
  const upcoming=releases.filter(event=>calendarRelatedIds(event).some(id=>allIds.includes(id))&&(event.scheduledAt?Date.parse(event.scheduledAt)>=now.getTime():event.date>=now.toISOString().slice(0,10))).sort((a,b)=>(a.scheduledAt??a.date).localeCompare(b.scheduledAt??b.date));

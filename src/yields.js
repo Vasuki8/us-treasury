@@ -27,6 +27,14 @@ function capturedCurves(source) {
   }).sort((a,b) => a.date.localeCompare(b.date));
 }
 
+/** Date-input choices use nearest UTC calendar distance; equal distances choose earlier. */
+export function nearestCurveDate(source, requested) {
+  try { dateKey(requested); } catch { return null; }
+  const target=Date.parse(`${requested}T00:00:00Z`);
+  const distance=date=>Math.abs(Date.parse(`${date}T00:00:00Z`)-target);
+  return capturedCurves(source).reduce((nearest,row)=>nearest===null||distance(row.date)<distance(nearest)?row.date:nearest,null);
+}
+
 /** Exact requested dates only; unavailable dates are explicit and no earlier curve is substituted. */
 export function selectCurveOverlays(source, dates = []) {
   if (!Array.isArray(dates)) throw new Error('Treasury overlay dates must be an array');

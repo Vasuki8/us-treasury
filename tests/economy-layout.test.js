@@ -75,7 +75,13 @@ test('credit groups retain separate readings, exact source periods, missing valu
  const html=creditContextPage(sources,{documents:[]}),lead=visible(html);
  assert.equal((html.match(/class="panel workspace-analysis credit-evidence-group"/g)??[]).length,creditContextGroups.length,'Each source group keeps a separate evidence section');
  for(const group of creditContextGroups){assert.equal(html.split(`</span>${escapeHtml(group.label)}</h2>`).length-1,1,`${group.label} has one heading`);assert.match(html,new RegExp(`data-page-disclosure="credit:${group.id}:evidence"`));}
- for(const text of ['Source &lt;failure&gt;','2026-10-07','2026-09-30','Unavailable','Net percent of domestic banks','USD billions','Meridian is not affiliated','same permissions','no combined liquidity score'])assert.ok(lead.includes(text),text);
+ const missingMetric=lead.split('href="#/series/bankLoans"')[1]?.split('</a>')[0]??'';
+ const surveyMetric=lead.split('href="#/series/ciStandardsLarge"')[1]?.split('</a>')[0]??'';
+ assert.match(missingMetric,/<strong class="metric-value">—<\/strong>/);
+ assert.match(missingMetric,/<span class="metric-basis">USD trillions · Seasonally adjusted<\/span>/);
+ assert.match(surveyMetric,/<strong class="metric-value">0%<\/strong>/);
+ for(const text of ['Source &lt;failure&gt;','2026-10-07','2026-09-30','Net percent of domestic banks','USD billions',
+  'Meridian is not affiliated','same permissions','no combined liquidity score'])assert.ok(lead.includes(text),text);
  assert.match(html,/data-page-disclosure="credit:lendingSurvey:evidence"/);
  assert.equal((html.match(/data-export-credit/g)??[]).length,1);
 });

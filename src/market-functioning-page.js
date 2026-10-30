@@ -7,6 +7,7 @@ import {readingGroup,supportingDetails} from './page-hierarchy.js';
 import {dataStatus} from './data.js';
 import {DEALER_METRICS,dealerWeeklyChanges,NY_FED_DATA_NOTICE,NY_FED_REFERENCE_RATE_NOTICE,NY_FED_PRODUCT_NOTICE,NY_FED_TERMS_URL,MARKET_FUNCTIONING_LIMITATION} from './market-functioning.js';
 import {csvCell} from './model.js';
+import {formatDisplayValue} from './display-format.js';
 import {canonicalJson} from './research-workspaces.js';
 import {heading,button,panel,chart,table,emptyState,escapeHtml as esc} from './ui.js';
 
@@ -15,7 +16,13 @@ const definitions={
   dealerNetTreasury:['Net dealer Treasury position','USD billions','Weekly'],dealerRepo:['Dealer repo financing','USD billions','Weekly'],dealerReverseRepo:['Dealer reverse-repo financing','USD billions','Weekly'],dealerFailsDeliver:['Failed deliveries','USD billions','Weekly'],dealerFailsReceive:['Failed receipts','USD billions','Weekly'],
   sofr:['SOFR','Percent','Daily'],effr:['EFFR','Percent','Daily'],sofrEffrSpread:['SOFR − EFFR','Basis points','Daily'],
 };
-const format=(id,value)=>!finite(value)?'—':definitions[id][1]==='USD billions'?`$${value.toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3})}B`:definitions[id][1]==='Percent'?`${value.toFixed(2)}%`:`${value.toFixed(1)} bp`;
+const format=(id,value)=>{
+  if(!finite(value))return '—';
+  if(definitions[id][1]==='USD billions'){
+    return `${value<0?'−':''}$${Math.abs(value).toLocaleString('en-US',{minimumFractionDigits:3,maximumFractionDigits:3})}B`;
+  }
+  return definitions[id][1]==='Percent'?`${value.toFixed(2)}%`:`${value.toFixed(1)} bp`;
+};
 const captured=source=>source?.fetchedAt?(source.status==='ok'?'CAPTURED':'CACHED'):'UNAVAILABLE';
 const latest=(source,id)=>source?.series?.[id]?.observations?.at(-1);
 const revised=row=>['Y','r'].includes(row?.revisionIndicator);
@@ -27,7 +34,13 @@ function sourceNotice(source,id){
 
 function headline(source,id){
   const row=latest(source,id);
-  return `<a class="metric" href="#/series/${id}"><span class="metric-name">${esc(definitions[id][0])}</span><strong class="metric-value">${esc(format(id,row?.value))}</strong><span class="metric-change">${row?.suppressed?'SUPPRESSED':revised(row)?'REVISED':id==='sofrEffrSpread'?'Calculated metric':'Official observation'}</span><span class="metric-period">${esc(row?.date??'Unavailable')} · ${esc(definitions[id][1])}</span><span class="metric-detail" aria-hidden="true">Details ↗</span></a>`;
+  const unit=definitions[id][1],format=unit==='USD billions'?'billions':unit==='Percent'?'percent':'basisPoints';
+  const value=formatDisplayValue({id,unit,format},row?.value,{currencyUnit:'B'});
+  const flag=row?.suppressed?'SUPPRESSED':revised(row)?'REVISED':id==='sofrEffrSpread'?'Calculated metric':'Official observation';
+  return `<a class="metric" href="#/series/${id}"><span class="metric-name">${esc(definitions[id][0])}</span>`
+    +`<strong class="metric-value">${esc(value)}</strong><span class="metric-change">${flag}</span>`
+    +`<span class="metric-period">${esc(row?.date??'Unavailable')} · ${esc(unit)}</span>`
+    +'<span class="metric-detail" aria-hidden="true">Details ↗</span></a>';
 }
 
 function dealerTable(source,ids){

@@ -30,6 +30,22 @@ test('unavailable market page never displays another global snapshot as fixture 
   assert.ok(html.includes(NY_FED_REFERENCE_RATE_NOTICE));
 });
 
+test('market compact readings use billions, three significant figures and integer bp while source tables and CSV stay exact',()=>{
+  const data=fixture();
+  data.series.dealerNetTreasury.observations[1].value=-444.683;
+  data.series.sofr.observations[0].value=0.088654;
+  data.series.sofrEffrSpread.observations[0].value=-12.67;
+  const original=JSON.stringify(data),csv=ui().marketFunctioningCsv(data);
+  const html=ui().marketFunctioningPage(data);
+  const headlines=[...html.matchAll(/class="metric-value">([^<]+)</g)].map(match=>match[1]);
+  assert.deepEqual(headlines,['−$445B','$121B','$137B','0.0887%','3.88%','−13 bp']);
+  assert.ok(html.includes('<td class="num">−$444.683B</td>'));
+  assert.ok(html.includes('<td class="num">-12.7 bp</td>'));
+  assert.equal(ui().marketFunctioningCsv(data),csv);
+  assert.ok(csv.includes('0.088654'));
+  assert.equal(JSON.stringify(data),original);
+});
+
 test('market CSV keeps missing/suppressed values blank, revision flags and all required source and license notices',()=>{
   const rows=parseCsv(ui().marketFunctioningCsv(fixture())),headers=rows.shift();
   const records=rows.map(row=>Object.fromEntries(headers.map((key,index)=>[key,row[index]])));

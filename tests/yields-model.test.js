@@ -5,6 +5,14 @@ let model;
 try { model = await import('../src/yields.js'); }
 catch (error) { if (error.code !== 'ERR_MODULE_NOT_FOUND' || !error.message.includes('yields.js')) throw error; }
 const yields = () => { assert.ok(model, 'The yield research model must exist'); return model; };
+test('date input snaps to the nearest captured trading date, with earlier ties and clamped ends',()=>{
+  const captured={curveHistory:[{date:'2026-10-19'},{date:'2026-10-16'},{date:'2026-10-21'}]};
+  const cases=[['2026-10-16','2026-10-16'],['2026-10-17','2026-10-16'],['2026-10-18','2026-10-19'],
+    ['2026-10-20','2026-10-19'],['2000-01-01','2026-10-16'],['2099-01-01','2026-10-21']];
+  for(const [requested,actual] of cases)assert.equal(yields().nearestCurveDate(captured,requested),actual);
+  assert.equal(yields().nearestCurveDate(captured,''),null);assert.equal(yields().nearestCurveDate(captured,'2026-02-30'),null);
+  assert.equal(yields().nearestCurveDate({},'2026-10-20'),null);
+});
 const source = {curveHistory:[
   {date:'2021-12-03',nominal:{'2Y':0.59,'3M':0.05,'10Y':1.35},real:{'10Y':-1.02}},
   {date:'2021-12-06',nominal:{'2Y':0.63,'3M':0.05,'10Y':1.43},real:{'10Y':-0.98}},

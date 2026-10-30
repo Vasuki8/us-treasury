@@ -9,6 +9,24 @@ const source=()=>({status:'ok',asOf:'2026-09-30',unit:'USD billions',fetchedAt:'
   totals:{eligiblePrincipal:770,reportedMarketablePrincipal:774,ffbPrincipal:3,maturedUnredeemedPrincipal:1,reportedMarketableHeldByPublic:768,reportedMarketableIntragovernmental:6},provenance:[{url:'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/debt/mspd/mspd_table_3_market?filter=record_date:eq:2026-09-30',sha256:'a'.repeat(64),retrievedAt:'2026-10-22T02:27:14.574Z'}],warnings:['TIPS current adjusted principal; future inflation unknown.']});
 const rows=csv=>{const[headers,...data]=parseCsv(csv);return data.map(row=>Object.fromEntries(headers.map((key,i)=>[key,row[i]])));};
 
+test('monthly refinancing history requests five calendar years without changing export scope',()=>{
+  const data=source(),csv=api().refinancingCsv(data),html=api().refinancingPage({},data);
+  const chart=html.match(/<div class="chart" data-chart data-series="marketableDebt"[^>]*>/)?.[0];
+  const range=chart?.match(/data-range="([^"]+)"/)?.[1];
+  assert.deepEqual(JSON.parse(range.replaceAll('&quot;','"')),{preset:'5y'});
+  assert.equal(api().refinancingCsv(data),csv);
+});
+
+test('refinancing compact exposure uses trillions while exact maturity tables and numeric CSV stay unchanged',()=>{
+  const data=source(),original=JSON.stringify(data),csv=api().refinancingCsv(data);
+  const html=api().refinancingPage({},data);
+  assert.ok(html.includes('<strong class="metric-value">$0.470T</strong>'));
+  assert.match(html,/principal changed \+\$0\.0700T/);
+  assert.ok(html.includes('<td class="num">$470.00B</td>'),'Source maturity amounts retain their original precision.');
+  assert.equal(api().refinancingCsv(data),csv);
+  assert.equal(JSON.stringify(data),original);
+});
+
 test('refinancing page preserves source dates and exposes accessible scenario controls with both directions',()=>{
   const html=api().refinancingPage({refinancingHorizon:3,refinancingShock:50},source());
   for(const text of ['REFINANCING','WHAT CHANGED','WHAT CONTRIBUTED','WHY IT MATTERS','LIMITATIONS','2026-09-30','2026-10-22T02:27:14.574Z','3 months','12 months','24 months','Bill','FRN','TIPS','4%','hypothetical','+50','−50','Original','Federal Financing Bank'])assert.ok(html.includes(text),text);

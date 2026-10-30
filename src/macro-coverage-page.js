@@ -18,7 +18,8 @@ import {currentAccountGdpComponentEffectsPanel} from './current-account-gdp-comp
 import {currentAccountGdpAllComponentEffectsPanel} from './current-account-gdp-all-component-effects-view.js';
 import {dataStatus} from './data.js';
 import {coverageFamilies} from './macro-registry.js';
-import {getSeries,latest,formatValue,periodLabel,transformSeries} from './model.js';
+import {getSeries,latest,formatValue,formatChange,periodLabel,transformSeries} from './model.js';
+import {displayCurrencyUnit,displayUnitLabel,formatDisplayValue,formatDisplayChange} from './display-format.js';
 import {routeFor} from './router.js';import {viewRange,indicatorHref} from './workspace-context.js';
 import {rangeControls,coverageSummary} from './research-controls.js';
 import {heading,panel,button,chart,table,emptyState,sourceLink,seriesStatus,escapeHtml as esc} from './ui.js';
@@ -33,12 +34,29 @@ function externalMethods(state,readings,research){
   +research+panel('CSV','EXPORTS & SOURCE INPUTS',`<p class="panel-note">CSV MEASURE exports the selected native measure and exact window from the page header. Each analysis panel retains its own CSV with formulas, missing values, source inputs and retrieval provenance.</p><div class="explain"><p>${link('summary','Summary: native current/prior accounting and latest-quarter ratio inputs ↗')}</p><p>${link('trends','Trends: ratio history, comparison, component breakdown and trailing-quarter inputs ↗')}</p><p>${link('decomposition','Decomposition: contributions, balance/GDP effects, all-component and selected-component inputs ↗')}</p></div><p class="panel-note">Freezing this workspace preserves all existing current-account calculation inputs and exports, including analysis in the other sections.</p>`);
 }
 
+function compactFamilyReadings(ids,focused,currencyUnit){
+ const cards=ids.map(key=>{
+  const s=getSeries(key),observation=latest(s),options={currencyUnit};
+  return `<a class="metric" href="${esc(indicatorHref(key,{...focused,macroMeasure:key}))}">`
+   +`<span class="metric-name">${esc(s.name)}</span>`
+   +`<strong class="metric-value">${esc(formatDisplayValue(s,observation?.value,options))}</strong>`
+   +`<span class="metric-period">${esc(observation?periodLabel(s,observation.date):'Unavailable')} · ${esc(s.frequency)}</span>`
+   +`<span class="metric-basis">${esc(displayUnitLabel(s,options))} · ${esc(s.adjustment)}</span>`
+   +`<span class="metric-change">${esc(seriesStatus(s))}</span><span class="metric-detail" aria-hidden="true">Details ↗</span></a>`;
+ }).join('');
+ return `<div class="metrics compact-family-readings">${cards}</div>`;
+}
+
 export function macroCoveragePage(state={}, {embedded=false}={}){
  const familyId=Object.hasOwn(coverageFamilies,state.macroFamily)?state.macroFamily:'prices',family=coverageFamilies[familyId];
  const id=family.ids.includes(state.macroMeasure)?state.macroMeasure:family.defaultMeasure,current=getSeries(id),range=viewRange(state);
+ const currencyUnit=displayCurrencyUnit(family.ids.map(getSeries)),displayOptions={currencyUnit};
  const focused={...state,page:'macroCoverage',macroFamily:familyId,macroMeasure:id},shown=transformSeries(current,'level',range),last=shown.observations.at(-1);
  const previous=getSeries(id).observations.filter(o=>!shown.window.endDate||o.date<=shown.window.endDate);
- const changed=last?`${formatValue(current,last.value)} at ${periodLabel(current,last.date)}. ${measurementChange({...current,observations:previous}).text}`:'No source observation falls in this date window.';
+ const changedSeries={...current,observations:previous},change=measurementChange(changedSeries);
+ const changeText=change.text.replace(formatChange(changedSeries),formatDisplayChange(changedSeries,displayOptions));
+ const changed=last?`${formatDisplayValue(current,last.value,displayOptions)} at ${periodLabel(current,last.date)}. ${changeText}`
+  :'No source observation falls in this date window.';
  const controls=`<div class="toolbar macro-family-controls"><label for="macro-family">Measurement family<select id="macro-family" aria-label="Measurement family">${Object.entries(coverageFamilies).map(([key,value])=>`<option value="${key}"${key===familyId?' selected':''}>${esc(value.label)}</option>`).join('')}</select></label><label for="macro-measure">History measure<select id="macro-measure" aria-label="History measure">${family.ids.map(key=>`<option value="${key}"${key===id?' selected':''}>${esc(getSeries(key).name)}</option>`).join('')}</select></label>${familyId==='external'?'':rangeControls(focused,[id])}${embedded?button('CSV MEASURE',`data-export-macro-measure${shown.error||!last?' disabled':''}`):''}</div>`;
  const errors=current.error?`<p class="panel-note amber">${esc(current.error)}</p>`:'';
  const history=shown.observations.length?chart([id],{range,height:250}):emptyState('History unavailable.',shown.error??current.error??'No retained observations are available in the selected date window.');
@@ -53,12 +71,32 @@ export function macroCoveragePage(state={}, {embedded=false}={}){
  const title=embedded?'':heading(({prices:'INFLATION',labor:'LABOR MARKET',activity:'ECONOMIC ACTIVITY',housing:'HOUSING',policy:'POLICY RATES',external:'EXTERNAL ACCOUNTS'})[familyId]??family.label.toUpperCase(),`${family.label} / ${family.question}`,button('COMPARE FAMILY',`data-compare="${esc(family.compare.join(','))}"`)+button('CSV MEASURE',`data-export-macro-measure${shown.error||!available?' disabled title="A valid window with retained observations is required."':''}`));
  const fullReadings=panel('',familyId==='external'?'LATEST TOPIC READINGS':'FULL TOPIC COVERAGE',table(['MEASUREMENT / DEFINITION',{label:'LATEST',numeric:true},'REFERENCE PERIOD','SOURCE STATUS / FULL COVERAGE'],rows,'Current topic readings and explicit source periods'));
  const readingIds=family.ids.slice(0,6);
- const readings=embedded?'':familyId==='external'?fullReadings:familyId==='prices'?readingGroup('LATEST TOPIC READINGS',inflationHorizonTable(focused),'Headline and core CPI / PCE at monthly, annual and annualized 3M / 6M horizons. Latest readings keep their own reference months; history controls below apply only to the focused chart.'):readingGroup('LATEST TOPIC READINGS',`<div class="metrics compact-family-readings">${readingIds.map(key=>{
-  const s=getSeries(key),observation=latest(s);
-  return `<a class="metric" href="${esc(indicatorHref(key,{...focused,macroMeasure:key}))}"><span class="metric-name">${esc(s.name)}</span><strong class="metric-value">${esc(formatValue(s,observation?.value))}</strong><span class="metric-period">${esc(observation?periodLabel(s,observation.date):'Unavailable')} · ${esc(s.frequency)}</span><span class="metric-basis">${esc(s.unit)} · ${esc(s.adjustment)}</span><span class="metric-change">${esc(seriesStatus(s))}</span><span class="metric-detail" aria-hidden="true">Details ↗</span></a>`;
- }).join('')}</div>${family.ids.map(key=>{const s=getSeries(key);return s.error?`<p class="panel-note amber">${esc(s.name)}: ${esc(s.error)}</p>`:'';}).join('')}`,'Latest retained readings use independent reference periods and native units. The selected history window applies below; full topic coverage is in research context.');
+ const familyErrors=family.ids.map(key=>{
+  const s=getSeries(key);return s.error?`<p class="panel-note amber">${esc(s.name)}: ${esc(s.error)}</p>`:'';
+ }).join('');
+ const readings=embedded?'':familyId==='external'?fullReadings:familyId==='prices'
+  ?readingGroup('LATEST TOPIC READINGS',inflationHorizonTable(focused),
+   'Headline and core CPI / PCE at monthly, annual and annualized 3M / 6M horizons. '
+   +'Latest readings keep their own reference months; history controls below apply only to the focused chart.')
+  :readingGroup('LATEST TOPIC READINGS',compactFamilyReadings(readingIds,focused,currencyUnit)+familyErrors,
+   'Latest retained readings use independent reference periods and display units. '
+   +'The selected history window applies below; full topic coverage is in research context.');
  const research=panel('','RESEARCH QUESTION',`<div class="explain"><p><strong>CONTEXT.</strong> ${esc(family.context)}</p><p><strong>WHY IT MATTERS.</strong> ${contributionContext}</p><p>${esc(current.definition)}</p><p>Source: ${sourceLink(current)}. Retrieval: <span class="mono">${esc(current.fetchedAt??'Unavailable')}</span>. Reference dates are not verified publication timestamps.</p><p><a href="${esc(family.schedule)}" target="_blank" rel="noopener noreferrer">External official schedule ↗</a>. BLS, BEA, DOL and Census program associations appear in the <a href="#/calendar">captured calendar</a> where available. Dated FOMC events and official material references are available in the calendar and <a href="#/economy?family=policy">Policy rates</a>; linked documents are separate from captured numeric projections.</p></div>`);
- const focusedHistory=panel('',familyId==='prices'?'INFLATION · CURRENT READING & HISTORY':'FOCUSED HISTORY',(familyId==='external'?'':familyId==='prices'?`<p class="focused-measure-reading"><strong>${esc(current.name)}: ${esc(formatValue(current,latest(current)?.value))}</strong> · ${esc(periodLabel(current,latest(current)?.date))} · ${esc(current.unit)} · ${esc(current.adjustment)}</p><details class="supporting-details" data-page-disclosure="macro-coverage:prices:history-controls"${shown.error?' open':''}><summary>Measure &amp; history window · ${esc(current.short)} · ${esc(shown.window.label)}</summary>${controls}</details>`:controls)+errors+`<p class="panel-note"><strong>LIMITATIONS.</strong> ${esc(family.limitations)}</p>`+history+(current.coverageNote?supportingDetails(`macro-coverage:${familyId}:focused-source`,'Focused measurement · source coverage',`<p class="panel-note">${esc(current.coverageNote)}</p>`):'')+`<p class="panel-note"><strong>WHAT CHANGED.</strong> ${esc(changed)}</p>`+coverageSummary(shown),`<a class="action" href="${esc(detail)}">DETAILS & DATA TABLE ↗</a>`,`${current.frequency} · ${current.unit} · ${current.adjustment}`,'workspace-analysis');
+ const focusedControls=familyId==='external'?'':familyId==='prices'
+  ?`<p class="focused-measure-reading"><strong>${esc(current.name)}: `
+   +`${esc(formatDisplayValue(current,latest(current)?.value,displayOptions))}</strong> · `
+   +`${esc(periodLabel(current,latest(current)?.date))} · ${esc(displayUnitLabel(current,displayOptions))} · `
+   +`${esc(current.adjustment)}</p><details class="supporting-details" data-page-disclosure="macro-coverage:prices:history-controls"`
+   +`${shown.error?' open':''}><summary>Measure &amp; history window · ${esc(current.short)} · `
+   +`${esc(shown.window.label)}</summary>${controls}</details>`
+  :controls;
+ const sourceCoverage=current.coverageNote?supportingDetails(`macro-coverage:${familyId}:focused-source`,
+  'Focused measurement · source coverage',`<p class="panel-note">${esc(current.coverageNote)}</p>`):'';
+ const focusedBody=focusedControls+errors+`<p class="panel-note"><strong>LIMITATIONS.</strong> ${esc(family.limitations)}</p>`
+  +history+sourceCoverage+`<p class="panel-note"><strong>WHAT CHANGED.</strong> ${esc(changed)}</p>`+coverageSummary(shown);
+ const focusedHistory=panel('',familyId==='prices'?'INFLATION · CURRENT READING & HISTORY':'FOCUSED HISTORY',focusedBody,
+  `<a class="action" href="${esc(detail)}">DETAILS & DATA TABLE ↗</a>`,
+  `${current.frequency} · ${current.unit} · ${current.adjustment}`,'workspace-analysis');
  const exportNote=`<p class="panel-note">CSV MEASURE exports the focused history's exact window in native units, including source identifiers, calculation, rights notices and retrieval provenance. All history means retained observations; new captures do not establish historical publication vintages.</p>`;
  const familyContext=familyId==='prices'?supportingDetails('macro-coverage:prices:cpi-effects','CPI effects · source coverage',cpiEffectsCoveragePanel()):familyId==='policy'?supportingDetails('macro-coverage:policy:fomc','FOMC decisions, minutes & projections',fomcContext(dataStatus.calendar?.sources?.fomc)):'';
  const priceResearch=familyId==='prices'?renderPcePriceContributions(dataStatus.sources.pcePriceContributions,{range})+supportingDetails('inflation:conditional-base-effects','Conditional PCE base effects · assumptions & arithmetic',pceBaseEffectsView(getSeries(state.pceBaseIndex??'pceIndex'),pceScenarioOptions(state))):'';
