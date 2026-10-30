@@ -12,6 +12,7 @@ import { asKnownOn, normalizeVintageTimestamp, revisionHistory } from '../src/vi
 import { vintagesCsv } from '../src/vintages-page.js';
 
 const MAX_ARCHIVE_BYTES = 512 * 1024 * 1024;
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const digest = value => createHash('sha256').update(value).digest('hex');
 const seriesIds = history => [...new Set(history.captures.flatMap(capture => [...Object.keys(capture.series), ...capture.removedSeries]))].sort();
 const latestCapture = history => history.captures.map(capture => normalizeVintageTimestamp(capture.capturedAt)).sort().at(-1) ?? null;
@@ -55,27 +56,48 @@ assert.deepEqual(Object.keys(manifest.sources), [...new Set(history.captures.map
 const bundles = new Map(), indexes = new Set(), referencedFiles = new Set(), perSource = {};
 let lazyGzipBytes = 0, lazyFallbackBytes = 0;
 for (const [sourceId, source] of Object.entries(manifest.sources)) {
-  exactKeys(source, ['captureCount', 'latestCaptureAt', 'seriesIds', 'compressed', 'fallback'], `Manifest fields for ${sourceId}`);
+  const multipart=Object.hasOwn(source,'parts');
+  const resourceKeys=multipart?['contentBytes','contentSha256','parts']:['compressed','fallback'];
+  exactKeys(source,['captureCount','latestCaptureAt','seriesIds',...resourceKeys],`Manifest fields for ${sourceId}`);
+  if(multipart){
+    assert.ok(Array.isArray(source.parts)&&source.parts.length>=2,`History parts for ${sourceId}`);
+    assert.ok(Number.isSafeInteger(source.contentBytes)&&source.contentBytes>0&&source.contentBytes<=MAX_ARCHIVE_BYTES,
+      `Bounded complete source bytes for ${sourceId}`);
+    assert.match(source.contentSha256,/^[a-f0-9]{64}$/);
+  }
   const expected = { version: 1, captures: history.captures.filter(capture => capture.sourceId === sourceId) };
   assert.equal(source.captureCount, expected.captures.length, `Source capture count for ${sourceId}`);
   assert.equal(source.latestCaptureAt, latestCapture(expected), `Source latest capture for ${sourceId}`);
   assert.deepEqual(source.seriesIds, seriesIds(expected), `Complete historical series mapping for ${sourceId}`);
-  const bytes = {};
-  for (const [kind, extension] of [['compressed', '.json.gz'], ['fallback', '.json']]) {
-    const descriptor = source[kind];
-    exactKeys(descriptor, ['url', 'sha256', 'bytes'], `Resource fields for ${sourceId}/${kind}`);
-    assert.match(descriptor.sha256, /^[a-f0-9]{64}$/);
-    assert.equal(descriptor.url, `./history-${descriptor.sha256}${extension}`, `Content-addressed resource name for ${sourceId}/${kind}`);
-    assert.ok(Number.isSafeInteger(descriptor.bytes) && descriptor.bytes > 0 && descriptor.bytes <= MAX_ARCHIVE_BYTES, `Bounded bytes for ${sourceId}/${kind}`);
-    const filename = descriptor.url.slice(2), content = assets.files.get(filename);
-    assert.ok(Buffer.isBuffer(content), `Missing resource for ${sourceId}/${kind}`);
-    assert.equal(content.length, descriptor.bytes, `Byte length for ${sourceId}/${kind}`);
-    assert.equal(digest(content), descriptor.sha256, `Hash for ${sourceId}/${kind}`);
-    referencedFiles.add(filename);
-    bytes[kind] = content;
+  const chunks=[];
+  let sourceGzipBytes=0,sourceFallbackBytes=0;
+  for(const part of multipart?source.parts:[source]){
+    if(multipart)exactKeys(part,['compressed','fallback'],`Part fields for ${sourceId}`);
+    const bytes={};
+    for(const kind of ['compressed','fallback']){
+      const extension=(multipart?'.bin':'.json')+(kind==='compressed'?'.gz':''),descriptor=part[kind];
+      exactKeys(descriptor,['url','sha256','bytes'],`Resource fields for ${sourceId}/${kind}`);
+      assert.match(descriptor.sha256,/^[a-f0-9]{64}$/);
+      assert.equal(descriptor.url,`./history-${descriptor.sha256}${extension}`,`Content-addressed resource name for ${sourceId}/${kind}`);
+      assert.ok(Number.isSafeInteger(descriptor.bytes)&&descriptor.bytes>0&&descriptor.bytes<MAX_FILE_BYTES,
+        `Resource must remain below 20 MiB for ${sourceId}/${kind}`);
+      const filename=descriptor.url.slice(2),content=assets.files.get(filename);
+      assert.ok(Buffer.isBuffer(content),`Missing resource for ${sourceId}/${kind}`);
+      assert.equal(content.length,descriptor.bytes,`Byte length for ${sourceId}/${kind}`);
+      assert.equal(digest(content),descriptor.sha256,`Hash for ${sourceId}/${kind}`);
+      referencedFiles.add(filename);bytes[kind]=content;
+    }
+    assert.deepEqual(gunzipSync(bytes.compressed,{maxOutputLength:part.fallback.bytes}),bytes.fallback,
+      `Gzip and fallback content for ${sourceId}`);
+    sourceGzipBytes+=bytes.compressed.length;sourceFallbackBytes+=bytes.fallback.length;chunks.push(bytes.fallback);
+    assert.ok(sourceGzipBytes<=MAX_ARCHIVE_BYTES&&sourceFallbackBytes<=MAX_ARCHIVE_BYTES,`Source resource byte limits for ${sourceId}`);
   }
-  assert.deepEqual(gunzipSync(bytes.compressed, { maxOutputLength: source.fallback.bytes }), bytes.fallback, `Gzip and fallback content for ${sourceId}`);
-  const bundle = JSON.parse(bytes.fallback.toString('utf8'));
+  const fallback=Buffer.concat(chunks);
+  if(multipart){
+    assert.equal(fallback.length,source.contentBytes,`Complete source byte length for ${sourceId}`);
+    assert.equal(digest(fallback),source.contentSha256,`Complete source hash for ${sourceId}`);
+  }
+  const bundle = JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(fallback));
   exactKeys(bundle, ['version', 'sourceId', 'captureIndexes', 'captures'], `Bundle fields for ${sourceId}`);
   assert.equal(bundle.version, 1);
   assert.equal(bundle.sourceId, sourceId);
@@ -91,9 +113,10 @@ for (const [sourceId, source] of Object.entries(manifest.sources)) {
     assert.deepEqual(bundle.captures[position], history.captures[index], `Original capture at global index ${index}`);
   });
   bundles.set(sourceId, bundle);
-  perSource[sourceId] = { captures: source.captureCount, series: source.seriesIds.length, latestCaptureAt: source.latestCaptureAt, gzipBytes: source.compressed.bytes, fallbackBytes: source.fallback.bytes };
-  lazyGzipBytes += source.compressed.bytes;
-  lazyFallbackBytes += source.fallback.bytes;
+  perSource[sourceId] = { captures: source.captureCount, series: source.seriesIds.length,
+    latestCaptureAt: source.latestCaptureAt, gzipBytes: sourceGzipBytes, fallbackBytes: sourceFallbackBytes };
+  lazyGzipBytes += sourceGzipBytes;
+  lazyFallbackBytes += sourceFallbackBytes;
 }
 assert.ok(lazyGzipBytes <= MAX_ARCHIVE_BYTES && lazyFallbackBytes <= MAX_ARCHIVE_BYTES, 'Total public resource byte limits');
 assert.equal(indexes.size, manifest.captureCount, 'Every global capture index must occur exactly once');

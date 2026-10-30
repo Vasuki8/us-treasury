@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createAppServer } from '../server.mjs';
+import {gzipSync} from 'node:zlib';
 
 test('server serves app assets and keeps project internals private', async t => {
   const server = createAppServer();
@@ -37,6 +38,8 @@ test('server serves versioned native modules and rejects unreviewed or malformed
     ['src/app.0123456789abcdef.js', 'export const loaded = true;'], ['styles.0123456789abcdef.css', 'body {}'],
     ['favicon.0123456789abcdef.svg', '<svg/>'], ['src/private.txt', 'private'], ['package.json', '{}'],
   ];
+  const binary=Buffer.from([0,255,128,65]),binaryName=`src/history-${'a'.repeat(64)}.bin`;
+  fixtures.push([binaryName,binary],[binaryName+'.gz',gzipSync(binary)]);
   for (const [name, contents] of fixtures) {
     await writeFile(path.join(root, prefix, name), contents);
   }
@@ -50,6 +53,11 @@ test('server serves versioned native modules and rejects unreviewed or malformed
   assert.equal(await module.text(), 'export const loaded = true;');
   assert.equal((await fetch(`${origin}/${prefix}styles.0123456789abcdef.css`)).headers.get('content-type'), 'text/css; charset=utf-8');
   assert.equal((await fetch(`${origin}/${prefix}favicon.0123456789abcdef.svg`)).headers.get('content-type'), 'image/svg+xml');
+  for(const [suffix,type,expected]of [['','application/octet-stream',binary],['.gz','application/gzip',gzipSync(binary)]]){
+    const result=await fetch(`${origin}/${prefix}${binaryName}${suffix}`);
+    assert.equal(result.status,200);assert.equal(result.headers.get('content-type'),type);
+    assert.deepEqual(Buffer.from(await result.arrayBuffer()),expected);
+  }
   const invalidPaths = [
     'assets/src/app.short.js', 'assets/src/app.0123456789ABCDEF.js', 'assets/src/app.js', `${prefix}package.json`,
     `${prefix}src/private.txt`, `${prefix}src/%2e%2e%2fpackage.json`, `${prefix}src/nested/app.js`, `${prefix}src/app.js/extra`,

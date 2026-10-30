@@ -78,6 +78,9 @@ export async function verifyLiveBuild(input, { directory = path.join(projectRoot
       throw new Error(`Expected JavaScript MIME type for ${name}`);
     }
     if(name.endsWith('.json')&&!/^application\/json(?:\s*;|$)/i.test(response.headers.get('content-type')??''))throw new Error(`Expected JSON MIME type for ${name}`);
+    if(name.endsWith('.bin')&&!/^application\/octet-stream(?:\s*;|$)/i.test(response.headers.get('content-type')??'')){
+      throw new Error(`Expected binary MIME type for ${name}`);
+    }
     if(name.endsWith('.gz')&&!/^application\/(?:gzip|octet-stream)(?:\s*;|$)/i.test(response.headers.get('content-type')??''))throw new Error(`Expected gzip MIME type for ${name}`);
     const actual = Buffer.from(await response.arrayBuffer());
     if (!actual.equals(expected)) throw new Error(`Deployed file differs from local build: ${name}`);

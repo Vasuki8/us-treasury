@@ -48,6 +48,8 @@ try {
       assert.match(result.headers.get('content-type'), /^image\/svg\+xml(?:;|$)/, `Built icon must have an SVG MIME type: ${asset}`);
     } else if(asset.endsWith('.json')){
       assert.match(result.headers.get('content-type'),/^application\/json(?:;|$)/,'Lazy history JSON MIME');
+    } else if(asset.endsWith('.bin')){
+      assert.match(result.headers.get('content-type'),/^application\/octet-stream(?:;|$)/,'Lazy history binary MIME');
     } else if(asset.endsWith('.gz')){
       assert.match(result.headers.get('content-type'),/^application\/(?:gzip|octet-stream)(?:;|$)/,'Lazy gzip history MIME');
     }

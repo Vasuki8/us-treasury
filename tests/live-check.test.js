@@ -147,3 +147,34 @@ test('live verification follows every v2 source archive, including an unselected
  setup.remote.delete('src/'+sources.bls.compressed.url.slice(2));
  await assert.rejects(verifyLiveBuild('https://meridian.example/preview/',setup),/404/);
 });
+
+async function chunkFixture(t){
+ const files={},parts=[],names=[];
+ for(const fragment of ['{"captures":[',']}']){
+  const plain=Buffer.from(fragment),gzip=gzipSync(plain);
+  const pair={};
+  for(const [kind,bytes,extension]of [['fallback',plain,'bin'],['compressed',gzip,'bin.gz']]){
+   const name=`src/history-${createHash('sha256').update(bytes).digest('hex')}.${extension}`;
+   files[name]=bytes;names.push(name);pair[kind]={url:'./'+name.slice(4)};
+  }
+  parts.push(pair);
+ }
+ const data=`export {value} from './nested/value.js';export const historyArchive=${JSON.stringify({version:2,sources:{treasury:{parts}}})};`;
+ const setup=await fixture(t,{...files,'src/data.js':data});
+ for(const name of names)setup.remote.get(name).type=name.endsWith('.gz')?'application/gzip':'application/octet-stream';
+ return {...setup,names};
+}
+
+test('live verification fetches and compares every raw and gzip history part',async t=>{
+ const setup=await chunkFixture(t);
+ assert.equal((await verifyLiveBuild('https://meridian.example/preview/',setup)).assets,10);
+});
+
+test('missing, changed or incorrectly served binary history parts stop live verification',async t=>{
+ for(const index of [0,1,2,3])for(const failure of ['missing','bytes','mime']){
+  const setup=await chunkFixture(t),name=setup.names[index],original=setup.remote.get(name);
+  if(failure==='missing')setup.remote.delete(name);
+  else setup.remote.set(name,{body:failure==='bytes'?'changed':original.body,type:failure==='mime'?'text/html':original.type});
+  await assert.rejects(verifyLiveBuild('https://meridian.example/preview/',setup),/404|differs|MIME/);
+ }
+});

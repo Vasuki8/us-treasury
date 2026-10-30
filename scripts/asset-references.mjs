@@ -9,7 +9,7 @@ export function staticModuleReferences(source) {
 /** Static/literal lazy native modules plus generated source-history bundles. */
 export function moduleAssetReferences(source){
   const modules=staticModuleReferences(source);
-  const history=[...source.matchAll(/(['"])(\.\/history-[a-f0-9]{64}\.json(?:\.gz)?)\1/g)].map(match=>match[2]);
+  const history=[...source.matchAll(/(['"])(\.\/history-[a-f0-9]{64}\.(?:json|bin)(?:\.gz)?)\1/g)].map(match=>match[2]);
   const lazy=[...source.matchAll(/\bimport\s*\(\s*(['"])([^'"]+)\1\s*\)/g)].map(match=>match[2]);
   const sources = [...source.matchAll(/(['"])(\.\/source-[a-f0-9]{64}\.js)\1/g)].map(match => match[2]);
   return [...new Set([...modules,...lazy,...history,...sources])];
@@ -45,5 +45,6 @@ export function resolveModuleReference(reference, parent, imports = new Map()) {
 
 export function isBuiltAsset(name) {
   return /^assets\/(?:styles\.[a-f0-9]{16}\.css|favicon\.[a-f0-9]{16}\.svg)$/.test(name)
-    || /^assets\/src\/(?:[a-zA-Z0-9_-]+\.[a-f0-9]{16}\.js|source-[a-f0-9]{64}\.js|history-[a-f0-9]{64}\.json(?:\.gz)?)$/.test(name);
+    || /^assets\/src\/(?:[a-zA-Z0-9_-]+\.[a-f0-9]{16}\.js|source-[a-f0-9]{64}\.js)$/.test(name)
+    || /^assets\/src\/history-[a-f0-9]{64}\.(?:json|bin)(?:\.gz)?$/.test(name);
 }

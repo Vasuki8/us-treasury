@@ -46,6 +46,24 @@ function fixture(value = history) {
   return {descriptor,requests,fetchImpl,replaceBundle,bundles:Object.fromEntries(groups),assets};
 }
 
+function splitBundle(f,id,boundaries){
+  const plain=Buffer.from(JSON.stringify(f.bundles[id])),entry=f.descriptor.sources[id];
+  const ends=[0,...(boundaries??[Math.floor(plain.length/2)]),plain.length];
+  delete entry.compressed;delete entry.fallback;
+  entry.contentBytes=plain.length;entry.contentSha256=sha(plain);
+  entry.parts=ends.slice(1).map((end,index)=>{
+    const bytes=plain.subarray(ends[index],end),compressed=gzipSync(bytes);
+    const part={
+      compressed:{url:`./history-${sha(compressed)}.bin.gz`,sha256:sha(compressed),bytes:compressed.length},
+      fallback:{url:`./history-${sha(bytes)}.bin`,sha256:sha(bytes),bytes:bytes.length},
+    };
+    f.assets.set(part.compressed.url.slice(2),{id,bytes:compressed});
+    f.assets.set(part.fallback.url.slice(2),{id,bytes});
+    return part;
+  });
+  return plain;
+}
+
 test('construction stays idle; a selected source shares one verified load and memoized revisions', async()=>{
   const f=fixture();let resolve;
   const loader=createHistoryLoader(f.descriptor,{fetchImpl:async(...args)=>{await new Promise(done=>{resolve=done;});return f.fetchImpl(...args);},cryptoImpl:webcrypto,decompress});
@@ -241,3 +259,105 @@ for(const kind of ['compressed hash','compressed length','decoded hash','decoded
   const loader=createHistoryLoader(f.descriptor,{fetchImpl,cryptoImpl:kind==='integrity unavailable'?null:webcrypto,decompress});
   await assert.rejects(loader.load());assert.equal(loader.getState().status,'error');assert.equal(loader.getState().history,null);
 });
+
+test('multipart sources reconstruct exact UTF-8 bytes before parsing with gzip and binary fallback',async()=>{
+  for(const decode of [decompress,null,undefined]){
+    const f=fixture(copy(history));f.bundles.bea.captures[0].metadata.note='漢字😀';
+    const plain=Buffer.from(JSON.stringify(f.bundles.bea)),middle=plain.indexOf(Buffer.from('😀'))+2;
+    splitBundle(f,'bea',[middle]);
+    const loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto,decompress:decode});
+    const expected={version:1,captures:f.bundles.bea.captures};
+    assert.deepEqual(await loader.load('gdp'),expected);
+    assert.deepEqual(asKnownOn(loader.getState('gdp').history,nextAt),asKnownOn(expected,nextAt));
+    assert.equal(f.requests.length,2);assert.equal(loader.getState('cpi').status,'idle');
+    assert.ok(f.requests.every(item=>item.url.pathname.endsWith(decode===null?'.bin':'.bin.gz')));
+  }
+});
+
+test('multipart source loads share one promise and expose no history until the final part verifies',async()=>{
+  const f=fixture();splitBundle(f,'bea');let release,requested;
+  const waiting=new Promise(resolve=>{requested=resolve;});
+  const last=f.descriptor.sources.bea.parts[1].compressed.url.slice(2);
+  const fetchImpl=async(url,options)=>{
+    if(url.pathname.endsWith(last)){requested();await new Promise(resolve=>{release=resolve;});}
+    return f.fetchImpl(url,options);
+  };
+  const loader=createHistoryLoader(f.descriptor,{fetchImpl,cryptoImpl:webcrypto,decompress});
+  const gdp=loader.load('gdp'),again=loader.load('gdp'),gdi=loader.load('gdi');
+  assert.equal(gdp,again);await waiting;
+  assert.equal(loader.getState('gdp').status,'loading');assert.equal(loader.getState('gdp').history,null);
+  assert.equal(loader.getState('gdi').history,null);assert.equal(f.requests.length,1);
+  release();assert.deepEqual(await gdp,beaHistory);assert.deepEqual(await gdi,beaHistory);
+  assert.equal(f.requests.length,2);await loader.load('gdp');assert.equal(f.requests.length,2);
+});
+
+test('a multipart failure remains unavailable and explicit retry preserves ready unrelated sources',async()=>{
+  const f=fixture();splitBundle(f,'bea');let broken=true;
+  const last=f.descriptor.sources.bea.parts[1].compressed.url.slice(2);
+  const fetchImpl=async(url,options)=>{
+    if(broken&&url.pathname.endsWith(last))throw new Error('part offline');
+    return f.fetchImpl(url,options);
+  };
+  const loader=createHistoryLoader(f.descriptor,{fetchImpl,cryptoImpl:webcrypto,decompress});
+  await loader.load('cpi');await assert.rejects(loader.load('gdp'),/part offline/);
+  assert.equal(loader.getState('gdp').status,'error');assert.equal(loader.getState('gdp').history,null);
+  const count=f.requests.length;await assert.rejects(loader.load('gdi'),/part offline/);assert.equal(f.requests.length,count);
+  broken=false;assert.deepEqual(await loader.load('gdp',{retry:true}),beaHistory);
+  assert.equal(loader.getState('cpi').status,'ready');assert.equal(f.requests.filter(item=>item.sourceId==='bls').length,1);
+});
+
+test('multipart moved sources preserve original global indexes and accept identical content-addressed parts',async()=>{
+  const first=recordVintages(null,{}, {bea:source('bea',{gdp:1}),bls:source('bls',{gdp:2})},{checkedAt:at});
+  const value=recordVintages(first,{}, {bea:source('bea',{gdp:3},nextAt),bls:source('bls',{gdp:4},nextAt)},{checkedAt:nextAt});
+  const f=fixture(value);f.bundles.bea.captures[0].metadata.note='a'.repeat(16);
+  const plain=Buffer.from(JSON.stringify(f.bundles.bea)),start=plain.indexOf(Buffer.from('a'.repeat(16)));
+  splitBundle(f,'bea',[start,start+8,start+16]);splitBundle(f,'bls');
+  assert.equal(f.descriptor.sources.bea.parts[1].fallback.url,f.descriptor.sources.bea.parts[2].fallback.url);
+  const loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto,decompress});
+  assert.deepEqual(await loader.load('gdp'),value);
+});
+
+for(const kind of ['ambiguous','empty','single','non-array','content bytes','content limit','content hash',
+  'part shape','part extra','part path','part hash','compressed limit','fallback limit','compressed total','sum']){
+  test(`multipart manifest ${kind} fails before fetching`,async()=>{
+  const f=fixture();splitBundle(f,'bea');const entry=f.descriptor.sources.bea;
+  if(kind==='ambiguous')entry.fallback=entry.parts[0].fallback;
+  if(kind==='empty')entry.parts=[];
+  if(kind==='single')entry.parts.pop();
+  if(kind==='non-array')entry.parts={};
+  if(kind==='content bytes')entry.contentBytes=0;
+  if(kind==='content limit')entry.contentBytes=512*1024*1024+1;
+  if(kind==='content hash')entry.contentSha256='invalid';
+  if(kind==='part shape')entry.parts[0]=null;
+  if(kind==='part extra')entry.parts[0].extra=true;
+  if(kind==='part path')entry.parts[0].fallback.url='../outside.bin';
+  if(kind==='part hash')entry.parts[0].compressed.sha256='invalid';
+  if(kind==='compressed limit')entry.parts[0].compressed.bytes=20*1024*1024;
+  if(kind==='fallback limit')entry.parts[0].fallback.bytes=20*1024*1024;
+  if(kind==='compressed total'){
+    const parts=entry.parts;
+    entry.parts=Array.from({length:28},(_,i)=>({
+      fallback:parts[i%2].fallback,compressed:{...parts[i%2].compressed,bytes:20*1024*1024-1},
+    }));
+    entry.contentBytes=entry.parts.reduce((total,part)=>total+part.fallback.bytes,0);
+  }
+  if(kind==='sum')entry.contentBytes++;
+  const loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto,decompress});
+  await assert.rejects(loader.load('gdp'));assert.equal(f.requests.length,0);assert.equal(loader.getState('gdp').history,null);
+  });
+}
+
+for(const kind of ['order','omission','compressed hash','decoded hash','whole hash','decoded limit']){
+  test(`multipart ${kind} corruption never exposes partial history`,async()=>{
+    const f=fixture();splitBundle(f,'bea');const entry=f.descriptor.sources.bea;
+    if(kind==='order')entry.parts.reverse();
+    if(kind==='omission')entry.parts.pop();
+    if(kind==='compressed hash')entry.parts[1].compressed.sha256='0'.repeat(64);
+    if(kind==='decoded hash')entry.parts[1].fallback.sha256='0'.repeat(64);
+    if(kind==='whole hash')entry.contentSha256='0'.repeat(64);
+    if(kind==='decoded limit'){entry.parts[1].fallback.bytes--;entry.contentBytes--;}
+    const loader=createHistoryLoader(f.descriptor,{fetchImpl:f.fetchImpl,cryptoImpl:webcrypto});
+    await assert.rejects(loader.load('gdp'));assert.equal(loader.getState('gdp').history,null);
+    assert.equal(loader.getState('gdp').status,'error');
+  });
+}
