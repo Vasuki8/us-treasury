@@ -4,6 +4,7 @@ import {matchesNyFedBlsCalendarFeed,assertNyFedBlsCalendar} from '../scripts/bls
 
 
 const calendarIndex='https://www.newyorkfed.org/research/calendars/nationalecon_cal.html';
+const octoberCalendar='https://www.newyorkfed.org/research/calendars/i-oct26.html';
 const novemberCalendar='https://www.newyorkfed.org/research/calendars/i-nov26.html';
 const terms='https://www.newyorkfed.org/privacy/termsofuse';
 const receipt=url=>({url,sha256:'a'.repeat(64),retrievedAt:'2026-10-24T16:00:00.000Z',lastModified:null,bytes:15000});
@@ -18,6 +19,64 @@ function calendarSource(){
       {id:'bls-employment-situation-2026-11-06',sourceId:'bls',provider:'new-york-fed',program:'employment-situation',seriesId:'unrate',seriesIds:['unrate','payroll','participation','wages'],name:'Employment Situation',agency:'BLS',topic:'Labor',date:'2026-11-06',time:'08:30',scheduledAt:'2026-11-06T13:30:00.000Z',period:null,periodLabel:null,sourceUrl:novemberCalendar,sourceUid:null,scheduleBasis:'secondary-calendar'},
     ]};
 }
+
+function advancedCalendarSource(){
+  const source=calendarSource();
+  source.indexMonth='2026-11';
+  const october={...source.events[0],id:'bls-employment-situation-2026-10-02',date:'2026-10-02',
+    scheduledAt:'2026-10-02T12:30:00.000Z',sourceUrl:octoberCalendar};
+  source.events[0].sourceUrl=calendarIndex;source.events.unshift(october);
+  source.provenance=[receipt(calendarIndex),receipt(octoberCalendar)];
+  return source;
+}
+
+test('an early next-month index requires captured current-month coverage and truthful source bindings',()=>{
+  assert.doesNotThrow(()=>assertNyFedBlsCalendar(advancedCalendarSource()));
+});
+
+test('an early January index preserves December coverage, receipt clocks and the retrieval-year attribution',()=>{
+  const source=advancedCalendarSource(),decemberCalendar='https://www.newyorkfed.org/research/calendars/i-dec26.html';
+  source.fetchedAt='2026-12-30T16:00:00.000Z';source.indexMonth='2027-01';
+  source.coveredMonths=['2026-12','2027-01'];source.unavailableMonths=['2027-02'];
+  source.coverageStart='2026-12-01';source.coverageEnd='2027-01-31';
+  source.provenance=[calendarIndex,decemberCalendar].map(url=>({...receipt(url),retrievedAt:source.fetchedAt}));
+  source.events=[
+    {...source.events[0],id:'bls-employment-situation-2026-12-04',date:'2026-12-04',
+      scheduledAt:'2026-12-04T13:30:00.000Z',sourceUrl:decemberCalendar},
+    {...source.events[1],id:'bls-employment-situation-2027-01-08',date:'2027-01-08',
+      scheduledAt:'2027-01-08T13:30:00.000Z',sourceUrl:calendarIndex},
+  ];
+  assert.doesNotThrow(()=>assertNyFedBlsCalendar(source));
+});
+
+test('advanced-index admission rejects missing current evidence, false source URLs and unsupported coverage',()=>{
+  const cases=[
+    ['missing current receipt',source=>{source.provenance.pop();}],
+    ['missing index receipt',source=>{source.provenance.shift();}],
+    ['false current receipt URL',source=>{source.provenance[1].url=novemberCalendar;}],
+    ['duplicate index receipt',source=>{source.provenance[1].url=calendarIndex;}],
+    ['false current event URL',source=>{source.events[0].sourceUrl=calendarIndex;}],
+    ['false index event URL',source=>{source.events[1].sourceUrl=novemberCalendar;}],
+    ['missing current coverage',source=>{
+      source.coveredMonths=['2026-11'];source.unavailableMonths=['2026-12'];source.coverageStart='2026-11-01';
+      source.events.shift();
+    }],
+    ['uncovered advanced index',source=>{
+      source.coveredMonths=['2026-10'];source.unavailableMonths=['2026-11','2026-12'];source.coverageEnd='2026-10-31';
+      source.events.pop();
+    }],
+    ['skipped month',source=>{source.coveredMonths=['2026-10','2026-12'];}],
+    ['index two months ahead',source=>{source.indexMonth='2026-12';}],
+    ['index two months behind',source=>{source.indexMonth='2026-08';}],
+    ['bad current receipt hash',source=>{source.provenance[1].sha256='bad';}],
+    ['receipt after retrieval',source=>{source.provenance[1].retrievedAt='2026-10-24T17:00:00.000Z';}],
+    ['unreviewed extra receipt',source=>{source.provenance.push(receipt('https://vendor.example/calendar'));}],
+  ];
+  for(const [name,mutate]of cases){
+    const source=advancedCalendarSource();mutate(source);
+    assert.throws(()=>assertNyFedBlsCalendar(source),/New York Fed calendar/i,name);
+  }
+});
 
 test('calendar admission allows only the reviewed New York Fed index and monthly pages',()=>{
   for(const url of [calendarIndex,novemberCalendar,'https://www.newyorkfed.org/research/calendars/i-dec99.html'])assert.equal(matchesNyFedBlsCalendarFeed(url),true,url);

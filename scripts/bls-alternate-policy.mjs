@@ -43,7 +43,12 @@ export function assertNyFedBlsCalendar(source){
   if(capturedAt===null||source.id!=='bls'||source.agency!=='BLS · calendar via New York Fed'||source.sourceTitle!==NYFED_BLS_CALENDAR_TITLE||source.termsUrl!==NYFED_BLS_CALENDAR_TERMS||source.licenseUrl!==NYFED_BLS_CALENDAR_TERMS||source.attribution!==nyFedBlsCalendarAttribution(new Date(capturedAt).getUTCFullYear())||source.modificationNotice!==NYFED_BLS_CALENDAR_MODIFICATION_NOTICE||source.sourceNotice!==NYFED_BLS_CALENDAR_SOURCE_NOTICE)fail();
   if(['description','html','content','body','image','logo','publishedAt','publicationDate','publicationConfirmed'].some(key=>Object.hasOwn(source,key)))fail();
   const currentMonth=easternFields(source.fetchedAt).date.slice(0,7),planned=[0,1,2].map(offset=>shiftMonth(currentMonth,offset));
-  if(!Array.isArray(source.coveredMonths)||!source.coveredMonths.length||source.coveredMonths.length>3||source.coveredMonths.some((month,index)=>month!==planned[index])||!Array.isArray(source.unavailableMonths)||JSON.stringify(source.unavailableMonths)!==JSON.stringify(planned.slice(source.coveredMonths.length))||![currentMonth,shiftMonth(currentMonth,-1)].includes(source.indexMonth)||source.coverageStart!==`${currentMonth}-01`||source.coverageEnd!==monthEnd(source.coveredMonths.at(-1)))fail();
+  const indexAllowed=[currentMonth,shiftMonth(currentMonth,-1)].includes(source.indexMonth)
+    ||source.indexMonth===planned[1]&&source.coveredMonths?.[1]===source.indexMonth;
+  if(!Array.isArray(source.coveredMonths)||!source.coveredMonths.length||source.coveredMonths.length>3
+    ||source.coveredMonths.some((month,index)=>month!==planned[index])||!Array.isArray(source.unavailableMonths)
+    ||JSON.stringify(source.unavailableMonths)!==JSON.stringify(planned.slice(source.coveredMonths.length))
+    ||!indexAllowed||source.coverageStart!==`${currentMonth}-01`||source.coverageEnd!==monthEnd(source.coveredMonths.at(-1)))fail();
   const expectedUrls=new Set([calendarIndex,...source.coveredMonths.filter(month=>month!==source.indexMonth).map(monthUrl)]),receipts=new Map();
   if(!Array.isArray(source.provenance)||source.provenance.length!==expectedUrls.size)fail();
   for(const item of source.provenance){

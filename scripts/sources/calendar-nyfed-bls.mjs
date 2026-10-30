@@ -41,10 +41,18 @@ export function parseNyFedBlsCalendar(html,{url,expectedMonth}={}){
  if(!heading||monthIndex<0)throw new Error('Unrecognized New York Fed calendar month/year header');
  const month=`${heading[2]}-${String(monthIndex+1).padStart(2,'0')}`;
  if(expectedMonth!==undefined&&expectedMonth!==month||pathMonth(source)&&pathMonth(source)!==month)throw new Error('Unexpected New York Fed calendar source month');
- const nextLinks=[...html.matchAll(/<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([^]*?)<\/a>/gi)].filter(match=>decodeHtmlText(match[2])==='NEXT MONTH');
- if(nextLinks.length>1)throw new Error('Ambiguous New York Fed next-month calendar link');
- const nextUrl=nextLinks.length?sourceUrl(new URL(nextLinks[0][1],source).href).href:null;
- if(nextUrl&&pathMonth(new URL(nextUrl))!==shiftMonth(month,1))throw new Error('Nonsequential New York Fed next-month calendar link');
+ const links=[...html.matchAll(/<a\b([^>]*)>([^]*?)<\/a>/gi)];
+ const adjacentLink=(label,offset)=>{
+  const found=links.filter(match=>decodeHtmlText(match[2])===label),direction=offset===1?'next':'previous';
+  if(found.length>1)throw new Error(`Ambiguous New York Fed ${direction}-month calendar link`);
+  if(!found.length)return null;
+  const hrefs=[...found[0][1].matchAll(/\bhref\s*=\s*["']([^"']+)["']/gi)];
+  if(hrefs.length!==1)throw new Error(`Missing or ambiguous New York Fed ${direction}-month calendar link`);
+  const target=sourceUrl(new URL(hrefs[0][1],source).href).href;
+  if(pathMonth(new URL(target))!==shiftMonth(month,offset))throw new Error(`Nonsequential New York Fed ${direction}-month calendar link`);
+  return target;
+ };
+ const nextUrl=adjacentLink('NEXT MONTH',1),previousUrl=adjacentLink('PREVIOUS MONTH',-1);
  const tables=[...html.matchAll(/<table\b([^>]*)>([^]*?)<\/table>/gi)].filter(match=>hasClass(match[1],'research-table-1col')&&hasClass(match[1],'greyborder'));
  if(tables.length!==1||/<table\b/i.test(tables[0][2]))throw new Error('Unrecognized New York Fed calendar table schema');
  const rows=[...tables[0][2].matchAll(/<tr\b[^>]*>([^]*?)<\/tr>/gi)];
@@ -87,10 +95,10 @@ export function parseNyFedBlsCalendar(html,{url,expectedMonth}={}){
    }
   }
  }
- return {month,events:events.sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)||a.id.localeCompare(b.id)),nextUrl};
+ return {month,events:events.sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)||a.id.localeCompare(b.id)),nextUrl,previousUrl};
 }
 
-/** At most current + two next months, or four pages when the index lags a month. */
+/** Require the current month, allowing a one-month early or lagging index; at most four reads. */
 export async function collectNyFedBlsCalendar({fetchImpl=globalThis.fetch,now=new Date(),pause=delay}={}){
  if(!(now instanceof Date)||!Number.isFinite(now.getTime()))throw new RangeError('A valid calendar date is required');
  const currentMonth=easternFields(now.toISOString()).date.slice(0,7),planned=[0,1,2].map(offset=>shiftMonth(currentMonth,offset));
@@ -118,14 +126,18 @@ export async function collectNyFedBlsCalendar({fetchImpl=globalThis.fetch,now=ne
   provenance.push(receipt);
   return parsed;
  };
- let page=await read(INDEX);
- const indexMonth=page.month;
+ const index=await read(INDEX),indexMonth=index.month;
+ let page=index;
  if(indexMonth!==currentMonth){
-  if(indexMonth!==shiftMonth(currentMonth,-1)||!page.nextUrl)throw new Error('New York Fed index does not provide the current month or a reviewed next-month link');
-  page=await read(page.nextUrl,currentMonth);
+  const currentUrl=indexMonth===shiftMonth(currentMonth,-1)?index.nextUrl:
+   indexMonth===shiftMonth(currentMonth,1)?index.previousUrl:null;
+  if(!currentUrl)throw new Error('New York Fed index does not provide the current month or a reviewed adjacent-month link');
+  page=await read(currentUrl,currentMonth);
  }
  const accepted=[page],warnings=[];
  for(const month of planned.slice(1)){
+  // The advanced index is an actual captured page; do not relabel it or fetch a duplicate monthly URL.
+  if(month===indexMonth){page=index;accepted.push(page);continue;}
   if(!page.nextUrl){warnings.push(`New York Fed ${month} calendar has no published next-month link; coverage ends at ${monthEnd(page.month)}.`);break;}
   try {page=await read(page.nextUrl,month,true);accepted.push(page);}
   catch(error){
