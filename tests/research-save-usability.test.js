@@ -8,7 +8,10 @@ test('full-inventory Save View and Freeze actions precede bounded searchable can
  const html=api.renderResearchSave({scope:'coverage',draft:{name:'My view',selected:['m0','m1','m2','m3'],query:''},catalog,candidates:Object.keys(catalog)});
  assert.ok(html.indexOf('data-save-workspace')<html.indexOf('data-freeze-select'));assert.ok(html.indexOf('data-pin-result')<html.indexOf('data-freeze-select'));
  assert.equal((html.match(/data-freeze-select=/g)||[]).length,145);assert.match(html,/data-freeze-query/);assert.match(html,/4 of 4 selected/);assert.match(html,/research-save-options/);
- assert.match(html,/Save View.*configuration/s);assert.match(html,/Freeze Result.*observations/s);
+ const labels=new Map([...html.matchAll(/<button\b([^>]*)>([^<]*)<\/button>/g)]
+  .map(([,attributes,label])=>[attributes.match(/id="([^"]+)"/)?.[1],label]));
+ assert.equal(labels.get('research-save-view'),'Save view');assert.equal(labels.get('research-freeze-result'),'Save snapshot');
+ assert.ok(html.includes('keeps a reusable configuration'));assert.ok(html.includes('preserves observations and supporting evidence'));
 });
 
 test('search hides candidate rows without changing checked membership or draft fields',()=>{

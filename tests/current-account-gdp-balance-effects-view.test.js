@@ -12,8 +12,10 @@ const close=(a,b)=>assert.ok(Number.isFinite(a)&&Math.abs(a-b)<1e-12,`${a} ≈ $
 
 test('balance effects view identifies the symmetric interaction allocation and keeps each horizon separate',()=>{
  const html=currentAccountGdpBalanceEffectsPanel(currentAccountGdpTrailingFixture(),range);
- assert.match(html,/BALANCE CHANGES VS GDP-DENOMINATOR EFFECTS/);assert.equal((html.match(/data-chart-catalog="current-account-gdp-balance-effects"/g)??[]).length,2);
- assert.match(html,/Q2 2026 versus Q1 2026/);assert.match(html,/BALANCE EFFECT · PP/);assert.match(html,/GDP-DENOMINATOR EFFECT · PP/);assert.match(html,/COMBINED CHANGE · PP/);
+ assert.match(html,/BALANCE CHANGES VS GDP-DENOMINATOR EFFECTS/i);assert.equal((html.match
+  (/data-chart-catalog="current-account-gdp-balance-effects"/g)??[]).length,2);
+ assert.match(html,/Q2 2026 versus Q1 2026/);assert.match(html,/BALANCE EFFECT · PP/i);assert.match(html,/GDP-DENOMINATOR EFFECT · PP/i);
+  assert.match(html,/COMBINED CHANGE · PP/i);
  assert.match(html,/symmetric two-order/i);assert.match(html,/interaction.*equally/i);assert.match(html,/not an official BEA contribution/i);assert.match(html,/not.*causal/i);
  assert.match(html,/not added again/i);assert.match(html,/five.*quarters/i);assert.match(html,/Reconciliation residual/);assert.match(html,/data-export-current-account-gdp-balance-effects/);
  assert.doesNotMatch(html,/id="window-start"/);
@@ -45,7 +47,8 @@ test('incomplete components preserve total effects and expose missing split reas
 
 test('frozen effect action reconstructs from a recorded package, while invalid or empty windows remain explicit',()=>{
  const html=currentAccountGdpBalanceEffectsPanel(currentAccountGdpTrailingFixture(),range,{frozen:true,packageId:'effect-proof'});
- assert.match(html,/FROZEN BALANCE CHANGES/);assert.match(html,/data-export-frozen-current-account-gdp-balance-effects="effect-proof"/);assert.doesNotMatch(html,/data-export-current-account-gdp-balance-effects(?:[\s=>])/);assert.match(html,/reconstructed from recorded inputs/i);
+ assert.match(html,/FROZEN BALANCE CHANGES/i);assert.match(html,/data-export-frozen-current-account-gdp-balance-effects="effect-proof"/);
+  assert.doesNotMatch(html,/data-export-current-account-gdp-balance-effects(?:[\s=>])/);assert.match(html,/reconstructed from recorded inputs/i);
  const invalid=currentAccountGdpBalanceEffectsPanel({}, {preset:'custom',startDate:'2026-04-01',endDate:'2025-01-01'});assert.match(invalid,/unavailable/i);assert.match(invalid,/disabled/);
  assert.equal(records(currentAccountGdpBalanceEffectsCsv({}, {preset:'all'})).length,1);
 });

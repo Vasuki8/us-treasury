@@ -16,6 +16,7 @@ import {watchlistPage} from './watchlist-page.js';
 import {macroCoveragePage} from './macro-coverage-page.js';
 import {laborPage} from './labor-page.js';
 import {researchPage} from './research-page.js';
+import {sourcesPage} from './sources-page.js';
 import {defaults as routeDefaults,defaultRouteWindow} from './router.js';
 import {getSeries} from './model.js';
 import {researchNavigation} from './research-navigation.js';
@@ -55,6 +56,7 @@ export function renderPage(input = {}, historyContext = {}) {
   state.saved = seriesIds(Array.isArray(state.saved) ? state.saved : []);
   if(!Object.hasOwn(input,'window'))state.window=Object.hasOwn(input,'range')?'observations':defaultRouteWindow(state);
   if(historyContext.sourceState&&historyContext.sourceState.status!=='ready')return sourceLoadingPage(state,historyContext.sourceState);
+  if(state.page==='sources')return researchNavigation(state)+`<div class="page-hierarchy">${sourcesPage()}</div>`;
   const content=({ research:()=>researchPage(state,historyContext),overview:()=>overviewPage(state,historyContext), labor, release:()=>releasePage(state,{archive:historyContext.publicationArchive,publicationState:historyContext.publicationState,explanations:historyContext.publicationExplanations,explanationState:historyContext.explanationState}), macroCoverage:()=>state.macroFamily==='labor'?labor(state):macroCoveragePage(state), credit:()=>creditContextPage(), indicator:()=>indicatorPage(state, historyContext), calendar:()=>calendarPage(state), explore:()=>explorePage(state,historyContext),watchlist:()=>`<div class="watchlist-workspace">${watchlistPage(state,historyContext)}</div>`, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage(),macro:()=>macroPage(),vintages:()=>vintagesPage(state, historyContext.historyState?.history, historyContext.historyState),market:()=>marketFunctioningPage(undefined,state) }[state.page] ?? (()=>overviewPage(state,historyContext)))(state);
   const styled=['overview','labor','indicator','calendar','explore'].includes(state.page)||(state.page==='macroCoverage'&&state.macroFamily==='labor');
   const specialist=['fiscal','refinancing','yields','auctions','ownership','macro','vintages','market','credit'].includes(state.page);

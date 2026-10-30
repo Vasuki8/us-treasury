@@ -2,6 +2,7 @@ import {getSeries,transformSeries} from './model.js';
 import {resolveDateWindow} from './date-window.js';
 import {viewRange} from './workspace-context.js';
 import {button,escapeHtml as esc} from './ui.js';
+import {humanDate,humanTimestamp} from './ui-time.js';
 
 export function rangeControls(state,ids,{catalog,observationDescription='Each series uses its own observation count; choose a year preset for a shared calendar window.'}={}) {
   const sources=ids.map(id=>catalog?catalog[id]:getSeries(id)).filter(Boolean),range=viewRange(state),resolved=resolveDateWindow(range,sources);
@@ -13,16 +14,18 @@ export function rangeControls(state,ids,{catalog,observationDescription='Each se
 
 export function coverageSummary(panel) {
   const all=panel.series?.observations??[],shown=panel.observations??[],missing=shown.filter(o=>!Number.isFinite(o.value)).length;
-  const bounds=rows=>rows.length?`${rows[0].date} to ${rows.at(-1).date}`:'no observations';
+  const bounds=rows=>rows.length?`${humanDate(rows[0].date)} to ${humanDate(rows.at(-1).date)}`:'no observations';
   const retained=panel.series?.retainedCoverage;
   const count=retained?.count??all.length;
-  const retainedDates=retained?.startDate?`${retained.startDate} to ${retained.endDate}`:bounds(all);
+  const retainedDates=retained?.startDate?`${humanDate(retained.startDate)} to ${humanDate(retained.endDate)}`:bounds(all);
   return '<p class="panel-note coverage-summary">'
     +`Retained: ${count} observations · reference dates ${esc(retainedDates)}. `
     +`Displayed: ${shown.length} observations · ${esc(bounds(shown))}`
     +(missing?` · ${missing} missing or suppressed`:'')
-    +`. Retrieval: ${esc(panel.series?.fetchedAt??'unavailable')}. Reference dates are not verified release times.</p>`;
+    +`. Retrieval: ${esc(humanTimestamp(panel.series?.fetchedAt)||'unavailable')}. Reference dates are not verified release times.</p>`;
 }
 
-export function measureLabel(current){return current.observationType==='calculated'?'Calculated metric':current.observationType==='modeled'?'Model estimate':'Official observation';}
+export function measureLabel(current){
+ return current.observationType==='calculated'?'Derived':current.observationType==='modeled'?'Model estimate':'Official observation';
+}
 export function changeLabel(current){return current.format==='index'?'Index-point change':current.format==='percent'?(current.id==='yield'||current.changeInBasisPoints?'Basis-point change':'Percentage-point change'):['percentagePoints','basisPoints'].includes(current.format)?`${current.format==='basisPoints'?'Basis-point':'Percentage-point'} change`:'Change between observations';}

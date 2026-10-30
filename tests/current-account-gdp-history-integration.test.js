@@ -16,7 +16,7 @@ import {MAX_RESEARCH_JSON_BYTES} from '../src/research-workspaces.js';
 
 test('external history reuses one date-control set and binds a scoped calculated chart and CSV action',async()=>{
  const html=renderPage({...parseRoute('#/economy?family=external&section=trends&window=all'),saved:[]});
- assert.match(html,/HISTORICAL CURRENT ACCOUNT \/ GDP/);assert.equal((html.match(/id="window-start"/g)??[]).length,1);
+ assert.match(html,/HISTORICAL CURRENT ACCOUNT \/ GDP/i);assert.equal((html.match(/id="window-start"/g)??[]).length,1);
  assert.match(html,/data-chart-catalog="current-account-gdp-history"/);assert.match(html,/data-export-current-account-gdp-history/);
  assert.doesNotMatch(renderPage({...parseRoute('#/economy?family=prices'),saved:[]}),/data-chart-catalog="current-account-gdp-history"/);
  const app=await readFile(new URL('../src/app.js',import.meta.url),'utf8');
@@ -33,7 +33,7 @@ test('history pins retain only the two relevant full input histories, selected w
  const pkg=await createResearchPackage({name:'Historical ratio acceptance',...args}),text=exportResearchPackage(pkg),restored=await importResearchPackage(text);
  assert.equal(exportResearchPackage(restored),text);assert.ok(Buffer.byteLength(text)<MAX_RESEARCH_JSON_BYTES);
  const html=renderPage({...parseRoute('#/research?view=packages'),packageId:pkg.id},{library:{packages:[restored],workspaces:[]}});
- assert.match(html,/FROZEN HISTORICAL CURRENT ACCOUNT \/ GDP/);assert.doesNotMatch(html,/data-export-current-account-gdp-history/);
+ assert.match(html,/FROZEN HISTORICAL CURRENT ACCOUNT \/ GDP/i);assert.doesNotMatch(html,/data-export-current-account-gdp-history/);
  const frozen=currentAccountGdpHistoryChartCatalog(history.sources,{frozen:true});
  assert.equal(frozen['current-account-gdp-history'].catalog.currentAccountToGdp.observations.length,history.sources.beaIta.series.currentAccountBalance.observations.length);
  assert.match(frozen['current-account-gdp-history'].evidenceLabel,/Frozen calculated/);

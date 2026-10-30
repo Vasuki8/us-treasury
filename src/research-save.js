@@ -18,11 +18,47 @@ export function createResearchSaveDrafts(){
 const matches=(item,id,query)=>[item.name,item.short,item.unit,item.source?.name,item.agency,id].join(' ').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
 
 export function renderResearchSave({scope,draft,candidates=[],catalog={},active=false,watchlist=false,pending=false,release=false}){
- const selected=draft.selected??[],query=draft.query??'',busy=pending||draft.pending,outside=selected.filter(id=>!candidates.includes(id)),choices=[...new Set([...candidates,...outside])],visible=choices.filter(id=>matches(catalog[id]??{},id,query));
- const rows=choices.map(id=>{const item=catalog[id]??{},search=[item.name,item.short,item.unit,item.source?.name,item.agency,id].join(' ').toLocaleLowerCase();return `<label class="freeze-option" data-freeze-candidate="${esc(id)}"${visible.includes(id)?'':' hidden'} data-freeze-search-text="${esc(search)}"><input type="checkbox" data-freeze-select="${esc(id)}"${selected.includes(id)?' checked':''}><span><strong>${esc(item.name??id)}</strong><small>${esc(item.unit??'Unit unavailable')} · ${esc(item.source?.name??item.agency??'Source in evidence')} <code>${esc(id)}</code></small>${outside.includes(id)?'<small class="amber">Selected outside the current view — uncheck to resolve.</small>':''}</span></label>`;}).join('');
- const feedback=draft.feedback?`<p class="research-action-feedback${draft.feedback.kind==='error'?' amber':''}" role="${draft.feedback.kind==='error'?'alert':'status'}">${esc(draft.feedback.message)}</p>`:'';
- const preview=choices.length?`<fieldset class="freeze-preview"><legend>Freeze Result · <span data-freeze-count>${selected.length} of 4 selected</span></legend><label class="freeze-search" for="freeze-search">Find measurements<input id="freeze-search" type="search" data-freeze-query value="${esc(query)}" autocomplete="off" placeholder="Name, unit or source"></label><p class="small muted" data-freeze-search-status>${visible.length} of ${choices.length} shown · selections stay checked when hidden.</p><div class="research-save-options" tabindex="0" aria-label="Measurements available to freeze">${rows}</div><p class="small muted">Select one to four primary measurement histories. Supporting evidence keeps its existing package scope.${watchlist?' Complete ordered watchlist membership is retained as context; unchecked observations are not frozen.':''}</p></fieldset>`:`<p class="small muted">${release?'Freeze Result preserves this verified release and its supporting evidence.':'No measurement is selected in this view. Choose a measurement before freezing.'}</p>`;
- return `<details class="context-save" data-save-scope="${esc(scope)}"${draft.open?' open':''}><summary id="research-save-trigger">SAVE</summary><section class="research-savebar" aria-label="Save research"><header class="research-save-heading"><h2>Save research</h2><button type="button" class="action" id="research-save-close" data-close-research-save aria-label="Close Save panel">×</button></header><label class="research-name-field" for="research-name">Research name<input id="research-name" value="${esc(draft.name)}" maxlength="80" autocomplete="off"></label><div class="research-save-primary"><div class="actions"><button type="button" class="action" id="research-save-view" data-save-workspace${busy?' disabled':''}>${draft.pending==='save'?'SAVING…':active?'UPDATE SAVED VIEW':'SAVE VIEW'}</button><button type="button" class="action" id="research-freeze-result" data-pin-result${busy||outside.length||!release&&!selected.length?' disabled':''}>${pending||draft.pending==='freeze'?'FREEZING…':'FREEZE RESULT'}</button></div><p class="small muted">Save View keeps a reusable configuration. Freeze Result preserves observations and supporting evidence.</p>${feedback}${outside.length?'<p class="small amber" role="status">A selected measurement is outside the current view. Uncheck it or return to its view before freezing. No selection has been removed.</p>':''}</div>${preview}<footer class="actions"><a class="action" href="#/research">SAVED RESEARCH</a>${active?'<button type="button" class="link-button" data-clear-workspace>NEW SAVED VIEW</button>':''}</footer></section></details>`;
+ const selected=draft.selected??[],query=draft.query??'',busy=pending||draft.pending;
+ const outside=selected.filter(id=>!candidates.includes(id)),choices=[...new Set([...candidates,...outside])];
+ const visible=choices.filter(id=>matches(catalog[id]??{},id,query));
+ const rows=choices.map(id=>{
+  const item=catalog[id]??{},search=[item.name,item.short,item.unit,item.source?.name,item.agency,id].join(' ').toLocaleLowerCase();
+  return `<label class="freeze-option" data-freeze-candidate="${esc(id)}"${visible.includes(id)?'':' hidden'}`
+   +` data-freeze-search-text="${esc(search)}"><input type="checkbox" data-freeze-select="${esc(id)}"`
+   +`${selected.includes(id)?' checked':''}><span><strong>${esc(item.name??id)}</strong>`
+   +`<small>${esc(item.unit??'Unit unavailable')} · ${esc(item.source?.name??item.agency??'Source in evidence')}`
+   +` <code>${esc(id)}</code></small>`
+   +(outside.includes(id)?'<small class="amber">Selected outside the current view — uncheck to resolve.</small>':'')+'</span></label>';
+ }).join('');
+ const feedback=draft.feedback?`<p class="research-action-feedback${draft.feedback.kind==='error'?' amber':''}"`
+  +` role="${draft.feedback.kind==='error'?'alert':'status'}">${esc(draft.feedback.message)}</p>`:'';
+ const preview=choices.length?'<fieldset class="freeze-preview"><legend>Save snapshot · '
+  +`<span data-freeze-count>${selected.length} of 4 selected</span></legend>`
+  +'<label class="freeze-search" for="freeze-search">Find measurements'
+  +`<input id="freeze-search" type="search" data-freeze-query value="${esc(query)}" autocomplete="off"`
+  +' placeholder="Name, unit or source"></label><p class="small muted" data-freeze-search-status>'
+  +`${visible.length} of ${choices.length} shown · selections stay checked when hidden.</p>`
+  +`<div class="research-save-options" tabindex="0" aria-label="Measurements available to save">${rows}</div>`
+  +'<p class="small muted">Select one to four primary measurement histories. Supporting evidence keeps its existing package scope.'
+  +(watchlist?' Complete ordered watchlist membership is retained as context; unchecked observations are not saved.':'')+'</p></fieldset>'
+  :`<p class="small muted">${release?'Save snapshot preserves this verified release and its supporting evidence.'
+   :'No measurement is selected in this view. Choose a measurement before saving a snapshot.'}</p>`;
+ return `<details class="context-save" data-save-scope="${esc(scope)}"${draft.open?' open':''}>`
+  +'<summary id="research-save-trigger">Save</summary><section class="research-savebar" aria-label="Save research">'
+  +'<header class="research-save-heading"><h2>Save research</h2><button type="button" class="action" id="research-save-close"'
+  +' data-close-research-save aria-label="Close Save panel">×</button></header>'
+  +'<label class="research-name-field" for="research-name">Research name'
+  +`<input id="research-name" value="${esc(draft.name)}" maxlength="80" autocomplete="off"></label>`
+  +'<div class="research-save-primary"><div class="actions"><button type="button" class="action" id="research-save-view"'
+  +` data-save-workspace${busy?' disabled':''}>${draft.pending==='save'?'Saving…':active?'Update saved view':'Save view'}</button>`
+  +'<button type="button" class="action" id="research-freeze-result" data-pin-result'
+  +`${busy||outside.length||!release&&!selected.length?' disabled':''}>`
+  +`${pending||draft.pending==='freeze'?'Saving…':'Save snapshot'}</button></div>`
+  +'<p class="small muted">Save view keeps a reusable configuration. Save snapshot preserves observations and supporting evidence.</p>'
+  +feedback+(outside.length?'<p class="small amber" role="status">A selected measurement is outside the current view. '
+   +'Uncheck it or return to its view before saving a snapshot. No selection has been removed.</p>':'')
+  +`</div>${preview}<footer class="actions"><a class="action" href="#/research">Saved research</a>`
+  +(active?'<button type="button" class="link-button" data-clear-workspace>New saved view</button>':'')+'</footer></section></details>';
 }
 
 export function filterFreezeCandidates(root,query){

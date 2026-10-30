@@ -23,7 +23,8 @@ test('new external pins retain selected quarterly/trailing comparison and reuse 
  const csv=args.context.attachments.find(file=>file.name==='current-account-gdp-trailing.csv');assert.ok(csv);assert.equal(csv.content,currentAccountGdpTrailingCsv(sources,retained.range,{comparisonMeasure:retained.measure}));assert.equal(csv.content,currentAccountGdpComparisonCsv(sources,retained.range,retained.measure));
  const pkg=await createResearchPackage({name:'Frozen quarterly and trailing comparison',...args}),text=exportResearchPackage(pkg),restored=await importResearchPackage(text);
  assert.equal(exportResearchPackage(restored),text);assert.deepEqual(restored.context.currentAccountGdpComparison,retained);assert.equal(restored.context.attachments.find(file=>file.name===csv.name).content,csv.content);
- const html=renderFrozen(restored);assert.match(html,/data-chart-catalog="current-account-gdp-comparison"/);assert.match(html,/FROZEN[^<]*(?:QUARTERLY|COMPARISON)/);assert.doesNotMatch(html,/data-export-current-account-gdp-comparison|data-current-account-comparison-measure/);
+ const html=renderFrozen(restored);assert.match(html,/data-chart-catalog="current-account-gdp-comparison"/);assert.match(html,
+  /FROZEN[^<]*(?:QUARTERLY|COMPARISON)/i);assert.doesNotMatch(html,/data-export-current-account-gdp-comparison|data-current-account-comparison-measure/);
 });
 
 test('comparison selection resolves combined trade to the admitted current-account total',()=>{
@@ -37,7 +38,9 @@ test('partial frozen comparison inputs keep missing denominator and components u
  const inputs=args.context[retained.inputContext].sources;assert.deepEqual(Object.keys(inputs.beaIta.series),['itaGoodsBalance']);assert.deepEqual(inputs.bea.series,{});
  const pkg=await createResearchPackage({name:'Unavailable frozen comparison',...args}),restored=await importResearchPackage(exportResearchPackage(pkg));assert.deepEqual(restored.context.currentAccountGdpBreakdown.sources,inputs);
  const originalFetch=globalThis.fetch;globalThis.fetch=()=>{throw new Error('Frozen viewers must not fetch missing inputs.');};
- try{const html=renderFrozen(restored);assert.match(html,/data-chart-catalog="current-account-gdp-comparison"|FROZEN[^<]*(?:QUARTERLY|COMPARISON)/);assert.doesNotMatch(html,/data-export-current-account-gdp-comparison/);}finally{globalThis.fetch=originalFetch;}
+ try{const html=renderFrozen(restored);assert.match(html,
+  /data-chart-catalog="current-account-gdp-comparison"|FROZEN[^<]*(?:QUARTERLY|COMPARISON)/i);assert.doesNotMatch(html,
+  /data-export-current-account-gdp-comparison/);}finally{globalThis.fetch=originalFetch;}
 });
 
 test('older quarterly and trailing pins never acquire comparison panels or inputs',async()=>{

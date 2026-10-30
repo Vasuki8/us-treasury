@@ -14,7 +14,8 @@ import {currentAccountGdpBalanceEffectsCsv} from '../src/current-account-gdp-bal
 
 test('external balance/GDP split retains shared date controls and combined contribution functionality',()=>{
  const html=macroCoveragePage(parseRoute('#/economy?family=external&section=decomposition&window=1y'));
- assert.match(html,/BALANCE CHANGES VS GDP-DENOMINATOR EFFECTS/);assert.match(html,/COMPONENT CONTRIBUTIONS TO RATIO CHANGES/);assert.match(macroCoveragePage(parseRoute('#/economy?family=external&section=trends&window=1y')),/QUARTERLY VS TRAILING FOUR QUARTERS/);
+ assert.match(html,/BALANCE CHANGES VS GDP-DENOMINATOR EFFECTS/i);assert.match(html,/COMPONENT CONTRIBUTIONS TO RATIO CHANGES/i);assert.match
+  (macroCoveragePage(parseRoute('#/economy?family=external&section=trends&window=1y')),/QUARTERLY VS TRAILING FOUR QUARTERS/i);
  assert.equal((html.match(/id="window-start"/g)??[]).length,1);assert.doesNotMatch(macroCoveragePage(parseRoute('#/economy?family=prices')),/data-chart-catalog="current-account-gdp-balance-effects"/);
 });
 

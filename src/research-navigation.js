@@ -10,11 +10,16 @@ const economy=[
  ['macroCoverage','Trade & current account','#/economy?family=external','external'],
  ['credit','Credit & banking','#/credit'],
 ];
-const fed=[['macroCoverage','Policy rates','#/economy?family=policy','policy'],['yields','Rates & curves','#/yields'],['market','Funding & market functioning','#/market']];
-const treasury=[['fiscal','Fiscal pressure','#/fiscal'],['refinancing','Refinancing exposure','#/refinancing'],['auctions','Auction demand','#/auctions'],['ownership','Debt ownership','#/ownership']];
-const evidence=[['research','Publication History','#/research?view=publications','publications'],['vintages','Retrieval History','#/vintages'],['research','Capture Changes','#/research?view=changes','changes']];
-const research=[['watchlist','Watchlist','#/watchlist'],['research','Saved Views','#/research','workspaces'],['research','Frozen Results','#/research?view=packages','packages']];
-export const researchPages=[...economy,...fed,...treasury,['vintages','Retrieval History','#/vintages']];
+const fed=[['macroCoverage','Policy rates','#/economy?family=policy','policy'],['yields','Rates & curves','#/yields'],
+ ['market','Funding & market functioning','#/market']];
+const treasury=[['fiscal','Fiscal pressure','#/fiscal'],['refinancing','Refinancing exposure','#/refinancing'],
+ ['auctions','Auction demand','#/auctions'],['ownership','Debt ownership','#/ownership']];
+const evidence=[['research','Publication history','#/research?view=publications','publications'],
+ ['vintages','Retrieval history','#/vintages'],['research','Capture changes','#/research?view=changes','changes'],
+ ['sources','Sources & terms','#/sources']];
+const research=[['watchlist','Watchlist','#/watchlist'],['research','Saved views','#/research','workspaces'],
+ ['research','Saved snapshots','#/research?view=packages','packages']];
+export const researchPages=[...economy,...fed,...treasury,['vintages','Retrieval history','#/vintages']];
 export const isResearchPage=page=>researchPages.some(([id])=>id===page);
 
 export function navigationFamily(input={}) {
@@ -23,7 +28,7 @@ export function navigationFamily(input={}) {
  if(['labor','macro','credit'].includes(state.page))return 'economy';
  if(['yields','market'].includes(state.page))return 'fed';
  if(treasury.some(([id])=>id===state.page))return 'treasury';
- if(state.page==='vintages'||state.page==='research'&&['publications','changes'].includes(state.researchView))return 'evidence';
+ if(['vintages','sources'].includes(state.page)||state.page==='research'&&['publications','changes'].includes(state.researchView))return 'evidence';
  if(['watchlist','research'].includes(state.page))return 'research';
  return null;
 }
@@ -32,7 +37,7 @@ export function navigationLinkActive(link,state={}) {
  const page=state.page==='macroCoverage'&&state.macroFamily==='labor'?'labor':state.page;
  if(link.dataset.nav!==page)return false;
  const family=link.dataset.navFamily,view=link.dataset.navView;
- return (!family||family===(state.macroFamily??'prices'))&&(!view||view===(state.researchView??'workspaces'));
+ return (!family||family===(state.macroFamily??'activity'))&&(!view||view===(state.researchView??'workspaces'));
 }
 
 export function researchNavigation(input) {

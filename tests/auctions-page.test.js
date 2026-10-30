@@ -14,7 +14,7 @@ test('auction page filters and selection remain exact with accessible controls a
   assert.doesNotMatch(html,/data-auction-id="tips"|data-auction-id="pending"/);
   assert.match(html,/competitive accepted/i);assert.match(html,/20\.0%/);assert.match(html,/70\.0%/);
   assert.match(html,/prior matching/i);assert.match(html,/indirect bidders[^<]*not[^<]*foreign/i);assert.match(html,/when-issued/i);
-  for(const label of ['WHAT CHANGED','WHAT CONTRIBUTED','WHY IT MATTERS','LIMITATIONS'])assert.ok(html.includes(label),label);
+  for(const label of ['WHAT CHANGED','WHAT CONTRIBUTED','WHY IT MATTERS','LIMITATIONS'])assert.ok(html.toLowerCase().includes(label.toLowerCase()),label);
   assert.match(html,/data-export-auctions/);assert.match(html,/data-export-auction-benchmark/);
 });
 
@@ -94,14 +94,14 @@ test('historical auction selection opens its 60-row page and existing auction li
   assert.match(latest,/History page 1 of 4/);
   assert.ok(latest.includes('id="auction-history" tabindex="-1"'),'paging target must be focusable');
   assert.ok(latest.includes('data-auction-history-page'),'paging controls must identify table navigation');
-  assert.match(latest,/data-auction-history-page="1"[^>]*>OLDER/);
-  assert.match(latest,/data-auction-history-page="3"[^>]*>OLDEST/);
+  assert.match(latest,/data-auction-history-page="1"[^>]*>Older/);
+  assert.match(latest,/data-auction-history-page="3"[^>]*>Oldest/);
   assert.doesNotMatch(latest,/aria-pressed="true"[^>]*>2020-01-11/);
   const historical=ui().auctionsPage({auctionId:'history-10'},source);
   assert.match(historical,/History page 3 of 4/);
   assert.match(historical,/data-auction-id="history-10"[^>]*aria-pressed="true"/);
-  assert.match(historical,/data-auction-history-page="1"[^>]*>NEWER/);
-  assert.match(historical,/data-auction-history-page="0"[^>]*>NEWEST/);
+  assert.match(historical,/data-auction-history-page="1"[^>]*>Newer/);
+  assert.match(historical,/data-auction-history-page="0"[^>]*>Newest/);
   assert.match(ui().auctionsPage({auctionId:'history-0'},source),/History page 4 of 4/);
   assert.equal(parseCsv(ui().auctionsCsv(source,{auctionId:'history-10'})).length,182,'CSV keeps every matching record independently of the displayed page');
 });

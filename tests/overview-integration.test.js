@@ -9,7 +9,7 @@ import {createResearchPackage,exportResearchPackage,importResearchPackage} from 
 
 test('Overview detail and comparison returns remain bounded and retain workspace position',()=>{
  const state=parseRoute('#/overview'),href=indicatorHref('payroll',state),back=workspaceReturn(parseRoute(href));
- assert.equal(back?.label,'BACK TO OVERVIEW');assert.equal(back?.href,routeFor(state));
+ assert.equal(back?.label,'Back to Overview');assert.equal(back?.href,routeFor(state));
  assert.equal(safeReturnTo('#/overviewevil'),null);
  const compare={...state,page:'explore',exploreMode:'compare',returnTo:routeFor(state)},detail=parseRoute(indicatorHref('unrate',compare));
  assert.equal(workspaceReturn(parseRoute(workspaceReturn(detail).href)).href,routeFor(state));

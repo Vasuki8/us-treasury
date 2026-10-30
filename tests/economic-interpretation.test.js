@@ -15,7 +15,7 @@ test('Overview adds private domestic final demand as a secondary reading beside 
   assert.ok(secondary);assert.match(secondary,/q\/q SAAR/);assert.match(secondary,/Private domestic final demand/);
   assert.match(html,/Private consumption and fixed investment; excludes inventories, government and net exports/);
   assert.doesNotMatch(html,/data-overview-disclosure="source-evidence"/);
-  assert.match(html,/YEAR OVER YEAR/);assert.match(html,/3M ANNUALIZED/);assert.match(html,/6M ANNUALIZED/);
+  assert.match(html,/Year over year/);assert.match(html,/3M annualized/);assert.match(html,/6M annualized/);
 });
 
 test('inflation horizons retain independent dates, final missing values and source precision while deduplicating escaped failures',()=>{
@@ -47,7 +47,7 @@ test('complete official FOMC references are grouped under Policy rates and credi
   dataStatus.calendar.sources.fomc={status:'ok',fetchedAt:'2026-10-27T12:00:00Z',documents:[{kind:'minutes',documentDate:'2026-10-14',meetingDate:'2026-09-16',url:'https://www.federalreserve.gov/monetarypolicy/fomcminutes20260916.htm'}]};
   try{
     const policy=macroCoveragePage({macroFamily:'policy'});
-    assert.match(policy,/data-page-disclosure="macro-coverage:policy:fomc"/);assert.match(policy,/2026-10-14/);assert.match(policy,/2026-09-16/);
+    assert.match(policy,/data-page-disclosure="macro-coverage:policy:fomc"/);assert.match(policy,/14 Oct 2026/);assert.match(policy,/16 Sept 2026/);
     assert.match(policy,/data-export-fomc/);assert.match(policy,/linked contents have not been ingested/);
     const credit=creditContextPage({},dataStatus.calendar.sources.fomc);
     assert.match(credit,/href="#\/economy\?family=policy"/);assert.doesNotMatch(credit,/data-export-fomc|2026-10-14/);
@@ -57,7 +57,7 @@ test('complete official FOMC references are grouped under Policy rates and credi
 test('advanced external ratio variants stay grouped with their existing exports and Residential construction keeps the Housing topic',()=>{
   const decomposition=macroCoveragePage({macroFamily:'external',externalView:'decomposition'});
   const advanced=decomposition.indexOf('data-page-disclosure="macro-coverage:external:advanced-effects"');
-  assert.ok(advanced>decomposition.indexOf('COMPONENT CONTRIBUTIONS TO RATIO CHANGES'));
+  assert.ok(advanced>decomposition.toLowerCase().indexOf('component contributions to ratio changes'));
   for(const action of ['data-export-current-account-gdp-balance-effects','data-export-current-account-gdp-all-component-effects','data-export-current-account-gdp-component-effects'])assert.ok(decomposition.indexOf(action)>advanced);
   const trends=macroCoveragePage({macroFamily:'external',externalView:'trends'});
   assert.match(trends,/data-page-disclosure="macro-coverage:external:advanced-trends"/);

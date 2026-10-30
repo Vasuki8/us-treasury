@@ -1,32 +1,39 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { series } from '../src/data.js';
+import {humanTimestamp} from '../src/ui-time.js';
 
 let watchlist;
 try { watchlist = await import('../src/watchlist-page.js'); }
 catch (error) { if (error.code !== 'ERR_MODULE_NOT_FOUND' || !error.message.includes('watchlist-page.js')) throw error; }
 const watchlistPage = state => { assert.ok(watchlist, 'Watchlist page must exist'); return watchlist.watchlistPage(state); };
+const compareControl=(html,id)=>{
+  const match=[...html.matchAll(/<button\b([^>]*)>([^<]*)<\/button>/g)]
+    .find(([,attributes])=>attributes.includes(`data-add-compare="${id}"`));
+  assert.ok(match,`Comparison action for ${id}`);
+  return {disabled:/\sdisabled(?:\s|$)/.test(match[1]),label:match[2]};
+};
 
 test('watchlist opens saved indicators with source, observation coverage and removal controls', () => {
   const output = watchlistPage({ saved: ['sofr', 'publicDebt', 'sofr', 'unknown'], selected: ['sofr'], storageAvailable: true });
-  assert.match(output, /<h1>WATCHLIST<\/h1>/);
+  assert.equal(output.match(/<h1\b[^>]*>([^<]+)<\/h1>/)?.[1],'Watchlist');
   assert.equal((output.match(/data-save="sofr"/g) ?? []).length, 1);
   assert.match(output, /href="#\/series\/sofr[^\"]*"/);
   assert.match(output, /data-save="publicDebt"/);
   assert.match(output, /data-add-compare="publicDebt"/);
-  assert.match(output, /data-add-compare="sofr"[^>]*>VIEW COMPARISON/);
+  assert.deepEqual(compareControl(output,'sofr'),{disabled:false,label:'View comparison'});
   assert.ok(output.includes(series.sofr.source.name));
   assert.ok(output.includes(series.sofr.observations[0].date));
   assert.ok(output.includes(series.sofr.observations.at(-1).date));
-  assert.ok(output.includes(series.sofr.fetchedAt));
+  assert.ok(output.includes(humanTimestamp(series.sofr.fetchedAt)));
   assert.match(output, /observations|reference dates/i);
   assert.doesNotMatch(output, /Unknown series|undefined|NaN/);
 });
 
 test('watchlist caps new comparison additions at four without blocking existing selections', () => {
   const output = watchlistPage({ saved: ['debt', 'sofr'], selected: ['sofr', 'effr', 'yield', 'publicDebt'] });
-  assert.match(output, /data-add-compare="debt"[^>]* disabled/);
-  assert.match(output, /data-add-compare="sofr"(?![^>]* disabled)[^>]*>VIEW COMPARISON/);
+  assert.equal(compareControl(output,'debt').disabled,true);
+  assert.deepEqual(compareControl(output,'sofr'),{disabled:false,label:'View comparison'});
   assert.match(output, /four|4 series/i);
 });
 

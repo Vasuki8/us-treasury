@@ -1,3 +1,4 @@
+import {humanDate} from './ui-time.js';
 import {readingGroup,supportingDetails} from './page-hierarchy.js';
 import {dataStatus} from './data.js';
 import {summarizeOwnership} from './ownership.js';
@@ -23,16 +24,24 @@ export function ownershipPage(source=dataStatus.sources.ownership) {
   const z1=source.z1,soma=source.soma??{},fedCapture=capture(source,'/z1/current/z1_csv_files.zip'),somaCapture=capture(source,'/api/soma/summary.json');
   const weeklyException=note=>/SOMA|FRN|weekly|2014-0[2-5]/i.test(note);
   const weeklyNotes=(source.warnings??[]).filter(weeklyException),quarterNotes=(source.warnings??[]).filter(note=>!weeklyException(note));
-  const sectors=summary.sectors.map(item=>`<tr><th scope="row">${esc(item.label)}<span class="table-code mono muted">${esc(item.code)}</span></th><td class="num">${esc(money(item.value))}</td><td class="num">${esc(signed(item.change))}</td><td>${esc(item.valuation)}${item.previousDate?` · change since ${esc(item.previousDate)}`:' · exact prior quarter unavailable'}</td></tr>`).join('');
+  const sectors=summary.sectors.map(item=>`<tr><th scope="row">${esc(item.label)}<span class="table-code mono muted">${esc(item.code)
+  }</span></th><td class="num">${esc(money(item.value))}</td><td class="num">${esc(signed(item.change))}</td><td>${esc(item.valuation)}${
+  item.previousDate?` · change since ${esc(humanDate(item.previousDate))}`:' · exact prior quarter unavailable'}</td></tr>`).join('');
   const changes=summary.sectors.filter(item=>finite(item.change)).sort((a,b)=>Math.abs(b.change)-Math.abs(a.change)).slice(0,6);
   const contributions=changes.length?table(['SECTOR',{label:'POSITION CHANGE',numeric:true},'BASIS'],changes.map(item=>row(item.label,signed(item.change),item.valuation)).join('')):emptyState('Aligned sector changes unavailable.','The exact preceding quarter is required; missing values are not filled.');
   const reconciliation=table(['Z.1 RECONCILIATION',{label:'USD BILLIONS',numeric:true},'DEFINITION'],row('Reported sector asset total',money(summary.assets),'Sum of reviewed top-level holder positions.')+row('Published valuation discrepancy',money(summary.valuationDiscrepancy),'Accumulated valuation difference between issuance and holdings.')+row('Reported Treasury liabilities',money(summary.liabilities),'Assets + published valuation discrepancy; not MSPD par debt.'));
-  const somaBlock=summary.soma?`<p class="panel-note"><strong>SOMA Holdings</strong> · observation ${esc(summary.soma.asOf)} · retrieved ${esc(somaCapture?.retrievedAt??source.fetchedAt??'unavailable')}. Actual release date: unknown. Usual Wednesday observations and Thursday publication can have posted holiday exceptions.</p>`+chart(['somaTreasuryHoldings'],{height:210,range:36})+table(['TREASURY-ONLY SOMA MEASURE',{label:'USD BILLIONS',numeric:true},'VALUATION / CHANGE'],row('Treasury principal',money(summary.soma.principal),'Par sum of bills, notes/bonds, TIPS and FRNs.')+row('Accrued TIPS inflation compensation',money(summary.soma.inflationCompensation),'Shown separately from unadjusted principal.')+row('Calculated adjusted Treasury principal',money(summary.soma.adjustedPrincipal),'Par plus accrued TIPS inflation compensation.')+row('Exact preceding-week change',signed(summary.soma.change),summary.soma.previousDate??'No exact preceding-week capture.')):emptyState('SOMA Holdings unavailable.','No weekly holdings are substituted for quarter-end Z.1 positions.');
+  const somaBlock=summary.soma?(`<p class="panel-note"><strong>SOMA Holdings</strong> · observation ${esc(humanDate(summary.soma.asOf))
+  } · retrieved ${esc(somaCapture?.retrievedAt??source.fetchedAt??'unavailable')
+  }. Actual release date: unknown. Usual Wednesday observations and Thursday publication can `+
+  `have posted holiday exceptions.</p>`)+chart(['somaTreasuryHoldings'],{height:210,range:36})+table(['TREASURY-ONLY SOMA MEASURE',
+  {label:'USD BILLIONS',numeric:true},'VALUATION / CHANGE'],row('Treasury principal',money(summary.soma.principal),
+  'Par sum of bills, notes/bonds, TIPS and FRNs.')+row('Accrued TIPS inflation compensation',money(summary.soma.inflationCompensation),
+  'Shown separately from unadjusted principal.')+row('Calculated adjusted Treasury principal',money(summary.soma.adjustedPrincipal),
+  'Par plus accrued TIPS inflation compensation.')+row('Exact preceding-week change',signed(summary.soma.change),summary.soma.previousDate
+  ??'No exact preceding-week capture.')):emptyState('SOMA Holdings unavailable.','No weekly holdings are substituted for quarter-end Z.1 positions.');
   return header+`<div class="workspace-basis"><p class="panel-note"><strong>WHAT CHANGED.</strong> Sector positions are compared with the exact preceding quarter. Weekly SOMA changes appear separately. Holdings changes can reflect valuation and transactions; they are not automatically purchases or sales.</p>${source.error?`<p class="panel-note amber">${esc(source.error)}</p>`:''}${summary.reconciled?'':'<p class="panel-note amber">Incomplete source positions: reconciliation is unavailable. Missing holdings are not assigned to a residual owner.</p>'}</div>`
-    +readingGroup('Quarterly Z.1 positions',`<p class="panel-note">Z.1 quarter end <strong>${esc(summary.asOf)}</strong>`
-    +` · current release ${esc(summary.releaseDate??'unknown')}`
-    +` · retrieved ${esc(fedCapture?.retrievedAt??source.fetchedAt??'unavailable')} · ${esc(state(source))}. `
-    +'The current vintage date is distinct from the original historical publication date.</p>'
+    +readingGroup('Quarterly Z.1 positions',`<p class="panel-note">Quarter end ${esc(humanDate(summary.asOf))}`
+    +`${summary.releaseDate?` · Released ${esc(humanDate(summary.releaseDate))}`:''}</p>`
     +metrics(['foreignTreasuryHoldings','fedTreasuryHoldings'],{currencyUnit:'T'})
     +`${quarterNotes.length?`<div class="panel-note">${lists(quarterNotes)}</div>`:''}`
     +'<div class="grid g11 workspace-analysis">'
@@ -46,7 +55,22 @@ export function ownershipPage(source=dataStatus.sources.ownership) {
     +readingGroup('Weekly SOMA holdings',panel('04','SOMA Holdings',somaBlock+(weeklyNotes.length?`<div class="panel-note weekly-source-exceptions"><strong>Weekly history exceptions</strong>${lists(weeklyNotes)}</div>`:''),'','This separately dated par measure is not added to Z.1 central-bank market-value holdings. Agency debt, MBS and CMBS are excluded from the Treasury-only calculation.')
     +panel('05','SOMA Holdings — SOURCE TERMS',`<div class="explain"><p>${esc(soma.attribution??source.attribution??'Required source attribution unavailable.')}</p><p>${esc(soma.redistributionNotice??source.redistributionNotice??'Source redistribution conditions unavailable.')}</p><p><a href="${TERMS}" target="_blank" rel="noopener noreferrer">New York Fed Terms of Use ↗</a> · <a href="https://www.newyorkfed.org/markets/soma-holdings.html" target="_blank" rel="noopener noreferrer">SOMA Holdings ↗</a>. Meridian’s Treasury-only sum and inclusion of TIPS inflation compensation are calculated modifications; the New York Fed does not endorse this website.</p></div>`),'Weekly par holdings keep their own observation and retrieval dates. They are not added to quarterly Z.1 market values.')
     +supportingDetails('ownership:reconciliation','Z.1 asset / liability reconciliation',panel('06','ASSET / LIABILITY RECONCILIATION',reconciliation,'',summary.reconciled?'Captured sector sums and published discrepancy reconcile within the bounded source rounding tolerance.':'Incomplete source positions: reconciliation is unavailable. Missing holdings are not assigned to a residual owner.'))
-    +supportingDetails('ownership:methods','Ownership interpretation, scope & source methods',panel('07','WHY IT MATTERS & LIMITATIONS',`<div class="explain"><p><strong>WHY IT MATTERS.</strong> Sector positions describe who reports Treasury exposure and how that distribution changes. Differences in investor mandates and instrument demand can inform research, but these stock measures alone do not establish the cause of a yield move.</p><p><strong>LIMITATIONS.</strong></p>${lists(summary.limitations)}<p>TIC country holdings are not ingested pending verified source-specific redistribution evidence. Country figures can reflect custody locations rather than ultimate ownership. No incompatible cross-source pie chart or total is calculated.</p><p>Source release dates, retrieval timestamps and period ends remain distinct. Previously uncaptured original vintages are unavailable. Missing values and exact-prior-period gaps remain visible.</p><p><a href="https://www.federalreserve.gov/releases/z1/current/html/F3_2_s.htm" target="_blank" rel="noopener noreferrer">Federal Reserve Z.1 Treasury securities ↗</a> · <a href="https://home.treasury.gov/data/treasury-international-capital-tic-system" target="_blank" rel="noopener noreferrer">Treasury TIC methodology and limitations ↗</a>. Provenance and per-row valuations accompany CSV exports.</p></div>`));
+    +supportingDetails('ownership:methods','About this data',`<p class="panel-note">Z.1 retrieved ${esc(source.fetchedAt
+  ??'unavailable')} · ${esc(state(source))}. Current vintage and original historical publication dates are distinct.</p>`+panel('07',
+  'WHY IT MATTERS & LIMITATIONS',(`<div class="explain"><p><strong>WHY IT MATTERS.</strong> Sector positions describe who `+
+  `reports Treasury exposure and how that distribution changes. Differences in investor `+
+  `mandates and instrument demand can inform research, but these stock measures alone do not `+
+  `establish the cause of a yield move.</p><p><strong>LIMITATIONS.</strong></p>${lists(summary.limitations)
+  }<p>TIC country holdings are not ingested pending verified source-specific redistribution `+
+  `evidence. Country figures can reflect custody locations rather than ultimate ownership. No `+
+  `incompatible cross-source pie chart or total is calculated.</p><p>Source release dates, `+
+  `retrieval timestamps and period ends remain distinct. Previously uncaptured original `+
+  `vintages are unavailable. Missing values and exact-prior-period gaps remain `+
+  `visible.</p><p><a href="https://www.federalreserve.gov/releases/z1/current/html/F3_2_s.htm`+
+  `" target="_blank" rel="noopener noreferrer">Federal Reserve Z.1 Treasury securities ↗</a> `+
+  `· <a href="https://home.treasury.gov/data/treasury-international-capital-tic-system" `+
+  `target="_blank" rel="noopener noreferrer">Treasury TIC methodology and limitations ↗</a>. `+
+  `Provenance and per-row valuations accompany CSV exports.</p></div>`)));
 }
 
 const COLUMNS=['dataset','series_code','holder','period','value','unit','source_unit','valuation','change_from_exact_prior','prior_period','observation_type','data_status','source_name','source_title','source_url','retrieved_at','release_date','vintage_release_date','release_date_basis','methodology','attribution','terms_url','redistribution_notice','limitations','provenance'];

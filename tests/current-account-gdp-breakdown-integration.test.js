@@ -15,10 +15,10 @@ import {parseCsv} from '../scripts/sources/http.mjs';
 
 test('external economy retains one shared date control and adds four-line historical breakdown',()=>{
  const html=macroCoveragePage(parseRoute('#/economy?family=external&section=trends&window=all'));
- assert.match(html,/HISTORICAL CURRENT ACCOUNT \/ GDP · BREAKDOWN/);
+ assert.match(html,/HISTORICAL CURRENT ACCOUNT \/ GDP · BREAKDOWN/i);
  assert.match(html,/data-export-current-account-gdp-breakdown/);
  assert.equal((html.match(/id="window-start"/g)??[]).length,1);
- assert.match(html,/CURRENT ACCOUNT · CONTRIBUTING BALANCES|CURRENT-ACCOUNT|CURRENT ACCOUNT/);
+ assert.match(html,/CURRENT ACCOUNT · CONTRIBUTING BALANCES|CURRENT-ACCOUNT|CURRENT ACCOUNT/i);
 });
 
 test('production chart and CSV select the same exact retained quarters without hard-coded refresh dates',()=>{

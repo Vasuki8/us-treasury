@@ -62,14 +62,14 @@ test('calendar and current-account sections round-trip through routes and saved 
 test('calendar exposes compact scope controls and explains retained Treasury coverage',()=>{
  const html=calendarPage({...defaults,saved:[]});
  assert.match(html,/id="calendar-scope"/);assert.match(html,/Macro releases/);assert.match(html,/Treasury &amp; funding/);
- assert.match(html,/All events/);assert.match(html,/Daily debt dates/);
+ assert.match(html,/All events/);assert.match(html,/data-page-disclosure="calendar:context"/);
 });
 test('selected calendar indicator preserves Treasury filters and exact event on return',()=>{
  const event=releases.find(item=>item.sourceId==='treasury');assert.ok(event);
  const state={...defaults,page:'calendar',calendarView:'treasury',calendarMonth:event.date.slice(0,7),day:event.date,eventId:event.id,calendarTopic:'Fiscal',watchOnly:true,saved:['debt']};
  const html=calendarPage(state),href=html.match(/href="(#\/series\/debt[^"]*)"/)?.[1];assert.ok(href);
  const detail=parseRoute(href.replaceAll('&amp;','&')),back=workspaceReturn(detail);assert.ok(back);
- assert.equal(back.label,'BACK TO CALENDAR');
+ assert.equal(back.label,'Back to Calendar');
  const returned=parseRoute(back.href);for(const key of ['calendarView','calendarMonth','day','eventId','calendarTopic','watchOnly'])assert.equal(returned[key],state[key]);
 });
 test('specialist comparison and indicator returns retain scenarios, windows and at most one origin',()=>{
@@ -83,7 +83,7 @@ test('specialist comparison and indicator returns retain scenarios, windows and 
  }
  assert.equal(safeReturnTo('#/fiscalevil'),null);
  assert.equal(safeReturnTo('#/refinancing?return=%23%2Fexplore'),'#/refinancing');
- assert.match(workspaceReturn({returnTo:'#/fiscal'}).label,/FISCAL/);
+ assert.match(workspaceReturn({returnTo:'#/fiscal'}).label,/Fiscal/);
 });
 test('actual selected-series button keeps the comparison and its specialist origin',async()=>{
  const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8');

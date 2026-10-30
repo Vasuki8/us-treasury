@@ -14,7 +14,10 @@ import {currentAccountGdpComponentEffectsCsv} from '../src/current-account-gdp-c
 import {CURRENT_ACCOUNT_GDP_EFFECT_COMPONENTS} from '../src/current-account-gdp-component-effects.js';
 
 test('component history is external-only and shares dates and focused component with comparison and history',async()=>{
- for(const {id}of CURRENT_ACCOUNT_GDP_EFFECT_COMPONENTS){const state=parseRoute(`#/economy?family=external&section=decomposition&measure=${id}&window=1y`),html=macroCoveragePage(state);assert.match(html,/COMPONENT BALANCE &amp; GDP EFFECT HISTORY/);assert.match(html,new RegExp(`value="${id}" selected`));assert.match(html,new RegExp(`${id}QuarterlyBalanceEffect,${id}QuarterlyGdpEffect,${id}QuarterlyRatioChange`));assert.equal((html.match(/id="window-start"/g)??[]).length,1);assert.equal(parseRoute(`#/economy?family=external&measure=${id}&window=1y`).macroMeasure,id);}
+ for(const {id}of CURRENT_ACCOUNT_GDP_EFFECT_COMPONENTS){const state=parseRoute(`#/economy?family=external&section=decomposition&measure=${id
+  }&window=1y`),html=macroCoveragePage(state);assert.match(html,/COMPONENT BALANCE &amp; GDP EFFECT HISTORY/i);assert.match(html,new RegExp
+  (`value="${id}" selected`));assert.match(html,new RegExp(`${id}QuarterlyBalanceEffect,${id}QuarterlyGdpEffect,${id}QuarterlyRatioChange`));
+  assert.equal((html.match(/id="window-start"/g)??[]).length,1);assert.equal(parseRoute(`#/economy?family=external&measure=${id}&window=1y`).macroMeasure,id);}
  assert.doesNotMatch(macroCoveragePage(parseRoute('#/economy?family=prices')),/data-chart-catalog="current-account-gdp-component-effects"/);
  const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8'),start=source.indexOf("else if(target.id==='current-account-effect-component'"),end=source.indexOf('\n',start);assert.ok(start>=0&&end>start);
  const calls=[],run=new Function('target','state','CURRENT_ACCOUNT_GDP_EFFECT_COMPONENTS','navigate',source.slice(start,end).replace(/^else if/,'if'));

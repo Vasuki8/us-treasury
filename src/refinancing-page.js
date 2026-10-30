@@ -1,3 +1,4 @@
+import {humanDate} from './ui-time.js';
 import {readingGroup,supportingDetails} from './page-hierarchy.js';
 import {dataStatus} from './data.js';
 import {summarizeRefinancing,refinancingScenario} from './refinancing.js';
@@ -39,7 +40,9 @@ function maturityBars(months) {
   const width=760,height=180,left=58,right=14,top=14,bottom=34,plotHeight=height-top-bottom;
   const max=Math.max(...months.map(item=>item.principal),0),step=(width-left-right)/Math.max(1,months.length);
   const bars=months.map((item,index)=>{const value=item.principal,barHeight=max>0?value/max*plotHeight:0,x=left+index*step;
-    return `<g><rect x="${x+3}" y="${height-bottom-barHeight}" width="${Math.max(1,step-6)}" height="${barHeight}" fill="var(--accent)"><title>${esc(item.endDate)}: ${esc(money(value))}</title></rect>${index%3===0?`<text x="${x+step/2}" y="${height-12}" text-anchor="middle">${esc(item.endDate.slice(0,7))}</text>`:''}</g>`;
+    return `<g><rect x="${x+3}" y="${height-bottom-barHeight}" width="${Math.max(1,
+  step-6)}" height="${barHeight}" fill="var(--accent)"><title>${esc(humanDate(item.endDate))}: ${esc(money(value))}</title></rect>${index%3===0?
+  `<text x="${x+step/2}" y="${height-12}" text-anchor="middle">${esc(item.endDate.slice(0,7))}</text>`:''}</g>`;
   }).join('');
   return `<figure class="maturity-ladder-chart"><figcaption>Monthly contractual principal · USD billions</figcaption><div class="maturity-chart-scroll" tabindex="0" role="region" aria-label="24-month maturity bars; exact monthly values in the following table"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Monthly contractual maturities for the next 24 calendar months"><line x1="${left}" x2="${width-right}" y1="${height-bottom}" y2="${height-bottom}" stroke="var(--muted)"/><text x="${left-8}" y="${top+8}" text-anchor="end">${esc(number(max))}</text><text x="${left-8}" y="${height-bottom}" text-anchor="end">0</text>${bars}</svg></div></figure>`;
 }
@@ -65,12 +68,16 @@ export function refinancingPage(state={},source=dataStatus.sources.refinancing) 
     row('Reported total marketable',money(totals.reportedMarketablePrincipal),'Eligible principal + FFB + matured-unredeemed balances.')+
     row('Reported marketable held by the public',money(totals.reportedMarketableHeldByPublic),'Aggregate ownership scope; not a CUSIP-level maturity allocation.')+
     row('Reported marketable intragovernmental',money(totals.reportedMarketableIntragovernmental),'Small holdings are included in the security-level profile.'), 'Marketable profile scope reconciliation');
-  return header+`<div class="workspace-basis"><p class="panel-note"><strong>WHAT CHANGED.</strong> ${esc(monthlyChange(source))}</p><p class="panel-note">Observation as of <strong>${esc(summary.asOf)}</strong> · retrieved ${esc(source.fetchedAt??'unavailable')} · ${esc(captureState(source))}. Release date: unknown; the month-end observation date is not a publication date.</p>${source.error?`<p class="panel-note amber">${esc(source.error)}</p>`:''}</div>`
+  const collection=`<div class="workspace-basis"><p class="panel-note"><strong>WHAT CHANGED.</strong> ${esc(monthlyChange(source))
+  }</p><p class="panel-note">Observation as of <strong>${esc(summary.asOf)}</strong> · retrieved ${esc(source.fetchedAt??'unavailable')} · ${esc
+  (captureState(source))}. Release date: unknown; the month-end observation date is not a publication date.</p>${source.error?
+  `<p class="panel-note amber">${esc(source.error)}</p>`:''}</div>`;
+  return header+(source.error?`<p class="panel-note amber">${esc(source.error)}</p>`:'')
     +readingGroup('Observed refinancing exposure','<div class="refinancing-summary">'
     +'<section class="metrics" aria-label="Principal maturing within 12 months"><div class="metric metric-primary">'
     +'<span class="metric-name">Principal maturing within 12 months</span>'
     +`<strong class="metric-value">${esc(formatDisplayValue({format:'billions'},twelveMonth.principal,{currencyUnit:'T'}))}</strong>`
-    +`<span class="metric-period">Contractual maturities through ${esc(twelveMonth.endDate)}</span></div>`
+    +`<span class="metric-period">Contractual maturities through ${esc(humanDate(twelveMonth.endDate))}</span></div>`
     +'<div class="metric"><span class="metric-name">Share maturing within 12 months</span>'
     +`<strong class="metric-value">${esc(formatDisplayValue({format:'percent'},twelveMonth.sharePct))}</strong>`
     +'<span class="metric-period">Calculated · eligible principal</span></div></section>'
@@ -90,12 +97,51 @@ export function refinancingPage(state={},source=dataStatus.sources.refinancing) 
     +supportingDetails('refinancing:principal-history','Outstanding principal history',
       panel('','OUTSTANDING PRINCIPAL HISTORY',chart(['marketableDebt'],{height:210}),'',
         'USD trillions · calculated sum of the five official unmatured instrument totals; missing months remain gaps.'))
-    +`<div class="grid g11 workspace-analysis">${panel('','CONTRACTUAL MATURITIES',table(['CUMULATIVE HORIZON',{label:'PRINCIPAL',numeric:true},'SHARE / END DATE'],maturityRows),'','Calculated from official current principal and final maturity dates. Horizons preserve calendar month ends; TIPS amounts include current accrued inflation adjustment.')}${panel('','CURRENT INSTRUMENT MIX',table(['INSTRUMENT',{label:'PRINCIPAL',numeric:true},'SHARE / REMAINING MATURITY'],instrumentRows),'','Bill maturity values, nominal notes/bonds, FRNs and inflation-adjusted TIPS. This is a current composition, not an attribution of historical issuance changes.')}</div>`,`Instrument observation ${summary.asOf} · calculated exposure from official principal and contractual maturities. The retained monthly balance keeps its own observation date.`)
-    +readingGroup('Modeled rate sensitivity',panel('','HIGHER / LOWER RATE SCENARIOS',controls(options)+`<p class="panel-note"><strong>MODELED.</strong> A flat <strong>4% hypothetical baseline</strong> is compared with +${options.shockBps} / −${options.shockBps} basis points through ${esc(higher.endDate)}. These are sensitivity assumptions, not observed rates or forecasts.</p><p class="panel-note">Only currently outstanding principal is modeled, assumed fully refinanced into nominal fixed-rate debt at maturity and maintained through the horizon. FRNs use an assumed 7-day reset lag. TIPS principal is held constant with its original-principal floor; future inflation and deficits are not projected. Replacement and FRN rates use a zero-rate floor.</p>`+table(['MODELED RATE',{label:'INCREMENTAL INTEREST COST WITHIN HORIZON',numeric:true},{label:'ANNUALIZED INCREMENTAL COST AT HORIZON',numeric:true}],scenarioRows,'Modeled higher and lower rate sensitivities'),button('CSV SCENARIOS','data-export-refinancing-scenario'),'USD billions · modeled incremental interest-cost sensitivity relative to the same hypothetical baseline. At-horizon annualized impact differs from interest accruing during the period.')
-    +panel('','WHAT CONTRIBUTED',table(['INSTRUMENT',{label:'PRINCIPAL REPRICING BY HORIZON',numeric:true},{label:`+${options.shockBps} BP ACCRUED`,numeric:true},{label:`−${options.shockBps} BP ACCRUED`,numeric:true}],contributions,'Modeled instrument contributions')+`<p class="panel-note">Bills reprice when refinanced; fixed coupons stay unchanged until maturity. FRNs can reset before final maturity. TIPS retain existing real coupons and their original-principal floor. Instrument contributions describe the modeled sensitivity; no unobserved cause of the monthly stock change is assigned.</p>`),`USD billions · scenario horizon ${options.horizonMonths} months through ${higher.endDate}; observed exposure above is distinct from this modeled sensitivity.`)
-    +supportingDetails('refinancing:assumptions-methods','Full model assumptions, scope & methodology',panel('','MODEL ASSUMPTIONS',textList(higher.assumptions),'','Original observed maturities are distinct from assumptions about future refinancing. Lower-rate results use the same assumptions and zero-rate floor.')
+    +`<div class="grid g11 workspace-analysis">${panel('','CONTRACTUAL MATURITIES',table(['CUMULATIVE HORIZON',{label:'PRINCIPAL',numeric:true},
+  'SHARE / END DATE'],maturityRows),'',('Calculated from official current principal and final maturity dates. Horizons preserve '+
+  'calendar month ends; TIPS amounts include current accrued inflation adjustment.'))}${panel('','CURRENT INSTRUMENT MIX',table(['INSTRUMENT',
+  {label:'PRINCIPAL',numeric:true},'SHARE / REMAINING MATURITY'],instrumentRows),'',
+  ('Bill maturity values, nominal notes/bonds, FRNs and inflation-adjusted TIPS. This is a '+
+  'current composition, not an attribution of historical issuance changes.'))}</div>`,
+  (`Instrument observation ${humanDate(summary.asOf)} · calculated exposure from official principal and contractual maturities. The retained `+
+  `monthly balance keeps its own observation date.`))
+    +readingGroup('Modeled rate sensitivity',panel('','HIGHER / LOWER RATE SCENARIOS',controls(options)
+  +(`<p class="panel-note"><strong>MODELED.</strong> A flat <strong>4% hypothetical `+
+  `baseline</strong> is compared with +${options.shockBps} / −${options.shockBps} basis points through ${esc(humanDate(higher.endDate))
+  }. These are sensitivity assumptions, not observed rates or forecasts.</p><p `+
+  `class="panel-note">Only currently outstanding principal is modeled, assumed fully `+
+  `refinanced into nominal fixed-rate debt at maturity and maintained through the horizon. `+
+  `FRNs use an assumed 7-day reset lag. TIPS principal is held constant with its `+
+  `original-principal floor; future inflation and deficits are not projected. Replacement and `+
+  `FRN rates use a zero-rate floor.</p>`)+table(['MODELED RATE',{label:'INCREMENTAL INTEREST COST WITHIN HORIZON',numeric:true},
+  {label:'ANNUALIZED INCREMENTAL COST AT HORIZON',numeric:true}],scenarioRows,'Modeled higher and lower rate sensitivities'),
+  button('CSV SCENARIOS','data-export-refinancing-scenario'),('USD billions · modeled incremental interest-cost sensitivity relative to the same '+
+  'hypothetical baseline. At-horizon annualized impact differs from interest accruing during '+
+  'the period.'))
+    +panel('','WHAT CONTRIBUTED',table(['INSTRUMENT',{label:'PRINCIPAL REPRICING BY HORIZON',numeric:true},
+  {label:`+${options.shockBps} BP ACCRUED`,numeric:true},{label:`−${options.shockBps} BP ACCRUED`,numeric:true}],contributions,
+  'Modeled instrument contributions')+(`<p class="panel-note">Bills reprice when refinanced; fixed coupons stay unchanged until `+
+  `maturity. FRNs can reset before final maturity. TIPS retain existing real coupons and `+
+  `their original-principal floor. Instrument contributions describe the modeled sensitivity; `+
+  `no unobserved cause of the monthly stock change is assigned.</p>`)),
+  `USD billions · scenario horizon ${options.horizonMonths} months through ${humanDate(higher.endDate)
+  }; observed exposure above is distinct from this modeled sensitivity.`)
+    +supportingDetails('refinancing:assumptions-methods','About this data',collection+panel('','MODEL ASSUMPTIONS',textList(higher.assumptions),
+  '',('Original observed maturities are distinct from assumptions about future refinancing. '+
+  'Lower-rate results use the same assumptions and zero-rate floor.'))
     +panel('','SCOPE & RECONCILIATION',reconciliation,'','Marketable debt is not gross federal debt or debt held by the public alone. Do not equate the deficit with this stock change; cash balances and other financing affect borrowing.')
-    +panel('','WHY IT MATTERS & LIMITATIONS',`<div class="explain"><p><strong>WHY IT MATTERS.</strong> The timing and instrument mix of current principal describe how quickly a changed rate environment could reach financing costs. This partial exposure measure does not predict auction demand, yields or default.</p><p><strong>LIMITATIONS.</strong></p>${textList(higher.limitations)}<p><strong>Methodology.</strong> ${esc(summary.methodology)}</p><p>Original agency identifiers are used internally for deduplication. Published security IDs are generated by Meridian and are not official Treasury identifiers; raw third-party assigned identifiers are not exported.</p><p><a href="https://fiscaldata.treasury.gov/datasets/monthly-statement-public-debt/" target="_blank" rel="noopener noreferrer">Treasury MSPD data and dictionary ↗</a>. Source URLs, response hashes, input principal and assumptions accompany CSV exports.</p></div>`));
+    +panel('','WHY IT MATTERS & LIMITATIONS',(`<div class="explain"><p><strong>WHY IT MATTERS.</strong> The timing and instrument mix of `+
+  `current principal describe how quickly a changed rate environment could reach financing `+
+  `costs. This partial exposure measure does not predict auction demand, yields or `+
+  `default.</p><p><strong>LIMITATIONS.</strong></p>${textList(higher.limitations)
+  }<p><strong>Derived.</strong> Exposure shares and weighted remaining maturity are `+
+  `calculated from official principal.</p><p><strong>Methodology.</strong> ${esc(summary.methodology)
+  }</p><p>Original agency identifiers are used internally for deduplication. Published `+
+  `security IDs are generated by Meridian and are not official Treasury identifiers; raw `+
+  `third-party assigned identifiers are not exported.</p><p><a `+
+  `href="https://fiscaldata.treasury.gov/datasets/monthly-statement-public-debt/" `+
+  `target="_blank" rel="noopener noreferrer">Treasury MSPD data and dictionary ↗</a>. Source `+
+  `URLs, response hashes, input principal and assumptions accompany CSV exports.</p></div>`)));
 }
 
 const COLUMNS=['row_type','as_of','security_id','instrument','maturity_date','principal_usd_billions','original_principal_usd_billions','inflation_adjustment_usd_billions','coupon_rate_pct','metric','value','unit','horizon_months','horizon_end','shock_bps','baseline_rate_pct','scenario_rate_pct','frn_reset_lag_days','repricing_principal_usd_billions','accrued_impact_usd_billions','annualized_impact_at_horizon_usd_billions','data_status','observation_type','source_name','source_url','retrieved_at','release_date','methodology','assumptions','limitations','provenance'];

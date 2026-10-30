@@ -4,37 +4,105 @@ import {coverageInventoryPanel} from './coverage-inventory-view.js';
 import {series,releases} from './data.js';
 import {globalSearch,globalSearchPanel} from './global-search.js';
 import {groupSearchMeasurements} from './search.js';
+import {routeFor} from './router.js';
 import {getSeries,filterSeries,latest,formatValue,periodLabel,compareSeries,observationCoverageLabel} from './model.js';
 import {viewRange,workspaceReturn,indicatorHref} from './workspace-context.js';
 import {rangeControls,coverageSummary} from './research-controls.js';
-import {escapeHtml as esc,button,heading,panel,chart,emptyState,seriesStatus,coverageBadge} from './ui.js';
+import {escapeHtml as esc,button,heading,panel,chart,emptyState,seriesStatus} from './ui.js';
 const allSeries=()=>Object.values(series);
 const options=(values,selected)=>values.map(value=>`<option value="${esc(value)}"${value===selected?' selected':''}>${esc(value)}</option>`).join('');
 const link=(label,href,className='action')=>`<a class="${esc(className)}" href="${esc(href)}">${esc(label)}</a>`;
 
 function selectionTray(state) {
-  return `<div class="series-tray radar-selection-tray"><span class="small muted">SELECTED ${state.selected.length}/4</span>${state.selected.map(id => `<span class="series-chip"><span>${esc(getSeries(id).short)} <span class="mono muted">${esc(getSeries(id).code)}</span></span>${button('×', `data-remove="${esc(id)}" aria-label="Remove ${esc(getSeries(id).name)}"`, 'link-button')}</span>`).join('')}${button('COMPARE SELECTED ↗', 'data-explore-mode="compare"', 'action primary')}</div>`;
+  const chips=state.selected.map(id=>{
+    const item=getSeries(id);
+    return `<span class="series-chip"><span>${esc(item.short)} <span class="mono muted">${esc(item.code)}</span></span>`+
+      button('×',`data-remove="${esc(id)}" aria-label="Remove ${esc(item.name)}"`,'link-button')+'</span>';
+  }).join('');
+  return `<div class="series-tray radar-selection-tray"><span class="small muted">Selected ${state.selected.length}/4</span>${chips}`+
+    button('Compare selected','data-explore-mode="compare"','action primary')+'</div>';
 }
 
 function catalogCoverage(current,observation) {
-  if(!current.coverageNote)return '';
+  if(!current.coverageNote)return {warning:'',note:''};
   // Keep interpretation-critical limitations inline; only ordinary history prose is disclosed.
-  const critical=['dol','dolAdvance'].includes(current.agency)||observation?.partial||observation?.suppressed||/\b(?:partial|suppressed)\b|\bnot (?:directly )?comparable\b/i.test(current.coverageNote);
-  if(critical)return `<span class="table-code catalog-coverage">${esc(current.coverageNote)}</span>`;
-  const label=/histor/i.test(current.coverageNote)?'Historical feed coverage':'Coverage note';
-  return `<details class="catalog-coverage-details"><summary>${label}</summary><p>${esc(current.coverageNote)}</p></details>`;
+  const critical=['dol','dolAdvance'].includes(current.agency)||observation?.partial||observation?.suppressed||
+    /\b(?:partial|suppressed)\b|\bnot (?:directly )?comparable\b/i.test(current.coverageNote);
+  return critical?{warning:`<span class="table-code catalog-coverage">${esc(current.coverageNote)}</span>`,note:''}
+    :{warning:'',note:`<p>${esc(current.coverageNote)}</p>`};
+}
+
+const catalogTopics=['Growth','Inflation','Labor','Housing','Policy','Rates','Fiscal','Ownership',
+  'Market functioning','Credit','Household finances'];
+const catalogHeadlines=['gdp','privateDomesticDemandGrowth','realSpendingMonthly','realDisposableIncomeMonthly','industrialProduction',
+  'cpi','cpiCore','cpiMonthly','pce','pceCore','unrate','payroll','claims','participation','wages','openings',
+  'housingStarts','housingPermits','policyTargetUpper','fedAssets','yield','nominalYield2','spread2s10s',
+  'debt','receiptsTtm','outlaysTtm','netInterestTtm','foreignTreasuryHoldings','fedTreasuryHoldings',
+  'sofr','effr','bankLoans','bankDeposits','householdDebtService'];
+const headlineRank=id=>catalogHeadlines.includes(id)?catalogHeadlines.indexOf(id):catalogHeadlines.length;
+
+function catalogRow({primary:current,variants},state){
+  const observation=latest(current),coverage=observationCoverageLabel(observation),notes=catalogCoverage(current,observation);
+  const checkbox=item=>`<input type="checkbox" data-select="${esc(item.id)}" aria-label="Select ${esc(item.name)}"`+
+    `${state.selected.includes(item.id)?' checked':''}>`;
+  const variantsList=variants.length?`<p>Separate source evidence · ${variants.length}</p>`+
+    variants.map(item=>`<p><label>${checkbox(item)} `+
+      `${link(item.name,indicatorHref(item.id,state),'')} · ${esc(item.code)} · ${esc(item.source.name)}</label></p>`).join(''):'';
+  const evidence=notes.note||variantsList?'<details class="catalog-coverage-details" '+
+    `data-page-disclosure="explore:source-evidence:${esc(current.id)}"><summary>Notes &amp; source evidence</summary>`+
+    notes.note+variantsList+'</details>':'';
+  const period=observation?`<time datetime="${esc(observation.date)}">${esc(periodLabel(current,observation.date))}</time>`:'Unavailable';
+  return `<tr data-catalog-series="${esc(current.id)}"${state.selected.includes(current.id)?' class="selected-row"':''}>`+
+    `<td>${checkbox(current)}</td><th scope="row">${link(current.name,indicatorHref(current.id,state),'')}`+
+    `<span class="table-code mono muted">${esc(current.code)} · ${esc(seriesStatus(current))}`+
+    `${current.error?` · ${esc(current.error)}`:''}</span>`+
+    `<span class="table-code catalog-identity-meta">${esc(current.frequency)} · ${esc(current.source.name)}</span>`+
+    `${coverage?`<span class="table-code catalog-coverage">${esc(coverage)}</span>`:''}${notes.warning}${evidence}</th>`+
+    `<td class="num catalog-reading"><strong>${esc(formatValue(current,observation?.value))}</strong>`+
+    `<span class="table-code catalog-unit">${esc(current.unit)}</span>`+
+    `<span class="table-code catalog-period"><span class="sr-only">Reference period </span>${period}</span></td>`+
+    `<td class="catalog-frequency">${esc(current.frequency)}</td><td class="muted catalog-source">${esc(current.source.name)}</td></tr>`;
 }
 
 function catalog(state,context) {
-  const matching = filterSeries({ query: state.query, topic: state.topic, frequency: state.frequency });
-  const filters = `<div class="filter-body"><label for="topic-filter">Topic<select id="topic-filter">${options(['All topics', ...new Set(allSeries().map(item => item.topic))], state.topic)}</select></label><label for="frequency-filter">Frequency<select id="frequency-filter">${options(['All frequencies', ...new Set(allSeries().map(item => item.frequency))], state.frequency)}</select></label></div>`;
-  const rows = groupSearchMeasurements(matching).map(({primary:current,variants}) => {
-    const observation = latest(current);
-    return `<tr${state.selected.includes(current.id) ? ' class="selected-row"' : ''}><td><input type="checkbox" data-select="${esc(current.id)}" aria-label="Select ${esc(current.name)}"${state.selected.includes(current.id) ? ' checked' : ''}></td><th scope="row">${link(current.name,indicatorHref(current.id,state),'')}<span class="table-code mono muted">${esc(current.code)}</span><span class="table-code muted">${esc(seriesStatus(current))}${current.error ? ` · ${esc(current.error)}` : ''}</span>${coverageBadge(current)}<span class="table-code catalog-identity-meta">${esc(current.frequency)} · ${esc(current.source.name)}</span>${observationCoverageLabel(observation)?`<span class="table-code catalog-coverage">${esc(observationCoverageLabel(observation))}</span>`:''}${catalogCoverage(current,observation)}${variants.length?`<details data-page-disclosure="explore:source-evidence:${esc(current.id)}"><summary>Separate source evidence · ${variants.length}</summary>${variants.map(item=>`<p><label><input type="checkbox" data-select="${esc(item.id)}" aria-label="Select ${esc(item.name)}"${state.selected.includes(item.id)?' checked':''}> <a href="${esc(indicatorHref(item.id,state))}">${esc(item.name)}</a> · ${esc(item.code)} · ${esc(item.source.name)}</label></p>`).join('')}</details>`:''}</th><td class="num catalog-reading"><strong>${esc(formatValue(current, observation?.value))}</strong><span class="table-code catalog-unit">${esc(current.unit)}</span><span class="table-code catalog-period"><span class="muted">Reference period </span>${observation ? `<time datetime="${esc(observation.date)}">${esc(periodLabel(current, observation.date))}</time>` : 'Unavailable'}</span></td><td class="catalog-frequency">${esc(current.frequency)}</td><td class="muted catalog-source">${esc(current.source.name)}</td></tr>`;
+  const matching=filterSeries({query:state.query,topic:state.topic,frequency:state.frequency});
+  const grouped=groupSearchMeasurements(matching).sort((a,b)=>
+    catalogTopics.indexOf(a.primary.topic)-catalogTopics.indexOf(b.primary.topic)||
+    headlineRank(a.primary.id)-headlineRank(b.primary.id)||a.primary.name.localeCompare(b.primary.name));
+  const pages=Math.max(1,Math.ceil(grouped.length/25)),page=Math.max(1,Math.min(pages,state.catalogPage||1)),start=(page-1)*25;
+  let priorTopic;
+  const rows=grouped.slice(start,start+25).map(group=>{
+    const topic=group.primary.topic,topicRow=topic===priorTopic?'':
+      `<tr class="catalog-topic" data-catalog-topic="${esc(topic)}"><th colspan="5" scope="rowgroup">${esc(topic)}</th></tr>`;
+    priorTopic=topic;return topicRow+catalogRow(group,state);
   }).join('');
-  const catalogTable = rows ? `<div class="table-wrap catalog-table-wrap"><table class="catalog-table"><caption class="sr-only">Official series catalog, including unavailable indicators</caption><thead><tr><th scope="col"><span class="sr-only">Select</span></th><th scope="col">INDICATOR / CODE</th><th scope="col" class="num">LATEST</th><th scope="col" class="catalog-frequency">FREQ</th><th scope="col" class="catalog-source">SOURCE</th></tr></thead><tbody>${rows}</tbody></table></div>` : emptyState('No series match your filters.', 'Search a series name, code, topic or agency, or clear the filters.', button('CLEAR FILTERS', 'data-reset-filters'));
+  const pageLink=(label,target)=>`<a class="action" href="${esc(routeFor({...state,page:'explore',catalogPage:target}))}" `+
+    `data-catalog-page="${target}">${label}</a>`;
+  const paging=grouped.length?`<nav class="catalog-pagination" aria-label="Catalog pages">`+
+    `${page>1?pageLink('Previous',page-1):''}<span class="muted">${start+1}–${Math.min(start+25,grouped.length)} of `+
+    `${grouped.length} · Page ${page} of ${pages}</span>${page<pages?pageLink('Next',page+1):''}</nav>`:'';
+  const table=rows?'<div class="table-wrap catalog-table-wrap"><table class="catalog-table">'+
+    '<caption class="sr-only">Official series catalog, including unavailable indicators</caption><thead><tr>'+
+    '<th scope="col"><span class="sr-only">Select</span></th><th scope="col">Indicator / code</th>'+
+    '<th scope="col" class="num">Latest</th><th scope="col" class="catalog-frequency">Frequency</th>'+
+    `<th scope="col" class="catalog-source">Source</th></tr></thead><tbody>${rows}</tbody></table></div>`:
+    emptyState('No series match your filters.','Search a series name, code, topic or agency, or clear the filters.',
+      button('Clear filters','data-reset-filters'));
+  const filters='<div class="filter-body"><label for="topic-filter">Topic<select id="topic-filter">'+
+    options(['All topics',...catalogTopics],state.topic)+'</select></label>'+
+    '<label for="frequency-filter">Frequency<select id="frequency-filter">'+
+    options(['All frequencies',...new Set(allSeries().map(item=>item.frequency))],state.frequency)+'</select></label></div>';
   const results=globalSearch(state.query,{catalog:allSeries(),events:context.events??releases,library:context.library??{}});
-  return panel('01', 'SERIES CATALOG', `<div class="panel-body"><label class="catalog-search-label" for="catalog-search">Search everything</label><input id="catalog-search" class="searchbox" type="search" placeholder="Indicators, pages, scheduled events or saved research…" value="${esc(state.query)}"></div>${globalSearchPanel(results,{includeIndicators:false})}${state.query.trim()?'<h3 class="chart-caption">Indicators · topic and frequency filters apply below</h3>':''}<div class="catalog-filters">${filters}${button('CLEAR FILTERS','data-reset-filters')}</div>${selectionTray(state)}${catalogTable}`, `<span class="small muted" id="catalog-result-count">${matching.length} SERIES</span>`);
+  const filterLabel=['Filters · topic & frequency',state.topic!=='All topics'?state.topic:'',
+    state.frequency!=='All frequencies'?state.frequency:''].filter(Boolean).join(' · ');
+  return panel('01','Series catalog','<div class="panel-body"><label class="catalog-search-label" for="catalog-search">Search everything</label>'+
+    '<input id="catalog-search" class="searchbox" type="search" placeholder="Indicators, pages, scheduled events or saved research…" '+
+    `value="${esc(state.query)}"></div>${globalSearchPanel(results,{includeIndicators:false})}`+
+    (state.query.trim()?'<h3 class="chart-caption">Indicators · topic and frequency filters apply below</h3>':'')+
+    '<details class="catalog-filter-details" data-page-disclosure="explore:catalog-filters">'+
+    `<summary>${esc(filterLabel)}</summary><div class="catalog-filters">${filters}`+
+    `${button('Clear filters','data-reset-filters')}</div></details>`+
+    selectionTray(state)+paging+table+paging,`<span class="small muted" id="catalog-result-count">${matching.length} series</span>`);
 }
 
 function comparison(state) {

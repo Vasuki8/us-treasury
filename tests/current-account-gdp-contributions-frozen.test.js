@@ -43,7 +43,10 @@ test('partial frozen contributions preserve missing denominator and components w
  const inputs=args.context[retained.inputContext].sources;assert.deepEqual(Object.keys(inputs.beaIta.series),['itaGoodsBalance']);assert.deepEqual(inputs.bea.series,{});
  const pkg=await createResearchPackage({name:'Unavailable frozen contributions',...args}),restored=await importResearchPackage(exportResearchPackage(pkg));assert.deepEqual(restored.context.currentAccountGdpBreakdown.sources,inputs);
  const originalFetch=globalThis.fetch;globalThis.fetch=()=>{throw new Error('Frozen viewers must not fetch missing inputs.');};
- try{const html=renderFrozen(restored);assert.match(html,/FROZEN[^<]*CONTRIBUTIONS|data-chart-catalog="current-account-gdp-contributions"/);assert.doesNotMatch(html,/data-export-current-account-gdp-contributions(?:[\s=>])/);const {currentAccountGdpContributionsCsv}=await import('../src/current-account-gdp-contributions-view.js');const csv=currentAccountGdpContributionsCsv(inputs,retained.range);assert.match(csv,/unavailable|missing/i);}finally{globalThis.fetch=originalFetch;}
+ try{const html=renderFrozen(restored);assert.match(html,/FROZEN[^<]*CONTRIBUTIONS|data-chart-catalog="current-account-gdp-contributions"/i);
+  assert.doesNotMatch(html,/data-export-current-account-gdp-contributions(?:[\s=>])/);const {currentAccountGdpContributionsCsv}=await import
+  ('../src/current-account-gdp-contributions-view.js');const csv=currentAccountGdpContributionsCsv(inputs,retained.range);assert.match(csv,
+  /unavailable|missing/i);}finally{globalThis.fetch=originalFetch;}
 });
 
 test('legacy frozen packages never acquire contribution panels, reconstruction buttons or inputs',async()=>{

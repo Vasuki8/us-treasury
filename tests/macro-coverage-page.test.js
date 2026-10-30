@@ -6,14 +6,15 @@ test('macro coverage routes validate family and measure while preserving the exa
  const state=parseRoute('#/economy?family=housing&measure=housingCompletions&window=custom&start=2025-01-01&end=2026-08-31');
  assert.equal(state.page,'macroCoverage');assert.equal(state.macroFamily,'housing');assert.equal(state.macroMeasure,'housingCompletions');
  const restored=parseRoute(routeFor(state));for(const key of ['macroFamily','macroMeasure','window','startDate','endDate'])assert.equal(restored[key],state[key]);
- const invalid=parseRoute('#/economy?family=vendor&measure=unrate');assert.equal(invalid.macroFamily,'prices');assert.equal(invalid.macroMeasure,'cpiMonthly');
+ const invalid=parseRoute('#/economy?family=vendor&measure=unrate');assert.equal(invalid.macroFamily,'activity');
+  assert.equal(invalid.macroMeasure,'realSpendingMonthly');
  const mismatched=parseRoute('#/economy?family=housing&measure=unrate');assert.equal(mismatched.macroMeasure,'housingStarts');
  assert.equal(parseRoute('#/economy/labor').page,'labor');
  const detail=parseRoute(indicatorHref('housingStarts',state));
- assert.equal(workspaceReturn(detail).label,'BACK TO ECONOMY');assert.equal(workspaceReturn(detail).href,routeFor(state));
+ assert.equal(workspaceReturn(detail).label,'Back to Economy');assert.equal(workspaceReturn(detail).href,routeFor(state));
  const comparison={...state,page:'explore',exploreMode:'compare',returnTo:routeFor(state),selected:['housingStarts','housingCompletions']};
  const inspect=parseRoute(indicatorHref('housingStarts',comparison));const restoredComparison=parseRoute(workspaceReturn(inspect).href);
- assert.equal(workspaceReturn(restoredComparison).label,'BACK TO ECONOMY');
+ assert.equal(workspaceReturn(restoredComparison).label,'Back to Economy');
 });
 
 test('family workspace reuses date windows, history, detail context, safe comparisons and same-window CSV',()=>{
@@ -22,7 +23,8 @@ test('family workspace reuses date windows, history, detail context, safe compar
  delete series[id].inputProvenanceScope;
  try{
   const state=parseRoute('#/economy?family=prices&measure=cpiMonthly&window=custom&start=2026-08-01&end=2026-08-31'),html=renderPage(state);
-  for(const text of ['INFLATION','How do headline and core','WHAT CHANGED','CONTEXT','WHY IT MATTERS','LIMITATIONS','Seasonally adjusted','month over month','Retained: 3 observations','Displayed: 1 observations'])assert.ok(html.includes(text),text);
+  for(const text of ['INFLATION','How do headline and core','WHAT CHANGED','CONTEXT','WHY IT MATTERS','LIMITATIONS','Seasonally adjusted',
+  'month over month','Retained: 3 observations','Displayed: 1 observations'])assert.ok(html.toLowerCase().includes(text.toLowerCase()),text);
   assert.match(html,/id="macro-family"/);assert.match(html,/id="macro-measure"/);assert.match(html,/data-export-macro-measure/);assert.match(html,/data-compare="cpiMonthly,cpiCoreMonthly"/);
   assert.match(html,/data-series="cpiMonthly"/);assert.match(html,/window=custom.*return=/);
   const [header,...rows]=parseCsv(toCsv([id],{range:{preset:'custom',startDate:'2026-08-01',endDate:'2026-08-31'}}));

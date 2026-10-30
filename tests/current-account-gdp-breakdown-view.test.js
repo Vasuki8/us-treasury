@@ -1,3 +1,4 @@
+import {humanTimestamp} from '../src/ui-time.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseCsv} from '../scripts/sources/http.mjs';
@@ -9,13 +10,14 @@ const records=csv=>{const [header,...rows]=parseCsv(csv);return rows.map(row=>Ob
 test('breakdown view supplies four calculated lines, same window, reconciliation and source evidence',()=>{
  assert.equal(typeof view.currentAccountGdpBreakdownPanel,'function');
  const html=view.currentAccountGdpBreakdownPanel(fixture(),all);
- assert.match(html,/HISTORICAL CURRENT ACCOUNT \/ GDP · BREAKDOWN/);
+ assert.match(html,/HISTORICAL CURRENT ACCOUNT \/ GDP · BREAKDOWN/i);
  assert.match(html,/data-chart-catalog="current-account-gdp-breakdown"/);
  assert.match(html,/itaGoodsBalanceToGdp,itaServicesBalanceToGdp,itaPrimaryIncomeBalanceToGdp,itaSecondaryIncomeBalanceToGdp/);
- for(const text of ['Goods','Services','Primary income','Secondary income','Published total','Component sum','Rounding residual'])assert.ok(html.includes(text));
+ for(const text of ['Goods','Services','Primary income','Secondary income','Published total','Component sum','Rounding residual'])assert.ok
+  (html.toLowerCase().includes(text.toLowerCase()));
  assert.match(html,/percentage points/);assert.match(html,/GDP SAAR.*four once/);assert.match(html,/not.*causal/i);
- assert.match(html,/2026-10-23T04:21:42.080Z/);assert.match(html,/2026-10-23T02:56:31.625Z/);
- assert.match(html,/bea.gov\/help\/faq\/147/);assert.match(html,/CSV BREAKDOWN &amp; INPUTS/);
+ assert.match(html,new RegExp(humanTimestamp("2026-10-23T04:21:42.080Z")));assert.match(html,new RegExp(humanTimestamp("2026-10-23T02:56:31.625Z")));
+ assert.match(html,/bea.gov\/help\/faq\/147/);assert.match(html,/CSV BREAKDOWN &amp; INPUTS/i);
  assert.doesNotMatch(html,/id="date-window"/);
  const binding=view.currentAccountGdpBreakdownChartCatalog(fixture())['current-account-gdp-breakdown'];
  assert.equal(Object.keys(binding.catalog).length,4);assert.match(binding.evidenceLabel,/Calculated/);
@@ -53,7 +55,8 @@ test('empty, invalid, cached and frozen states stay explicit and source text is 
  assert.match(view.currentAccountGdpBreakdownPanel(sources,all),/Cached input/);assert.match(view.currentAccountGdpBreakdownPanel(sources,all),/&lt;failed&gt;/);
  assert.match(view.currentAccountGdpBreakdownPanel(sources,{preset:'custom',startDate:'2030-01-01',endDate:'2030-04-01'}),/No retained quarters/);
  assert.match(view.currentAccountGdpBreakdownPanel({},all),/unavailable/i);
- const frozen=view.currentAccountGdpBreakdownPanel(sources,all,{frozen:true});assert.match(frozen,/FROZEN HISTORICAL/);assert.doesNotMatch(frozen,/data-export-current-account-gdp-breakdown|data-window=/);
+ const frozen=view.currentAccountGdpBreakdownPanel(sources,all,{frozen:true});assert.match(frozen,/FROZEN HISTORICAL/i);assert.doesNotMatch
+  (frozen,/data-export-current-account-gdp-breakdown|data-window=/);
  assert.match(view.currentAccountGdpBreakdownChartCatalog(sources,{frozen:true})['current-account-gdp-breakdown'].evidenceLabel,/Frozen/);
  const invalid={preset:'custom',startDate:'bad',endDate:'bad'};
  assert.match(view.currentAccountGdpBreakdownPanel(sources,invalid),/unavailable/i);assert.equal(records(view.currentAccountGdpBreakdownCsv(sources,invalid)).length,0);

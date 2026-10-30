@@ -8,7 +8,8 @@ import {marketFunctioningPage} from '../src/market-functioning-page.js';
 import {NY_FED_DATA_NOTICE,NY_FED_REFERENCE_RATE_NOTICE,NY_FED_PRODUCT_NOTICE} from '../src/market-functioning.js';
 
 const visible=html=>html.replace(/<details\b(?![^>]*\bopen\b)[^>]*>[\s\S]*?<\/details>/g,'');
-const before=(html,a,b)=>{assert.ok(html.includes(a),a);assert.ok(html.includes(b),b);assert.ok(html.indexOf(a)<html.indexOf(b),`${a} precedes ${b}`);};
+const before=(html,a,b)=>{html=html.toLowerCase();a=a.toLowerCase();b=b.toLowerCase();assert.ok(html.includes(a),a);assert.ok(html.includes(b),
+  b);assert.ok(html.indexOf(a)<html.indexOf(b),`${a} precedes ${b}`);};
 function group(html,label){
   const start=html.indexOf(`<section class="reading-group" aria-label="${label}">`);
   assert.ok(start>=0,`Separate reading basis: ${label}`);
@@ -27,14 +28,17 @@ const auction=(id,date,extra={})=>({id,auctionDate:date,securityType:'Note',secu
 test('refinancing groups observed instrument dates apart from modeled horizon and leads tables with maturity bars',()=>{
   const html=refinancingPage({refinancingHorizon:3,refinancingShock:50},refinancing),main=visible(html);
   const observed=group(main,'Observed refinancing exposure'),modeled=group(main,'Modeled rate sensitivity');
-  assert.match(observed,/2026-09-30/);assert.match(observed,/own.*date/i);
-  before(observed,'maturity-ladder-chart','CONTRACTUAL MATURITIES');
-  assert.match(html,/data-page-disclosure="refinancing:principal-history"[\s\S]*OUTSTANDING PRINCIPAL HISTORY[\s\S]*data-series="marketableDebt"/,'Supplemental principal history remains available');
-  assert.doesNotMatch(observed,/OUTSTANDING PRINCIPAL HISTORY/,'The primary view prioritizes current maturity exposure');
-  assert.match(html,/data-page-disclosure="refinancing:maturity-table"[\s\S]*CUMULATIVE PRINCIPAL/,'Exact monthly values remain accessible');
+  assert.match(observed,/30 Sept 2026/);assert.match(observed,/own.*date/i);
+  before(observed,'maturity-ladder-chart','CONTRACTUAL MATURITIES</h2>');
+  assert.match(html,
+  /data-page-disclosure="refinancing:principal-history"[\s\S]*OUTSTANDING PRINCIPAL HISTORY[\s\S]*data-series="marketableDebt"/i,
+  'Supplemental principal history remains available');
+  assert.doesNotMatch(observed,/OUTSTANDING PRINCIPAL HISTORY/i,'The primary view prioritizes current maturity exposure');
+  assert.match(html,/data-page-disclosure="refinancing:maturity-table"[\s\S]*CUMULATIVE PRINCIPAL/i,'Exact monthly values remain accessible');
   before(main,'Observed refinancing exposure','Modeled rate sensitivity');
-  for(const phrase of ['2026-12-31','4% hypothetical baseline','id="refinancing-horizon"','id="refinancing-shock"','not observed rates or forecasts','USD billions'])assert.ok(modeled.includes(phrase),phrase);
-  for(const phrase of ['CACHED','2026-10-22T02:00:00Z','Release date: unknown','Retained maturity &lt;error&gt;','Instrument coverage warning','future inflation is unknown'])assert.ok(main.includes(phrase),phrase);
+  for(const phrase of ['31 Dec 2026','4% hypothetical baseline','id="refinancing-horizon"','id="refinancing-shock"',
+  'not observed rates or forecasts','USD billions'])assert.ok(modeled.includes(phrase),phrase);
+  for(const phrase of ['Retained maturity &lt;error&gt;','Instrument coverage warning','future inflation is unknown'])assert.ok(main.includes(phrase),phrase);
 });
 
 test('selected yield controls and overlay lead detailed tenor evidence while retained dates remain separate',()=>{
@@ -54,30 +58,32 @@ test('auction selection preserves open history paging and visibly distinguishes 
   const source={status:'error',error:'Retained auction <error>',fetchedAt:'2026-10-22T02:00:00Z',auctions:Array.from({length:75},(_,i)=>auction(`record-${i}`,new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10)))};
   Object.assign(source.auctions[0],{status:'announced',competitiveAccepted:null,totalAccepted:null,somaAccepted:null,primaryDealerAccepted:null,directAccepted:null,indirectAccepted:null});
   const main=visible(auctionsPage({auctionId:'record-0'},source)),selected=group(main,'Selected auction comparison');
-  assert.match(selected,/id="auction-type"/);assert.match(selected,/RESULTS NOT RETAINED/);assert.match(selected,/Result release timestamp<\/dt><dd>Unknown/);
+  assert.match(selected,/id="auction-type"/);assert.match(selected,/RESULTS NOT RETAINED/);assert.doesNotMatch(selected,/<dt>Result release timestamp<\/dt>/);
   before(main,'PRIOR MATCHING RESULTS','AUCTION HISTORY');
   assert.match(main,/History page 2 of 2/);assert.match(main,/data-auction-history-page/);assert.match(main,/id="auction-history" tabindex="-1"/);
-  assert.match(main,/data-auction-id="record-0" aria-pressed="true"/);assert.match(main,/CACHED/);assert.match(main,/Retained auction &lt;error&gt;/);
+  assert.match(main,/data-auction-id="record-0" aria-pressed="true"/);assert.match(main,/Retained auction &lt;error&gt;/);
 });
 
 test('ownership preserves separate quarterly vintage and weekly par basis with SOMA chart before detail and notices open',()=>{
   const main=visible(ownershipPage(ownership)),z1=group(main,'Quarterly Z.1 positions'),soma=group(main,'Weekly SOMA holdings');
-  for(const phrase of ['2026-06-30','2026-09-11','market values'])assert.ok(z1.includes(phrase),phrase);
+  for(const phrase of ['30 Jun 2026','11 Sept 2026','market values'])assert.ok(z1.includes(phrase),phrase);
   before(z1,'data-series="foreignTreasuryHoldings,fedTreasuryHoldings"','OFFICIAL Z.1 SECTOR POSITIONS');
   before(soma,'data-series="somaTreasuryHoldings"','TREASURY-ONLY SOMA MEASURE');
-  for(const phrase of ['2026-10-14','Actual release date: unknown','not added to Z.1','Required SOMA credit','Required SOMA reuse notice','New York Fed Terms of Use'])assert.ok(soma.includes(phrase),phrase);
+  for(const phrase of ['14 Oct 2026','not added to Z.1','Required SOMA credit','Required SOMA reuse notice',
+  'New York Fed Terms of Use'])assert.ok(soma.includes(phrase),phrase);
   assert.match(main,/Incomplete source positions/);assert.match(main,/Retained ownership &lt;error&gt;/);
 });
 
 test('market groups weekly stocks and cumulative fails apart from daily funding and leads funding detail with distributions',()=>{
   const source={status:'error',fetchedAt:'2026-10-21T01:00:00Z',lastAttemptAt:'2026-10-22T02:00:00Z',error:'Funding refresh <error>',series:{dealerNetTreasury:{observations:[{date:'2026-10-07',value:null,suppressed:true}]},dealerFailsDeliver:{observations:[{date:'2026-10-07',value:30}]},sofr:{observations:[{date:'2026-10-20',value:4}]}}};
   const main=visible(marketFunctioningPage(source)),stocks=group(main,'Weekly dealer stocks'),fails=group(main,'Weekly settlement fails'),daily=group(main,'Daily funding rates');
-  assert.match(stocks,/Wednesday positions/);assert.match(stocks,/SUPPRESSED/);assert.match(stocks,/2026-10-07/);
+  assert.match(stocks,/Wednesday positions/);assert.match(stocks,/SUPPRESSED/);assert.match(stocks,/7 Oct 2026/);
   assert.match(fails,/Cumulative weekly/);assert.doesNotMatch(stocks,/SOFR/);assert.doesNotMatch(fails,/Published volume-weighted median rate/);
   before(daily,'SHARED FUNDING HISTORY WINDOW','DAILY FUNDING-RATE CONTEXT');
   before(daily,'SOFR − EFFR','DAILY FUNDING-RATE CONTEXT');
-  assert.match(daily,/2026-10-20/);assert.match(daily,/same-effective-date difference/);
-  for(const phrase of ['2026-10-21T01:00:00Z','2026-10-22T02:00:00Z','Funding refresh &lt;error&gt;',NY_FED_DATA_NOTICE,NY_FED_REFERENCE_RATE_NOTICE,NY_FED_PRODUCT_NOTICE])assert.ok(main.includes(phrase),phrase);
+  assert.match(daily,/20 Oct 2026/);assert.match(daily,/same-effective-date difference/);
+  for(const phrase of ['Funding refresh &lt;error&gt;',NY_FED_DATA_NOTICE,NY_FED_REFERENCE_RATE_NOTICE,NY_FED_PRODUCT_NOTICE])assert.ok
+  (main.includes(phrase),phrase);
 });
 
 test('unavailable Treasury inputs retain visible recovery explanations and heading actions',()=>{

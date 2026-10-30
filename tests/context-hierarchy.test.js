@@ -32,7 +32,8 @@ function visible(html){
   }
   return result;
 }
-function ordered(html,labels){let prior=-1;for(const label of labels){const next=html.indexOf(label);assert.ok(next>prior,`${label} should follow the primary working view`);prior=next;}}
+function ordered(html,labels){html=html.toLowerCase();labels=labels.map(label=>label.toLowerCase());let prior=-1;
+  for(const label of labels){const next=html.indexOf(label);assert.ok(next>prior,`${label} should follow the primary working view`);prior=next;}}
 const stamp='2026-10-20T12:00:00.123Z';
 const captured=(fetchedAt,value)=>({id:'bea',fetchedAt,series:{gdp:{unit:'Percent',definition:'Captured growth',observations:[{date:'2026-04-01',value}]}}});
 const history=recordVintages(null,{bea:captured(stamp,2.2)},{bea:captured('2026-10-21T12:00:00.456Z',2.4)},{checkedAt:'2026-10-21T13:00:00.000Z'});
@@ -68,7 +69,8 @@ test('capture controls and both evidence tables precede supporting provenance wi
 
 test('release results, roles and essential clocks remain open before collection and source internals',()=>{
  const row=publicationArchive.releases.find(row=>row.seriesId==='gdp'),html=releasePage({publicationSeries:'gdp',publicationPeriod:row.period,publicationCutoff:row.publicationDate},{archive:publicationArchive,publicationState:{status:'ready'}}),lead=visible(html);
- for(const text of ['Verified official result','Earlier estimate of this quarter','Expected schedule','Verified publication','Evidence retrieved','day precision','RETURN TO CALENDAR','PUBLICATION HISTORY / CSV / FREEZE'])assert.ok(lead.includes(text),text);
+ for(const text of ['Verified official result','Earlier estimate of this quarter','Expected schedule','Verified publication',
+  'Evidence retrieved','day precision','Return to calendar','Publication history / CSV / Save snapshot'])assert.ok(lead.includes(text),text);
  assert.match(disclosureContent(html,'release:collection'),/Schedule-to-retrieval delay/);
  assert.match(disclosureContent(html,'release:source-reuse'),/Reuse terms/);
  ordered(html,['VERIFIED OFFICIAL RESULT','SCHEDULE, PUBLICATION AND COLLECTION','AGENCY EXPLANATION','data-page-disclosure="release:source-reuse"']);
@@ -90,7 +92,7 @@ test('frozen result and original exports lead advanced evidence; import follows 
  assert.match(disclosureContent(html,`research:package:${pkg.id}:checksum`),/SHA-256/);
  assert.match(disclosureContent(html,`research:package:${pkg.id}:series:gdp`),/Source IDs/);
  assert.match(disclosureContent(html,`research:package:${pkg.id}:evidence`),/research-json/);
- ordered(html,['FROZEN RESULT LIBRARY','READ-ONLY','data-page-disclosure="research:import"']);
+ ordered(html,['Saved snapshot library','READ-ONLY','data-page-disclosure="research:import"']);
 });
 
 test('publication controls, selected estimate and confirmation limits remain open before fuller methods',()=>{
@@ -111,7 +113,7 @@ test('capture measurement changes remain explicit beside both value tables after
 test('release loading and failure retain the calendar recovery route beside the essential schedule clocks',()=>{
  for(const status of ['loading','error']){
   const html=releasePage({publicationSeries:'gdp',calendarMonth:'2026-03'},{publicationState:{status,error:'Failed publication archive'}}),lead=visible(html);
-  assert.match(lead,/RETURN TO CALENDAR/);assert.match(lead,/month=2026-03/);
+  assert.match(lead,/Return to calendar/);assert.match(lead,/month=2026-03/);
   assert.match(lead,/Expected schedule/);assert.doesNotMatch(lead,/Verified official result/);
   if(status==='error')assert.match(lead,/data-retry-publications/);
  }
@@ -121,7 +123,8 @@ test('Research checkpoint failures and immutable-package recovery remain visible
  const changes=visible(researchPage({researchView:'changes'},{changes:{status:'error',error:'Archive failed'},checkpoint:{enabled:true,since:stamp},failures:[{id:'bea',error:'Cached source',fetchedAt:stamp}]}));
  for(const text of ['id="change-since"','data-disable-changes','data-retry-changes','Cached source','Archive failed'])assert.ok(changes.includes(text),text);
  const missing=researchPage({researchView:'packages',packageId:'missing',researchError:'Import rejected'},{library:{sessionOnly:true}}),lead=visible(missing);
- for(const text of ['session-only','Import rejected','Frozen result unavailable','Current observations are never substituted'])assert.ok(lead.includes(text),text);
+ for(const text of ['session-only','Import rejected','Saved snapshot unavailable',
+  'Current observations are never substituted'])assert.ok(lead.includes(text),text);
  assert.match(disclosureContent(missing,'research:import'),/id="research-import"/);
 });
 
@@ -142,8 +145,8 @@ test('frozen external Trends and Decomposition retain their specialist analysis 
   const args=buildPinContext(state,{sources:currentAccountGdpBreakdownFixture()}),pkg=await createResearchPackage({name:`Frozen ${section}`,...args});
   const html=researchPage({researchView:'packages',packageId:pkg.id},{library:{packages:[pkg]}}),lead=visible(html);
   assert.match(lead,/data-chart-catalog="current-account-gdp-/);
-  assert.match(lead,/QUARTERLY VS TRAILING FOUR QUARTERS/);
-  assert.match(lead,/COMPONENT CONTRIBUTIONS TO RATIO CHANGES/);
+  assert.match(lead,/quarterly vs trailing four quarters/i);
+  assert.match(lead,/component contributions to ratio changes/i);
   assert.ok(lead.includes(`data-export-frozen-current-account-gdp-contributions="${pkg.id}"`));
   assert.ok(lead.includes(`data-export-frozen-current-account-gdp-component-effects="${pkg.id}"`));
   assert.doesNotMatch(lead,/research-json/);
@@ -157,7 +160,7 @@ test('the package library leads without a selection and discloses its index besi
  const second=await createResearchPackage({name:'Second retained result',state:{selected:['unrate'],range:1}});
  const library={packages:[first,second]};
  const index=researchPage({researchView:'packages'},{library}),indexLead=visible(index);
- assert.match(indexLead,/FROZEN RESULT LIBRARY/);
+ assert.match(indexLead,/Saved snapshot library/);
  for(const pkg of [first,second]){
   for(const attribute of ['data-open-package','data-remove-package','data-package-json'])assert.ok(indexLead.includes(`${attribute}="${pkg.id}"`));
  }
@@ -168,9 +171,9 @@ test('the package library leads without a selection and discloses its index besi
  assert.match(selectedLead,/data-chart/);
  assert.ok(selectedLead.includes(`data-package-csv="${second.id}"`));
  assert.ok(selectedLead.includes(`data-package-json="${second.id}"`));
- assert.doesNotMatch(selectedLead,/FROZEN RESULT LIBRARY|First retained result|data-open-package|data-remove-package/);
+ assert.doesNotMatch(selectedLead,/Saved snapshot library|First retained result|data-open-package|data-remove-package/);
  const disclosed=disclosureContent(selected,'research:package-library');
- assert.match(disclosed,/<summary>[\s\S]*Frozen result library/);
+ assert.match(disclosed,/<summary>[\s\S]*Saved snapshot library/);
  for(const pkg of [first,second])for(const attribute of ['data-open-package','data-remove-package','data-package-json'])assert.ok(disclosed.includes(`${attribute}="${pkg.id}"`));
  ordered(selected,['data-page-disclosure="research:package-library"','READ-ONLY','data-page-disclosure="research:import"']);
 });

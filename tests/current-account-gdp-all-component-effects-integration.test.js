@@ -14,9 +14,10 @@ import {currentAccountGdpBalanceEffectsCsv} from '../src/current-account-gdp-bal
 
 test('external decomposition adds eight all-component charts while preserving one shared date control and existing effects',()=>{
  const html=macroCoveragePage(parseRoute('#/economy?family=external&section=decomposition&window=1y'));
- assert.match(html,/ALL-COMPONENT BALANCE &amp; GDP EFFECT COMPARISON/);assert.equal((html.match(/data-cursor-group="current-account-all-component-effects"/g)??[]).length,8);assert.equal((html.match(/id="window-start"/g)??[]).length,1);
+ assert.match(html,/ALL-COMPONENT BALANCE &amp; GDP EFFECT COMPARISON/i);assert.equal((html.match
+  (/data-cursor-group="current-account-all-component-effects"/g)??[]).length,8);assert.equal((html.match(/id="window-start"/g)??[]).length,1);
  assert.match(html,/id="current-account-effect-component"/);assert.match(html,/data-chart-catalog="current-account-gdp-balance-effects"/);
- assert.doesNotMatch(macroCoveragePage(parseRoute('#/economy?family=prices')),/ALL-COMPONENT|current-account-all-component-effects/);
+ assert.doesNotMatch(macroCoveragePage(parseRoute('#/economy?family=prices')),/ALL-COMPONENT|current-account-all-component-effects/i);
 });
 
 test('new frozen comparison alone binds the existing component catalog and never borrows current data',async()=>{

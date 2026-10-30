@@ -21,13 +21,13 @@ function fixture(){
 }
 const ratioNames=['Gross federal debt','Debt held by the public','budget deficit','net budget interest'];
 
-test('fiscal headline groups five TTM readings separately from the daily public debt stock',()=>{
+test('fiscal headline groups six TTM readings separately from the daily public debt stock',()=>{
  const html=fiscalPage();
  assert.match(html,/class="[^"]*\bfiscal-workspace\b/);
  const activity=element(html,'section','aria-label="Trailing 12-month fiscal activity"');
  const debt=element(html,'aside','aria-label="Daily public debt stock"');
  for(const id of ['receiptsTtm','outlaysTtm','primaryDeficitTtm','netInterestTtm','interestRevenueRatio'])assert.ok(activity.includes(`href="#/series/${id}"`),id);
- assert.equal((activity.match(/class="metric"/g)??[]).length,5);
+ assert.equal((activity.match(/class="metric"/g)??[]).length,6);
  assert.doesNotMatch(activity,/href="#\/series\/publicDebt"/);
  assert.match(debt,/href="#\/series\/publicDebt"/);
  assert.equal((debt.match(/class="metric"/g)??[]).length,1);
@@ -37,8 +37,8 @@ test('fiscal headline groups five TTM readings separately from the daily public 
 test('fiscal trends and monthly contributors precede GDP context and retain native research actions',()=>{
  const html=fiscalPage();
  for(const title of ['TRAILING 12-MONTH FISCAL TRENDS','WHAT CONTRIBUTED']){
-  assert.ok(html.includes(title));
-  assert.ok(html.indexOf(title)<html.indexOf('FISCAL SIZE RELATIVE TO NOMINAL GDP'),title);
+  assert.ok(html.toLowerCase().includes(title.toLowerCase()));
+  assert.ok(html.toLowerCase().indexOf(title.toLowerCase())<html.toLowerCase().indexOf('fiscal size relative to nominal GDP'.toLowerCase()),title);
  }
  assert.match(html,/data-chart\s+data-series="receiptsTtm,outlaysTtm,netInterestTtm"/);
  assert.match(html,/data-comparison="native"/);

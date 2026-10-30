@@ -47,7 +47,10 @@ test('partial frozen balance effects preserve unavailable denominator and compon
  const inputs=args.context[retained.inputContext].sources;assert.deepEqual(Object.keys(inputs.beaIta.series),['itaGoodsBalance']);assert.deepEqual(inputs.bea.series,{});
  const pkg=await createResearchPackage({name:'Unavailable frozen balance effects',...args}),restored=await importResearchPackage(exportResearchPackage(pkg));assert.deepEqual(restored.context.currentAccountGdpBreakdown.sources,inputs);
  const originalFetch=globalThis.fetch;globalThis.fetch=()=>{throw new Error('Frozen viewers must not fetch missing inputs.');};
- try{const html=renderFrozen(restored);assert.match(html,/data-chart-catalog="current-account-gdp-balance-effects"|FROZEN[^<]*BALANCE/);assert.doesNotMatch(html,/data-export-current-account-gdp-balance-effects(?:[\s=>])/);const {currentAccountGdpBalanceEffectsCsv}=await import('../src/current-account-gdp-balance-effects-view.js');assert.match(currentAccountGdpBalanceEffectsCsv(inputs,retained.range),/unavailable|missing/i);}finally{globalThis.fetch=originalFetch;}
+ try{const html=renderFrozen(restored);assert.match(html,/data-chart-catalog="current-account-gdp-balance-effects"|FROZEN[^<]*BALANCE/i);
+  assert.doesNotMatch(html,/data-export-current-account-gdp-balance-effects(?:[\s=>])/);const {currentAccountGdpBalanceEffectsCsv}=await import
+  ('../src/current-account-gdp-balance-effects-view.js');assert.match(currentAccountGdpBalanceEffectsCsv(inputs,retained.range),
+  /unavailable|missing/i);}finally{globalThis.fetch=originalFetch;}
 });
 
 test('legacy frozen packages do not acquire balance-effects panels, reconstruction actions or method claims',async()=>{

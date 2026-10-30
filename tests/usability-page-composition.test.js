@@ -14,7 +14,7 @@ test('auction browsing keeps the explicitly selected result, with a nearby acces
  assert.match(html,/id="auction-selection-status"[^>]*role="status"/);
  assert.match(html,/data-auction-selected[^>]*>View selected auction/);
  assert.match(html,/id="auction-selected-result"[^>]*tabindex="-1"/);
- assert.match(html,/Selected: 2020-06-29/);
+ assert.match(html,/Selected: 29 Jun 2020/);
  assert.match(auctionsCsv(source,{auctionId:'record-180',benchmark:true}),/record-180,selected/);
 });
 test('comparison invalid dates offer date recovery while preserving mode and selected series',()=>{
@@ -32,8 +32,8 @@ test('unsupported indexed comparisons offer supported modes without resetting th
 });
 test('shared tables require explicit numeric column definitions and keep textual headings left aligned',()=>{
  const html=table(['DATE','SECURITY',{label:'BID-TO-COVER',numeric:true}],'<tr><td>2026-01-01</td><td>Bill</td><td class="num">2.40</td></tr>','Facts');
- assert.match(html,/<th scope="col">SECURITY<\/th>/);
- assert.match(html,/<th scope="col" class="num">BID-TO-COVER<\/th>/);
+ assert.match(html,/<th scope="col">SECURITY<\/th>/i);
+ assert.match(html,/<th scope="col" class="num">BID-TO-COVER<\/th>/i);
  assert.doesNotMatch(html,/\[object Object\]/);
 });
 test('navigable metric cards contain a visible detail cue',()=>{

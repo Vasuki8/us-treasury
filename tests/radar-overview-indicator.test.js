@@ -37,7 +37,10 @@ test('Overview keeps primary readings and supporting measurements individually i
 
 test('Overview leads with conditions and momentum, then catalysts, with research exceptions in supporting disclosures', () => {
   const html=overviewPage(state({saved:['unrate']}), {checkpoint:{enabled:true,since:'2026-10-20'},changes:{status:'ready',rows:[{seriesId:'unrate',kind:'value-change',period:'2026-09-01',capturedAt:'2026-10-22T12:00:00Z'}]}});
-  ordered(html,['ECONOMIC CONDITIONS','Monthly inflation','Payroll momentum','NEXT CATALYSTS','Published results · GDP, claims &amp; CPI','Activity &amp; income','Weekly claims','My research','Following 1','Captured changes 1','Collection attention 0','Data &amp; methods','Collection failures and retained-source status are in Refresh details above']);
+  ordered(html,['oh-snapshot','oh-momentum','oh-catalysts','data-overview-disclosure="publications"',
+    'data-overview-disclosure="activity-income"','data-overview-disclosure="weekly-claims"',
+    'data-overview-disclosure="my-research"','Following 1','Captured changes 1','Collection attention 0',
+    'data-overview-disclosure="data-methods"']);
   assert.match(html,/Percent month over month · headline and core PCE\. Year-over-year inflation is a different horizon/);
   assert.match(html,/Thousands of jobs · three-month average of monthly payroll gains; establishment jobs differ from household people measures/);
   assert.match(html,/retrieval update is not itself an official publication or market surprise/);
@@ -48,7 +51,7 @@ test('Overview leads with conditions and momentum, then catalysts, with research
   assert.match(overviewPage(state()),/Follow measurements from their detail pages/);
   assert.match(overviewPage(state()),/Publication evidence not loaded/);
   assert.match(overviewPage(state()),/Historical publications captured recently are not new releases today/);
-  assert.match(html,/DATA FRESHNESS &amp; RELEASE COVERAGE/);
+  assert.match(html,/Data freshness &amp; release coverage/);
 });
 
 test('Overview renders a retained historical publication through reviewed archive context with separate clocks',()=>{
@@ -56,8 +59,8 @@ test('Overview renders a retained historical publication through reviewed archiv
   row.id=`dol-${row.seriesId}-${row.period}-${row.releaseStage}-${row.publicationDate}`;
   const html=overviewPage(state(),{publicationContexts:{claims:{status:'ready',archive:{releases:[row]}},gdp:{status:'error',error:'Archive unavailable'}}});
   const publications=html.slice(html.indexOf('data-overview-disclosure="publications"'),html.indexOf('class="oh-support"'));
-  assert.match(publications,/Initial claims/);assert.match(publications,/Published 2026-03-19 · day precision/);
-  assert.match(publications,/Captured 2026-10-22T22:00:00\.000Z/);assert.match(publications,/reference 2026-03-14/);
+  assert.match(publications,/Initial claims/);assert.match(publications,/Published 19 Mar 2026 · day precision/);
+  assert.match(publications,/Captured 6:00 pm ET, 22 Oct/);assert.match(publications,/reference 14 Mar 2026/);
   assert.match(publications,/GDP: Publication evidence unavailable/);
   assert.match(publications,/Historical publications captured recently are not new releases today/);
   assert.doesNotMatch(publications,/new publication today|Released today/);
@@ -76,11 +79,11 @@ test('Indicator latest native snapshot stays separate from a transformed histori
     assert.match(snapshot,/Native unit[^]*?Percent/);
     assert.match(snapshot,/Sep 2026/);
     assert.match(snapshot,/Feb 2025/);
-    assert.match(snapshot,/Official observation/);
+    assert.match(html,/Official observation/);
     assert.match(html,/Percentage-point change/);
-    assert.match(html,/Displayed: 1 observations · 2025-02-01 to 2025-02-01/);
+    assert.match(html,/Displayed: 1 observations · 1 Feb 2025 to 1 Feb 2025/);
     assert.match(html,/0\.1 Percentage points/);
-    ordered(html,['indicator-snapshot','indicator-chart','Indicator detail sections','Related indicators','Full source identifiers']);
+    ordered(html,['indicator-snapshot','indicator-chart','Indicator detail sections','Related indicators','About this data']);
     for(const action of ['data-save="unrate"','data-add-compare="unrate"','data-export','id="transform-select"','id="window-start"','id="window-end"','data-window="all"']) assert.ok(html.includes(action));
   } finally {current.observations=saved;}
 });
@@ -99,7 +102,7 @@ test('Indicator empty and invalid windows never substitute latest observations i
 test('Indicator separates calculated or modeled measurement kind from captured or cached freshness', () => {
   const current=getSeries('unrate'), saved={observationType:current.observationType,dataStatus:current.dataStatus};
   try {
-    for(const [observationType,kind] of [['calculated','Calculated metric'],['modeled','Model estimate']]) {
+    for(const [observationType,kind] of [['calculated','Derived'],['modeled','Model estimate']]) {
       current.observationType=observationType;
       for(const [dataStatus,freshness] of [['official','Captured'],['cached','Cached'],['unavailable','Unavailable']]) {
         current.dataStatus=dataStatus;
@@ -139,14 +142,15 @@ test('Indicator exports retained missing changes and suppressed rows with exact-
 
 test('Indicator keeps claims and GDP publication evidence prominent and workspace returns bounded', async () => {
   const html=await indicator({seriesId:'claimsAdvance',returnTo:'#/explore?mode=compare&selected=claims,unrate'});
-  ordered(html,['Return to workspace','indicator-snapshot','Claims history and latest release','VERIFIED RELEASE &amp; PUBLICATION EVIDENCE','indicator-chart']);
-  assert.match(html,/BACK TO COMPARISON/);
-  assert.match(html,/VIEW REVISED HISTORY/);
-  assert.match(html,/ARCHIVED PUBLICATIONS/);
-  assert.match(html,/LATEST RELEASE CONTEXT/);
+  ordered(html,['Return to workspace','indicator-snapshot','Claims history and latest release',
+    'Verified release &amp; publication evidence','indicator-chart']);
+  assert.match(html,/Back to comparison/);
+  assert.match(html,/View revised history/);
+  assert.match(html,/Archived publications/);
+  assert.match(html,/Latest release context/);
   assert.match(html,/separate captures and can show different reference weeks/);
   const gdp=await indicator({seriesId:'gdp'});
-  const evidenceHref=gdp.match(/href="([^"]+)">VERIFIED RELEASE &amp; PUBLICATION EVIDENCE/)?.[1];
+  const evidenceHref=gdp.match(/href="([^"]+)">Verified release &amp; publication evidence/)?.[1];
   assert.ok(evidenceHref);
   assert.equal(parseRoute(evidenceHref.replaceAll('&amp;','&')).publicationSeries,'gdp');
   assert.doesNotMatch(await indicator({seriesId:'unrate',returnTo:'https://example.com'}),/Return to workspace|example\.com/);
@@ -157,7 +161,10 @@ test('Indicator evidence tabs preserve source notes, measurement methodology and
   current.observations=[{date:'2026-09-01',value:null,publishedAt:'2026-10-02',footnotes:['Preliminary <estimate>'],suppressed:true,revisionIndicator:'Y'}];
   try {
     const html=await indicator({seriesId:'unrate',window:'all'});
-    for(const marker of ['DATA TABLE','METHODOLOGY','RETRIEVAL HISTORY','Preliminary &lt;estimate&gt;','SUPPRESSED · withheld by source','SOURCE REVISION FLAG · reason unknown','2026-10-02']) assert.ok(html.includes(marker),marker);
+    for(const tab of ['data','methodology','revisions'])assert.ok(html.includes(`id="detail-tab-${tab}"`));
+    for(const marker of ['Preliminary &lt;estimate&gt;','SUPPRESSED · withheld by source','SOURCE REVISION FLAG · reason unknown','2 Oct 2026']){
+      assert.ok(html.includes(marker),marker);
+    }
     assert.match(html,/data-copy-link/);
     const method=await indicator({seriesId:'unrate',tab:'methodology'});
     assert.match(method,/Missing observations remain missing; no values are filled/);

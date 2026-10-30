@@ -99,18 +99,18 @@ test('data mapping uses the source publication note for advance context and leav
 test('advance details display release roles and day dates, and link to separate revised histories in both directions', () => withReadings(() => {
   for (const [historyId, id] of pairs) {
     const html = renderPage(parseRoute(`#/series/${id}?window=all`));
-    assert.match(html, /LATEST RELEASE CONTEXT/);
-    assert.doesNotMatch(html, /\/ HISTORICAL SERIES/);
+    assert.match(html, /Latest release context/);
+    assert.doesNotMatch(html, /\/ Historical series/);
     assert.match(html, /2026-10-22/);
     assert.match(html, /day precision/);
     assert.match(html, /embargo.*not.*actual release instant/i);
     assert.match(html, /Prior-week value as revised in this release/);
     assert.match(html, /Current advance estimate in this release/);
     assert.ok(html.includes(`href="#/series/${historyId}`));
-    assert.match(html, /VIEW REVISED HISTORY/);
+    assert.match(html, /View revised history/);
     const history = renderPage(parseRoute(`#/series/${historyId}`));
     assert.ok(history.includes(`href="#/series/${id}`));
-    assert.match(history, /VIEW LATEST RELEASE CONTEXT/);
+    assert.match(history, /View latest release context/);
     assert.ok(!history.includes(`data-series="${id}"`), 'the history detail must not add unpinned advance numerical panels');
   }
 }));

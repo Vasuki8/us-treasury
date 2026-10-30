@@ -44,20 +44,39 @@
       <a class="nav-secondary" href="#/fiscal" data-nav-group="treasury">Treasury &amp; funding</a>
       <details class="navigation-more" id="navigation-more">
         <summary aria-label="More pages">More<svg aria-hidden="true" focusable="false" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 4.5 3 3 3-3"/></svg></summary>
-        <div class="navigation-menu"><div class="mobile-density"><label for="density-select-mobile">Density</label><select id="density-select-mobile"><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select></div><p class="navigation-group-label">My research</p>
-          <a href="#/series/unrate" data-nav="indicator" id="indicator-mobile">Recent indicator</a>
-          <a href="#/watchlist" data-nav="watchlist">Watchlist <span class="nav-count" id="mobile-saved-count">0</span></a>
-          <a href="#/research" data-nav="research" data-nav-view="workspaces">Saved views</a>
-          <a href="#/research?view=packages" data-nav="research" data-nav-view="packages">Frozen results</a><p class="navigation-group-label">Economy</p>
-          <a href="#/economy?family=activity" data-nav="macroCoverage" data-nav-family="activity">Activity &amp; income</a><a href="#/macro" data-nav="macro">GDP contributions</a><a href="#/economy?family=prices" data-nav="macroCoverage" data-nav-family="prices">Inflation</a><a href="#/economy/labor" data-nav="labor">Labor market</a><a href="#/economy?family=housing" data-nav="macroCoverage" data-nav-family="housing">Housing</a><a href="#/economy?family=external" data-nav="macroCoverage" data-nav-family="external">Trade &amp; current account</a><a href="#/credit" data-nav="credit">Credit &amp; banking</a>
-          <p class="navigation-group-label">Fed &amp; rates</p><a href="#/economy?family=policy" data-nav="macroCoverage" data-nav-family="policy">Policy rates</a>
+        <div class="navigation-menu">
+          <p class="navigation-group-label">Economy</p>
+          <a href="#/economy?family=activity" data-nav="macroCoverage" data-nav-family="activity">Activity &amp; income</a>
+          <a href="#/macro" data-nav="macro">GDP contributions</a>
+          <a href="#/economy?family=prices" data-nav="macroCoverage" data-nav-family="prices">Inflation</a>
+          <a href="#/economy/labor" data-nav="labor">Labor market</a>
+          <a href="#/economy?family=housing" data-nav="macroCoverage" data-nav-family="housing">Housing</a>
+          <a href="#/economy?family=external" data-nav="macroCoverage" data-nav-family="external">Trade &amp; current account</a>
+          <a href="#/credit" data-nav="credit">Credit &amp; banking</a>
+          <p class="navigation-group-label">Fed &amp; rates</p>
+          <a href="#/economy?family=policy" data-nav="macroCoverage" data-nav-family="policy">Policy rates</a>
           <a href="#/yields" data-nav="yields">Rates &amp; curves</a>
           <a href="#/market" data-nav="market">Funding &amp; market functioning</a>
-          <p class="navigation-group-label">Treasury &amp; funding</p><a href="#/fiscal" data-nav="fiscal">Fiscal pressure</a>
+          <p class="navigation-group-label">Treasury &amp; funding</p>
+          <a href="#/fiscal" data-nav="fiscal">Fiscal pressure</a>
           <a href="#/refinancing" data-nav="refinancing">Refinancing exposure</a>
           <a href="#/auctions" data-nav="auctions">Auction demand</a>
           <a href="#/ownership" data-nav="ownership">Debt ownership</a>
-          <p class="navigation-group-label">Data &amp; evidence</p><a href="#/research?view=publications" data-nav="research" data-nav-view="publications">Publication History</a><a href="#/vintages" data-nav="vintages">Retrieval History</a><a href="#/research?view=changes" data-nav="research" data-nav-view="changes">Capture changes</a><button type="button" class="action link-button" data-source-health>Source health &amp; coverage</button>
+          <p class="navigation-group-label">Data &amp; evidence</p>
+          <a href="#/research?view=publications" data-nav="research" data-nav-view="publications">Publication history</a>
+          <a href="#/vintages" data-nav="vintages">Retrieval history</a>
+          <a href="#/research?view=changes" data-nav="research" data-nav-view="changes">Capture changes</a>
+          <a href="#/sources" data-nav="sources">Sources &amp; terms</a>
+          <button type="button" class="action link-button" data-source-health>Source health &amp; coverage</button>
+          <p class="navigation-group-label">My research</p>
+          <a href="#/series/unrate" data-nav="indicator" id="indicator-mobile">Recent indicator</a>
+          <a href="#/watchlist" data-nav="watchlist">Watchlist <span class="nav-count" id="mobile-saved-count">0</span></a>
+          <a href="#/research" data-nav="research" data-nav-view="workspaces">Saved views</a>
+          <a href="#/research?view=packages" data-nav="research" data-nav-view="packages">Saved snapshots</a>
+          <div class="mobile-density">
+            <label for="density-select-mobile">Density</label>
+            <select id="density-select-mobile"><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select>
+          </div>
         </div>
       </details>
     </nav>
@@ -75,7 +94,7 @@
         <hr><div class="rail-title">Research</div>
         <a href="#/watchlist" data-nav="watchlist">Watchlist</a>
         <a href="#/research" data-nav="research" data-nav-view="workspaces">Saved views</a>
-        <a href="#/research?view=packages" data-nav="research" data-nav-view="packages">Frozen results</a>
+        <a href="#/research?view=packages" data-nav="research" data-nav-view="packages">Saved snapshots</a>
         <hr><details class="rail-group"><summary class="rail-title">Shortcuts</summary>
           <div class="rail-title">Quick series</div>
           <a href="#/series/gdp"><span class="code">GDP</span>Real growth</a>
@@ -86,9 +105,10 @@
           <div id="saved-list" class="saved-list"></div>
         </details>
         <details class="rail-group"><summary class="rail-title">Data &amp; evidence</summary>
-          <a href="#/research?view=publications" data-nav="research" data-nav-view="publications">Publication History</a>
-          <a href="#/vintages" data-nav="vintages">Retrieval History</a>
+          <a href="#/research?view=publications" data-nav="research" data-nav-view="publications">Publication history</a>
+          <a href="#/vintages" data-nav="vintages">Retrieval history</a>
           <a href="#/research?view=changes" data-nav="research" data-nav-view="changes">Capture changes</a>
+          <a href="#/sources" data-nav="sources">Sources &amp; terms</a>
           <button type="button" class="action link-button" data-source-health>Source health &amp; coverage</button>
         </details>
       </aside>

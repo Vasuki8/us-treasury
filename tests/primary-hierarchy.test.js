@@ -10,7 +10,16 @@ import {getSeries} from '../src/model.js';
 import {releases,dataStatus} from '../src/data.js';
 const state=overrides=>({...defaults,saved:[],...overrides});
 const count=(html,text)=>html.split(text).length-1;
-const outsideDetails=html=>html.replace(/<details\b[^>]*>[\s\S]*?<\/details>/g,'');
+function outsideDetails(html){
+ let depth=0,result='';
+ for(const token of html.matchAll(/<\/?details\b[^>]*>|[^<]+|<(?!\/?details\b)[^>]*>/g)){
+  const part=token[0];
+  if(part.startsWith('<details')){if(depth||!/\sopen(?:\s|>)/.test(part))depth++;}
+  else if(part.startsWith('</details')){if(depth)depth--;}
+  else if(!depth)result+=part;
+ }
+ return result;
+}
 
 test('Labor focus has one CSV and data action while retaining weekly distinctions and supporting source access',()=>{
  const html=laborPage(state({macroMeasure:'unrate'}));
@@ -42,7 +51,7 @@ test('Calendar selected event gives its source retrieval one home and keeps sche
  try{
   const html=calendarPage(state({calendarMonth:'2026-11',eventId:'hierarchy-claims'}));
   const preview=html.slice(html.indexOf('id="calendar-selected-preview"'),html.indexOf('data-page-disclosure="calendar:context"'));
-  assert.equal(count(preview,stamp),1);
+  assert.equal(count(preview,'8:34 am ET, 20 Oct'),1);
   assert.match(preview,/data-page-disclosure="calendar:event:hierarchy-claims:basis"/);
   assert.match(outsideDetails(preview),/HTTP 503 &lt;retry&gt;/);
   assert.match(outsideDetails(preview),/past scheduled time does not establish/);
@@ -65,7 +74,8 @@ test('Explore comparison leads with charts, one export action and visible no-fil
 
 test('Macro readings and history lead supporting research while external accounting sections remain intact',()=>{
  const html=macroCoveragePage(state({macroFamily:'prices'}));
- const focused=html.indexOf('INFLATION · CURRENT READING &amp; HISTORY'),chart=html.indexOf('data-chart'),readings=html.indexOf('LATEST TOPIC READINGS');
+ const focused=html.indexOf('class="panel workspace-analysis"'),chart=html.indexOf('data-chart');
+ const readings=html.indexOf('aria-label="LATEST TOPIC READINGS"');
  assert.ok(focused>=0&&focused<chart&&chart<readings,'Inflation current reading and principal chart precede the full horizon readings');
  assert.match(html,/data-page-disclosure="macro-coverage:prices:research"/);
  assert.ok(readings<html.indexOf('data-page-disclosure="macro-coverage:prices:research"'));
@@ -74,5 +84,18 @@ test('Macro readings and history lead supporting research while external account
  assert.equal(count(html,'WHAT CHANGED'),1);
  assert.match(html,/id="macro-measure"/);assert.match(html,/data-export-macro-measure/);
  const external=macroCoveragePage(state({macroFamily:'external',externalView:'methods'}));
- for(const label of ['Summary','Trends','Decomposition','Data &amp; methods','not annualized','not causal'])assert.ok(external.includes(label),label);
+ for(const label of ['Summary','Trends','Decomposition','Data &amp; methods','not annualized','not causal']){
+  assert.ok(external.includes(label),label);
+ }
+ const summary=macroCoveragePage(state({macroFamily:'external',externalView:'summary'})),visible=outsideDetails(summary);
+ assert.match(visible,/<td class="num">-?\$[\d,.]+B<\/td>/);
+ assert.match(visible,/USD billions[^<]*not annualized/);
+ assert.match(visible,/accounting arithmetic; they do not identify causes or market surprises/);
+ assert.match(visible,/not an exact GDP accounting component or a causal explanation/);
+ assert.match(visible,/<strong class="metric-value">-?[\d.]+%<\/strong>/);
+ for(const key of ['current-account:accounting-evidence','current-account-gdp:context-evidence']){
+  const disclosure=summary.match(new RegExp(`<details[^>]*data-page-disclosure="${key}"[^>]*>`))?.[0];
+  assert.ok(disclosure,key);assert.doesNotMatch(disclosure,/\sopen(?:\s|>)/);
+  assert.ok(summary.indexOf(disclosure)>summary.indexOf('<td class="num">'));
+ }
 });

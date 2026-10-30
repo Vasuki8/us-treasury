@@ -1,3 +1,4 @@
+import {humanDate} from './ui-time.js';
 import { readingGroup, supportingDetails } from './page-hierarchy.js';
 import {dataStatus} from './data.js';
 import {creditContextRegistry,creditContextGroups,BOARD_TERMS_URL,CREDIT_CONTEXT_LIMITATION} from './credit-context-registry.js';
@@ -28,28 +29,40 @@ function metrics(source,ids){
   const value=formatDisplayValue(definition,row?.value,{currencyUnit:'T'});
   return `<a class="metric" href="#/series/${id}"><span class="metric-name">${esc(definition.name)}</span>`
    +`<strong class="metric-value">${esc(value)}</strong>${exact}`
-   +`<span class="metric-period">${esc(row?.date??'No reference date')} · ${esc(definition.frequency)}`
+   +`<span class="metric-period">${esc(humanDate(row?.date))} · ${esc(definition.frequency)}`
    +`${row?.sourcePeriodLabel?` · Source label ${esc(row.sourcePeriodLabel)}`:''}</span>`
    +`<span class="metric-basis">${esc(displayUnitLabel(definition,{currencyUnit:'T'}))} · ${esc(definition.adjustment)}</span>`
-   +`<span class="metric-detail" aria-hidden="true">Details ↗</span></a>`;
+   +`<span class="metric-detail" aria-hidden="true">Details</span></a>`;
  }).join('')+'</section>';
 }
 function groupPanel(group,index,sources){
   const source=sources?.[group.id],hasData=group.ids.some(id=>source?.series?.[id]?.observations?.length);
   const credit=group.id==='onRrp'?`<p>${esc(notice(source))}</p><p><a href="https://www.newyorkfed.org/markets/desk-operations/reverse-repo" target="_blank" rel="noopener noreferrer">Reverse Repo Operations ↗</a> · <a href="${NY_FED_TERMS_URL}" target="_blank" rel="noopener noreferrer">Terms of Use ↗</a></p>`:`<p>Source: Board of Governors of the Federal Reserve System. <a href="${esc(creditContextRegistry[group.ids[0]].source.url)}" target="_blank" rel="noopener noreferrer">${esc(source?.series?.[group.ids[0]]?.sourceTitle??group.label)} ↗</a> · <a href="${BOARD_TERMS_URL}" target="_blank" rel="noopener noreferrer">Board source terms ↗</a></p>`;
-  return panel(String(index+1).padStart(2,'0'),group.label,`<p class="coverage-warning">${esc(status(source))} · Retrieved ${esc(source?.fetchedAt??'not recorded')}.${source?.error?` <strong class="amber">${esc(source.error)}</strong>`:''}</p>${hasData?metrics(source,group.ids):emptyState('No verified capture is available.','Missing observations remain unavailable.')}<p class="panel-note">${esc(group.note)}</p>${hasData?chart(group.ids,{height:190,range:{preset:'3y'}}):''}${group.id==='onRrp'?`<div class="workspace-basis">${credit}</div>`:''}${supportingDetails(`credit:${group.id}:evidence`, 'Definitions, source and collection evidence', `${group.ids.map(id=>`<p><strong>${esc(creditContextRegistry[id].name)}.</strong> ${esc(creditContextRegistry[id].definition)}</p>`).join('')}<p>${esc(source?.coverageNote??'Reference dates, publication dates and retrieval times are separate.')}</p>${group.id==='onRrp'?'':credit}`)}`,'','','workspace-analysis credit-evidence-group');
+  return panel(String(index+1).padStart(2,'0'),group.label,
+  `${source?.error?`<p class="coverage-warning amber">${esc(source.error)}</p>`:''}${hasData?metrics(source,
+  group.ids):emptyState('No verified capture is available.',
+  'Missing observations remain unavailable.')}<p class="panel-note">${esc(group.note)}</p>${hasData?chart(group.ids,{height:190,
+  range:{preset:'3y'}}):''}${group.id==='onRrp'?`<div class="workspace-basis">${credit}</div>`:''}${supportingDetails(`credit:${group.id
+  }:evidence`, 'About this data',`<p>${esc(status(source))} · Retrieved ${esc(source?.fetchedAt??'not recorded')}.</p>`+ `${group.ids.map(id=>
+  `<p><strong>${esc(creditContextRegistry[id].name)}.</strong> ${esc(creditContextRegistry[id].definition)}</p>`).join('')}<p>${esc(source
+  ?.coverageNote??'Reference dates, publication dates and retrieval times are separate.')}</p>${group.id==='onRrp'?'':credit}`)}`,'','',
+  'workspace-analysis credit-evidence-group');
 }
 
 export function fomcContext(source){
   const documents=[...(source?.documents??[])].sort((a,b)=>b.documentDate.localeCompare(a.documentDate)||a.kind.localeCompare(b.kind));
-  const rows=documents.map(row=>`<tr><th scope="row">${esc(row.kind==='decision'?'Policy decision':row.kind==='minutes'?'Meeting minutes':'Summary of Economic Projections')}</th><td class="mono">${esc(row.documentDate)}</td><td class="mono">${esc(row.meetingDate)}</td><td><a href="${esc(row.url)}" target="_blank" rel="noopener noreferrer">Official document ↗</a></td></tr>`).join('');
+  const rows=documents.map(row=>`<tr><th scope="row">${esc(row.kind==='decision'?'Policy decision':row.kind==='minutes'?'Meeting minutes':
+  'Summary of Economic Projections')}</th><td class="mono">${esc(humanDate(row.documentDate))}</td><td class="mono">${esc(humanDate
+  (row.meetingDate))}</td><td><a href="${esc(row.url)}" target="_blank" rel="noopener noreferrer">Official document ↗</a></td></tr>`).join('');
   return panel(String(creditContextGroups.length+1).padStart(2,'0'),'FOMC decisions, minutes & projections',`<p>${esc(status(source))} · Calendar retrieved ${esc(source?.fetchedAt??'not recorded')}.${source?.error?` <strong class="amber">${esc(source.error)}</strong>`:''}</p>${rows?table(['Official material','Listed document date','Meeting decision date','Source'],rows):emptyState('No official FOMC document references captured.')}<p>Dates have day precision. Minutes use the explicit release date listed by the Board, which differs from the meeting date. These are official calendar links; the linked contents have not been ingested as verified publication results or numeric projections. Participant projections are conditional assessments, not market pricing or a promise of future policy.</p><p>Source: Board of Governors of the Federal Reserve System. <a href="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" target="_blank" rel="noopener noreferrer">FOMC calendar and official materials ↗</a></p>`,source?.documents?.length?button('Download policy references','data-export-fomc'): '');
 }
 export function creditContextPage(sources=dataStatus.sources,calendarSource=dataStatus.calendar?.sources?.fomc){
   return heading('Credit & policy transmission','How do bank balances, lending conditions and Federal Reserve funding context differ?',button('Download data','data-export-credit'))
     +`<p class="section-copy">${esc(CREDIT_CONTEXT_LIMITATION)}</p>`
     +`<p class="section-copy">Charts and data downloads show the latest three years per source group, using exact dates. Open a measurement for its full retained history.</p>`+creditContextGroups.map((group,index)=>groupPanel(group,index,sources)).join('')
-    +`<p class="panel-note"><a href="#/economy?family=policy">Policy rates · FOMC decisions, minutes & projections ↗</a>. The complete official reference list is grouped with policy-rate observations.</p>`;
+    +(`<p class="panel-note"><a href="#/economy?family=policy">Policy rates · FOMC decisions, `+
+  `minutes & projections</a>. The complete official reference list is grouped with `+
+  `policy-rate observations.</p>`);
 }
 
 export function creditContextCsv(sources){

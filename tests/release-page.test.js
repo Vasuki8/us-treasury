@@ -13,7 +13,7 @@ test('release comparison names its preset pair while its return preserves the co
  const contextual={...state,selected:selection,window:'custom',startDate:'2025-01-01',endDate:'2026-06-01',returnTo:origin};
  const html=api.releasePage(contextual,{archive,publicationState:{status:'ready'},events:[event]});
  const action=[...html.matchAll(/<a class="action" href="([^"]+)">([^<]+)<\/a>/g)].find(([,href])=>href.startsWith('#/explore?'));
- assert.ok(action);assert.equal(action[2],'COMPARE WITH UNEMPLOYMENT');
+ assert.ok(action);assert.equal(action[2],'Compare with unemployment');
  const comparison=parseRoute(action[1].replaceAll('&amp;','&'));
  assert.deepEqual(comparison.selected,['claimsAdvance','unrate']);
  const returning=parseRoute(comparison.returnTo);assert.deepEqual(returning.selected,selection);assert.equal(returning.returnTo,origin);
@@ -43,7 +43,8 @@ test('GDP workspace uses only the selected publication explanation and labels it
 });
 test('matched release offers a calendar return with the original filters',()=>{
  const html=api.releasePage({...state,calendarMonth:'2026-03',day:'2026-03-19',calendarTopic:'Labor',watchOnly:true},{archive,publicationState:{status:'ready'},events:[event]});
- assert.match(html,/RETURN TO CALENDAR/);assert.match(html,/href="#\/calendar\?month=2026-03&amp;day=2026-03-19&amp;calendarTopic=Labor&amp;watch=1&amp;event=claims-test"/);
+ assert.match(html,/Return to calendar/);assert.match(html,
+  /href="#\/calendar\?month=2026-03&amp;day=2026-03-19&amp;calendarTopic=Labor&amp;watch=1&amp;event=claims-test"/);
 });
 test('a GDP not-open-for-revision record stays an unchanged confirmation in the release workspace',async()=>{
  const {publicationArchive}=await import('../src/publication-archive.js');

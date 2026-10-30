@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createOverviewDisclosureMemory} from '../src/overview-disclosures.js';
 import {metrics,seriesTable} from '../src/ui.js';
-import {getSeries,formatChange} from '../src/model.js';
+import {getSeries,formatChange,formatValue} from '../src/model.js';
 import {measurementChange} from '../src/measurement-change.js';
 const api=await import('../src/page-hierarchy.js').catch(error=>{if(error.code==='ERR_MODULE_NOT_FOUND')return {};throw error;});
 const node=(key,open,overview=false)=>({dataset:overview?{overviewDisclosure:key}:{pageDisclosure:key},open});
@@ -30,7 +30,9 @@ test('headline and table changes retain units and prior period without repeating
  assert.equal(reading,`Growth-rate change ${formatChange(current)} vs ${change.priorPeriod}`);
  assert.ok(html.includes(`title="${change.text}"`),'complete explanation remains available');
  assert.ok(seriesTable(['gdp']).includes(`>${reading}</td>`));
- const payroll=getSeries('payroll');assert.ok(metrics(['payroll']).includes(`>Change in gains ${formatChange(payroll)} vs ${measurementChange(payroll).priorPeriod}</span>`));
+ const payroll=getSeries('payroll'),prior=payroll.observations.at(-2);
+ const payrollReading=metrics(['payroll']).match(/class="metric-change"[^>]*>([^<]+)<\/span>/)?.[1];
+ assert.equal(payrollReading,`Prior month: ${formatValue(payroll,prior.value)}`);
 });
 
 test('an unavailable prior comparison stays explicit in compact metric readings',()=>{

@@ -43,7 +43,7 @@ test('new market freezes retain every source date and generate full specialist C
  assert.equal(file.content,again.content);assert.match(file.content,/2016-03-01/);assert.match(file.content,/2018-04-02/);
  assert.deepEqual(restored.context.moduleSources.marketFunctioning,JSON.parse(canonicalJson(input)));
  const html=researchPage(parseRoute('#/research?view=packages&package='+pkg.id),{library:{packages:[restored]}});
- assert.match(html,/FROZEN SOFR RATE DISTRIBUTION/);assert.match(html,/data-package-attachment="0"/);assert.match(html,/generated.*full.retained/i);
+ assert.match(html,/FROZEN SOFR RATE DISTRIBUTION/i);assert.match(html,/data-package-attachment="0"/);assert.match(html,/generated.*full.retained/i);
  assert.throws(()=>packages.researchPackageAttachment(restored,1),/unavailable/i);
  assert.throws(()=>packages.researchPackageAttachment({...restored},0),/validated/i);
 });

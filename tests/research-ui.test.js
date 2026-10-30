@@ -3,10 +3,14 @@ import {renderPage} from '../src/pages.js';import {series} from '../src/data.js'
 import {parseRoute,routeFor} from '../src/router.js';
 import {toCsv} from '../src/model.js';import {parseCsv} from '../scripts/sources/http.mjs';
 
-test('growth and changes calculated from official levels are labeled calculated in details and CSV',()=>{
+test('growth and changes from official levels are labeled Derived in details and retain calculated CSV provenance',()=>{
  for(const id of ['payroll','cpi','pce','wages','retail']){
   assert.equal(series[id].observationType,'calculated',id);
-  assert.match(renderPage(parseRoute(`#/series/${id}`)),/Calculated metric/,id);
+  const html=renderPage(parseRoute(`#/series/${id}`));
+  const details=html.slice(html.indexOf(`data-page-disclosure="indicator:source:${id}"`));
+  const facts=new Map([...details.matchAll(/<dt>([^<]+)<\/dt><dd[^>]*>([^<]*)<\/dd>/g)]
+   .map(([,label,value])=>[label,value]));
+  assert.equal(facts.get('Measurement'),'Derived',id);
   const [headers,row]=parseCsv(toCsv([id],{range:1}));
   assert.equal(row[headers.indexOf('observation_type')],'calculated',id);
  }
@@ -25,7 +29,9 @@ test('indicator exposes all retained SOFR history and exact dates shared by char
 test('catalog related context and return links preserve search settings',()=>{
  const origin=routeFor({...parseRoute('#/explore'),query:'Treasury',window:'all'});
  const detail=renderPage(parseRoute('#/series/publicDebt?return='+encodeURIComponent(origin)));
- assert.match(detail,/BACK TO RESULTS/);assert.match(detail,/Treasury|Fiscal/);assert.doesNotMatch(detail,/href="#\/series\/payroll"/);
+ const back=detail.match(/<nav\b[^>]*aria-label="Return to workspace"[^>]*>([^]*?)<\/nav>/)?.[1]??'';
+ const href=back.match(/href="([^"]+)"/)?.[1]?.replaceAll('&amp;','&');
+ assert.equal(href,origin);assert.match(detail,/Treasury|Fiscal/);assert.doesNotMatch(detail,/href="#\/series\/payroll"/);
  const comparison=renderPage({...parseRoute('#/explore'),exploreMode:'compare',window:'all',selected:['sofr','effr']});
  assert.match(comparison,/href="#\/series\/sofr\?[^\"]*window=all[^\"]*return=/,'comparison builder keeps its date and return context');
 });

@@ -16,17 +16,17 @@ test('reading groups identify native content and escape labels without replacing
  assert.doesNotMatch(html,/<details/);
 });
 
-test('Overview distinguishes calculated readings and preserves native units without repeating routine official labels',()=>{
+test('Overview keeps native reading units and moves derivation labels out of the cards',()=>{
  const html=overviewPage({saved:[]});
  const fiscal=html.match(/<a class="oh-reading" data-overview-reading="interestRevenueRatio"[\s\S]*?<\/a>/)?.[0];
  assert.ok(fiscal);
- assert.match(fiscal,/class="reading-basis">Calculated measure/);
+ assert.doesNotMatch(fiscal,/Calculated measure|Calculated metric/);
  const gdp=html.match(/<a class="oh-reading" data-overview-reading="gdp"[\s\S]*?<\/a>/)?.[0];
  assert.ok(gdp);
  assert.doesNotMatch(gdp,/Calculated measure/);
  assert.match(gdp,/reading-unit/);
  assert.match(gdp,/q\/q SAAR/);
- assert.ok(html.indexOf('ECONOMIC CONDITIONS')<html.indexOf('MOMENTUM'));
+ assert.ok(html.indexOf('class="oh-snapshot"')<html.indexOf('class="oh-momentum"'));
 });
 
 test('Labor headlines retain explicit native units and adjustments beside each measurement',()=>{

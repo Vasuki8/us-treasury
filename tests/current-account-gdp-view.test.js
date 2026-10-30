@@ -1,3 +1,4 @@
+import {humanTimestamp} from '../src/ui-time.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {currentAccountGdpFixture} from './helpers/current-account-gdp-fixture.js';
@@ -8,10 +9,10 @@ const copy=currentAccountGdpFixture;
 test('Graphite ratio panel labels the calculation, matching quarter, SAAR conversion and percentage-point change',()=>{
  assert.equal(typeof view.currentAccountGdpPanel,'function');
  const html=view.currentAccountGdpPanel(copy());
- assert.match(html,/CURRENT ACCOUNT \/ NOMINAL GDP/);assert.match(html,/Calculated metric/);
+ assert.match(html,/CURRENT ACCOUNT \/ NOMINAL GDP/i);assert.match(html,/Derived/);
  assert.match(html,/-3\.02%/);assert.match(html,/8,140\.7575/);assert.match(html,/32,563\.030/);
  assert.match(html,/percentage points/);assert.match(html,/SAAR/);assert.match(html,/100 ×/);
- assert.match(html,/2026-10-23T04:21:42\.080Z/);assert.match(html,/2026-10-23T02:56:31\.625Z/);
+ assert.match(html,new RegExp(humanTimestamp("2026-10-23T04:21:42.080Z")));assert.match(html,new RegExp(humanTimestamp("2026-10-23T02:56:31.625Z")));
  assert.match(html,/different retrieval vintages/);assert.match(html,/data-export-current-account-gdp/);
  assert.match(html,/GDP publication date.*unknown/i);assert.match(html,/Source: U.S. Bureau of Economic Analysis/);
 });
@@ -45,6 +46,7 @@ test('CSV preserves missing denominators and neutralizes untrusted metadata, wit
  const [header,...rows]=parseCsv(view.currentAccountGdpCsv(sources)),current=Object.fromEntries(header.map((key,index)=>[key,rows.at(-1)[index]]));
  assert.equal(current.value_percent,'');assert.equal(current.denominator_saar_value,'');assert.equal(current.missing,'true');
  assert.equal(current.denominator_source_title,"'=UNTRUSTED()");
- const html=view.currentAccountGdpPanel(copy(),{frozen:true});assert.match(html,/FROZEN CURRENT ACCOUNT/);assert.doesNotMatch(html,/data-export-current-account-gdp/);assert.match(html,/recorded inputs/i);
+ const html=view.currentAccountGdpPanel(copy(),{frozen:true});assert.match(html,/FROZEN CURRENT ACCOUNT/i);assert.doesNotMatch(html,
+  /data-export-current-account-gdp/);assert.match(html,/recorded inputs/i);
  assert.doesNotMatch(html,/latest revised BEA|latest-quarter context/i);
 });

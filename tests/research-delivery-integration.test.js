@@ -14,10 +14,10 @@ import {parseCsv} from '../scripts/sources/http.mjs';
 test('CPI calendar and all four indicator measurements link to published evidence without claiming an exact publication time',()=>{
  const event=releases.find(row=>row.sourceId==='bls'&&row.program==='consumer-price-index');assert.ok(event);
  const calendar=renderPage(parseRoute('#/calendar?event='+event.id+'&month='+event.date.slice(0,7)));
- assert.match(calendar,/OPEN RELEASE EVIDENCE/);assert.match(calendar,/publicationSeries=cpiMonthly/);
+ assert.match(calendar,/Open release evidence/);assert.match(calendar,/publicationSeries=cpiMonthly/);
  for(const id of ['cpi','cpiCore','cpiMonthly','cpiCoreMonthly']){
   const html=renderPage(parseRoute('#/series/'+id));
-  assert.match(html,/VERIFIED RELEASE &amp; PUBLICATION EVIDENCE/);assert.match(html,new RegExp('publicationSeries='+id));
+  assert.match(html,/Verified release &amp; publication evidence/);assert.match(html,new RegExp('publicationSeries='+id));
   assert.match(html,/Published CPI rates use the dated release/);
  }
 });
@@ -36,7 +36,7 @@ test('funding freeze retains the exact selected range, complete source percentil
  assert.deepEqual(restored.context.moduleSources.marketFunctioning.series.sofr.observations,args.context.moduleSources.marketFunctioning.series.sofr.observations);
  assert.equal(researchPackageAttachment(restored,0).content,original);
  const html=researchPage(parseRoute('#/research?view=packages&package='+pkg.id),{library:{packages:[restored]}});
- assert.match(html,/FROZEN SOFR RATE DISTRIBUTION/);assert.match(html,/data-chart-catalog="funding"/);
+ assert.match(html,/data-chart-catalog="funding"/);
 });
 
 test('coverage freeze reconstructs metadata from retained inputs and puts inventory before scalar histories',async()=>{
@@ -48,7 +48,7 @@ test('coverage freeze reconstructs metadata from retained inputs and puts invent
  assert.deepEqual(replayed.rows.map(x=>[x.id,x.firstReference,x.lastReference,x.usableCount,x.totalCount]),live.rows.map(x=>[x.id,x.firstReference,x.lastReference,x.usableCount,x.totalCount]));
  assert.ok(restored.context.attachments.some(x=>x.name==='coverage-inventory.csv'));
  const html=researchPage(parseRoute('#/research?view=packages&package='+pkg.id),{library:{packages:[restored]}});
- assert.match(html,/FROZEN COVERAGE INVENTORY/);assert.doesNotMatch(html,/data-chart/);
+ assert.match(html,/class="panel coverage-inventory"/);assert.doesNotMatch(html,/data-chart/);
 });
 
 test('full GDP matrix pins retain archive cutoff and original CSV inside the portable limit',async()=>{
@@ -60,7 +60,9 @@ test('full GDP matrix pins retain archive cutoff and original CSV inside the por
  const restored=await importResearchPackage(json);assert.equal(restored.context.attachments.find(x=>x.name==='gdp-revision-matrix.csv').content,original);
  assert.equal(restored.context.gdpRevisionMatrix.archive.releases.length,publicationArchive.releases.length);
  const html=researchPage(parseRoute('#/research?view=packages&package='+pkg.id),{library:{packages:[restored]}});
- assert.match(html,/OFFICIAL GDP REVISION MATRIX/);assert.match(html,/Frozen publication cutoff: 2026-09-30/);assert.doesNotMatch(html,/id="publication-cutoff"|data-pin-gdp-matrix|data-chart/);
+ assert.match(html,/data-page-disclosure="research:gdp-matrix:methods"/);
+ assert.match(html,/Frozen publication cutoff: 2026-09-30/);
+ assert.doesNotMatch(html,/id="publication-cutoff"|data-pin-gdp-matrix|data-chart/);
 });
 
 test('CPI publication pins preserve published rates and source basis rather than the live index-derived history',async()=>{

@@ -18,7 +18,7 @@ test('Trade & current account is discoverable and all six official balances keep
  assert.match(routeFor(state),/family=external/);
  for(const id of Object.keys(currentAccountRegistry)){assert.equal(registry[id].comparisonClass,'balance');assert.equal(registry[id].agency,'beaIta');}
  const html=renderPage({...state,saved:[]});
- assert.match(html,/CURRENT ACCOUNT · ACCOUNTING CHANGES/);assert.match(html,/not annualized/);assert.match(html,/NIPA/);
+ assert.match(html,/CURRENT ACCOUNT · ACCOUNTING CHANGES/i);assert.match(html,/not annualized/);assert.match(html,/NIPA/);
  assert.match(await readFile(new URL('../index.html',import.meta.url),'utf8'),/href="#\/economy\?family=external"/);
  assert.deepEqual(relevantRefreshIds(state,series),['data:beaIta','data:bea']);
 });
@@ -38,5 +38,5 @@ test('frozen external context retains exact current/prior inputs, dataset releas
  const pkg=await createResearchPackage({name:'Official current-account accounting',...args}),json=exportResearchPackage(pkg),restored=await importResearchPackage(json);
  assert.equal(exportResearchPackage(restored),json);
  const html=renderPage({...parseRoute('#/research?view=packages'),packageId:pkg.id},{library:{packages:[restored],workspaces:[]}});
- assert.match(html,/FROZEN CURRENT ACCOUNT/);assert.doesNotMatch(html,/data-export-current-account/);
+ assert.match(html,/FROZEN CURRENT ACCOUNT/i);assert.doesNotMatch(html,/data-export-current-account/);
 });

@@ -11,7 +11,7 @@ import {currentAccountGdpContext} from '../src/current-account-gdp.js';
 
 test('external family exposes calculated GDP ratio and an accessible scoped CSV action',async()=>{
  const html=renderPage({...parseRoute('#/economy?family=external'),saved:[]});
- assert.match(html,/CURRENT ACCOUNT \/ NOMINAL GDP/);assert.match(html,/data-export-current-account-gdp/);
+ assert.match(html,/CURRENT ACCOUNT \/ NOMINAL GDP/i);assert.match(html,/data-export-current-account-gdp/);
  assert.doesNotMatch(renderPage({...parseRoute('#/economy?family=prices'),saved:[]}),/data-export-current-account-gdp/);
  const app=await readFile(new URL('../src/app.js',import.meta.url),'utf8');
  assert.match(app,/exportCurrentAccountGdp/);assert.match(app,/currentAccountGdpCsv\(dataStatus.sources\)/);
@@ -28,7 +28,7 @@ test('frozen external result retains only exact current/prior GDP, original inpu
  const pkg=await createResearchPackage({name:'Ratio with exact GDP inputs',...args}),original=exportResearchPackage(pkg),imported=await importResearchPackage(original);
  assert.equal(exportResearchPackage(imported),original);
  const html=renderPage({...parseRoute('#/research?view=packages'),packageId:pkg.id},{library:{packages:[imported],workspaces:[]}});
- assert.match(html,/FROZEN CURRENT ACCOUNT \/ NOMINAL GDP/);
+ assert.match(html,/FROZEN CURRENT ACCOUNT \/ NOMINAL GDP/i);
  assert.ok(html.includes(Number.isFinite(ratio.current.value)?ratio.current.value.toFixed(2)+'%':'Unavailable'));
  assert.doesNotMatch(html,/data-export-current-account-gdp/);
 });
@@ -45,5 +45,5 @@ test('a later GDP revision changes new context without rewriting an old package 
  context.attachments=context.attachments.filter(file=>!['current-account-gdp.csv','current-account-gdp-history.csv'].includes(file.name));
  const legacy=await createResearchPackage({name:'Legacy current-account package',...args,context});
  const html=renderPage({...parseRoute('#/research?view=packages'),packageId:legacy.id},{library:{packages:[legacy],workspaces:[]}});
- assert.doesNotMatch(html,/FROZEN CURRENT ACCOUNT \/ NOMINAL GDP/);
+ assert.doesNotMatch(html,/FROZEN CURRENT ACCOUNT \/ NOMINAL GDP/i);
 });

@@ -13,12 +13,13 @@ const exportsBySection={
 
 test('current-account default leads with exact-quarter accounting and native history without advanced charts',()=>{
  const html=macroCoveragePage(parseRoute('#/economy?family=external'));
- for(const text of ['CURRENT ACCOUNT · ACCOUNTING CHANGES','CURRENT ACCOUNT / NOMINAL GDP','FOCUSED HISTORY','exact preceding quarter','not annualized'])assert.ok(html.includes(text),text);
+ for(const text of ['CURRENT ACCOUNT · ACCOUNTING CHANGES','CURRENT ACCOUNT / NOMINAL GDP','FOCUSED HISTORY','exact preceding quarter',
+  'not annualized'])assert.ok(html.toLowerCase().includes(text.toLowerCase()),text);
  assert.equal((html.match(/<div class="chart"[^>]*\sdata-chart(?:\s|>)/g)??[]).length,1);
- assert.doesNotMatch(html,/data-chart-catalog="current-account-gdp-|LATEST TOPIC READINGS/);
- assert.ok(html.indexOf('id="macro-measure"')<html.indexOf('CURRENT ACCOUNT · ACCOUNTING CHANGES'));
- assert.ok(html.indexOf('CURRENT ACCOUNT · ACCOUNTING CHANGES')<html.indexOf('CURRENT ACCOUNT / NOMINAL GDP'));
- assert.ok(html.indexOf('FOCUSED HISTORY')<html.indexOf('CURRENT ACCOUNT / NOMINAL GDP'));
+ assert.doesNotMatch(html,/data-chart-catalog="current-account-gdp-|LATEST TOPIC READINGS/i);
+ assert.ok(html.indexOf('id="macro-measure"')<html.toLowerCase().indexOf('current account · accounting changes'));
+ assert.ok(html.toLowerCase().indexOf('current account · accounting changes')<html.toLowerCase().indexOf('current account / nominal gdp'));
+ assert.ok(html.toLowerCase().indexOf('focused history')<html.toLowerCase().indexOf('current account / nominal gdp'));
  assert.match(html,/<nav[^>]+aria-label="Current-account sections"/);
  for(const label of ['Summary','Trends','Decomposition','Data &amp; methods'])assert.ok(html.includes(`>${label}</a>`),label);
  assert.match(html,/<a[^>]+aria-current="page"[^>]*>Summary<\/a>/);
@@ -27,11 +28,14 @@ test('current-account default leads with exact-quarter accounting and native his
 test('advanced current-account calculations and exports remain reachable in their focused section',()=>{
  const html=Object.fromEntries(['summary','trends','decomposition','methods'].map(view=>[view,render(view)]));
  for(const [view,exports]of Object.entries(exportsBySection))for(const action of exports)assert.match(html[view],new RegExp(`${action}(?:[\\s=>])`),`${view}: ${action}`);
- for(const title of ['HISTORICAL CURRENT ACCOUNT / GDP','QUARTERLY VS TRAILING FOUR QUARTERS','HISTORICAL CURRENT ACCOUNT / GDP · BREAKDOWN','TRAILING FOUR QUARTERS · CURRENT ACCOUNT / GDP'])assert.ok(html.trends.includes(title),title);
- for(const title of ['COMPONENT CONTRIBUTIONS TO RATIO CHANGES','BALANCE CHANGES VS GDP-DENOMINATOR EFFECTS','ALL-COMPONENT BALANCE &amp; GDP EFFECT COMPARISON','COMPONENT BALANCE &amp; GDP EFFECT HISTORY'])assert.ok(html.decomposition.includes(title),title);
- assert.doesNotMatch(html.trends,/COMPONENT CONTRIBUTIONS TO RATIO CHANGES|CURRENT ACCOUNT · ACCOUNTING CHANGES/);
- assert.doesNotMatch(html.decomposition,/QUARTERLY VS TRAILING FOUR QUARTERS|FOCUSED HISTORY/);
- assert.match(html.methods,/LATEST TOPIC READINGS|DATA &amp; METHODS/);
+ for(const title of ['HISTORICAL CURRENT ACCOUNT / GDP','QUARTERLY VS TRAILING FOUR QUARTERS','HISTORICAL CURRENT ACCOUNT / GDP · BREAKDOWN',
+  'TRAILING FOUR QUARTERS · CURRENT ACCOUNT / GDP'])assert.ok(html.trends.toLowerCase().includes(title.toLowerCase()),title);
+ for(const title of ['COMPONENT CONTRIBUTIONS TO RATIO CHANGES','BALANCE CHANGES VS GDP-DENOMINATOR EFFECTS',
+  'ALL-COMPONENT BALANCE &amp; GDP EFFECT COMPARISON','COMPONENT BALANCE &amp; GDP EFFECT HISTORY'])assert.ok(html.decomposition.toLowerCase
+  ().includes(title.toLowerCase()),title);
+ assert.doesNotMatch(html.trends,/COMPONENT CONTRIBUTIONS TO RATIO CHANGES|CURRENT ACCOUNT · ACCOUNTING CHANGES/i);
+ assert.doesNotMatch(html.decomposition,/<h2\b[^>]*>(?:<span[^>]*>[^<]*<\/span>)?(?:Quarterly vs trailing four quarters|Focused history)/i);
+ assert.match(html.methods,/LATEST TOPIC READINGS|DATA &amp; METHODS/i);
  assert.match(html.methods,/GDP.*divided by four|GDP.*÷ 4/i);
  assert.match(html.methods,/first.release|first.publication/i);
  assert.match(html.methods,/CSV|exports/i);
@@ -57,7 +61,7 @@ test('Summary keeps history controls compact with selected context visible and v
  assert.doesNotMatch(disclosure.split('>')[0],/\bopen\b/,'Valid Summary history controls start closed');
  assert.match(disclosure,/<summary>History controls · [^<]*Services[^<]*2024-04-01[^<]*2025-01-01<\/summary>/i);
  for(const id of ['macro-family','macro-measure','window-start','window-end'])assert.ok(disclosure.includes(`id="${id}"`),id);
- assert.ok(summary.indexOf(disclosure)<summary.indexOf('CURRENT ACCOUNT · ACCOUNTING CHANGES'));
+ assert.ok(summary.indexOf(disclosure)<summary.toLowerCase().indexOf('current account · accounting changes'));
  for(const view of ['trends','decomposition','methods'])assert.doesNotMatch(render(view),/<summary>History controls/);
  const invalid=render('summary','&window=custom&start=2025-01-01&end=2024-04-01');
  assert.match(invalid,/<details class="supporting-details"[^>]*\bopen\b[^>]*><summary>History controls/);
@@ -86,9 +90,9 @@ test('section links and indicator detail returns retain the selected measure, se
 
 test('invalid external section falls back to summary and does not alter other family workspaces',()=>{
  const html=render('unknown');
- assert.match(html,/CURRENT ACCOUNT · ACCOUNTING CHANGES/);
+ assert.match(html,/CURRENT ACCOUNT · ACCOUNTING CHANGES/i);
  assert.doesNotMatch(html,/data-chart-catalog="current-account-gdp-/);
  const prices=macroCoveragePage({...parseRoute('#/economy?family=prices'),externalView:'decomposition'});
- assert.match(prices,/LATEST TOPIC READINGS|FOCUSED HISTORY/);
- assert.doesNotMatch(prices,/Current-account sections|CURRENT ACCOUNT · ACCOUNTING CHANGES|data-chart-catalog="current-account-gdp-/);
+ assert.match(prices,/LATEST TOPIC READINGS|FOCUSED HISTORY/i);
+ assert.doesNotMatch(prices,/Current-account sections|CURRENT ACCOUNT · ACCOUNTING CHANGES|data-chart-catalog="current-account-gdp-/i);
 });

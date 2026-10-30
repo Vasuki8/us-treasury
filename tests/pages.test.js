@@ -23,7 +23,7 @@ test('Labor links directly to its next retained employment schedule with honest 
  assert.ok(next,'retained employment schedule covers the test date');
  const html=render({page:'labor'});
  assert.ok(html.includes(encodeURIComponent(next.id)));assert.ok(html.includes(next.date));
- assert.match(html,/NEXT EMPLOYMENT RELEASE/);assert.match(html,/Schedule only/);
+ assert.match(html,/Next employment release/);assert.match(html,/Schedule only/);
 });
 
 test('Overview keeps a compact followed-measure monitor with checkpoint-specific update semantics',()=>{
@@ -66,16 +66,16 @@ test('Treasury yield guidance stays ongoing without adding dated releases or inh
     const panel = timingPanel(november);
     assert.ok(panel, 'ongoing timing has its own visible panel');
     assert.equal(timingPanel(december), panel, 'dated filters must not turn general guidance into a dated promise');
-    assert.match(panel, /ONGOING TIMING/);
+    assert.match(panel, /Ongoing timing/);
     assert.match(panel, /usually available by <strong[^>]*>18:00 Eastern Time/);
     assert.match(panel, /each trading day/);
     assert.match(panel, /Publication can be delayed/);
     assert.match(panel, /Office of Debt Management/);
-    assert.match(panel, /2026-10-21T12:05:00Z/);
+    assert.match(panel, /8:05 am ET, 21 Oct/);
     assert.match(panel, /href="#\/series\/yield"/);
     assert.doesNotMatch(panel, /SCHEDULED|RELEASED|2026-11-06|2026-12-04|data-event=|15:30/);
     assert.equal((november.match(/class="calendar-event/g) || []).length, 1);
-    assert.match(november, /1 EVENTS/);
+    assert.match(november, /1 events/);
     assert.match(november, /<dt>Captured events<\/dt><dd>2<\/dd>/);
   });
 });
@@ -87,7 +87,7 @@ test('Treasury ongoing timing follows Rates and yield watchlist filters even whe
       assert.ok(timingPanel(html));
       assert.match(html, /<option value="Rates"/);
       if (filters.calendarTopic === 'Rates') {
-        assert.match(html, /0 EVENTS/);
+        assert.match(html, /0 events/);
         assert.doesNotMatch(html, /class="calendar-event/);
       }
     }
@@ -103,13 +103,13 @@ test('yield detail shows independently cached timing beside unchanged observatio
     const html = render({ page: 'indicator', seriesId: 'yield', tab: 'data' });
     const panel = timingPanel(html);
     assert.ok(panel, 'timing is visible without opening methodology');
-    assert.match(panel, /CACHED TIMING/);
+    assert.match(panel, /Cached timing/);
     assert.match(panel, /usually available by/);
     assert.match(panel, /HTTP 503 &lt;retry&gt;/);
     assert.match(panel, /Timing &lt;guidance&gt; only/);
     assert.match(panel, /Delay &lt;possible&gt;/);
     assert.match(panel, /Timing source retrieved/);
-    assert.match(panel, /2026-10-21T12:05:00Z/);
+    assert.match(panel, /8:05 am ET, 21 Oct/);
     assert.ok(html.includes(getSeries('yield').fetchedAt));
     assert.ok(html.includes(formatValue(getSeries('yield'), latest(getSeries('yield'))?.value)));
     assert.doesNotMatch(html, /<retry>|<guidance>|<possible>/);
@@ -126,10 +126,12 @@ test('initial timing failure stays unavailable without presenting an uncaptured 
       for (const state of [{ page: 'calendar',calendarView:'treasury' }, { page: 'indicator', seriesId: 'yield' }]) {
         const html = render(state), panel = timingPanel(html);
         assert.ok(panel);
-        assert.match(panel, /TIMING UNAVAILABLE/);
+        assert.match(panel, /Timing unavailable/);
         assert.match(panel, /No successful retrieval/);
-        assert.doesNotMatch(html, /18:00 Eastern Time|usually available|CACHED TIMING|CAPTURED TIMING/,'An attempted-retrieval clock does not establish an availability deadline');
-        if(calendar===failed.calendar)assert.match(panel,/Last attempt[\s\S]*2026-10-28T18:00:00\.000Z/,'The real failed-attempt timestamp stays visible even when its clock reads 18:00');
+        assert.doesNotMatch(html,/18:00 Eastern Time|usually available|Cached timing|Captured timing/,
+          'An attempted-retrieval clock does not establish an availability deadline');
+        if(calendar===failed.calendar)assert.match(panel,/Last attempt[\s\S]*2:00 pm ET, 28 Oct/,
+          'The real failed-attempt timestamp stays visible even when its clock reads 18:00');
       }
     });
   }
@@ -150,10 +152,10 @@ test('overview leads with eight dated readings and keeps momentum, catalysts and
  assert.match(html,/data-series="pceMonthly,pceCoreMonthly"/);
  assert.match(html,/data-series="payrollAverage3m"/);
  assert.doesNotMatch(html,/data-chart[^>]*data-series="(?:pceMonthly|payroll),unrate"/);
- assert.match(html,/data-overview-disclosure="publications"/);assert.match(html,/NEXT CATALYSTS/);
- assert.ok(html.indexOf('class="oh-topic-grid"')<html.indexOf('NEXT CATALYSTS'));
+ assert.match(html,/data-overview-disclosure="publications"/);assert.match(html,/Next catalysts/);
+ assert.ok(html.indexOf('class="oh-topic-grid"')<html.indexOf('Next catalysts'));
  assert.ok(html.indexOf('class="oh-topic-grid"')<html.indexOf('class="oh-momentum"'));
- assert.ok(html.indexOf('class="oh-momentum"')<html.indexOf('NEXT CATALYSTS'));
+ assert.ok(html.indexOf('class="oh-momentum"')<html.indexOf('Next catalysts'));
  assert.doesNotMatch(html,/Source health, coverage and methodology/);
  assert.match(html,/Collection failures and retained-source status are in Refresh details above/);
  assert.doesNotMatch(html,/synthetic|sample week|sample observations/i);
@@ -188,8 +190,8 @@ test('one employment release matches every related watchlist series and links th
     for (const id of ['unrate', 'payroll', 'participation', 'wages']) {
       const html = render({ page: 'calendar', calendarMonth: '2026-11', watchOnly: true, saved: [id] });
       assert.equal((html.match(/class="calendar-event/g) || []).length, 1);
-      assert.match(html, /Observation period not supplied/i);
-      assert.match(html, /08:30 EST/);
+      assert.doesNotMatch(html, /Observation period not supplied/i);
+      assert.match(html, /8:30 am ET/);
       for (const related of ['unrate', 'payroll', 'participation', 'wages']) assert.ok(html.includes(`href="#/series/${related}?`));
       assert.match(html, /href="https:\/\/www\.bls\.gov\/schedule\/news_release\/bls\.ics"/);
     }
@@ -199,10 +201,10 @@ test('one employment release matches every related watchlist series and links th
 test('cached calendar capture and partial agency failures stay distinct from observation retrievals', () => {
   withCalendar([calendarEvent()], calendarFixture, () => {
     const html = render({ page: 'calendar', calendarMonth: '2026-11' });
-    assert.match(html, /CACHED SCHEDULE/);
+    assert.match(html, /Cached schedule/);
     assert.match(html, /BLS retained; BEA unavailable\./);
-    assert.match(html, /2026-10-20T12:00:00Z/);
-    assert.match(html, /2026-10-21T12:00:00Z/);
+    assert.match(html, /8:00 am ET, 20 Oct/);
+    assert.match(html, /8:00 am ET, 21 Oct/);
     assert.match(html, /HTTP 503/);
     assert.match(html, /No response/);
     assert.doesNotMatch(html, />OUT<|>NEXT<|>Released</i);
@@ -220,8 +222,8 @@ test('calendar groups only the selected month and uses bounded month and day sel
     assert.match(html, /id="calendar-month"/);
     assert.match(html, /id="calendar-day"/);
     assert.doesNotMatch(html, /data-day=/);
-    assert.match(html, /Nov 1, 2026/);
-    assert.doesNotMatch(html, /class="calendar-day"[^]*Oct 31, 2026/);
+    assert.match(html, /1 Nov 2026/);
+    assert.doesNotMatch(html, /class="calendar-day"[^]*31 Oct 2026/);
     const selectedDay = render({ page: 'calendar', calendarMonth: '2026-11', day: '2026-11-06' });
     assert.equal((selectedDay.match(/class="calendar-event/g) || []).length, 1);
   });
@@ -235,7 +237,7 @@ test('overview release watch selects upcoming ET dates rather than old schedule 
     const html = render();
     assert.doesNotMatch(html, /Past release|Elapsed today|Future release 5|Future release 40/);
     for (const days of [1, 2, 3, 4]) assert.ok(html.includes(`Future release ${days}`));
-    assert.match(html, /CACHED SCHEDULE/);
+    assert.match(html, /Cached schedule/);
     assert.doesNotMatch(html, />OUT<|>NEXT</);
   });
 });
@@ -245,7 +247,7 @@ test('calendar preserves an authoritative period label and shows daylight saving
   withCalendar([calendarEvent({ id: 'bea-pio', sourceId: 'bea', agency: 'BEA', name: 'Personal Income and Outlays, September 2026', seriesId: 'pce', seriesIds: ['pce'], topic: 'Prices', date: '2026-10-15', scheduledAt: '2026-10-15T12:30:00Z', periodLabel: 'September 2026', sourceUrl: 'https://www.bea.gov/news/schedule/ics/online-calendar-subscription.ics' })], calendar, () => {
     const html = render({ page: 'calendar', calendarMonth: '2026-10' });
     assert.match(html, /September 2026/);
-    assert.match(html, /08:30 EDT/);
+    assert.match(html, /8:30 am ET/);
     assert.match(html, /Bureau of Economic Analysis/);
     assert.doesNotMatch(html, /Observation period not supplied/);
   });
@@ -260,7 +262,7 @@ test('Census retail schedule events match the retail watchlist and retain the or
     assert.match(html, /U\.S\. Census Bureau, Advance Monthly Retail Trade Survey/);
     assert.match(html, /Individually listed date on the official agency schedule/);
     assert.match(html, /October 2026/);
-    assert.doesNotMatch(html, /AGENCY RULE/);
+    assert.doesNotMatch(html, /Agency rule/);
   });
 });
 
@@ -274,11 +276,12 @@ test('DOL agency-rule dates match claims watchlists and explain their basis with
     for (const [month, timezone] of [['2026-10', 'EDT'], ['2026-11', 'EST']]) {
       const html = render({ page: 'calendar', calendarMonth: month, watchOnly: true, saved: ['claims'], calendarTopic: 'Labor' });
       assert.equal((html.match(/class="calendar-event/g) || []).length, 1);
-      assert.match(html, /AGENCY RULE/);
-      assert.match(html, /<span class="table-code muted">AGENCY RULE · Observation period not supplied · DOL<\/span>/);
+      assert.match(html, /Agency rule/);
+      assert.match(html, /data-event="dol-/);
+      assert.doesNotMatch(html, /Observation period not supplied/);
       assert.match(html, /Thursday at 08:30 Eastern Time/);
-      assert.match(html, new RegExp(`08:30 ${timezone}`));
-      assert.match(html, /Observation period not supplied/);
+      assert.match(html, /8:30 am ET/);
+      assert.doesNotMatch(html, /Observation period not supplied/);
       assert.match(html, /Department of Labor, Employment and Training Administration/);
       assert.match(html, /href="#\/series\/claims\?[^"]*return=/);
       assert.match(html, /agency &lt;rule&gt;/);
@@ -292,16 +295,17 @@ test('DOL individually posted exceptions identify the nominal Thursday while cac
   const source = { status: 'ok', fetchedAt: '2026-10-21T12:00:00Z', warnings: [] };
   withCalendar([event], { status: 'ok', sources: { dol: source } }, () => {
     const html = render({ page: 'calendar', calendarMonth: '2026-11' });
-    assert.match(html, /AGENCY EXCEPTION/);
-    assert.match(html, /<span class="table-code muted">AGENCY EXCEPTION · Observation period not supplied · DOL<\/span>/);
+    assert.match(html, /Agency exception/);
+    assert.match(html, /data-event="dol-thanksgiving"/);
+    assert.doesNotMatch(html, /Observation period not supplied/);
     assert.match(html, /official DOL schedule lists this exception/i);
-    assert.match(html, /Nominal Thursday: Nov 26, 2026/);
-    assert.match(html, /Nov 25, 2026/);
+    assert.match(html, /Nominal Thursday: 26 Nov 2026/);
+    assert.match(html, /25 Nov 2026/);
     source.status = 'error'; source.error = 'HTTP 503';
     const cached = render({ page: 'calendar', calendarMonth: '2026-11' });
-    assert.match(cached, /CACHED SCHEDULE/);
+    assert.match(cached, /Cached schedule/);
     assert.match(cached, /official DOL schedule lists this exception/i);
-    assert.match(cached, /Nominal Thursday: Nov 26, 2026/);
+    assert.match(cached, /Nominal Thursday: 26 Nov 2026/);
     assert.match(cached, /HTTP 503/);
   });
 });
@@ -310,8 +314,8 @@ test('overview catalysts retain schedule basis and avoid repeated programs while
  const dateAfter=days=>new Date(Date.now()+days*86400000).toISOString().slice(0,10);
  const events=['recurring-rule','published-exception'].map((scheduleBasis,index)=>calendarEvent({id:`dol-${index}`,sourceId:'dol',program:'weekly-claims',name:`Claims ${index}`,agency:'DOL',seriesId:'claims',seriesIds:['claims'],topic:'Labor',scheduleBasis,nominalDate:dateAfter(index+2),date:dateAfter(index+1),scheduledAt:`${dateAfter(index+1)}T13:30:00Z`,sourceUrl:'https://oui.doleta.gov/unemploy/claims_arch.asp'}));
  const calendar={status:'ok',sources:{dol:{status:'ok',fetchedAt:'2026-10-21T12:00:00Z'}}};
- withCalendar(events,calendar,()=>{const html=render();assert.match(html,/AGENCY RULE/);assert.doesNotMatch(html,/Claims 1/);});
- withCalendar([events[1]],calendar,()=>{assert.match(render(),/AGENCY EXCEPTION/);});
+ withCalendar(events,calendar,()=>{const html=render();assert.match(html,/Agency rule/);assert.doesNotMatch(html,/Claims 1/);});
+ withCalendar([events[1]],calendar,()=>{assert.match(render(),/Agency exception/);});
 });
 
 test('Treasury calendar estimates disclose their basis on debt watchlists with Eastern seasonal times and full source credit', () => {
@@ -321,11 +325,12 @@ test('Treasury calendar estimates disclose their basis on debt watchlists with E
   ];
   const calendar = { status: 'ok', sources: { treasury: { status: 'ok', fetchedAt: '2026-10-21T12:00:00Z', coverageNote: 'Treasury dates are <estimates>.', warnings: [] } } };
   withCalendar(events, calendar, () => {
-    for (const [month, time] of [['2026-10', '16:00 EDT'], ['2026-11', '15:00 EST']]) {
+    for (const [month, time] of [['2026-10', '4:00 pm ET'], ['2026-11', '3:00 pm ET']]) {
       const html = render({ page: 'calendar', calendarView:'treasury', calendarMonth: month, watchOnly: true, saved: ['debt'], calendarTopic: 'Fiscal' });
       assert.equal((html.match(/class="calendar-event/g) || []).length, 1);
-      assert.match(html, /<span class="table-code muted">ESTIMATED · Observation period not supplied · Treasury Fiscal Data<\/span>/);
-      assert.match(html, /<span class="pill">ESTIMATED<\/span>/);
+      assert.match(html, /data-event="treasury-debt-/);
+      assert.doesNotMatch(html, /Observation period not supplied/);
+      assert.match(html, /<span class="pill">Estimated<\/span>/);
       assert.ok(html.includes(time));
       assert.match(html, /U\.S\. Department of the Treasury, Bureau of the Fiscal Service/);
       assert.match(html, /href="#\/series\/debt\?[^"]*return=/);
@@ -350,9 +355,10 @@ test('Treasury estimate deep links select the captured event and cached schedule
     const html = render(route);
     assert.equal((html.match(/class="calendar-event/g) || []).length, 1);
     assert.match(html, /data-event="treasury-debt-2026-10-23" aria-pressed="true"/);
-    assert.match(html, /Oct 23, 2026/);
-    assert.match(html, /CACHED SCHEDULE/);
-    assert.match(html, /ESTIMATED · Observation period not supplied/);
+    assert.match(html, /23 Oct 2026/);
+    assert.match(html, /Cached schedule/);
+    assert.match(html, /Estimated/);
+    assert.doesNotMatch(html, /Observation period not supplied/);
     assert.match(html, /Individually listed estimate on the official Fiscal Data calendar/);
     assert.match(html, /HTTP 503 &lt;retry&gt;/);
     assert.doesNotMatch(html, /<retry>/);
@@ -363,7 +369,7 @@ test('Treasury estimates remain estimated after scheduled time has elapsed', () 
   const event = calendarEvent({ id: 'treasury-debt-elapsed', sourceId: 'treasury', program: 'debt-to-the-penny', name: 'Debt to the Penny', agency: 'Treasury Fiscal Data', seriesId: 'debt', seriesIds: ['debt'], topic: 'Fiscal', scheduleBasis: 'calendar-estimate', date: '2000-01-03', time: '15:00', scheduledAt: '2000-01-03T20:00:00Z', sourceUrl: 'https://api.fiscaldata.treasury.gov/services/calendar/release' });
   withCalendar([event], { status: 'ok', sources: { treasury: { status: 'ok', fetchedAt: '2026-10-21T12:00:00Z' } } }, () => {
     const html = render({ page: 'calendar', calendarView:'treasury', calendarMonth: '2000-01' });
-    assert.match(html, /<span class="pill">ESTIMATED<\/span>/);
+    assert.match(html, /<span class="pill">Estimated<\/span>/);
     assert.match(html, /past scheduled time does not establish that a result was published/);
     assert.doesNotMatch(html, />RELEASED<|>PUBLISHED<|>ACTUAL<|>OUT<|>NEXT</i);
   });
@@ -375,7 +381,8 @@ test('Overview leaves routine debt estimates in the full chronological calendar'
  withCalendar([event],{status:'ok',sources:{treasury:{status:'ok',fetchedAt:'2026-10-21T12:00:00Z'}}},()=>{
   assert.doesNotMatch(render(),/data-event="treasury-debt-upcoming"/);
   assert.doesNotMatch(render({page:'calendar',calendarMonth:date.slice(0,7)}),/data-event="treasury-debt-upcoming"/);
-  const html=render({page:'calendar',calendarView:'all',calendarMonth:date.slice(0,7)});assert.match(html,/data-event="treasury-debt-upcoming"/);assert.match(html,/ESTIMATED/);
+  const html=render({page:'calendar',calendarView:'all',calendarMonth:date.slice(0,7)});
+  assert.match(html,/data-event="treasury-debt-upcoming"/);assert.match(html,/Estimated/);
  });
 });
 

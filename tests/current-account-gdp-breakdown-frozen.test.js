@@ -26,7 +26,8 @@ test('external pins retain exactly five complete ITA input histories and one GDP
  const pkg=await createResearchPackage({name:'Frozen historical component ratios',...args}),text=exportResearchPackage(pkg),restored=await importResearchPackage(text);
  assert.equal(exportResearchPackage(restored),text);assert.ok(Buffer.byteLength(text)<MAX_RESEARCH_JSON_BYTES);assert.deepEqual(restored.context.currentAccountGdpBreakdown,retained);
  const html=renderPage({...parseRoute('#/research?view=packages'),packageId:pkg.id},{library:{packages:[restored],workspaces:[]}});
- assert.match(html,/FROZEN HISTORICAL CURRENT ACCOUNT \/ GDP · BREAKDOWN/);assert.match(html,/data-chart-catalog="current-account-gdp-breakdown"/);assert.doesNotMatch(html,/data-export-current-account-gdp-breakdown/);
+ assert.match(html,/FROZEN HISTORICAL CURRENT ACCOUNT \/ GDP · BREAKDOWN/i);assert.match(html,
+  /data-chart-catalog="current-account-gdp-breakdown"/);assert.doesNotMatch(html,/data-export-current-account-gdp-breakdown/);
 });
 
 test('pins retain missing component and denominator evidence without filling from current data',async()=>{
@@ -35,13 +36,15 @@ test('pins retain missing component and denominator evidence without filling fro
  assert.ok(retained,'Partial inputs still require their own frozen breakdown record.');assert.deepEqual(Object.keys(retained.sources.beaIta.series),['itaGoodsBalance']);assert.deepEqual(retained.sources.bea.series,{});assert.equal(retained.sources.beaIta.error,'Cached partial capture');
  const pkg=await createResearchPackage({name:'Unavailable component ratio evidence',...args}),restored=await importResearchPackage(exportResearchPackage(pkg));assert.deepEqual(restored.context.currentAccountGdpBreakdown,retained);
  const html=renderPage({...parseRoute('#/research?view=packages'),packageId:pkg.id},{library:{packages:[restored],workspaces:[]}});
- assert.match(html,/FROZEN HISTORICAL CURRENT ACCOUNT \/ GDP · BREAKDOWN/);assert.doesNotMatch(html,/data-export-current-account-gdp-breakdown/);
+ assert.match(html,/FROZEN HISTORICAL CURRENT ACCOUNT \/ GDP · BREAKDOWN/i);assert.doesNotMatch(html,/data-export-current-account-gdp-breakdown/);
 });
 
 test('the frozen viewer never adds a breakdown to an older package',async()=>{
  const pkg=await createResearchPackage({name:'Legacy frozen GDP result',state:{selected:['gdp'],window:'all'},catalog:{gdp:{...series.gdp,observations:series.gdp.observations.slice(-2)}}}),text=exportResearchPackage(pkg),restored=await importResearchPackage(text);
  const originalFetch=globalThis.fetch;globalThis.fetch=()=>{throw new Error('Frozen viewers must not fetch missing evidence.');};
- try{const html=renderPage({...parseRoute('#/research?view=packages'),packageId:pkg.id},{library:{packages:[restored],workspaces:[]}});assert.doesNotMatch(html,/data-chart-catalog="current-account-gdp-breakdown"|HISTORICAL CURRENT ACCOUNT \/ GDP · BREAKDOWN/);assert.equal(exportResearchPackage(restored),text);}finally{globalThis.fetch=originalFetch;}
+ try{const html=renderPage({...parseRoute('#/research?view=packages'),packageId:pkg.id},{library:{packages:[restored],workspaces:[]}});
+  assert.doesNotMatch(html,/data-chart-catalog="current-account-gdp-breakdown"|HISTORICAL CURRENT ACCOUNT \/ GDP · BREAKDOWN/i);assert.equal
+  (exportResearchPackage(restored),text);}finally{globalThis.fetch=originalFetch;}
 });
 
 test('one all-history external package fits durable browser storage and reopens with all breakdown evidence intact',async()=>{

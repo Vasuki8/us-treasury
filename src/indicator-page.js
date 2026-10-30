@@ -2,17 +2,20 @@ import {cpiPublicationIds} from './cpi-publication-history.js';
 import {supportingDetails} from './page-hierarchy.js';
 import {getSeries,latest,formatValue,formatChange,periodLabel,transformSeries,observationCoverageLabel} from './model.js';
 import {displayCurrencyUnit,displayUnitLabel,formatDisplayValue,formatDisplayChange} from './display-format.js';
-import {escapeHtml as esc,button,heading,panel,chart,table,emptyState,sourceLink,seriesStatus} from './ui.js';
+import {escapeHtml as esc,button,heading,panel,chart,table,emptyState,sourceLink,seriesStatus,sentenceCase} from './ui.js';
 import {viewRange,workspaceReturn,indicatorHref,contextualHref} from './workspace-context.js';
 import {rangeControls,coverageSummary,measureLabel,changeLabel} from './research-controls.js';
 import {relatedIndicators} from './related.js';
-import {measurementChange} from './measurement-change.js';
+import {measurementChange,priorReadingLabel} from './measurement-change.js';
 import {routeFor} from './router.js';
 import {historyStatusMessage} from './vintages-page.js';
 import {vintageMeasurementsComparable} from './vintages.js';
 import {yieldTimingPanel} from './calendar-presentation.js';
+import {releases} from './data.js';
+import {humanDate,humanTimestamp,publicationDate,scheduledReleaseDate} from './ui-time.js';
 
-const link=(label,href,className='action')=>`<a class="${esc(className)}" href="${esc(href)}">${esc(label)}</a>`;
+const link=(label,href,className='action')=>`<a class="${esc(className)}" href="${esc(href)}">`
+  +`${esc(sentenceCase(label.replace(/ ↗/g,'')))}</a>`;
 const number=(value,precision=2)=>value==null?'—':new Intl.NumberFormat('en-US',{maximumFractionDigits:precision,minimumFractionDigits:precision}).format(value);
 const valueForPanel=(item,value,transform='level')=>transform==='level'?formatValue(item.series,value):value==null?'—':`${number(value,item.series.precision)} ${item.unit}`;
 
@@ -22,9 +25,19 @@ function detailData(item, state) {
   const originals = new Map(item.series.observations.map(observation => [observation.date, observation]));
   const rows = [...item.observations].reverse().map(observation => {
     const original = originals.get(observation.date);
-    return `<tr><th scope="row"><time datetime="${esc(observation.date)}">${esc(periodLabel(item.series, observation.date))}</time></th><td class="num">${esc(valueForPanel(item, observation.value, state.transform))}</td><td class="mono muted">${esc(original?.publishedAt ?? '—')}</td><td class="muted">${esc([...(original?.footnotes??[]),observationCoverageLabel(original),original?.suppressed?'SUPPRESSED · withheld by source':'',original?.revisionIndicator==='Y'?'SOURCE REVISION FLAG · reason unknown':''].filter(Boolean).join('; ') || '—')}</td></tr>`;
+    const notes=[...(original?.footnotes??[]),observationCoverageLabel(original),
+      original?.suppressed?'SUPPRESSED · withheld by source':'',
+      original?.revisionIndicator==='Y'?'SOURCE REVISION FLAG · reason unknown':''].filter(Boolean).join('; ')||'—';
+    const published=publicationDate(item.series,original,releases);
+    return `<tr><th scope="row"><time datetime="${esc(observation.date)}">`
+      +`${esc(periodLabel(item.series,observation.date))}</time></th>`
+      +`<td class="num">${esc(valueForPanel(item,observation.value,state.transform))}</td>`
+      +`<td class="mono muted">${esc(humanDate(published)||'—')}</td><td class="muted">${esc(notes)}</td></tr>`;
   }).join('');
-  return `<p class="panel-note">${esc(state.transform==='change'?changeLabel(item.series):measureLabel(item.series))} · ${esc(item.unit)} · most recent first. ${esc(item.series.publicationNote ?? 'Historical publication dates are not supplied by this feed; — means unknown.')}</p>${table(['OBSERVATION PERIOD', {label:state.transform === 'change' ? 'PERIOD CHANGE' : 'VALUE',numeric:true}, 'PUBLISHED', 'SOURCE NOTES'], rows, 'Official indicator observations and source footnotes')}`;
+  return `<p class="panel-note">${esc(state.transform==='change'?changeLabel(item.series):measureLabel(item.series))}`
+    +` · ${esc(item.unit)} · most recent first.</p>`
+    +table(['Observation period',{label:state.transform==='change'?'Period change':'Value',numeric:true},'Published','Source notes'],
+      rows,'Official indicator observations and source footnotes');
 }
 
 function detailRevisions(current, { historyState = { status:'idle' }, revisions = [] } = {},state={}) {
@@ -53,6 +66,7 @@ function claimsContextLinks(current,state) {
 export function indicatorPage(state,historyContext={}) {
   const current=getSeries(state.seriesId)??getSeries('unrate');
   const observation=latest(current),previous=current.observations.at(-2);
+  const published=publicationDate(current,observation,releases),scheduled=scheduledReleaseDate(current,observation,releases);
   const currencyUnit=displayCurrencyUnit([current]),options={currencyUnit};
   const change=measurementChange(current),changeText=change.text.replace(formatChange(current),formatDisplayChange(current,options));
   const transformed=transformSeries(current,state.transform,viewRange(state));
@@ -64,31 +78,53 @@ export function indicatorPage(state,historyContext={}) {
   const actions=button(state.saved.includes(current.id)?'★ FOLLOWING':'☆ FOLLOW',`data-save="${esc(current.id)}" aria-pressed="${state.saved.includes(current.id)}"`)
     +button(state.selected.includes(current.id)?'VIEW COMPARISON':'ADD TO COMPARISON',`data-add-compare="${esc(current.id)}"${state.selected.length>=4&&!state.selected.includes(current.id)?' disabled title="Remove a selected series before adding another."':''}`)
     +button('DOWNLOAD CSV',`data-export${transformed.error?' disabled title="Choose a valid date window."':!available?' disabled title="No observations in the selected window."':''}`);
-  const metadata=`<dl class="facts"><dt>Series</dt><dd class="mono cyan">${esc(current.code)}</dd><dt>Source IDs</dt><dd class="mono">${esc((current.source.seriesIds??[]).join(', ')||'—')}</dd></dl><p class="panel-note">See the Methodology tab for calculation and publication-date limits.</p>`;
+  const metadata=`<dl class="facts"><dt>Series</dt><dd class="mono cyan">${esc(current.code)}</dd><dt>Source IDs</dt>`
+    +`<dd class="mono">${esc((current.source.seriesIds??[]).join(', ')||'—')}</dd><dt>Measurement</dt>`
+    +`<dd>${esc(current.observationType==='calculated'?'Derived':measureLabel(current))}</dd></dl>`;
+  const criticalCoverage=['dol','dolAdvance'].includes(current.agency)||observation?.partial||observation?.suppressed
+    ||/\b(?:partial|suppressed)\b|\bnot (?:directly )?comparable\b/i.test(current.coverageNote??'');
+  const payrollChange=current.id==='payroll'
+    ?`${priorReadingLabel(current)}: ${formatDisplayValue(current,previous?.value,options)}`:changeText;
+  const chartControls=`<div class="toolbar">${rangeControls(state,[current.id])}`
+    +'<label for="transform-select">View <select id="transform-select">'
+    +`<option value="level"${state.transform==='level'?' selected':''}>${esc(measureLabel(current))}</option>`
+    +`<option value="change"${state.transform==='change'?' selected':''}>${esc(changeLabel(current))}</option>`
+    +'</select></label></div>';
+  const chartBody=chartControls+chart([current.id],{height:260,transform:state.transform,range:viewRange(state)})
+    +coverageSummary(transformed)+(state.transform==='change'?'<p class="panel-note">'
+      +'Changes use the immediately preceding retained observation before the selected window is applied; '
+      +'the first displayed change can reference an observation outside the window. Missing observations remain gaps.</p>':'');
   return `<div class="radar-page radar-indicator">${back?`<nav class="return-context" aria-label="Return to workspace">${link(back.label,back.href)}</nav>`:''}`
-    +heading(current.name.toUpperCase(),`${current.code} · ${current.source.name} · ${current.adjustment}`,actions)
+    +heading(current.name,`${current.code} · ${current.source.name} · ${current.adjustment}`,actions)
     +`<div class="workspace-basis"><section class="indicator-snapshot" aria-label="Latest retained reading">`
     +`<div class="indicator-reading"><p class="indicator-latest-label">`
     +`Latest retained reading — independent of the selected history window and transformation</p>`
     +`<div class="indicator-native-reading"><strong class="big-value">${esc(formatDisplayValue(current,observation?.value,options))}</strong>`
     +`<span>${currencyUnit?'Display unit':'Native unit'}<br><b>${esc(displayUnitLabel(current,options))}</b></span></div>`
-    +`<p class="indicator-reference">OBSERVATION <b>${esc(observation?periodLabel(current,observation.date):'—')}</b></p>`
-    +`<p class="indicator-change">${esc(changeText)}</p><p class="indicator-prior">PRIOR `
+    +`<p class="indicator-reference">Observation <b>${esc(observation?periodLabel(current,observation.date):'—')}</b></p>`
+    +`<p class="indicator-change">${esc(payrollChange)}</p><p class="indicator-prior">Prior `
     +`<b>${esc(formatDisplayValue(current,previous?.value,options))}</b> · `
     +`${esc(previous?periodLabel(current,previous.date):'Unavailable')}</p></div>`
-    +`<dl class="indicator-provenance"><dt>Measurement</dt><dd>${esc(measureLabel(current))}</dd><dt>Source freshness</dt>`
+    +`<dl class="indicator-provenance"><dt>Source freshness</dt>`
     +`<dd>${current.dataStatus==='cached'?'Cached':current.dataStatus==='official'?'Captured':'Unavailable'}</dd>`
-    +`<dt>Published</dt><dd>${esc(observation?.publishedAt??'Unknown')}</dd><dt>Retrieved</dt>`
-    +`<dd>${esc(current.fetchedAt??'No successful retrieval')}</dd><dt>Source</dt><dd>${sourceLink(current)}</dd></dl></section>`
+    +(published?`<dt>Published</dt><dd>${esc(humanDate(published))}</dd>`:'')
+    +(!published&&scheduled?`<dt>Scheduled release</dt><dd>${esc(humanDate(scheduled))} · publication not confirmed</dd>`:'')
+    +`<dt>Retrieved</dt><dd>${esc(humanTimestamp(current.fetchedAt)||'No successful retrieval')}</dd></dl></section>`
     +`<p class="panel-note indicator-definition">${esc(current.definition)}</p>`
-    +(current.coverageNote?`<p class="panel-note amber">${esc(current.coverageNote)}</p>`:'')
+    +(current.coverageNote&&criticalCoverage?`<p class="panel-note amber">${esc(current.coverageNote)}</p>`:'')
     +(current.error?`<p class="panel-note amber" role="status">${esc(current.error)}</p>`:'')
     +claimsContextLinks(current,state)
     +(cpiPublicationIds.includes(current.id)?`<p class="panel-note indicator-publication-link">${link('VERIFIED RELEASE & PUBLICATION EVIDENCE ↗',contextualHref({page:'release',publicationSeries:current.id,publicationPeriod:observation?.date??''},state))}<br>Published CPI rates use the dated release, with monthly seasonally adjusted and twelve-month unadjusted bases. This chart retains its current index-derived history.</p>`:'')
     +(['gdp','claimsAdvance','continuedClaimsAdvance','claims','continuedClaims'].includes(current.id)?`<p class="panel-note indicator-publication-link">${link('VERIFIED RELEASE & PUBLICATION EVIDENCE ↗',contextualHref({page:'release',publicationSeries:current.id==='gdp'?'gdp':current.id.includes('ontinued')?'continuedClaimsAdvance':'claimsAdvance',publicationPeriod:observation?.date??'',publicationCutoff:current.agency==='dolAdvance'?observation?.publishedAt??'':''},state))}</p>`:'')
-    +`</div><div class="workspace-analysis"><div class="indicator-chart">${panel('01',`${current.code} / ${current.agency==='dolAdvance'?'LATEST RELEASE CONTEXT':'HISTORICAL SERIES'}`,`<div class="toolbar">${rangeControls(state,[current.id])}<label for="transform-select">View <select id="transform-select"><option value="level"${state.transform==='level'?' selected':''}>${esc(measureLabel(current))}</option><option value="change"${state.transform==='change'?' selected':''}>${esc(changeLabel(current))}</option></select></label></div>${chart([current.id],{height:260,transform:state.transform,range:viewRange(state)})}${coverageSummary(transformed)}${state.transform==='change'?'<p class="panel-note">Changes use the immediately preceding retained observation before the selected window is applied; the first displayed change can reference an observation outside the window. Missing observations remain gaps.</p>':''}`,'',`${current.frequency} · ${transformed.unit} · ${seriesStatus(current)}`)}</div>`
+    +'</div><div class="workspace-analysis"><div class="indicator-chart">'
+    +panel('01',`${current.code} / ${current.agency==='dolAdvance'?'Latest release context':'Historical series'}`,chartBody,'',
+      `${current.frequency} · ${transformed.unit} · ${seriesStatus(current)}`)+'</div>'
     +`<section class="panel indicator-evidence"><div class="tabs" role="tablist" aria-label="Indicator detail sections">${tabs.map(([id,label])=>button(label,`role="tab" id="detail-tab-${id}" aria-controls="detail-content" aria-selected="${activeTab===id}" tabindex="${activeTab===id?0:-1}" data-tab="${id}"`,'')).join('')}</div><div class="tab-panel" id="detail-content" role="tabpanel" tabindex="0" aria-labelledby="detail-tab-${activeTab}">${content}</div></section>`
-    +`</div><nav class="context-strip related-series" aria-label="Related indicators"><span class="muted">RELATED</span>${related.seriesIds.map(id=>link(getSeries(id).short,indicatorHref(id,state))).join('')}${related.module?link(related.module.label+' ↗',related.module.href):''}</nav>`
+    +`</div><nav class="context-strip related-series" aria-label="Related indicators"><span class="muted">Related</span>`
+    +related.seriesIds.map(id=>link(getSeries(id).short,indicatorHref(id,state))).join('')
+    +(related.module?link(related.module.label,related.module.href):'')+'</nav>'
     +(current.id==='yield'?supportingDetails('indicator:yield-timing','Rates guidance · ongoing Treasury publication timing',yieldTimingPanel()):'')
-    +supportingDetails(`indicator:source:${current.id}`,'Full source identifiers & metadata',panel('02','SERIES INFORMATION',metadata,button('COPY LINK','data-copy-link','link-button')))+`</div>`;
+    +supportingDetails(`indicator:source:${current.id}`,'About this data',
+      panel('02','Series information',metadata+detailMethodology(current),button('Copy link','data-copy-link','link-button')))
+    +`</div>`;
 }

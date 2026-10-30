@@ -39,7 +39,7 @@ test('monthly contractual ladder conserves cumulative exposure, includes boundar
   assert.deepEqual(contractualMaturityLadder({}),[]);
   const html=refinancingPage({},source);
   assert.match(html,/Principal maturing within 12 months/);assert.match(html,/Share maturing within 12 months/);
-  assert.match(html,/MONTHLY CONTRACTUAL MATURITY LADDER/);assert.match(html,/INCREMENTAL INTEREST COST WITHIN HORIZON/);
+  assert.match(html,/MONTHLY CONTRACTUAL MATURITY LADDER/i);assert.match(html,/INCREMENTAL INTEREST COST WITHIN HORIZON/i);
 });
 
 test('rate shortcuts use calendar targets without choosing a later observation and keep missing YTD explicit',()=>{
@@ -59,7 +59,7 @@ test('selected nominal, real and compensation changes share dates, preserve miss
   source.curveHistory[0].real['10Y']=null;
   assert.equal(selectedYieldChanges(source,'2026-10-27','2026-10-26').inflationCompensation.changeBps,null);
   const html=yieldsPage({yieldDateA:'2026-10-27',yieldDateB:'2026-10-26'},source);
-  assert.match(html,/data-yield-shortcut/);assert.match(html,/SELECTED NOMINAL \/ REAL \/ COMPENSATION CHANGES/);
+  assert.match(html,/data-yield-shortcut/);assert.match(html,/SELECTED NOMINAL \/ REAL \/ COMPENSATION CHANGES/i);
   assert.match(html,/Current retained rate context/);
   const events=yieldEventComparisons(source,[{sourceId:'fomc',program:'fomc-decision',date:'2026-10-27',sourceUrl:'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm'}]);
   assert.equal(events[0].dateB,'2026-10-26');assert.match(events[0].basis,/does not verify/);

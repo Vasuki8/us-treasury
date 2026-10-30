@@ -20,7 +20,8 @@ test('compact previews retain the full source bounds rather than claiming a shor
   assert.equal(panel.coverage.fullStartDate,'1990-01-01');
   const html=coverageSummary(panel);
   assert.ok(html.includes('Retained: 400 observations'));
-  assert.ok(html.includes('1990-01-01 to 2026-01-01'));
+  assert.ok(html.includes('1 Jan 1990 to 1 Jan 2026'));
+  assert.ok(html.includes('1 Jan 2025 to 1 Jan 2026'));
   assert.ok(html.includes('Displayed: 2 observations'));
 });
 

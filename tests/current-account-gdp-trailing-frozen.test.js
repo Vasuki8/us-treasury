@@ -24,7 +24,8 @@ test('external pins retain one trailing window reference and reuse full breakdow
  const csv=args.context.attachments.find(file=>file.name==='current-account-gdp-trailing.csv');assert.ok(csv);assert.equal(csv.content,currentAccountGdpTrailingCsv(sources,retained.range,{comparisonMeasure:args.context.currentAccountGdpComparison.measure}));
  const pkg=await createResearchPackage({name:'Trailing-four-quarter frozen ratios',...args}),text=exportResearchPackage(pkg),restored=await importResearchPackage(text);
  assert.equal(exportResearchPackage(restored),text);assert.deepEqual(restored.context.currentAccountGdpTrailing,retained);assert.equal(restored.context.attachments.find(file=>file.name===csv.name).content,csv.content);
- const html=renderFrozen(restored);assert.match(html,/data-chart-catalog="current-account-gdp-trailing"/);assert.match(html,/FROZEN[^<]*(?:TRAILING|T4Q)/);assert.doesNotMatch(html,/data-export-current-account-gdp-trailing/);
+ const html=renderFrozen(restored);assert.match(html,/data-chart-catalog="current-account-gdp-trailing"/);assert.match(html,
+  /FROZEN[^<]*(?:TRAILING|T4Q)/i);assert.doesNotMatch(html,/data-export-current-account-gdp-trailing/);
 });
 
 test('partial trailing inputs remain frozen without current GDP or missing component substitution',async()=>{
@@ -34,7 +35,8 @@ test('partial trailing inputs remain frozen without current GDP or missing compo
  const pkg=await createResearchPackage({name:'Unavailable trailing component ratios',...args}),restored=await importResearchPackage(exportResearchPackage(pkg));
  assert.deepEqual(restored.context.currentAccountGdpBreakdown.sources,retained);
  const originalFetch=globalThis.fetch;globalThis.fetch=()=>{throw new Error('Frozen viewers must not fetch missing inputs.');};
- try{const html=renderFrozen(restored);assert.match(html,/FROZEN[^<]*(?:TRAILING|T4Q)/);assert.doesNotMatch(html,/data-export-current-account-gdp-trailing/);}finally{globalThis.fetch=originalFetch;}
+ try{const html=renderFrozen(restored);assert.match(html,/FROZEN[^<]*(?:TRAILING|T4Q)/i);assert.doesNotMatch(html,
+  /data-export-current-account-gdp-trailing/);}finally{globalThis.fetch=originalFetch;}
 });
 
 test('older breakdown packages never acquire a trailing chart or attachment when reopened',async()=>{

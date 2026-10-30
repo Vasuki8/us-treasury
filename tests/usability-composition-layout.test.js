@@ -13,7 +13,7 @@ test('calendar keeps active filter summary and filter controls in a remembered d
 });
 test('inflation begins with the focused reading and chart before full topic horizon coverage',()=>{
  const html=macroCoveragePage({...parseRoute('#/economy?family=prices'),saved:[]});
- assert.match(html,/<h1>INFLATION<\/h1>/);
+ assert.match(html,/<h1>INFLATION<\/h1>/i);
  assert.ok(html.indexOf('data-chart')<html.indexOf('inflation-horizon-comparison'));
  assert.match(html,/data-page-disclosure="macro-coverage:prices:history-controls"/);
 });
@@ -29,7 +29,7 @@ test('watchlist prioritizes opening saved series and keeps editing in an explici
 test('calendar Today and Upcoming shortcuts retain the active scope and topic',()=>{
  const html=calendarPage({...parseRoute('#/calendar?scope=treasury&calendarTopic=Rates'),saved:[]});
  assert.match(html,/aria-label="Schedule window shortcuts"/);
- const today=html.match(/href="([^"]+)"[^>]*>TODAY<\/a>/),upcoming=html.match(/href="([^"]+)"[^>]*>UPCOMING<\/a>/);
+ const today=html.match(/href="([^"]+)"[^>]*>TODAY<\/a>/i),upcoming=html.match(/href="([^"]+)"[^>]*>UPCOMING<\/a>/i);
  assert.ok(today);assert.ok(upcoming);
  for(const item of [today,upcoming]){const state=parseRoute(item[1].replaceAll('&amp;','&'));assert.equal(state.calendarView,'treasury');assert.equal(state.calendarTopic,'Rates');}
  assert.match(parseRoute(today[1].replaceAll('&amp;','&')).day,/^\d{4}-\d{2}-\d{2}$/);

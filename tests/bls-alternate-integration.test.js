@@ -28,7 +28,7 @@ async function withCapturedCalendar(run){
  try{return await run(source);}
  finally{releases.splice(0,releases.length,...priorEvents);dataStatus.calendar=priorCalendar;}
 }
-const cards=(html,className)=>[...html.matchAll(new RegExp(`<article class="${className}">([^]*?)<\\/article>`,'g'))].map(match=>match[1]);
+const cards=(html,className)=>[...html.matchAll(new RegExp(`<article class="${className}"[^>]*>([^]*?)<\\/article>`,'g'))].map(match=>match[1]);
 
 const nyfed={provider:'new-york-fed',sourceTitle:'Economic Indicators Calendar',sourceNotice:'©2026 Federal Reserve Bank of New York. Content from the New York Fed subject to the Terms of Use at newyorkfed.org.',attribution:'Source: Federal Reserve Bank of New York, Economic Indicators Calendar.',modificationNotice:'BLS events extracted and Eastern times converted to UTC by Meridian; tentative schedule; no endorsement.',licenseUrl:'https://www.newyorkfed.org/privacy/termsofuse'};
 test('secondary calendar provenance is visible through existing disclosure markup and original agency associations stay intact',()=>{
@@ -60,9 +60,11 @@ test('the actual New York Fed capture passes commercial admission with its real 
 test('the selected public calendar preview presents the actual secondary publisher, rights and unknown period',async()=>withCapturedCalendar(source=>{
  const html=calendarPage({...parseRoute(`#/calendar?month=2026-11&event=${cpiId}`),saved:[]});
  const preview=html.split('id="calendar-selected-preview"')[1].split('calendar:context')[0];
- for(const text of ['Consumer Price Index','Observation period not supplied','08:30 EST','NY FED CALENDAR','New York Fed · BLS releases','Secondary calendar','publication is not confirmed',source.sourceTitle,source.sourceNotice,source.attribution,source.modificationNotice,source.licenseUrl,'OPEN RELEASE EVIDENCE'])assert.ok(preview.includes(text),text);
+ for(const text of ['Consumer Price Index','8:30 am ET','NY Fed calendar','New York Fed · BLS releases',
+  'Secondary calendar','publication is not confirmed',source.sourceTitle,source.sourceNotice,source.attribution,
+  source.modificationNotice,source.licenseUrl,'Open release evidence'])assert.ok(preview.includes(text),text);
  assert.ok(preview.includes('href="https://www.newyorkfed.org/research/calendars/i-nov26.html"'));
- assert.doesNotMatch(preview,/OFFICIAL SCHEDULE|Bureau of Labor Statistics<br>|October 2026/);
+ assert.doesNotMatch(preview,/Official schedule|Bureau of Labor Statistics<br>|October 2026|Observation period not supplied/);
  assert.match(html,/Captured secondary schedule/);
  assert.match(html,/class="calendar-toolbar"|class="toolbar calendar-toolbar"/);
  assert.match(html,/data-save="cpiMonthly"/,'The BLS originating-program indicator association remains available');
@@ -74,11 +76,11 @@ test('Overview upcoming cards label the New York Fed source and retain its actua
  assert.equal(upcoming.length,3);
  for(const event of source.events.filter(event=>event.date.startsWith('2026-11'))){
   const card=upcoming.find(value=>value.includes(event.id));assert.ok(card,event.id);
-  assert.ok(card.includes(event.name));assert.match(card,/BLS · NY FED CALENDAR/);
+  assert.ok(card.includes(event.name));assert.match(card,/BLS · NY Fed calendar/);
   assert.ok(card.includes(event.sourceUrl));assert.ok(card.includes(source.sourceNotice));assert.ok(card.includes(source.modificationNotice));assert.ok(card.includes(source.licenseUrl));
   assert.doesNotMatch(card,/Official schedule|Bureau of Labor Statistics/);
  }
- assert.ok(upcoming.some(card=>card.includes('10:00 EST')));assert.ok(upcoming.some(card=>card.includes('08:30 EST')));
+ assert.ok(upcoming.some(card=>card.includes('10:00 am ET')));assert.ok(upcoming.some(card=>card.includes('8:30 am ET')));
 }));
 
 test('Labor upcoming cards preserve originating BLS program actions while identifying the calendar provider',async()=>withCapturedCalendar(source=>{
@@ -87,9 +89,10 @@ test('Labor upcoming cards preserve originating BLS program actions while identi
  assert.equal(upcoming.length,2);
  for(const name of ['Job Openings and Labor Turnover Survey','Employment Situation']){
   const card=upcoming.find(value=>value.includes(name));assert.ok(card,name);
-  assert.match(card,/NY Fed calendar/);assert.match(card,/Reference period not supplied/);assert.doesNotMatch(card,/Official BLS schedule|Bureau of Labor Statistics/);
+  assert.match(card,/NY Fed calendar/);assert.doesNotMatch(card,/Reference period not supplied/);
+  assert.doesNotMatch(card,/Official BLS schedule|Bureau of Labor Statistics/);
  }
- assert.match(html,/NEXT EMPLOYMENT RELEASE/);assert.ok(html.includes('event=bls-employment-situation-2026-11-06'));
+ assert.match(html,/Next employment release/);assert.ok(html.includes('event=bls-employment-situation-2026-11-06'));
  for(const notice of [source.sourceTitle,source.sourceNotice,source.attribution,source.modificationNotice,source.licenseUrl])assert.ok(html.includes(notice),notice);
 }));
 

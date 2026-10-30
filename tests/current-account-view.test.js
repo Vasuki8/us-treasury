@@ -1,3 +1,4 @@
+import {humanTimestamp} from '../src/ui-time.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseCsv } from '../scripts/sources/http.mjs';
@@ -138,7 +139,7 @@ test('panel displays signed nonannualized quarterly amounts, four accounting cha
   assert.match(html, /NIPA.*SAAR/);
   assert.match(html, /Bureau of Economic Analysis/);
   assert.match(html, /data-export-current-account/);
-  assert.match(html, /CSV CURRENT &amp; PRIOR/);
+  assert.match(html, /CSV CURRENT &amp; PRIOR/i);
 });
 
 test('panel keeps missing and cached states visible and escapes all supplied source text', () => {
@@ -163,7 +164,7 @@ test('panel keeps missing and cached states visible and escapes all supplied sou
   assert.match(html, /x=&quot;&amp;y=&lt;x&gt;/);
   assert.doesNotMatch(html, /<img|<script|href="javascript:/i);
   assert.match(html, /2026-09-23/);
-  assert.match(html, /2026-10-23T20:00:00\.000Z/);
+  assert.match(html, new RegExp(humanTimestamp("2026-10-23T20:00:00.000Z")));
   assert.match(view.currentAccountPanel({ status: 'unavailable', error: 'HTTP 503' }), /HTTP 503/);
 });
 
@@ -244,9 +245,9 @@ test('frozen accounting replay labels recorded status and omits the live CSV act
     [{ status: 'unavailable' }, 'unavailable'],
   ]) {
     const html = view.currentAccountPanel(input, { frozen: true });
-    assert.match(html, /FROZEN CURRENT ACCOUNT · ACCOUNTING CHANGES/);
+    assert.match(html, /FROZEN CURRENT ACCOUNT · ACCOUNTING CHANGES/i);
     assert.match(html, new RegExp(`Frozen recorded source status: ${status}`));
-    assert.doesNotMatch(html, /data-export-current-account|CSV CURRENT|Official capture|Cached · refresh failed/);
+    assert.doesNotMatch(html, /data-export-current-account|CSV CURRENT|Official capture|Cached · refresh failed/i);
   }
   assert.match(view.currentAccountPanel(source(), { frozen: false }), /data-export-current-account/);
 });

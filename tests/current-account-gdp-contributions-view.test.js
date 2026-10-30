@@ -9,11 +9,12 @@ const records=text=>{const [head,...rows]=parseCsv(text);return rows.map(row=>Ob
 
 test('contributions panel distinguishes changes from horizon gaps and reconciles both exact preceding endpoints',()=>{
  const html=currentAccountGdpContributionsPanel(currentAccountGdpTrailingFixture(),range);
- assert.match(html,/COMPONENT CONTRIBUTIONS TO RATIO CHANGES/);assert.equal((html.match(/data-chart-catalog="current-account-gdp-contributions"/g)??[]).length,2);
+ assert.match(html,/COMPONENT CONTRIBUTIONS TO RATIO CHANGES/i);assert.equal((html.match
+  (/data-chart-catalog="current-account-gdp-contributions"/g)??[]).length,2);
  assert.match(html,/Q2 2026 versus Q1 2026/);assert.match(html,/Reconciliation residual change/);assert.match(html,/Published total change/);
  assert.match(html,/denominator changes are already included/);assert.match(html,/not official BEA growth contributions/);assert.match(html,/overlap by three quarters/);
  assert.match(html,/predecessor can precede the selected window/);assert.match(html,/data-export-current-account-gdp-contributions/);
- assert.match(html,/CHANGE · PP/);assert.doesNotMatch(html,/id="window-start"/);
+ assert.match(html,/CHANGE · PP/i);assert.doesNotMatch(html,/id="window-start"/);
 });
 
 test('contributions chart catalog has eight calculated percentage-point series without observed-ratio labeling',()=>{
@@ -53,7 +54,8 @@ test('input evidence does not label valid raw observations unavailable when thei
 
 test('frozen panel only exposes reconstruction from its package and invalid windows keep a clear empty state',()=>{
  const html=currentAccountGdpContributionsPanel(currentAccountGdpTrailingFixture(),range,{frozen:true,packageId:'frozen-proof'});
- assert.match(html,/FROZEN COMPONENT CONTRIBUTIONS/);assert.match(html,/data-export-frozen-current-account-gdp-contributions="frozen-proof"/);assert.doesNotMatch(html,/data-export-current-account-gdp-contributions/);assert.match(html,/reconstructed from recorded inputs/i);
+ assert.match(html,/FROZEN COMPONENT CONTRIBUTIONS/i);assert.match(html,/data-export-frozen-current-account-gdp-contributions="frozen-proof"/);
+  assert.doesNotMatch(html,/data-export-current-account-gdp-contributions/);assert.match(html,/reconstructed from recorded inputs/i);
  const invalid=currentAccountGdpContributionsPanel({}, {preset:'custom',startDate:'2026-04-01',endDate:'2025-01-01'});assert.match(invalid,/unavailable/i);assert.match(invalid,/disabled/);
  const csv=records(currentAccountGdpContributionsCsv({}, {preset:'all'}));assert.equal(csv.length,1);
 });
