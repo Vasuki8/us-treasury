@@ -152,10 +152,10 @@ test('overview leads with four cards and retains all eight dated readings, momen
  assert.match(html,/data-series="pceMonthly,pceCoreMonthly"/);
  assert.match(html,/data-series="payrollAverage3m"/);
  assert.doesNotMatch(html,/data-chart[^>]*data-series="(?:pceMonthly|payroll),unrate"/);
- assert.match(html,/data-overview-disclosure="publications"/);assert.match(html,/Next catalysts/);
- assert.ok(html.indexOf('class="oh-topic-grid"')<html.indexOf('Next catalysts'));
+ assert.match(html,/data-overview-disclosure="publications"/);assert.match(html,/Upcoming releases/);
+ assert.ok(html.indexOf('class="oh-topic-grid"')<html.indexOf('Upcoming releases'));
  assert.ok(html.indexOf('class="oh-topic-grid"')<html.indexOf('class="oh-momentum"'));
- assert.ok(html.indexOf('class="oh-momentum"')<html.indexOf('Next catalysts'));
+ assert.ok(html.indexOf('class="oh-momentum"')<html.indexOf('Upcoming releases'));
  assert.doesNotMatch(html,/Source health, coverage and methodology/);
  assert.match(html,/Collection failures and retained-source status are in Refresh details above/);
  assert.doesNotMatch(html,/synthetic|sample week|sample observations/i);

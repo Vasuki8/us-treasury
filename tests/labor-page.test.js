@@ -19,7 +19,8 @@ test('Labor Radar presents all 23 readings in domain-reviewed order with accessi
  for(const id of ordered){assert.match(html,new RegExp(`data-save="${id}"`));assert.match(html,new RegExp(`data-select="${id}"`));assert.ok(html.includes(periodLabel(series[id],latest(series[id])?.date)));}
  assert.match(html,/id="macro-measure"/);assert.match(html,/value="underemployment" selected/);
  for(const id of ['analysis','weekly','trends','readings','notes'])assert.match(html,new RegExp(`data-labor-section="labor-${id}"`));
- assert.ok(html.indexOf('id="labor-weekly"')<html.indexOf('id="labor-trends"'));
+ assert.ok(html.indexOf('id="labor-trends"')<html.indexOf('id="labor-weekly"'));
+ assert.ok(html.indexOf('id="labor-weekly"')<html.indexOf('id="labor-analysis"'));
  assert.match(html,/data-compare="unrate,underemployment,participation"/);
  assert.match(html,/data-compare="payroll,payrollAverage3m,weeklyHours"/);
  assert.match(html,/data-compare="hiresRate,quitsRate,layoffsRate"/);
@@ -45,7 +46,7 @@ test('focused history preserves exact windows, empty errors and live latest summ
 });
 
 test('weekly desk keeps own weeks and same-release priors distinct from revised history',()=>{
- const html=render(),desk=html.slice(html.indexOf('id="labor-weekly"'),html.indexOf('id="labor-trends"'));
+ const html=render(),desk=html.slice(html.indexOf('id="labor-weekly"'),html.indexOf('id="labor-analysis"'));
  for(const id of ['claimsAdvance','continuedClaimsAdvance']){
   const s=series[id];for(const observation of s.observations)assert.ok(desk.includes(periodLabel(s,observation.date)));
   assert.ok(desk.includes(humanDate(latest(s).publishedAt)));assert.match(desk,new RegExp(`publicationSeries=${id}`));
@@ -81,7 +82,7 @@ test('core charts share quarterly and weekly focus dates for calendar presets an
   const html=render('&measure='+focus+windowQuery);
   const windows=[...html.matchAll(/data-chart data-series="([^"]+)"[^>]*data-range="([^"]+)"/g)].map(([,id,encoded])=>({id,...transformSeries(series[id],'level',JSON.parse(encoded.replaceAll('&quot;','"')))}));
   assert.deepEqual(windows.map(({id,window,observations})=>[id,window.mode==='calendar'?window.startDate:observations[0]?.date,window.mode==='calendar'?window.endDate:observations.at(-1)?.date]),[
-   [focus,start,end],['payroll',start,end],['unrate',start,end],
+   ['payroll',start,end],['unrate',start,end],[focus,start,end],
   ]);
   }
  }finally{for(const id of ids)series[id]=priors[id];}

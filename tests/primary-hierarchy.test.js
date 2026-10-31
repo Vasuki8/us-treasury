@@ -24,13 +24,14 @@ function outsideDetails(html){
 test('Labor focus has one CSV and data action while retaining weekly distinctions and supporting source access',()=>{
  const html=laborPage(state({macroMeasure:'unrate'}));
  assert.equal(count(html,'data-export-macro-measure'),1);
- const focus=html.slice(html.indexOf('class="labor-history"'),html.indexOf('class="labor-aside"'));
+ const focus=html.match(/<section class="labor-history"[^]*?<\/section>/)?.[0]??'';
+ assert.ok(focus);
  assert.equal(count(focus,'Details &amp; data table'),1);
  assert.doesNotMatch(focus,/Inspect data/);
  assert.match(focus,/data-page-disclosure="labor:definition:unrate"/);
  assert.match(focus,/Methodology &amp; source notes/);
  assert.match(html,/Same-release prior/);assert.match(html,/not spliced/);
- assert.ok(html.indexOf('class="labor-history"')<html.indexOf('id="labor-weekly"'));
+ assert.ok(html.indexOf('id="labor-weekly"')<html.indexOf('class="labor-history"'));
 });
 
 test('Indicator keeps its one definition and critical caveats by the reading with secondary source metadata below history',()=>{

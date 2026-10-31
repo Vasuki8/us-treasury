@@ -48,7 +48,7 @@ test('Overview leads with conditions and momentum, then catalysts, with research
   assert.match(html,/Observed value change between retrievals/);
   for(const href of ['#/watchlist','#/research?view=changes']) assert.ok(html.includes(href));
   for(const ids of ['pceMonthly,pceCoreMonthly','unrate,underemployment,participation','realDisposableIncomeMonthly,realSpendingMonthly']) assert.ok(html.includes('data-compare="'+ids+'"'));
-  assert.match(overviewPage(state()),/Follow measurements from their detail pages/);
+  assert.doesNotMatch(overviewPage(state()),/data-overview-disclosure="my-research"/,'Empty personal research stays out of the briefing');
   assert.match(overviewPage(state()),/Publication evidence not loaded/);
   assert.match(overviewPage(state()),/Historical publications captured recently are not new releases today/);
   assert.match(html,/Data freshness &amp; release coverage/);
