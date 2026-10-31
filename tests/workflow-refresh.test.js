@@ -8,11 +8,13 @@ import vm from 'node:vm';
 const workflow = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
 const jobs = Object.fromEntries([...workflow.slice(workflow.indexOf('\njobs:')).matchAll(/^  ([\w-]+):\r?\n([\s\S]*?)(?=^  [\w-]+:\r?$|(?![\s\S]))/gm)].map(match => [match[1], match[2]]));
 function context(event = 'push', {
-  ref = 'refs/heads/main', force = false, scope = 'all', checkSources = false, cancelled = false,
+  ref = 'refs/heads/main', force = false, scope = 'all', checkSources = false, recover = false, cancelled = false,
   check = 'success', required = 'true', refresh = 'success', verify = 'success', constrained = 'success', target = '',
 } = {}) {
   return {
-    github: { event_name: event, ref }, inputs: { refresh_data: force, refresh_scope: scope, check_sources: checkSources }, vars: { DEPLOY_TARGET: target },
+    github: { event_name: event, ref },
+    inputs: { refresh_data: force, refresh_scope: scope, check_sources: checkSources, recover_overdue: recover },
+    vars: { DEPLOY_TARGET: target },
     needs: {
       refresh_check: { result: check, outputs: { required } }, refresh: { result: refresh },
       verify: { result: verify }, test_constrained: { result: constrained },
@@ -31,6 +33,12 @@ function eligible(job, data) {
   const needs = Object.fromEntries(dependencies.map(id => [id, data.needs[id]]));
   return !!vm.runInNewContext(expression, { ...data, needs }, { timeout: 1000 });
 }
+function planningCommand(data) {
+  const run = jobs.refresh_check.match(/^        run: ([^\r\n]+)((?:\r?\n          [^\r\n]*)*)/m);
+  const command = run?.[1] === '>-' ? run[2].trim().split(/\r?\n/).map(line => line.trim()).join(' ') : run?.[1];
+  assert.ok(command);
+  return command.replace(/\$\{\{([\s\S]*?)\}\}/g, (_, expression) => String(vm.runInNewContext(expression, data, { timeout: 1000 })));
+}
 
 test('trusted automatic main runs check for a missed refresh while PRs and redeploy-only runs do not', () => {
   for (const event of ['push', 'schedule']) assert.equal(eligible('refresh_check', context(event)), true, event);
@@ -38,6 +46,44 @@ test('trusted automatic main runs check for a missed refresh while PRs and redep
   assert.equal(eligible('refresh_check', context('workflow_dispatch')), false);
   assert.equal(eligible('refresh_check', context('pull_request', { ref: 'refs/pull/1/merge' })), false);
   assert.equal(eligible('refresh_check', context('push', { ref: 'refs/heads/feature' })), false);
+});
+
+test('overdue recovery planning is allowed only for an explicit dispatch on main', () => {
+  assert.equal(eligible('refresh_check', context('workflow_dispatch', { recover: true })), true);
+  for (const event of ['workflow_dispatch', 'push', 'schedule', 'pull_request']) {
+    for (const ref of ['refs/heads/feature', 'refs/pull/1/merge']) {
+      assert.equal(eligible('refresh_check', context(event, { ref, recover: true, force: true })), false, `${event} ${ref}`);
+    }
+  }
+});
+
+test('overdue recovery uses the daily planner without forcing or narrowing collection even when manual options conflict', () => {
+  for (const force of [false, true]) {
+    for (const scope of ['all', 'core-labor', 'unemployment-cpi-debt']) {
+      const command = planningCommand(context('workflow_dispatch', { recover: true, force, scope })).trim();
+      assert.equal(command, 'node scripts/check-refresh-due.mjs', `${force} ${scope}`);
+    }
+  }
+  assert.match(planningCommand(context('push')), /^node scripts\/check-release-refresh\.mjs/);
+  assert.match(planningCommand(context('schedule')), /^node scripts\/check-release-refresh\.mjs/);
+});
+
+test('overdue recovery skips verification after a completed daily plan and keeps both deployment checks after refresh', () => {
+  for (const job of ['verify', 'test_constrained']) {
+    assert.equal(eligible(job, context('workflow_dispatch', { recover: true, required: 'false', refresh: 'skipped' })), false, job);
+    assert.equal(eligible(job, context('workflow_dispatch', { recover: true })), true, job);
+    for (const options of [{ check: 'failure', refresh: 'skipped' }, { refresh: 'failure' }, { cancelled: true }]) {
+      assert.equal(eligible(job, context('workflow_dispatch', { recover: true, ...options })), false, `${job} ${JSON.stringify(options)}`);
+    }
+  }
+  for (const job of ['deploy', 'deploy-cloudflare']) {
+    for (const result of ['failure', 'skipped', 'cancelled']) {
+      assert.equal(eligible(job, context('workflow_dispatch', { recover: true, verify: result })), false, `${job} verify ${result}`);
+      assert.equal(eligible(job, context('workflow_dispatch', { recover: true, constrained: result })), false, `${job} constrained ${result}`);
+    }
+  }
+  assert.equal(eligible('deploy', context('workflow_dispatch', { recover: true })), true);
+  assert.equal(eligible('deploy-cloudflare', context('workflow_dispatch', { recover: true, target: 'cloudflare' })), true);
 });
 
 test('all-source diagnostics require explicit manual selection and do not gate publication',()=>{
@@ -57,15 +103,14 @@ test('refresh downloads run only after a successful due check', () => {
 });
 
 test('core labor bootstrap explicitly selects only BLS while automatic and all-source modes retain their scope',()=>{
- const run=jobs.refresh_check.match(/^        run: ([^\r\n]+)((?:\r?\n          [^\r\n]*)*)/m);
- const command=run?.[1]==='>-'?run[2].trim().split(/\r?\n/).map(line=>line.trim()).join(' '):run?.[1];
- assert.ok(command);
- const render=data=>command.replace(/\$\{\{([\s\S]*?)\}\}/g,(_,expression)=>String(vm.runInNewContext(expression,data,{timeout:1000})));
- const labor=render(context('workflow_dispatch',{force:true,scope:'core-labor'}));
+ const labor=planningCommand(context('workflow_dispatch',{force:true,scope:'core-labor'}));
  assert.match(labor,/ --force --sources=bls$/);
  assert.doesNotMatch(labor,/treasury|fiscal/);
- assert.match(render(context('workflow_dispatch',{force:true,scope:'unemployment-cpi-debt'})),/ --force --sources=bls,treasury,fiscal$/);
- for(const data of [context('push',{scope:'core-labor'}),context('schedule',{scope:'core-labor'}),context('workflow_dispatch',{scope:'core-labor'}),context('workflow_dispatch',{force:true,scope:'all'})])assert.doesNotMatch(render(data),/--sources=/);
+ assert.match(planningCommand(context('workflow_dispatch',{force:true,scope:'unemployment-cpi-debt'})),/ --force --sources=bls,treasury,fiscal$/);
+ for (const data of [
+   context('push', { scope: 'core-labor' }), context('schedule', { scope: 'core-labor' }),
+   context('workflow_dispatch', { scope: 'core-labor' }), context('workflow_dispatch', { force: true, scope: 'all' }),
+ ]) assert.doesNotMatch(planningCommand(data), /--sources=/);
 });
 
 test('failed refresh planning or collection blocks verification and deployment', () => {
