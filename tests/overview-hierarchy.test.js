@@ -10,11 +10,12 @@ const state=extra=>({...defaults,saved:[],selected:[],...extra});
 const render=(extra={},context={})=>overviewPage(state(extra),{now:new Date('2026-10-23T12:00:00Z'),...context});
 const primary=(html,id)=>html.match(new RegExp(`data-overview-reading="${id}"[^]*?</a>`))?.[0];
 
-test('Overview has eight distinct primary reading cells and native momentum charts',()=>{
+test('Overview has four headline cards and four monitor readings with native momentum charts',()=>{
  const html=render();
  assert.match(html,/class="radar-page radar-overview overview-hierarchy"/);
  assert.equal((html.match(/data-overview-reading=/g)??[]).length,8);
- assert.equal((html.match(/class="oh-topic"/g)??[]).length,8);
+ assert.equal((html.match(/class="oh-topic"/g)??[]).length,4);
+ assert.equal((html.match(/class="workspace-monitor-row"/g)??[]).length,4);
  for(const id of ['gdp','pceCore','payroll','unrate','policyTargetRange','yield','spread2s10s','interestRevenueRatio'])assert.ok(primary(html,id),id);
  for(const [earlier,later] of [['oh-snapshot','oh-momentum'],['oh-momentum','oh-catalysts'],['oh-catalysts','oh-support']])assert.ok(html.indexOf(earlier)<html.indexOf(later));
  assert.match(primary(html,'gdp'),/q\/q SAAR/);

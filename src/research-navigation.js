@@ -22,6 +22,13 @@ const research=[['watchlist','Watchlist','#/watchlist'],['research','Saved views
 export const researchPages=[...economy,...fed,...treasury,['vintages','Retrieval history','#/vintages']];
 export const isResearchPage=page=>researchPages.some(([id])=>id===page);
 
+export function workspaceNavigation(){
+ return [['economy','Economy',economy],['fed','Fed & rates',fed],['treasury','Treasury & funding',treasury]].map(([id,label,links])=>
+  `<details class="workspace-nav-group" data-workspace-family="${id}"><summary data-nav-group="${id}">${esc(label)}</summary>`
+  +links.map(([page,title,href,detail])=>`<a href="${esc(href)}" data-nav="${page}"`
+   +`${page==='macroCoverage'?` data-nav-family="${detail}"`:''}>${esc(title)}</a>`).join('')+'</details>').join('');
+}
+
 export function navigationFamily(input={}) {
  const state=typeof input==='string'?{page:input}:input;
  if(state.page==='macroCoverage')return state.macroFamily==='policy'?'fed':'economy';

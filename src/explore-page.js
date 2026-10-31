@@ -2,6 +2,7 @@ import {readingGroup,supportingDetails} from './page-hierarchy.js';
 import {buildCoverageInventory} from './coverage-inventory.js';
 import {coverageInventoryPanel} from './coverage-inventory-view.js';
 import {series,releases} from './data.js';
+import {seriesPreview} from './workspace-preview.js';
 import {globalSearch,globalSearchPanel} from './global-search.js';
 import {groupSearchMeasurements} from './search.js';
 import {routeFor} from './router.js';
@@ -54,6 +55,9 @@ function catalogRow({primary:current,variants},state){
   const period=observation?`<time datetime="${esc(observation.date)}">${esc(periodLabel(current,observation.date))}</time>`:'Unavailable';
   return `<tr data-catalog-series="${esc(current.id)}"${state.selected.includes(current.id)?' class="selected-row"':''}>`+
     `<td>${checkbox(current)}</td><th scope="row">${link(current.name,indicatorHref(current.id,state),'')}`+
+    `<button type="button" class="catalog-preview-button" data-workspace-preview="${esc(current.id)}" `+
+    `aria-label="Preview ${esc(current.name)}" aria-controls="catalog-preview" `+
+    `aria-pressed="${state.previewId===current.id}">Preview</button>`+
     `<span class="table-code mono muted">${esc(current.code)} · ${esc(seriesStatus(current))}`+
     `${current.error?` · ${esc(current.error)}`:''}</span>`+
     `<span class="table-code catalog-identity-meta">${esc(current.frequency)} · ${esc(current.source.name)}</span>`+
@@ -132,7 +136,24 @@ function inventory(state,context){
 }
 
 export function explorePage(state,context={}) {
+  const previewId=getSeries(context.workspacePreview)?context.workspacePreview:'gdp';
+  state={...state,previewId};
   const back=workspaceReturn(state),result=compareSeries(state.selected,state.exploreMode==='compare'?state.comparison:'native',viewRange(state));
-  return `<div class="radar-page radar-explore" data-explore-view="${state.exploreMode}">`+(back?`<nav class="return-context" aria-label="Return to workspace">${link(back.label,back.href)}</nav>`:'')+heading('EXPLORE DATA', 'Find series, compare observations and inspect retained coverage', state.exploreMode==='coverage'?button('CSV COVERAGE','data-export-coverage'):button('CSV SELECTED', `data-export${state.selected.length&&!result.error ? '' : ' disabled title="Choose a valid comparison and date window."'}`))
-    + `<div class="tabs explore-tabs" role="tablist" aria-label="Explore views">${[['catalog', 'SERIES CATALOG'], ['compare', 'COMPARE SERIES'],['coverage','COVERAGE INVENTORY']].map(([id, label]) => button(label, `role="tab" id="explore-tab-${id}" aria-controls="explore-content" aria-selected="${state.exploreMode === id}" data-explore-mode="${id}"`, '')).join('')}</div><div id="explore-content" class="tab-panel workspace-analysis" role="tabpanel" aria-labelledby="explore-tab-${state.exploreMode}">${state.exploreMode === 'coverage'?inventory(state,context):state.exploreMode === 'compare' ? comparison(state) : catalog(state,context)}</div>${state.exploreMode === 'coverage'?'':state.exploreMode === 'compare' ? comparisonStarters() : supportingDetails('explore:catalog-starters','Starter comparisons · explore a question',comparisonStarters(),{className:'catalog-starters'})}</div>`;
+  const catalogDesk=`<div class="catalog-workspace">${catalog(state,context)}`
+    +`<aside id="catalog-preview" tabindex="-1" data-preview-active="${Boolean(context.workspacePreview)}" aria-label="Series preview">`
+    +button('Back to catalog','data-preview-close','action preview-return')+seriesPreview(previewId,state)+'</aside></div>';
+  const content=state.exploreMode==='coverage'?inventory(state,context):state.exploreMode==='compare'?comparison(state):catalogDesk;
+  const actions=state.exploreMode==='coverage'?button('CSV coverage','data-export-coverage')
+    :button('CSV selected',`data-export${state.selected.length&&!result.error?'':' disabled'}`);
+  const tabs=[['catalog','Series catalog'],['compare','Compare series'],['coverage','Coverage inventory']];
+  const starters=state.exploreMode==='coverage'?'':state.exploreMode==='compare'?comparisonStarters()
+    :supportingDetails('explore:catalog-starters','Starter comparisons · explore a question',comparisonStarters(),{className:'catalog-starters'});
+  return `<div class="radar-page radar-explore" data-explore-view="${state.exploreMode}">`
+    +(back?`<nav class="return-context" aria-label="Return to workspace">${link(back.label,back.href)}</nav>`:'')
+    +heading('Explore data','Find a measurement. Inspect its history. Build a comparison.',actions)
+    +`<div class="tabs explore-tabs" role="tablist" aria-label="Explore views">${tabs.map(([id,label])=>button(label,
+      `role="tab" id="explore-tab-${id}" aria-controls="explore-content" aria-selected="${state.exploreMode===id}" `
+      +`data-explore-mode="${id}"`,'')).join('')}</div>`
+    +`<div id="explore-content" class="tab-panel workspace-analysis" role="tabpanel" `
+    +`aria-labelledby="explore-tab-${state.exploreMode}">${content}</div>${starters}</div>`;
 }

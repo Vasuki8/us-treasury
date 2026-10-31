@@ -11,6 +11,7 @@ import { indicatorHref } from './workspace-context.js';
 import {inflationHorizonTable} from './inflation-comparison.js';
 import {displayCurrencyUnit,displayUnitLabel,formatDisplayValue,formatDisplayChange} from './display-format.js';
 import {humanDate,humanTimestamp} from './ui-time.js';
+import {seriesPreview} from './workspace-preview.js';
 
 const a=(text,href,className='action')=>`<a class="${esc(className)}" href="${esc(href)}">`
  +`${esc(sentenceCase(/^https?:/.test(href)?text:text.replace(/ ↗[︎]?/g,'')))}</a>`;
@@ -128,12 +129,20 @@ export function overviewPage(state={},context={}){
  const brief=dailyBrief({catalog:series,changes:context.changes?.rows??[],failures:context.failures,publicationContexts:context.publicationContexts});
  const cards=topic('Growth','#/economy?family=activity',reading('gdp',state,{label:'Real GDP growth'}))
   +topic('Inflation','#/economy?family=prices',reading('pceCore',state,{label:'Core PCE · year over year'}))
-  +topic('Jobs','#/economy/labor',reading('payroll',state,{label:'Monthly payroll gain'}))
   +topic('Unemployment','#/economy/labor',reading('unrate',state,{label:'Unemployment rate'}))
-  +topic('Monetary policy','#/economy?family=policy',policyReading(state))
-  +topic('Treasury yield','#/yields',reading('yield',state,{label:'10Y Treasury par yield'}))
-  +topic('Yield curve','#/yields',reading('spread2s10s',state,{label:'2s10s curve spread'}))
-  +topic('Fiscal & funding','#/fiscal',reading('interestRevenueRatio',state,{label:'Net interest / revenue · TTM'}));
+  +topic('Treasury yield','#/yields',reading('yield',state,{label:'10Y Treasury par yield'}));
+ const trendIds=['gdp','pceCore','unrate','yield','payroll','policyTargetUpper','spread2s10s','interestRevenueRatio'];
+ const preview=trendIds.includes(context.workspacePreview)?context.workspacePreview:'gdp';
+ const trendPicker='<label class="workspace-trend-picker" for="overview-trend">Measurement '
+  +`<select id="overview-trend" data-workspace-series>${trendIds.map(id=>`
+   <option value="${id}"${id===preview?' selected':''}>${esc(getSeries(id).short)}</option>`).join('')}</select></label>`;
+ const trend=seriesPreview(preview,{...state,page:'overview'},{title:'Trend monitor',controls:trendPicker,definition:false});
+ const monitorRows=[['payroll','Monthly payroll gain'],['policyTargetUpper','Fed funds target range'],
+  ['spread2s10s','2s10s curve spread'],['interestRevenueRatio','Net interest / revenue · TTM']].map(([id,label])=>
+  `<div class="workspace-monitor-row"${preview===id?' data-active="true"':''}>`
+  +(id==='policyTargetUpper'?policyReading(state):reading(id,state,{label}))
+  +button('Chart',`data-workspace-preview="${id}" aria-label="Chart ${esc(label)}" aria-pressed="${preview===id}"`)
+  +'</div>').join('');
  const snapshotContext=disclosure('growth-demand','Domestic demand',reading('privateDomesticDemandGrowth',state,{label:'Private domestic final demand',primary:false,compact:true})+'<p class="panel-note oh-growth-note">Private consumption and fixed investment; excludes inventories, government and net exports.</p>','','oh-context-details')
   +disclosure('policy-effective','Effective rate',reading('effr',state,{label:'Effective federal funds rate',primary:false})+`<p class="panel-note">Effective rates and target bounds can refer to different days. Inspect ${detail('policyTargetLower',state,'lower bound')} or ${detail('policyTargetUpper',state,'upper bound')}.</p>`,'','oh-context-details')
   +disclosure('fiscal-debt','Debt stock',reading('publicDebt',state,{label:'Debt held by public',primary:false}),'','oh-context-details');
@@ -147,10 +156,13 @@ export function overviewPage(state={},context={}){
   'Thousands of jobs · three-month average of monthly payroll gains; establishment jobs differ from household people measures.','oh-chart-panel');
  const horizons=disclosure('inflation-horizons','Inflation horizons',
   `<div class="oh-inflation-comparison">${inflationHorizonTable({...state,page:'overview'})}</div>`,'Monthly · annual · annualized');
- const momentum=`<section class="oh-momentum"><div class="oh-section-label"><h2>Momentum</h2></div>`
-  +`<div class="oh-plots">${inflationMomentum}${payrollMomentum}</div>${horizons}</section>`;
+ const momentum=`<section class="oh-momentum" aria-label="Economic trends"><div class="oh-plots">${trend}${inflationMomentum}</div></section>`;
+ const monitorLinks=a('Policy & rates','#/economy?family=policy','link-button')+a('Fiscal & funding','#/fiscal','link-button');
+ const monitor=`<section class="oh-monitor">${panel('','Macro monitor',monitorRows,monitorLinks,'Each reading keeps its own reference period.')}`
+  +`<div class="oh-context">${snapshotContext}</div></section>`;
  const support=disclosure('activity-income','Activity & income',supportingRows(['realSpendingMonthly','realDisposableIncomeMonthly','industrialProduction'],state)+`<p class="panel-note">Different scope and reporting lags provide context; correlated changes do not prove causation.</p><div class="oh-research-links">${button('COMPARE INCOME & SPENDING','data-compare="realDisposableIncomeMonthly,realSpendingMonthly"')}</div>`,'3 measurements')
   +disclosure('weekly-claims','Weekly claims',supportingRows(['claimsAdvance','continuedClaimsAdvance'],state,{claims:true})+'<p class="panel-note">Initial and continued claims refer to different weeks. Reported publication days come from the current source feed; reviewed archived evidence is separate in Published results above. Revised history and full release provenance remain on each detail page.</p>','Distinct reference weeks')
+  +disclosure('payroll-momentum','Payroll momentum',payrollMomentum,'3-month average')+horizons
   +research(brief,state,context)
   +disclosure('data-methods','About this data',`<p class="panel-note">Snapshot assembled ${esc(humanTimestamp(dataStatus.generatedAt)||'unknown')}. `
    +'Latest reference periods are shown with each measurement. Successful collection does not establish publication. '
@@ -159,9 +171,9 @@ export function overviewPage(state={},context={}){
     now:context.now??new Date()}),{disclosure:false,hrefFor:id=>indicatorHref(id,{...state,page:'overview'})})
    +`<div class="oh-research-links">${a('Published estimates','#/research?view=publications')}</div>`,'Reference periods & provenance');
  return '<div class="radar-page radar-overview overview-hierarchy">'
-  +heading('U.S. economy','Latest readings, with each measure’s own date and unit.')
+  +heading('U.S. economy','Growth, inflation, employment and rates. One research workspace.')
   +'<div class="oh-desk"><section class="oh-snapshot"><div class="oh-section-label"><h2>Economic conditions</h2></div>'
   +`<div class="oh-topic-grid" role="region" aria-label="Economy at a glance">${cards}</div>`
-  +`<div class="oh-context">${snapshotContext}</div></section>${momentum}${catalystPanel(state,context,brief)}`
+  +`</section>${momentum}${monitor}${catalystPanel(state,context,brief)}`
   +`<section class="oh-support" aria-label="Supporting research">${support}</section></div></div>`;
 }

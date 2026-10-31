@@ -33,6 +33,14 @@ export function syncCompactNavigation(root, state) {
   for(const group of root.querySelectorAll('[data-nav-group]')) {
     group.dataset.active=String(group.dataset.navGroup==='research'?isResearchPage(page):group.dataset.navGroup===family);
   }
+  for(const group of root.querySelectorAll('[data-workspace-family]')){
+    const activeFamily=family??'';
+    if(group.dataset.activeFamily!==activeFamily)group.open=group.dataset.workspaceFamily===family;
+    group.dataset.activeFamily=activeFamily;
+  }
+  for(const group of root.querySelectorAll('.rail .rail-group')){
+    if(group.querySelector('[aria-current="page"]'))group.open=true;
+  }
   const menu=root.querySelector('#navigation-more');
   if(menu)menu.querySelector('summary').dataset.active=String([...menu.querySelectorAll('[data-nav]')].some(link=>navigationLinkActive(link,state)));
   for(const id of ['indicator-nav','indicator-rail','indicator-mobile']) {

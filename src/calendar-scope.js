@@ -1,5 +1,6 @@
 import {releases,series} from './data.js';
 import {calendarRelatedIds} from './macro-calendar.js';
+import {isIsoDate} from './date-window.js';
 export const isTreasuryEvent=event=>['treasury','treasury-auctions'].includes(event?.sourceId);
 export const isTreasuryBill=event=>event?.sourceId==='treasury-auctions'&&/bill/i.test(event.securityType??'');
 
@@ -14,6 +15,9 @@ export function calendarScope(state,{events=releases,catalog=series,now=new Date
  if(!(now instanceof Date)||!Number.isFinite(now.getTime()))throw new Error('Invalid calendar scope date.');
  const ordered=[...events].sort((a,b)=>a.date.localeCompare(b.date)||String(a.time??'').localeCompare(String(b.time??''))||a.id.localeCompare(b.id));
  const months=[...new Set(events.map(event=>event.date.slice(0,7)))].sort();
+ if(isIsoDate(state.calendarMonth+'-01')&&!months.includes(state.calendarMonth)){
+  months.push(state.calendarMonth);months.sort();
+ }
  const related=event=>calendarRelatedIds(event).filter(id=>Object.hasOwn(catalog,id)),saved=state.saved??[];
  const matchesFilters=event=>(state.day==='all'||!state.day||event.date===state.day)
   &&(!state.calendarTopic||state.calendarTopic==='All topics'||event.topic===state.calendarTopic||related(event).some(id=>catalog[id].topic===state.calendarTopic))
@@ -40,6 +44,9 @@ export function calendarScope(state,{events=releases,catalog=series,now=new Date
  const viewEvents=windowEvents.filter(event=>(view==='treasury'||!isTreasuryBill(event))
   &&(view==='all'||isTreasuryEvent(event)===(view==='treasury')));
  const days=[...new Set(viewEvents.map(event=>event.date))];
+ if(isIsoDate(state.day)&&state.day>=startDate&&state.day<=endDate&&!days.includes(state.day)){
+  days.push(state.day);days.sort();
+ }
  const filtered=viewEvents.filter(matchesFilters);
  const selected=filtered.find(event=>event.id===state.eventId)??(view==='treasury'?filtered.find(event=>event.sourceId!=='treasury'):null)??filtered[0];
  return {months,month,view,revealed,days,windowEvents,filtered,selected,window:{startDate,endDate,timeZone:'America/New_York'}};

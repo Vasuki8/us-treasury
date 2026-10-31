@@ -28,7 +28,7 @@ test('Overview keeps primary readings and supporting measurements individually i
     assert.match(reading[1], /class="reading-unit">[^<]+ · [^<]+<\/span>/);
     assert.match(reading[1], /class="reading-change"/);
   }
-  assert.equal((html.match(/class="oh-topic"/g)||[]).length,8);
+  assert.equal((html.match(/class="oh-topic"/g)||[]).length,4);
   for(const id of ['realSpendingMonthly','pceCoreMonthly','effr','policyTargetLower','policyTargetUpper','publicDebt','claimsAdvance','continuedClaimsAdvance'])assert.ok(html.includes('#/series/'+id),id);
   for (const href of ['#/economy?family=activity','#/economy?family=prices','#/economy/labor','#/economy?family=policy','#/yields','#/fiscal']) assert.ok(html.includes(href),href);
   assert.match(html,/data-compare="pceMonthly,pceCoreMonthly"/,'The focused comparison action replaces the generic catalog link');

@@ -1,6 +1,6 @@
 import { series, releases } from './data.js';
 import {coverageFamilies} from './macro-registry.js';
-import {defaultWindowPreset} from './date-window.js';
+import {defaultWindowPreset,isIsoDate} from './date-window.js';
 import {pagePaths} from './page-registry.js';
 
 const validIds = ids => [...new Set(ids.filter(id => Object.hasOwn(series, id)))].slice(0, 4);
@@ -102,8 +102,9 @@ export function parseRoute(hash = '') {
     state.exploreMode = ['compare','coverage'].includes(p.get('mode')) ? p.get('mode') : 'catalog';
     state.comparison = ['indexed','difference'].includes(p.get('comparison')) ? p.get('comparison') : 'native';
     state.alignment=p.get('alignment')==='quarter'?'quarter':'exact';
-    state.day = releases.some(event=>event.date===p.get('day')) ? p.get('day') : 'all';
-    state.calendarMonth = releases.some(event => event.date.startsWith(p.get('month') + '-')) ? p.get('month') : !p.has('month') && state.day !== 'all' ? state.day.slice(0, 7) : 'upcoming';
+    state.day = isIsoDate(p.get('day')) ? p.get('day') : 'all';
+    state.calendarMonth = isIsoDate(p.get('month')+'-01') ? p.get('month')
+      : !p.has('month') && state.day !== 'all' ? state.day.slice(0,7) : 'upcoming';
     if (state.calendarMonth !== 'upcoming' && state.day !== 'all' && !state.day.startsWith(state.calendarMonth + '-')) state.day = 'all';
     state.calendarTopic = topics.includes(p.get('calendarTopic')) ? p.get('calendarTopic') : 'All topics';
     state.watchOnly = p.get('watch') === '1';
