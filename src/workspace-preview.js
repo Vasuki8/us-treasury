@@ -17,7 +17,7 @@ export function seriesPreview(id,state,{title='Series preview',controls='',defin
   ||/partial|suppressed|not (?:directly )?comparable/i.test(current.coverageNote??'');
  const warning=current.coverageNote&&(definition||critical)?`<p class="panel-note">${esc(current.coverageNote)}</p>`:'';
  const error=current.error?`<p class="panel-note amber" role="status">${esc(current.error)}</p>`:'';
- const body=controls+reading+basis+error+chart([id],{range:12,height:215,kind:id==='payroll'?'bar':'line'})
+ const body=controls+reading+basis+error+chart([id],{range:12,height:215,kind:['gdp','payroll'].includes(id)?'bar':'line'})
   +`<p class="panel-note preview-window">Up to 12 retained observations · native units · no interpolation</p>`
   +(definition?`<div class="preview-definition"><p>${esc(current.definition)}</p>${warning}`
     +`<p class="muted">${esc(current.source.name)} · Retrieved ${esc(humanTimestamp(current.fetchedAt)||'Unavailable')}</p></div>`:warning);

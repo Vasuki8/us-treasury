@@ -133,7 +133,7 @@ function applyAppearance() {
   root.dataset.theme=state.theme;
   root.dataset.density=state.density;
   document.documentElement.dataset.theme=state.theme;
-  document.querySelector('meta[name="theme-color"]').content=state.theme==='Graphite'?'#101722':'#f3f6fa';
+  document.querySelector('meta[name="theme-color"]').content=state.theme==='Graphite'?'#17181e':'#f5f5f4';
   const dark=state.theme==='Graphite',themeButton=document.getElementById('theme-toggle');
   themeButton.querySelector('[data-theme-label]').textContent=dark?'Dark':'Light';
   themeButton.querySelector('[data-theme-sun]').hidden=dark;
@@ -281,6 +281,7 @@ function render({focusHeading=false,preserveFocus=false,captureDrafts=true}={}) 
     workspacePreview:workspacePreviews[state.page],
   });
   main.querySelector('.page-heading .actions')?.insertAdjacentHTML('beforeend',researchActions());
+  document.getElementById('workspace-page-label').textContent=main.querySelector('h1')?.textContent??pageNames[state.page];
   if(externalControlsOpen&&main.querySelector('#external-history-controls'))main.querySelector('#external-history-controls').open=true;
   researchDisclosures.restore(main);
   document.getElementById('ticker').hidden=true;
