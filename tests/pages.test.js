@@ -144,9 +144,9 @@ test('HTML helpers escape untrusted values and expose declarative chart controls
   assert.match(chart(['unrate'], { range: 6, transform: 'change' }), /data-transform="change"/);
 });
 
-test('overview leads with eight dated readings and keeps momentum, catalysts and publication evidence reachable', () => {
+test('overview leads with four cards and retains all eight dated readings, momentum and publication evidence', () => {
  const html=render(),current=getSeries('unrate');
- assert.equal((html.match(/class="oh-topic"/g)||[]).length,8);
+ assert.equal((html.match(/class="oh-topic"/g)||[]).length,4);
  assert.equal((html.match(/data-overview-reading=/g)||[]).length,8);
  assert.ok(html.includes(formatValue(current,latest(current)?.value)));
  assert.match(html,/data-series="pceMonthly,pceCoreMonthly"/);

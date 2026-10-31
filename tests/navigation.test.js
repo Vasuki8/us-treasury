@@ -44,9 +44,9 @@ test('malformed paths, unknown ids and invalid settings resolve safely', () => {
   assert.deepEqual(parseRoute('#/explore?selected=bad,cpi,cpi,unrate').selected, ['cpi', 'unrate']);
 });
 
-test('calendar deep links retain watchlist mode and reject unverified event and day values', () => {
+test('calendar filters retain valid dates and watchlist mode while rejecting unverified event identities', () => {
   const state = parseRoute(routeFor({page:'calendar',day:'1900-10-22',calendarTopic:'Labor',watchOnly:true,eventId:'unverified-event'}));
-  assert.equal(state.day, 'all');
+  assert.equal(state.day, '1900-10-22');
   assert.equal(state.watchOnly, true);
   assert.equal(state.eventId, '');
   assert.equal(state.calendarTopic, 'Labor');
@@ -68,10 +68,12 @@ test('calendar links validate captured events and infer the month for an explici
     assert.equal(month.calendarMonth, '2026-11');
     assert.equal(month.day, '2026-11-06');
     assert.equal(month.watchOnly, true);
-    assert.equal(parseRoute('#/calendar?month=1900-01&day=1900-01-01&event=unknown').calendarMonth, 'upcoming');
+    const empty=parseRoute('#/calendar?month=1900-01&day=1900-01-01&event=unknown');
+    assert.equal(empty.calendarMonth, '1900-01');
+    assert.equal(empty.eventId, '');
     assert.equal(parseRoute('#/calendar?month=2026-10&day=2026-11-06').day, 'all');
     releases.splice(0);
-    assert.equal(parseRoute('#/calendar?event=employment-2026-11-06&day=2026-11-06').day, 'all');
+    assert.equal(parseRoute('#/calendar?event=employment-2026-11-06&day=2026-11-06').day, '2026-11-06');
     assert.equal(parseRoute('#/calendar?event=employment-2026-11-06').eventId, '');
   } finally { releases.splice(0, releases.length, ...saved); }
 });

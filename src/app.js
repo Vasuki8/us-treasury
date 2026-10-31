@@ -34,6 +34,7 @@ import {vintagesCsv,normalizedCutoff} from './vintages-page.js';
 import {marketFunctioningCsv} from './market-functioning-page.js';
 import {mountCompactNavigation,syncCompactNavigation} from './compact-navigation.js';
 import { renderPage } from './pages.js';
+import {workspaceNavigation} from './research-navigation.js';
 import { escapeHtml as esc, sourceNotice } from './ui.js';
 import {pageSourceScope} from './page-source-scope.js';
 import {humanTimestamp} from './ui-time.js';
@@ -251,6 +252,9 @@ function researchActions(){
  return alert+renderResearchSave({scope,draft,candidates,catalog:series,active:Boolean(active),watchlist:state.page==='watchlist',pending:pinBusy,release:state.page==='release'});
 }
 
+const workspacePreviews={overview:'gdp',explore:null};
+document.getElementById('workspace-topics').innerHTML=workspaceNavigation();
+
 function render({focusHeading=false,preserveFocus=false,captureDrafts=true}={}) {
   if(captureDrafts){saveDrafts.capture(main);questionDrafts.capture(document);}
   const inspection=focusHeading?null:captureChartInspection(main);
@@ -274,6 +278,7 @@ function render({focusHeading=false,preserveFocus=false,captureDrafts=true}={}) 
     ...historyController.context(state),sourceState:sourceController.context(state),library:researchLibrary.getState(),
     questionDrafts:questionDrafts.snapshot(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationContexts,
     publicationArchive,publicationState,publicationExplanations,explanationState,
+    workspacePreview:workspacePreviews[state.page],
   });
   main.querySelector('.page-heading .actions')?.insertAdjacentHTML('beforeend',researchActions());
   if(externalControlsOpen&&main.querySelector('#external-history-controls'))main.querySelector('#external-history-controls').open=true;
@@ -544,6 +549,20 @@ root.addEventListener('click',async event=>{
   const d=button.dataset;
   if(button.disabled)return;
   if(button.id==='theme-toggle'){toggleTheme();return;}
+  if('previewClose' in d){
+    const id=workspacePreviews.explore;workspacePreviews.explore=null;
+    render({preserveFocus:true});
+    (main.querySelector(`[data-workspace-preview="${id}"]`)??main.querySelector('#catalog-search'))?.focus();return;
+  }
+  if('workspacePreview' in d&&getSeries(d.workspacePreview)){
+    workspacePreviews[state.page]=d.workspacePreview;
+    render({preserveFocus:true});
+    if(state.page==='explore'&&window.matchMedia('(max-width:1000px)').matches){
+      main.querySelector('#catalog-preview')?.focus();
+    }
+    announce(`Previewing ${getSeries(d.workspacePreview).name}. Comparison selection is unchanged.`);
+    return;
+  }
   if(Object.keys(d).some(key=>key.startsWith('export')&&!key.startsWith('exportFrozen')&&key!=='exportSettings')){
     try{await ensureSourceAction(requiredSourceIds(state,{purpose:'export',action:d}));}
     catch(error){announce(`Export unavailable: ${error.message}`);return;}
@@ -676,6 +695,9 @@ root.addEventListener('click',async event=>{
 
 root.addEventListener('change',async event=>{
   const target=event.target;
+  if(target.matches?.('[data-workspace-series]')&&getSeries(target.value)){
+    workspacePreviews[state.page]=target.value;render({preserveFocus:true});return;
+  }
   if(target.dataset&&'freezeSelect' in target.dataset){
     const candidates=freezeCandidates(state),scope=researchSaveScope(state),draft=saveDrafts.get(scope,{selected:candidates.slice(0,4)}),chosen=[...(state.freezeSelection??draft.selected)],id=target.dataset.freezeSelect;
     if(target.checked&&chosen.length>=4){target.checked=false;const message=

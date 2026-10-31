@@ -96,7 +96,7 @@ export function indicatorPage(state,historyContext={}) {
       +'the first displayed change can reference an observation outside the window. Missing observations remain gaps.</p>':'');
   return `<div class="radar-page radar-indicator">${back?`<nav class="return-context" aria-label="Return to workspace">${link(back.label,back.href)}</nav>`:''}`
     +heading(current.name,`${current.code} · ${current.source.name} · ${current.adjustment}`,actions)
-    +`<div class="workspace-basis"><section class="indicator-snapshot" aria-label="Latest retained reading">`
+    +`<div class="indicator-desk"><div class="workspace-basis"><section class="indicator-snapshot" aria-label="Latest retained reading">`
     +`<div class="indicator-reading"><p class="indicator-latest-label">`
     +`Latest retained reading — independent of the selected history window and transformation</p>`
     +`<div class="indicator-native-reading"><strong class="big-value">${esc(formatDisplayValue(current,observation?.value,options))}</strong>`
@@ -120,7 +120,7 @@ export function indicatorPage(state,historyContext={}) {
     +panel('01',`${current.code} / ${current.agency==='dolAdvance'?'Latest release context':'Historical series'}`,chartBody,'',
       `${current.frequency} · ${transformed.unit} · ${seriesStatus(current)}`)+'</div>'
     +`<section class="panel indicator-evidence"><div class="tabs" role="tablist" aria-label="Indicator detail sections">${tabs.map(([id,label])=>button(label,`role="tab" id="detail-tab-${id}" aria-controls="detail-content" aria-selected="${activeTab===id}" tabindex="${activeTab===id?0:-1}" data-tab="${id}"`,'')).join('')}</div><div class="tab-panel" id="detail-content" role="tabpanel" tabindex="0" aria-labelledby="detail-tab-${activeTab}">${content}</div></section>`
-    +`</div><nav class="context-strip related-series" aria-label="Related indicators"><span class="muted">Related</span>`
+    +`</div></div><nav class="context-strip related-series" aria-label="Related indicators"><span class="muted">Related</span>`
     +related.seriesIds.map(id=>link(getSeries(id).short,indicatorHref(id,state))).join('')
     +(related.module?link(related.module.label,related.module.href):'')+'</nav>'
     +(current.id==='yield'?supportingDetails('indicator:yield-timing','Rates guidance · ongoing Treasury publication timing',yieldTimingPanel()):'')
