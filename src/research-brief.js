@@ -1,6 +1,32 @@
 import {releaseMeasurements,selectReleaseEvidence} from './release-evidence.js';
 import {publicationFamily as family} from './publication-controller.js';
 import {isTreasuryBill} from './calendar-scope.js';
+import {measurementChange} from './measurement-change.js';
+import {periodLabel} from './model.js';
+import {formatDisplayChange} from './display-format.js';
+
+/** Descriptive comparisons of retained observations, never publication or significance claims. */
+export function readingChanges(catalog,ids){
+ const names={gdp:'GDP growth',pceCore:'Annual core inflation',payroll:'Monthly payroll change',unrate:'Unemployment',wages:'Annual wage growth'};
+ return ids.flatMap(id=>{
+  const current=catalog[id];if(!current)return [];
+  const last=current.observations?.at(-1),prior=current.observations?.at(-2),change=measurementChange(current);
+  const comparable=current.dataStatus!=='unavailable'&&last?.date>prior?.date&&change.value!==null;
+  const delta=comparable?change.value:null,direction=delta===null?'unavailable':delta>0?'higher':delta<0?'lower':'unchanged';
+  const name=names[id]??current.name;
+  const title=direction==='unavailable'?`${name}: comparison unavailable`
+   :`${name} ${direction==='higher'?'increased':direction==='lower'?'decreased':'was unchanged'}`;
+  let formatted=comparable?formatDisplayChange(current):'—';
+  if(comparable&&current.format==='percent'&&!current.changeInBasisPoints&&id!=='yield'){
+   const magnitude=Math.abs(delta),value=magnitude>0&&magnitude<0.005?'<0.01':new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(magnitude);
+   formatted=`${delta>0?'+':delta<0?'−':''}${value} pp`;
+  }
+  const period=last?periodLabel(current,last.date):'Unavailable',priorPeriod=prior?periodLabel(current,prior.date):'Unavailable';
+  return [{id,title,direction,delta,change:formatted,period,priorPeriod,category:'reading',publicationDate:null,
+   comparison:comparable?`${formatted} · ${period} vs ${priorPeriod}`:'An available latest and prior retained observation are required.',
+   cached:current.dataStatus==='cached',warning:current.error??'',coverageNote:current.coverageNote??''}];
+ });
+}
 const labels={'first-capture':'First captured coverage','new-period':'New reference period','historical-backfill':'Historical backfill','value-change':'Observed change between retrievals','metadata-change':'Metadata update','observation-metadata-change':'Observation metadata update','coverage-removal':'Coverage removed'};
 const newest=(field)=>(a,b)=>String(b[field]??'').localeCompare(String(a[field]??''));
 /** Curated overview only; the chronological full calendar remains unfiltered. */

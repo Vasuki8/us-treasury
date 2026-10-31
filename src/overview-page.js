@@ -2,7 +2,8 @@ import { series, releases, dataStatus } from './data.js';
 import { getSeries, latest, formatValue, formatChange, periodLabel } from './model.js';
 import {heading,panel,chart,table,button,seriesStatus,sentenceCase,escapeHtml as esc} from './ui.js';
 import {measurementChange,priorReadingLabel} from './measurement-change.js';
-import { dailyBrief, nextCatalysts } from './research-brief.js';
+import { dailyBrief, nextCatalysts, readingChanges } from './research-brief.js';
+import {readingBrief} from './reading-brief.js';
 import { releaseCoverage, releaseCoveragePanel } from './release-coverage.js';
 import { calendarRelatedIds } from './macro-calendar.js';
 import { releaseDate, scheduledTime, scheduleBasisNote, calendarSourceNotice } from './calendar-presentation.js';
@@ -25,8 +26,9 @@ function reading(id,state,{label,primary=true,compact=false}={}){
  const currencyUnit=displayCurrencyUnit([current]),options={currencyUnit};
  const changeLabel=id==='gdp'?'Growth-rate change':'Change';
  const prior=current.observations.at(-2);
+ const compactChange=readingChanges({[id]:current},[id])[0]?.change??formatDisplayChange(current,options);
  const delta=id==='payroll'?`${priorReadingLabel(current)}: ${formatDisplayValue(current,prior?.value,options)}`
-  :change.value===null?'Prior comparison unavailable':`${changeLabel} ${formatDisplayChange(current,options)} vs ${change.priorPeriod}`;
+  :change.value===null?'Prior comparison unavailable':`${changeLabel} ${compactChange} vs ${change.priorPeriod}`;
  const unit=currencyUnit?displayUnitLabel(current,options):compactUnits[id]??current.unit;
  const title=change.text.replace(formatChange(current),formatDisplayChange(current,options));
  return `<a class="oh-reading" data-overview-${primary?'reading':'support-reading'}="${esc(id)}"`
@@ -110,12 +112,13 @@ function catalystPanel(state,context,brief){
  }).join('');
  const body=(rows||'<p class="panel-note">No supported upcoming events are retained. Check the full calendar and official schedules.</p>')
   +`<div class="oh-chart-footer">${a('Calendar','#/calendar','link-button')}<span class="muted">Eastern Time</span></div>`;
- return '<aside class="oh-catalysts">'+panel('','Next catalysts',body,'',
+ return '<aside class="oh-catalysts">'+panel('','Upcoming releases',body,'',
   'Selected distinct programs. Routine debt dates remain in the full calendar; schedules do not confirm results.','oh-catalyst-panel')
   +publicationEvidence(brief,context)+'</aside>';
 }
 
 function research(brief,state,context){
+ if(!(state.saved?.length||brief.captures.length||brief.attention.length||['loading','error'].includes(context.changes?.status)))return '';
  const changes=context.changes?.rows??[];
  const followed=watchlistMonitor(state.saved??[],{catalog:series,events:releases,now:context.now??new Date()}).sort((a,b)=>Number(b.current.dataStatus==='cached')-Number(a.current.dataStatus==='cached')||Number(changes.some(row=>row.seriesId===b.id))-Number(changes.some(row=>row.seriesId===a.id))||a.index-b.index);
  const monitor=followed.length?`<ul class="brief-list">${followed.slice(0,4).map(({id,current,nextEvent})=>`<li>${detail(id,state,current.name)}<p class="small muted">${current.dataStatus==='cached'?'CACHED DATA · ':''}${esc(monitorUpdateLabel(id,context.changes,context.checkpoint))}${nextEvent?` · Next related schedule ${esc(nextEvent.date)}: ${esc(nextEvent.name)}`:' · No related schedule in retained coverage'}</p></li>`).join('')}</ul>`:'<p class="panel-note">Follow measurements from their detail pages to monitor collection problems, captured changes and upcoming schedules here.</p>';
@@ -136,8 +139,8 @@ export function overviewPage(state={},context={}){
  const trendPicker='<label class="workspace-trend-picker" for="overview-trend">Measurement '
   +`<select id="overview-trend" data-workspace-series>${trendIds.map(id=>`
    <option value="${id}"${id===preview?' selected':''}>${esc(getSeries(id).short)}</option>`).join('')}</select></label>`;
- const trend=seriesPreview(preview,{...state,page:'overview'},{title:'Growth & macro trends',controls:trendPicker,definition:false});
- const inflationTrend=seriesPreview('pceCore',{...state,page:'overview'},{title:'Core inflation · year over year',definition:false});
+ const trend=seriesPreview(preview,{...state,page:'overview'},{title:'Growth & macro trends',controls:trendPicker,definition:false,summary:false});
+ const inflationTrend=seriesPreview('pceCore',{...state,page:'overview'},{title:'Core inflation · year over year',definition:false,summary:false});
  const monitorRows=[['payroll','Monthly payroll gain'],['policyTargetUpper','Fed funds target range'],
   ['spread2s10s','2s10s curve spread'],['interestRevenueRatio','Net interest / revenue · TTM']].map(([id,label])=>
   `<div class="workspace-monitor-row"${preview===id?' data-active="true"':''}>`
@@ -159,7 +162,11 @@ export function overviewPage(state={},context={}){
   `<div class="oh-inflation-comparison">${inflationHorizonTable({...state,page:'overview'})}</div>`,'Monthly · annual · annualized');
  const momentum=`<section class="oh-momentum" aria-label="Economic trends"><div class="oh-plots">${trend}${inflationTrend}</div></section>`;
  const monitorLinks=a('Policy & rates','#/economy?family=policy','link-button')+a('Fiscal & funding','#/fiscal','link-button');
- const monitor=`<section class="oh-monitor">${panel('','Macro monitor',monitorRows,monitorLinks,'Each reading keeps its own reference period.')}`
+ const crossChecks=panel('','Cross-check the headlines','<div class="brief-questions">'
+  +`<article><h3>Is growth broad-based?</h3><p>Compare GDP with private domestic demand to put the headline in context.</p>${button('Compare growth','data-compare="gdp,privateDomesticDemandGrowth"','link-button')}</article>`
+  +`<article><h3>Is labor demand changing?</h3><p>Read monthly payrolls alongside the three-month average and weekly hours.</p>${button('Compare labor demand','data-compare="payroll,payrollAverage3m,weeklyHours"','link-button')}</article>`
+  +`<article><h3>Does recent inflation match the annual trend?</h3><p>Monthly and annual core PCE measure different horizons; compare in separate native panels.</p>${button('Compare inflation horizons','data-compare="pceCoreMonthly,pceCore"','link-button')}</article></div>`);
+ const monitor=`<section class="oh-monitor">${crossChecks}${panel('','Macro monitor',monitorRows,monitorLinks,'Each reading keeps its own reference period.')}`
   +`<div class="oh-context">${snapshotContext}</div></section>`;
  const support=disclosure('activity-income','Activity & income',supportingRows(['realSpendingMonthly','realDisposableIncomeMonthly','industrialProduction'],state)+`<p class="panel-note">Different scope and reporting lags provide context; correlated changes do not prove causation.</p><div class="oh-research-links">${button('COMPARE INCOME & SPENDING','data-compare="realDisposableIncomeMonthly,realSpendingMonthly"')}</div>`,'3 measurements')
   +disclosure('weekly-claims','Weekly claims',supportingRows(['claimsAdvance','continuedClaimsAdvance'],state,{claims:true})+'<p class="panel-note">Initial and continued claims refer to different weeks. Reported publication days come from the current source feed; reviewed archived evidence is separate in Published results above. Revised history and full release provenance remain on each detail page.</p>','Distinct reference weeks')
@@ -174,6 +181,7 @@ export function overviewPage(state={},context={}){
    +`<div class="oh-research-links">${a('Published estimates','#/research?view=publications')}</div>`,'Reference periods & provenance');
  return '<div class="radar-page radar-overview overview-hierarchy">'
   +heading('U.S. economy','Growth, inflation, employment and rates. One research workspace.')
+  +readingBrief(['gdp','pceCore','payroll'],{...state,page:'overview'})
   +'<div class="oh-desk"><section class="oh-snapshot"><div class="oh-section-label"><h2>Economic conditions</h2></div>'
   +`<div class="oh-topic-grid" role="region" aria-label="Economy at a glance">${cards}</div>`
   +`</section>${momentum}${monitor}${catalystPanel(state,context,brief)}`

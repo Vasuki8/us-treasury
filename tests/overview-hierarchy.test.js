@@ -26,7 +26,7 @@ test('Overview has four headline cards and four monitor readings with native mom
  assert.match(html,/data-series="payrollAverage3m"/);
  assert.doesNotMatch(html,/data-series="payroll"/);
  for(const ids of ['pceMonthly,pceCoreMonthly','unrate,underemployment,participation','realDisposableIncomeMonthly,realSpendingMonthly'])assert.ok(html.includes('data-compare="'+ids+'"'),'native comparison control '+ids);
- for(const key of ['policy-effective','fiscal-debt','publications','activity-income','weekly-claims','my-research','data-methods'])assert.match(html,new RegExp(`data-overview-disclosure="${key}"`));
+ for(const key of ['policy-effective','fiscal-debt','publications','activity-income','weekly-claims','data-methods'])assert.match(html,new RegExp(`data-overview-disclosure="${key}"`));
  assert.equal((html.match(/<details\b/g)??[]).length,(html.match(/data-overview-disclosure=/g)??[]).length,'all nested disclosure state can survive refresh');
  assert.doesNotMatch(html,/FOLLOWING · EXCEPTIONS|overview-evidence-desk|sample-|data-proposed-overview/);
 });

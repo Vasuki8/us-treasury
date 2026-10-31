@@ -1,4 +1,5 @@
 import {humanDate} from './ui-time.js';
+import {readingBrief} from './reading-brief.js';
 import {supportingDetails} from './page-hierarchy.js';
 import {renderLaborEvidence,laborUncertaintyNote} from './economic-evidence.js';
 import {series,releases,dataStatus} from './data.js';
@@ -75,11 +76,11 @@ function releaseRadar(state,now){
 
 function history(state,current,shown,range){
  const last=shown.observations.at(-1),history={...current,observations:current.observations.filter(o=>!shown.window.endDate||o.date<=shown.window.endDate)},available=shown.observations.some(o=>Number.isFinite(o.value));
- return `<section class="labor-history">${sectionHead('01',
+ return `<section class="labor-history">${sectionHead('03',
   'Focused history')}<label class="labor-picker" for="macro-measure">History measure<select id="macro-measure">${allIds.map(id=>
-  `<option value="${id}"${id===current.id?' selected':''}>${esc(getSeries(id).name)}</option>`).join('')}</select></label>${rangeControls(state,
+  `<option value="${id}"${id===current.id?' selected':''}>${esc(getSeries(id).name)}</option>`).join('')}</select></label>${supportingDetails('labor:history-window','Date window & observation controls',rangeControls(state,
   [current.id],{observationDescription:('Observation count applies to the focused measure; core trends share its displayed start '+
-  'and end dates.')})}<p class="labor-axis-unit">${esc(current.frequency)} · ${esc(unit(current))} · ${esc(current.adjustment)} · ${esc(status
+  'and end dates.')}),{open:state.window==='custom'||Boolean(shown.error),meta:shown.window.label})}<p class="labor-axis-unit">${esc(current.frequency)} · ${esc(unit(current))} · ${esc(current.adjustment)} · ${esc(status
   (current))}</p>${sourceError(current)}${current.coverageNote
    &&(['dol','dolAdvance'].includes(current.agency)||/partial|suppressed|not (?:directly )?comparable/i.test(current.coverageNote))
    ?`<p class="labor-note labor-warning">${esc(current.coverageNote)}</p>`:''}${
@@ -191,16 +192,24 @@ export function laborPage(input={},options={}){
  const focus=allIds.includes(input.macroMeasure)?input.macroMeasure:coverageFamilies.labor.defaultMeasure,state={...input,macroFamily:'labor',macroMeasure:focus,saved:input.saved??[],selected:(input.selected??[]).filter(id=>series[id]).slice(0,4)},current=getSeries(focus),range=viewRange(state),shown=transformSeries(current,'level',range);
  // Resolve once against the focused series; each core source retains its own gaps.
  const coreRange={preset:'custom',startDate:shown.window.mode==='calendar'?shown.window.startDate??'':shown.observations[0]?.date??'',endDate:shown.window.mode==='calendar'?shown.window.endDate??'':shown.observations.at(-1)?.date??''};
- return `<div class="labor-radar">${heading('Labor market','Jobs, people, pay and claims · distinct measures, one research desk.',
-  button('Compare series','data-compare="unrate,claims"'))}<nav class="labor-section-nav" aria-label="Labor sections">${[['analysis','Analysis'],
-  ['weekly','Weekly claims'],['trends','Core trends'],['readings','All 23 measures'],['notes','Definitions & sources']].map(([id,
-  label])=>button(label,`data-labor-section="labor-${id}"`,
-  'labor-section-link')).join('')}</nav>${headlines(state)}${laborUncertaintyNote(getSeries('payroll'))
-  }<div class="labor-desk" id="labor-analysis">${history(state,current,shown,range)}${releaseRadar(state,options.now??new Date())}</div>${weekly
-  (state)}<section id="labor-trends">${sectionHead('03','Core labor trends',
+ const trends=`<section id="labor-trends">${sectionHead('01','Payrolls & unemployment',
   '<span class="labor-small">Same selected window · separate scales</span>')}<div class="labor-dual">${[['payroll','Monthly payroll gains',
   'bar'],['unrate','Unemployment rate','line']].map(([id,title,chartKind])=>`<article><div class="labor-chart-title"><h3>${title}</h3>${detail
-  (id,state,'Detail','link-button')}</div><p class="labor-axis-unit">${esc(getSeries(id).unit)} · ${esc(getSeries(id).adjustment)}</p>${chart
-  ([id],{range:coreRange,kind:chartKind,height:185})}</article>`).join('')}</div></section>${renderLaborEvidence
+  (id,state,'Detail','link-button')}</div><p class="labor-axis-unit">${esc(getSeries(id).unit)} · ${esc(getSeries(id).adjustment)}</p>${id==='payroll'?detail('payrollAverage3m',state,
+   `Latest 3-month average: ${formatDisplayValue(getSeries('payrollAverage3m'),latest(getSeries('payrollAverage3m'))?.value)} · ${periodLabel(getSeries('payrollAverage3m'),latest(getSeries('payrollAverage3m'))?.date)}`,'labor-average'):''}${chart
+  ([id],{range:coreRange,kind:chartKind,height:210})}</article>`).join('')}</div><div class="actions labor-trend-links">${button('Compare payroll momentum',
+  'data-compare="payroll,payrollAverage3m,weeklyHours"','link-button')}${button('Compare participation & employment',
+  'data-compare="unrate,participation,primeAgeEmploymentPopulation"','link-button')}</div></section>`;
+ const revisions='<div class="labor-revision-context"><strong>Payroll revisions</strong><span>First-published payroll estimates are not covered. Current revised history cannot establish release revisions.</span>'
+  +link('Inspect retrieval history','#/vintages?series=payroll','link-button')+'</div>';
+ const uncertainty=laborUncertaintyNote(getSeries('payroll'));
+ return `<div class="labor-radar">${heading('Labor market','Employment demand, participation and pay. Read the changes, then investigate the evidence.',
+  button('Compare series','data-compare="unrate,claims"'))}<div class="labor-briefing">${readingBrief(['payroll','unrate','wages'],{...state,page:'labor'})}${headlines(state)}</div>${revisions}`
+  +supportingDetails('labor:uncertainty','Payroll estimates · sampling uncertainty',uncertainty)
+  +`<nav class="labor-section-nav" aria-label="Labor sections">${[['trends','Payrolls & unemployment'],
+  ['weekly','Weekly claims'],['analysis','Focused history'],['readings','All 23 measures'],['notes','Definitions & sources']].map(([id,
+  label])=>button(label,`data-labor-section="labor-${id}"`,
+  'labor-section-link')).join('')}</nav><div class="labor-desk">${trends}${releaseRadar(state,options.now??new Date())}</div>${weekly
+  (state)}<div id="labor-analysis">${history(state,current,shown,range)}</div>${renderLaborEvidence
   (dataStatus.sources.laborEvidence,{range})}${readings(state)}${supportingDetails('labor:about-data','About this data',notes(state))}</div>`;
 }
