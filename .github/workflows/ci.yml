@@ -11,6 +11,10 @@ on:
         description: Refresh all official data, calendars and yield timing before deployment
         type: boolean
         default: false
+      recover_overdue:
+        description: Recover a missed daily capture only when its verified outcomes are still due
+        type: boolean
+        default: false
       check_sources:
         description: Check all official collectors and retain diagnostics without publishing their data
         type: boolean
@@ -124,7 +128,9 @@ jobs:
 
   refresh_check:
     name: Check daily and supported release refresh objectives
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh_data))
+    if: >-
+      ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && (inputs.refresh_data || inputs.recover_overdue))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -146,11 +152,12 @@ jobs:
 
       - name: Check all registered daily capture outcomes
         id: check
-        # Only this explicit manual option forces a repeat of a completed run.
+        # Recovery retains the daily due guard even when manual forcing is also selected.
         run: >-
-          node scripts/check-release-refresh.mjs
-          ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_data && '--force' || '' }}
-          ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_data &&
+          node ${{ github.event_name == 'workflow_dispatch' && inputs.recover_overdue &&
+          'scripts/check-refresh-due.mjs' || 'scripts/check-release-refresh.mjs' }}
+          ${{ github.event_name == 'workflow_dispatch' && !inputs.recover_overdue && inputs.refresh_data && '--force' || '' }}
+          ${{ github.event_name == 'workflow_dispatch' && !inputs.recover_overdue && inputs.refresh_data &&
           (inputs.refresh_scope == 'core-labor' && '--sources=bls' ||
           inputs.refresh_scope == 'unemployment-cpi-debt' && '--sources=bls,treasury,fiscal') || '' }}
 
@@ -221,7 +228,11 @@ jobs:
   verify:
     name: Verify on Node ${{ matrix.node }}
     needs: [refresh_check, refresh]
-    if: ${{ !cancelled() && (needs.refresh_check.result == 'success' || needs.refresh_check.result == 'skipped') && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') && (github.event_name != 'schedule' || needs.refresh.result == 'success') }}
+    if: >-
+      ${{ !cancelled() && (needs.refresh_check.result == 'success' || needs.refresh_check.result == 'skipped') &&
+      (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') &&
+      ((github.event_name != 'schedule' && !(github.event_name == 'workflow_dispatch' && inputs.recover_overdue)) ||
+      needs.refresh.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
@@ -287,7 +298,8 @@ jobs:
     if: >-
       ${{ !cancelled() && (needs.refresh_check.result == 'success' || needs.refresh_check.result == 'skipped') &&
       (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') &&
-      (github.event_name != 'schedule' || needs.refresh.result == 'success') }}
+      ((github.event_name != 'schedule' && !(github.event_name == 'workflow_dispatch' && inputs.recover_overdue)) ||
+      needs.refresh.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:

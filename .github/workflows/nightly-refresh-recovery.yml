@@ -1,0 +1,39 @@
+name: Recover overdue nightly invocation
+
+on:
+  schedule:
+    # Independent checks after the existing nightly and backup slots; all times UTC.
+    - cron: '43 2,4,6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-refresh-recovery
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    if: github.repository == 'Vasuki8/us-treasury' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Check out trusted default-branch recovery code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      - name: Request bounded recovery only for overdue captures
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/recover-nightly-refresh.mjs
