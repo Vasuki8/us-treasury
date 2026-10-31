@@ -54,6 +54,11 @@ test('preview escapes source failures and does not invent observations for an un
  }finally{Object.assign(current,before);}
 });
 
+test('growth and payroll previews use bars while rate previews retain line charts',()=>{
+ for(const id of ['gdp','payroll'])assert.match(workspace.seriesPreview(id,defaults),/data-kind="bar"/,id);
+ for(const id of ['pceCore','unrate','yield'])assert.match(workspace.seriesPreview(id,defaults),/data-kind="line"/,id);
+});
+
 test('preview value and label share a currency scale when latest and history cross a threshold',()=>{
  const current=getSeries('tgaBalance'),saved=current.observations;
  try{

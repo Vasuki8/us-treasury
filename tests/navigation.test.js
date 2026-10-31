@@ -145,11 +145,11 @@ test('the actual theme button switches icons, current text and accessible action
   assert.equal(view.state().theme,'Graphite');assert.equal(view.label.textContent,'Dark');
   assert.equal(view.sun.hidden,true);assert.equal(view.moon.hidden,false);
   assert.equal(view.attributes.get('aria-label'),'Dark theme. Switch to Light theme.');
-  assert.equal(view.root.dataset.theme,'Graphite');assert.equal(view.document.documentElement.dataset.theme,'Graphite');assert.equal(view.meta.content,'#101722');
+  assert.equal(view.root.dataset.theme,'Graphite');assert.equal(view.document.documentElement.dataset.theme,'Graphite');assert.equal(view.meta.content,'#17181e');
   assert.equal(view.document.activeElement,view.button);assert.equal(readPreferences(storage).theme,'Graphite');assert.match(view.notices.at(-1),/Dark theme enabled.*Saved in this browser/);
   await view.click({target:{closest:()=>view.button}});
   assert.equal(view.state().theme,'Light');assert.equal(view.label.textContent,'Light');assert.equal(view.sun.hidden,false);assert.equal(view.moon.hidden,true);
-  assert.equal(view.meta.content,'#f3f6fa');assert.equal(readPreferences(storage).theme,'Light');assert.equal(view.document.activeElement,view.button);
+  assert.equal(view.meta.content,'#f5f5f4');assert.equal(readPreferences(storage).theme,'Light');assert.equal(view.document.activeElement,view.button);
 });
 
 test('legacy dark preferences restore the moon control and unavailable persistence remains session-only',async()=>{

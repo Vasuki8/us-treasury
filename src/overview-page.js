@@ -136,7 +136,8 @@ export function overviewPage(state={},context={}){
  const trendPicker='<label class="workspace-trend-picker" for="overview-trend">Measurement '
   +`<select id="overview-trend" data-workspace-series>${trendIds.map(id=>`
    <option value="${id}"${id===preview?' selected':''}>${esc(getSeries(id).short)}</option>`).join('')}</select></label>`;
- const trend=seriesPreview(preview,{...state,page:'overview'},{title:'Trend monitor',controls:trendPicker,definition:false});
+ const trend=seriesPreview(preview,{...state,page:'overview'},{title:'Growth & macro trends',controls:trendPicker,definition:false});
+ const inflationTrend=seriesPreview('pceCore',{...state,page:'overview'},{title:'Core inflation · year over year',definition:false});
  const monitorRows=[['payroll','Monthly payroll gain'],['policyTargetUpper','Fed funds target range'],
   ['spread2s10s','2s10s curve spread'],['interestRevenueRatio','Net interest / revenue · TTM']].map(([id,label])=>
   `<div class="workspace-monitor-row"${preview===id?' data-active="true"':''}>`
@@ -156,12 +157,13 @@ export function overviewPage(state={},context={}){
   'Thousands of jobs · three-month average of monthly payroll gains; establishment jobs differ from household people measures.','oh-chart-panel');
  const horizons=disclosure('inflation-horizons','Inflation horizons',
   `<div class="oh-inflation-comparison">${inflationHorizonTable({...state,page:'overview'})}</div>`,'Monthly · annual · annualized');
- const momentum=`<section class="oh-momentum" aria-label="Economic trends"><div class="oh-plots">${trend}${inflationMomentum}</div></section>`;
+ const momentum=`<section class="oh-momentum" aria-label="Economic trends"><div class="oh-plots">${trend}${inflationTrend}</div></section>`;
  const monitorLinks=a('Policy & rates','#/economy?family=policy','link-button')+a('Fiscal & funding','#/fiscal','link-button');
  const monitor=`<section class="oh-monitor">${panel('','Macro monitor',monitorRows,monitorLinks,'Each reading keeps its own reference period.')}`
   +`<div class="oh-context">${snapshotContext}</div></section>`;
  const support=disclosure('activity-income','Activity & income',supportingRows(['realSpendingMonthly','realDisposableIncomeMonthly','industrialProduction'],state)+`<p class="panel-note">Different scope and reporting lags provide context; correlated changes do not prove causation.</p><div class="oh-research-links">${button('COMPARE INCOME & SPENDING','data-compare="realDisposableIncomeMonthly,realSpendingMonthly"')}</div>`,'3 measurements')
   +disclosure('weekly-claims','Weekly claims',supportingRows(['claimsAdvance','continuedClaimsAdvance'],state,{claims:true})+'<p class="panel-note">Initial and continued claims refer to different weeks. Reported publication days come from the current source feed; reviewed archived evidence is separate in Published results above. Revised history and full release provenance remain on each detail page.</p>','Distinct reference weeks')
+  +disclosure('monthly-inflation','Monthly inflation',inflationMomentum,'Headline & core · month over month')
   +disclosure('payroll-momentum','Payroll momentum',payrollMomentum,'3-month average')+horizons
   +research(brief,state,context)
   +disclosure('data-methods','About this data',`<p class="panel-note">Snapshot assembled ${esc(humanTimestamp(dataStatus.generatedAt)||'unknown')}. `
