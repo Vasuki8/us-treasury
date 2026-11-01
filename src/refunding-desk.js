@@ -8,8 +8,44 @@ const isoMonth={January:1,February:2,March:3,April:4,May:5,June:6,July:7,August:
 const shortMonths=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const validDate=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d))&&new Date(d+'T00:00:00Z').toISOString().slice(0,10)===d;
 const periodIndex=p=>{const m=/^([A-Z][a-z]{2})-(\d{2})$/.exec(p);if(!m||!shortMonths.includes(m[1]))throw Error('Invalid refunding month');return (2000+Number(m[2]))*12+shortMonths.indexOf(m[1]);};
-export function matchesRefundingDocumentUrl(value){try{const u=new URL(value);return u.origin==='https://home.treasury.gov'&&!u.username&&!u.password&&!u.search&&!u.hash&&(value===REFUNDING_INDEX||/^\/news\/press-releases\/[a-z0-9]+$/.test(u.pathname)||/^\/system\/files\/221\/(?:TBACRecommendedFinancingTableByRefundingQuarter|TreasuryPresentationToTBAC)[A-Za-z0-9_-]*\.pdf$/.test(u.pathname)||/^\/system\/files\/221\/Tentative-Buyback-Schedule[A-Za-z0-9_-]*\.xml$/.test(u.pathname));}catch{return false;}}
-export function refundingDocumentLinks(html){if(typeof html!=='string'||html.length>300000)throw Error('Invalid refunding index');const anchors=[...html.matchAll(/<a\b[^>]*href\s*=\s*["']?([^\s"'>]+)["']?[^>]*>([\s\S]*?)<\/a>/gi)].map(m=>({url:new URL(m[1],REFUNDING_INDEX).href,label:refundingText(m[2])}));const find=(label,path)=>{const found=anchors.filter(a=>label.test(a.label));if(found.length!==1||!matchesRefundingDocumentUrl(found[0].url)||!path.test(new URL(found[0].url).pathname))throw Error('Ambiguous or unreviewed official refunding document');return found[0].url;};const links={borrowing:find(/^Financing Estimates:/,/^\/news\/press-releases\//),policy:find(/^Policy Statement:/,/^\/news\/press-releases\//),recommended:find(/^TBAC Recommended Financing Table/,/\/TBACRecommendedFinancingTableByRefundingQuarter[^/]*\.pdf$/),presentation:find(/^Treasury Presentation to TBAC/,/\/TreasuryPresentationToTBAC[^/]*\.pdf$/),buybacks:find(/^Buyback Schedule: XML/,/\/Tentative-Buyback-Schedule[^/]*\.xml$/)};if(new Set(Object.values(links)).size!==5)throw Error('Duplicate refunding document roles');return links;}
+export function matchesRefundingDocumentUrl(value){try{const u=new URL(value);return u.origin==='https://home.treasury.gov'&&!u.username&&!u.password&&!u.search&&!u.hash&&(value===REFUNDING_INDEX||/^\/news\/press-releases\/[a-z0-9]+$/.test(u.pathname)||/^\/system\/files\/221\/(?:TBACRecommendedFinancingTableByRefundingQuarter|TreasuryPresentationToTBAC)[A-Za-z0-9_-]*\.pdf$/.test(u.pathname)||/^\/system\/files\/221\/Tentative-Buyback-Schedule[A-Za-z0-9_-]*\.(?:xml|pdf)$/.test(u.pathname));}catch{return false;}}
+function refundingAnchors(html){
+ if(typeof html!=='string'||html.length>300000)throw Error('Invalid refunding index');
+ const matches=[...html.matchAll(/<a\b[^>]*href\s*=\s*["']?([^\s"'>]+)["']?[^>]*>([\s\S]*?)<\/a>/gi)];
+ return matches.map((m,i)=>({url:new URL(m[1],REFUNDING_INDEX).href,label:refundingText(m[2]),following:refundingText(html.slice(m.index+m[0].length,matches[i+1]?.index??html.length))}));
+}
+function buybackPublications(anchors){
+ const versions=anchors.filter(a=>/^Buyback Schedule:/.test(a.label)).map(a=>{
+  const format=/^Buyback Schedule: (XML|PDF)(?: Format)?$/.exec(a.label),date=/^\((?:Last updated|Updated) on ([A-Z][a-z]+) (\d{1,2}), (\d{4})\)/i.exec(a.following);
+  if(!format||!matchesRefundingDocumentUrl(a.url)||!/^\/system\/files\/221\/Tentative-Buyback-Schedule[A-Za-z0-9_-]*\.(?:xml|pdf)$/.test(new URL(a.url).pathname)||!new URL(a.url).pathname.endsWith('.'+format[1].toLowerCase()))throw Error('Unreviewed buyback publication');
+  const documentDate=date?`${date[3]}-${String(isoMonth[date[1][0].toUpperCase()+date[1].slice(1).toLowerCase()]).padStart(2,'0')}-${date[2].padStart(2,'0')}`:null;
+  if(date&&!validDate(documentDate)||!date&&a.following.startsWith('(')||[...a.following.matchAll(/\((?:Last updated|Updated) on /gi)].length>1)throw Error('Invalid buyback publication date');
+  return{url:a.url,format:format[1].toLowerCase(),documentDate};
+ });
+ if(!versions.length||versions.length>8||new Set(versions.map(v=>v.url)).size!==versions.length||versions.length>1&&versions.some(v=>!v.documentDate))throw Error('Ambiguous buyback publication versions');
+ return versions;
+}
+function latestBuybackPublication(versions){
+ const sorted=[...versions].sort((a,b)=>(b.documentDate??'').localeCompare(a.documentDate??'')),latest=sorted.filter(v=>v.documentDate===sorted[0].documentDate);
+ if(latest.length===1)return latest[0];
+ // Same dated XML/PDF renditions of one named schedule prefer the native XML.
+ if(latest.length===2&&new Set(latest.map(v=>v.format)).size===2&&latest[0].url.replace(/\.(xml|pdf)$/,'')===latest[1].url.replace(/\.(xml|pdf)$/,''))return latest.find(v=>v.format==='xml');
+ throw Error('Ambiguous latest buyback publication');
+}
+export function refundingDocumentLinks(html,{legacyBuybacks=false}={}){
+ const anchors=refundingAnchors(html),find=(label,path)=>{const found=anchors.filter(a=>label.test(a.label));if(found.length!==1||!matchesRefundingDocumentUrl(found[0].url)||!path.test(new URL(found[0].url).pathname))throw Error('Ambiguous or unreviewed official refunding document');return found[0].url;},versions=buybackPublications(anchors);
+ const legacy=versions.filter(v=>v.format==='xml');if(legacyBuybacks&&legacy.length!==1)throw Error('Ambiguous captured XML publication');
+ const links={borrowing:find(/^Financing Estimates:/,/^\/news\/press-releases\//),policy:find(/^Policy Statement:/,/^\/news\/press-releases\//),recommended:find(/^TBAC Recommended Financing Table/,/\/TBACRecommendedFinancingTableByRefundingQuarter[^/]*\.pdf$/),presentation:find(/^Treasury Presentation to TBAC/,/\/TreasuryPresentationToTBAC[^/]*\.pdf$/),buybacks:(legacyBuybacks?legacy[0]:latestBuybackPublication(versions)).url};
+ if(new Set(Object.values(links)).size!==5)throw Error('Duplicate refunding document roles');return links;
+}
+export function refundingBuybackPublication(source){
+ try{
+  const versions=buybackPublications(refundingAnchors(source.documents.index)),latest=latestBuybackPublication(versions),receipts=source.provenance.filter(r=>versions.some(v=>v.url===r.url));
+  if(receipts.length!==1)throw Error('Ambiguous captured buyback receipt');
+  const captured=versions.find(v=>v.url===receipts[0].url);
+  return{status:captured.url!==latest.url?'superseded':captured.documentDate?'latest-linked':'undated-capture',documentDate:captured.documentDate,latestDocumentDate:latest.documentDate,sourceUrl:captured.url,latestSourceUrl:latest.url};
+ }catch{return{status:'undated-capture',documentDate:null,latestDocumentDate:null,sourceUrl:null,latestSourceUrl:null};}
+}
 export function parseTbacRecommendedGrid(grid,text){
  if(!grid||!Number.isFinite(grid.width)||!Number.isFinite(grid.height)||grid.width<300||grid.width>1500||grid.height<300||grid.height>1500||!Array.isArray(grid.cells)||grid.cells.length<100||grid.cells.length>1000)throw Error('Unreviewed TBAC PDF grid');
  const cells=grid.cells;for(const c of cells)if(Object.keys(c).sort().join(',')!=='text,width,x,y'||typeof c.text!=='string'||!c.text.trim()||c.text.length>1000||![c.x,c.y,c.width].every(Number.isFinite)||c.x<0||c.y<0||c.width<0||c.x+c.width>grid.width+1||c.y>grid.height)throw Error('Invalid TBAC PDF cell');
@@ -26,6 +62,42 @@ export function parseTbacRecommendedGrid(grid,text){
 }
 const dated=(text,anchor)=>{const at=text.indexOf(anchor),m=/\b(January|February|March|April|May|June|July|August|September|October|November|December) (\d{1,2}), (\d{4})/.exec(text.slice(at));if(at<0||!m)throw Error('Unreviewed refunding publication date');const d=`${m[3]}-${String(isoMonth[m[1]]).padStart(2,'0')}-${m[2].padStart(2,'0')}`;if(!validDate(d))throw Error('Invalid publication date');return d;};
 const number=s=>{if(typeof s!=='string'||!/^(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(s)||!Number.isFinite(Number(s.replaceAll(',',''))))throw Error('Invalid native refunding amount');return Number(s.replaceAll(',',''));};
+function parseBuybackPdf(documents){
+ const {buybacks:text,buybacksGrid:grid}=documents;
+ if(!grid||grid.width!==612||grid.height!==792||!Array.isArray(grid.cells)||grid.cells.length<100||grid.cells.length>1000)throw Error('Unreviewed buyback PDF grid');
+ const cells=grid.cells;
+ for(const c of cells)if(Object.keys(c).sort().join(',')!=='text,width,x,y'||typeof c.text!=='string'||!c.text.trim()||c.text.length>1000||![c.x,c.y,c.width].every(Number.isFinite)||c.x<0||c.y<0||c.width<0||c.x+c.width>grid.width+1||c.y>grid.height)throw Error('Invalid buyback PDF cell');
+ if(cells.map(c=>c.text).join(' ').replace(/\s+/g,' ').trim()!==text)throw Error('Buyback PDF text/grid mismatch');
+ const title=cells.filter(c=>c.y>=690).map(c=>c.text).join(' '),quarter=/^Tentative Schedule of Treasury Buyback Operations ([A-Z][a-z]+) (\d{4}) Refunding Quarter For Publication ([A-Z][a-z]+ \d{1,2}, \d{4})$/.exec(title);
+ if(!quarter||![2,5,8,11].includes(isoMonth[quarter[1]]))throw Error('Unreviewed buyback PDF title');
+ const documentDate=dated(title,'For Publication'),publication=latestBuybackPublication(buybackPublications(refundingAnchors(documents.index)));
+ if(publication.format!=='pdf'||publication.documentDate!==documentDate)throw Error('Mismatched buyback PDF publication');
+ const bounds=[[40,95],[100,145],[150,212],[215,265],[268,335],[338,405],[410,458],[465,502],[508,570]],column=c=>bounds.findIndex(([lo,hi])=>c.x>=lo&&c.x+c.width<=hi);
+ const header=['Announcement Date1','Operation Date2','Operation Time (ET)','Settlement Date','Operation Type','Security Type & Maturity Range','Maturity Date Range','Minimum Purchase Amount','Maximum Purchase Amount'];
+ const headerCells=cells.filter(c=>c.y>650&&c.y<690);
+ if(headerCells.some(c=>column(c)<0)||header.some((label,i)=>headerCells.filter(c=>column(c)===i).sort((a,b)=>b.y-a.y).map(c=>c.text).join(' ')!==label))throw Error('Unreviewed buyback PDF columns');
+ const footnotes=cells.filter(c=>c.y<80).map(c=>c.text).join(' ').replace(/\s+/g,' ').trim();
+ if(!/^1 A preliminary list of eligible CUSIPs will be disclosed at 11:00 am ET on the Announcement Date\. 2 The final list of eligible CUSIPs will be disclosed at 11:00 am ET on the Operation Date\.(?: \*Operation is scheduled within the [A-Z][a-z]+ \d{4} refunding quarter\.)?$/.test(footnotes))throw Error('Unreviewed buyback PDF footnotes');
+ const nativeDate=s=>{const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s),date=m?`${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`:null;if(!validDate(date))throw Error('Invalid native buyback date');return date;};
+ const amount=s=>{const m=/^(= or > )?\$(\d+(?:\.\d+)?) (million|billion)$/.exec(s);if(!m)throw Error('Unreviewed native buyback maximum');const value=number(m[2])*(m[3]==='billion'?1e9:1e6);if(!Number.isSafeInteger(value)||value<=0)throw Error('Invalid native buyback maximum');return{maximumDollars:String(value),maximumBillions:value/1e9,maximumOperator:m[1]?'>=':'=',maximumSourceValue:s};};
+ const body=cells.filter(c=>c.y>=80&&c.y<=650),anchors=body.filter(c=>column(c)===0).sort((a,b)=>b.y-a.y);
+ if(anchors.length<1||anchors.length>100||body.some(c=>column(c)<0)||anchors.some((c,i)=>i&&anchors[i-1].y-c.y<20))throw Error('Unreviewed buyback PDF rows');
+ const used=new Set(),keys=new Set();let previous='';
+ const rows=anchors.map(anchor=>{
+  const rowCells=body.filter(c=>Math.abs(c.y-anchor.y)<10),fields=bounds.map((_,i)=>rowCells.filter(c=>column(c)===i).sort((a,b)=>b.y-a.y||a.x-b.x).map(c=>c.text).join(' '));
+  for(const c of rowCells){if(used.has(c))throw Error('Ambiguous buyback PDF row');used.add(c);}
+  const [announcement,operation,time,settlement,purpose,bucket,maturity,minimum,maximum]=fields,prior=operation.endsWith('*'),date=nativeDate(operation.replace(/\*$/,'')),announcementDate=nativeDate(announcement),settlementDate=nativeDate(settlement),range=/^(\d{2}\/\d{2}\/\d{4}) - (\d{2}\/\d{2}\/\d{4})$/.exec(maturity),key=date+'|'+bucket;
+  if(!/^1:40 pm –\s?2:00 pm$/.test(time)||!['Liquidity Support','Cash Management'].includes(purpose)||! /^(?:Nominal Coupons (?:\d+Mo|\d+Y)|TIPS \d+Y) to \d+Y$/.test(bucket)||!range||minimum!=='$0'||announcementDate>date||date>=settlementDate||date<previous||keys.has(key))throw Error('Invalid native buyback operation');
+  const maturityStartDate=nativeDate(range[1]),maturityEndDate=nativeDate(range[2]);if(maturityStartDate<=settlementDate||maturityStartDate>=maturityEndDate)throw Error('Invalid buyback maturity range');
+  previous=date;keys.add(key);
+  return{date,announcementDate,settlementDate,bucket,purpose,...amount(maximum),minimumDollars:'0',maturityStartDate,maturityEndDate,quarterRole:prior?'previous refunding quarter':'stated refunding quarter',sourceValue:fields.join(' | '),observationType:'tentative operation schedule, not result'};
+ });
+ if(used.size!==body.length||rows.some(r=>r.quarterRole==='previous refunding quarter')!==footnotes.includes('*Operation'))throw Error('Unmapped buyback PDF content');
+ const quarterStart=Number(quarter[2])*12+isoMonth[quarter[1]]-1,publicationMonth=Number(documentDate.slice(0,4))*12+Number(documentDate.slice(5,7))-1;
+ const priorQuarter=new Date(Date.UTC(Number(quarter[2]),isoMonth[quarter[1]]-4,1)),priorQuarterName=Object.keys(isoMonth)[priorQuarter.getUTCMonth()]+' '+priorQuarter.getUTCFullYear();
+ if(publicationMonth<quarterStart-1||publicationMonth>quarterStart+2||footnotes.includes('*Operation')&&!footnotes.endsWith(`*Operation is scheduled within the ${priorQuarterName} refunding quarter.`)||rows.some(r=>{const month=Number(r.date.slice(0,4))*12+Number(r.date.slice(5,7))-1;return r.quarterRole==='previous refunding quarter'?month!==quarterStart:month<quarterStart||month>quarterStart+3;}))throw Error('Mismatched buyback refunding quarter');
+ return{calendarName:`${quarter[1]} ${quarter[2]} Refunding Tentative Buyback Calendar · published ${documentDate}`,startDate:rows[0].date,endDate:rows.at(-1).date,rows,documentDate,sourceFormat:'pdf',sourceUrl:publication.url,versionStatus:'latest-linked'};
+}
 export function parseRefundingDocuments(documents){
  const {borrowing,policy,recommended,survey,buybacks}=documents;if([borrowing,policy,recommended,survey,buybacks].some(t=>typeof t!=='string'||t.length>300000))throw Error('Invalid refunding documents');
  const borrowingDate=dated(borrowing,'Treasury Announces Marketable Borrowing Estimates'),policyDate=dated(policy,'Quarterly Refunding Statement');
@@ -43,17 +115,25 @@ export function parseRefundingDocuments(documents){
  const recommendations=parseTbacRecommendedGrid(documents.recommendedGrid,recommended);
  const surveyRows=[...survey.matchAll(/FY (\d{4}) (Deficit|Privately-Held Net Marketable Borrowing\*?) ([\d,]+) ([\d,]+) ([\d,]+)/g)].map(m=>({fiscalYear:Number(m[1]),measure:m[2].replace('*',''),p25:number(m[3]),median:number(m[4]),p75:number(m[5]),sourceValues:m.slice(3,6),unit:'USD billions',observationType:'officially published primary-dealer survey aggregate'}));if(surveyRows.length!==6||surveyRows.some(r=>r.p25>r.median||r.median>r.p75))throw Error('Unreviewed public dealer survey');
  const asOf=/Estimates as of: ([A-Z][a-z]{2}-\d{2})/.exec(survey),normalization=/normalized[^]*?assumed Fiscal Year (\d{4}) cash balance of \$([\d,]+) billion, held constant in out years/.exec(survey);if(!asOf||!normalization||!survey.includes('25th Median 75th')||!survey.includes('Primary Dealer'))throw Error('Unreviewed public survey labels');const month=periodIndex(asOf[1]);const fiscalYears=[...new Set(surveyRows.map(r=>r.fiscalYear))];if(fiscalYears.length!==3||fiscalYears.some((y,i)=>i&&y!==fiscalYears[i-1]+1)||surveyRows.some((r,i)=>r.measure!==(i<3?'Deficit':'Privately-Held Net Marketable Borrowing')||r.fiscalYear!==fiscalYears[i%3]))throw Error('Unreviewed fiscal survey horizons');
+ if(documents.buybacksFormat!==undefined&&!['xml','pdf'].includes(documents.buybacksFormat)||documents.buybacksGrid&&documents.buybacksFormat!=='pdf')throw Error('Unreviewed buyback document format');
+ let buybackTable;
+ if(documents.buybacksFormat==='pdf')buybackTable=parseBuybackPdf(documents);
+ else{
  const tag=(text,name)=>{const matches=[...text.matchAll(new RegExp(`<${name}>([^<]+)</${name}>`,'g'))];if(matches.length!==1)throw Error('Missing or duplicate buyback field');return matches[0][1];};
  if(/<!DOCTYPE|<!ENTITY|&[a-z#]/i.test(buybacks)||!/^\s*<BuyBackCalendar>[\s\S]*<\/BuyBackCalendar>\s*$/.test(buybacks))throw Error('Unreviewed buyback XML');
  const operations=[...buybacks.matchAll(/<BuybackCalendarDate>([\s\S]*?)<\/BuybackCalendarDate>/g)].map(m=>({date:tag(m[1],'OperationDate'),announcementDate:tag(m[1],'AnnouncementDate'),settlementDate:tag(m[1],'SettlementDate'),bucket:tag(m[1],'PurchaseBucketName'),purpose:tag(m[1],'OperationType'),maximumDollars:tag(m[1],'MaximumPurchaseAmountDollars'),maximumBillions:Number(tag(m[1],'MaximumPurchaseAmountDollars'))/1e9,observationType:'tentative operation schedule, not result'}));if(!operations.length||operations.length>100)throw Error('Unreviewed buyback operation count');
  const calendarName=tag(buybacks,'BuybackCalendarName'),startDate=tag(buybacks,'StartDate'),endDate=tag(buybacks,'EndDate');if(!/Tentative Buyback Calendar/.test(calendarName)||!validDate(startDate)||!validDate(endDate)||startDate>endDate)throw Error('Invalid tentative calendar');const keys=new Set();for(const r of operations){const key=r.date+'|'+r.bucket;if(keys.has(key)||![r.date,r.announcementDate,r.settlementDate].every(validDate)||r.announcementDate>r.date||r.date>=r.settlementDate||r.date<startDate||r.date>endDate||!/^\d+$/.test(r.maximumDollars)||!Number.isSafeInteger(Number(r.maximumDollars))||Number(r.maximumDollars)<=0||!['Liquidity Support','Cash Management'].includes(r.purpose))throw Error('Invalid tentative buyback operation');keys.add(key);}
- return {borrowingDate,policyDate,package:number(offering[1]),newCash:number(cash[1]),estimates,couponTable:{tenors,rows:couponTable},recommendations:{tenors:[...tenors.slice(0,7),'5-Year TIPS','10-Year TIPS','30-Year TIPS','FRN'],rows:recommendations},survey:{asOfMonth:`${Math.floor(month/12)}-${String(month%12+1).padStart(2,'0')}`,datePrecision:'month',normalizationFiscalYear:Number(normalization[1]),normalizationCash:number(normalization[2]),rows:surveyRows,note:'Published Treasury presentation, longer-term borrowing estimates, primary-dealer 25th/median/75th percentiles. Normalized to the presentation’s assumed year-end cash balance. Fiscal-year borrowing is not a quarterly forecast.'},buybacks:{calendarName,startDate,endDate,rows:operations}};
+ buybackTable={calendarName,startDate,endDate,rows:operations};
+ if(documents.buybacksFormat==='xml'){const publication=latestBuybackPublication(buybackPublications(refundingAnchors(documents.index)));if(publication.format!=='xml')throw Error('Superseded newly captured XML');Object.assign(buybackTable,{documentDate:publication.documentDate,sourceFormat:'xml',sourceUrl:publication.url,versionStatus:publication.documentDate?'latest-linked':'undated-capture'});}
+ }
+ return {borrowingDate,policyDate,package:number(offering[1]),newCash:number(cash[1]),estimates,couponTable:{tenors,rows:couponTable},recommendations:{tenors:[...tenors.slice(0,7),'5-Year TIPS','10-Year TIPS','30-Year TIPS','FRN'],rows:recommendations},survey:{asOfMonth:`${Math.floor(month/12)}-${String(month%12+1).padStart(2,'0')}`,datePrecision:'month',normalizationFiscalYear:Number(normalization[1]),normalizationCash:number(normalization[2]),rows:surveyRows,note:'Published Treasury presentation, longer-term borrowing estimates, primary-dealer 25th/median/75th percentiles. Normalized to the presentation’s assumed year-end cash balance. Fiscal-year borrowing is not a quarterly forecast.'},buybacks:buybackTable};
 }
 export function validateRefundingDeskSource(source){try{
  const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;
  if(source?.id!=='treasuryRefunding'||!['ok','cached','error'].includes(source.status)||!Number.isFinite(Date.parse(source.fetchedAt))||!source.documents||!Array.isArray(source.provenance)||source.provenance.length!==6)return false;
- const links=refundingDocumentLinks(source.documents.index),urls=[REFUNDING_INDEX,...Object.values(links)],expected=parseRefundingDocuments(source.documents);
- if(JSON.stringify(canonical(expected))!==JSON.stringify(canonical(source.tables))||new Set(source.provenance.map(r=>r.url)).size!==6||source.provenance.some(r=>!urls.includes(r.url)||!/^[a-f0-9]{64}$/.test(r.sha256)||!Number.isFinite(Date.parse(r.retrievedAt))||Date.parse(r.retrievedAt)>Date.parse(source.fetchedAt))||!source.provenance.some(r=>r.retrievedAt===source.fetchedAt)||expected.policyDate>source.fetchedAt.slice(0,10)||expected.borrowingDate>source.fetchedAt.slice(0,10))return false;
+ const links=refundingDocumentLinks(source.documents.index,{legacyBuybacks:source.documents.buybacksFormat===undefined}),urls=[REFUNDING_INDEX,...Object.values(links)],expected=parseRefundingDocuments(source.documents);
+ if(JSON.stringify(canonical(expected))!==JSON.stringify(canonical(source.tables))||new Set(source.provenance.map(r=>r.url)).size!==6||source.provenance.some(r=>!urls.includes(r.url)||!/^[a-f0-9]{64}$/.test(r.sha256)||!Number.isFinite(Date.parse(r.retrievedAt))||Date.parse(r.retrievedAt)>Date.parse(source.fetchedAt))||!source.provenance.some(r=>r.retrievedAt===source.fetchedAt)||expected.policyDate>source.fetchedAt.slice(0,10)||expected.borrowingDate>source.fetchedAt.slice(0,10)||expected.buybacks.documentDate&&expected.buybacks.documentDate>source.fetchedAt.slice(0,10))return false;
+ if(buybackPublications(refundingAnchors(source.documents.index)).some(v=>v.documentDate&&v.documentDate>source.fetchedAt.slice(0,10))||expected.buybacks.documentDate&&expected.buybacks.documentDate>source.provenance.find(r=>r.url===links.buybacks).retrievedAt.slice(0,10))return false;
  const values=[expected.package,expected.newCash,expected.estimates[0].borrowing,expected.estimates[1].borrowing];
  return Object.keys(source.series??{}).length===4&&Object.entries(refundingDeskRegistry).every(([id,d],i)=>{const s=source.series[id],r=s?.observations?.[0];return s?.observations?.length===1&&s.unit===d.unit&&s.frequency===d.frequency&&s.adjustment===d.adjustment&&s.calculation===d.definition&&s.observationType===d.observationType&&JSON.stringify(s.sourceIds)===JSON.stringify([id])&&s.sourceUrl===(i<2?links.policy:links.borrowing)&&s.licenseUrl===REFUNDING_TERMS&&s.attribution==='Source: U.S. Department of the Treasury.'&&r.date===(i<2?expected.policyDate:expected.borrowingDate)&&r.value===values[i]&&r.sourceValue===String(values[i])&&r.publishedAt===null&&Object.keys(r).sort().join(',')==='date,publishedAt,sourceValue,value';});
  }catch{return false;}}

@@ -13,7 +13,8 @@ import {yieldTimingPanel} from './calendar-presentation.js';
 import {releases} from './data.js';
 import {humanDate,humanTimestamp,publicationDate,scheduledReleaseDate} from './ui-time.js';
 import {indicatorStats,indicatorContext,indicatorFamily} from './stitch-indicator-context.js';
-import {familyLedger,familyRelated,familyExportDock,familyChartSelection} from './stitch-family-view.js';
+import {familyLedger,familyRelated,familyExportDock,familyChartSelection,indicatorFamilyChartCatalog} from './stitch-family-view.js';
+import {normalizeSourceNotes} from './source-notes.js';
 
 const link=(label,href,className='action')=>`<a class="${esc(className)}" href="${esc(href)}">`
   +`${esc(sentenceCase(label.replace(/ ↗/g,'')))}</a>`;
@@ -26,9 +27,9 @@ function detailData(item, state) {
   const originals = new Map(item.series.observations.map(observation => [observation.date, observation]));
   const rows = [...item.observations].reverse().map(observation => {
     const original = originals.get(observation.date);
-    const notes=[...(original?.footnotes??[]),observationCoverageLabel(original),
+    const notes=normalizeSourceNotes([...(original?.footnotes??[]),observationCoverageLabel(original),
       original?.suppressed?'SUPPRESSED · withheld by source':'',
-      original?.revisionIndicator==='Y'?'SOURCE REVISION FLAG · reason unknown':''].filter(Boolean).join('; ')||'—';
+      original?.revisionIndicator==='Y'?'SOURCE REVISION FLAG · reason unknown':'']).join('; ')||'—';
     const published=publicationDate(item.series,original,releases);
     return `<tr><th scope="row"><time datetime="${esc(observation.date)}">`
       +`${esc(periodLabel(item.series,observation.date))}</time></th>`
@@ -91,6 +92,9 @@ export function indicatorPage(state,historyContext={}) {
   const familySelection=state.transform==='level'?familyChartSelection(current,family):null;
   const chartIds=familySelection?.ids.length?familySelection.ids:state.transform==='level'&&current.id==='payroll'?['payroll','payrollAverage3m']:
     state.transform==='level'&&['unrate','underemployment'].includes(current.id)?[current.id,current.id==='unrate'?'underemployment':'unrate']:[current.id];
+  const chartCatalog=familySelection?.catalog?indicatorFamilyChartCatalog()[familySelection.catalog]?.catalog:null;
+  const chartBasis=[...new Set(chartIds.map(id=>chartCatalog?chartCatalog[id]:getSeries(id)).filter(Boolean).map(s=>
+    `${s.frequency} · ${transformSeries(s,state.transform,viewRange(state)).unit} · ${s.adjustment} · ${seriesStatus(s)}`))].join(' / ');
   const chartMarkup=chart(chartIds,{height:300,kind:chartIds.length>1&&current.id==='payroll'?'combo':current.id==='payroll'?'bar':'line',transform:state.transform,range:viewRange(state),legend:true,endLabels:true});
   const chartBody=chartControls+(familySelection?.catalog?chartMarkup.replace('data-chart ',`data-chart data-chart-catalog="${familySelection.catalog}" `):chartMarkup)
     +(familySelection?.ids.length?`<p class="panel-note indicator-chart-basis">${esc(familySelection.note)}</p>`:'')
@@ -115,7 +119,7 @@ export function indicatorPage(state,historyContext={}) {
     +(['gdp','claimsAdvance','continuedClaimsAdvance','claims','continuedClaims'].includes(current.id)?`<p class="panel-note indicator-publication-link">${link('VERIFIED RELEASE & PUBLICATION EVIDENCE ↗',contextualHref({page:'release',publicationSeries:current.id==='gdp'?'gdp':current.id.includes('ontinued')?'continuedClaimsAdvance':'claimsAdvance',publicationPeriod:observation?.date??'',publicationCutoff:current.agency==='dolAdvance'?observation?.publishedAt??'':''},state))}</p>`:'')
     +'<div class="indicator-chart">'
     +panel('01',`${current.code} / ${current.agency==='dolAdvance'?'Latest release context':'Historical series'}`,chartBody,'',
-      `${current.frequency} · ${transformed.unit} · ${seriesStatus(current)}`)+'</div>'
+      chartBasis)+'</div>'
     +indicatorContext(current,state)
     +familyLedger(current,family)
     +(family==='other'?evidence:'')
