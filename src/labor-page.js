@@ -74,6 +74,15 @@ function releaseRadar(state,now){
   `BLS schedule ↗</a>`),{className:'labor-details'})}</aside>`);
 }
 
+function comparisonStarters(){
+ return `<aside class="labor-aside labor-comparison-starters" data-labor-comparison-starters>${sectionHead('','Comparison starters')}`
+  +'<p class="labor-note">Read related measures in separate native panels, with their own units and scales.</p>'
+  +`<div class="labor-presets actions" aria-label="Labor comparison starters">${button('Compare breadth',
+   'data-compare="unrate,underemployment,participation"')}${button('Jobs momentum',
+   'data-compare="payroll,payrollAverage3m,weeklyHours"')}${button('Labor turnover',
+   'data-compare="hiresRate,quitsRate,layoffsRate"')}</div></aside>`;
+}
+
 function history(state,current,shown,range){
  const last=shown.observations.at(-1),history={...current,observations:current.observations.filter(o=>!shown.window.endDate||o.date<=shown.window.endDate)},available=shown.observations.some(o=>Number.isFinite(o.value));
  return `<section class="labor-history">${sectionHead('03',
@@ -125,11 +134,7 @@ function readings(state){
  let previousGroup=null;
  return (`<section class="labor-readings" id="labor-readings">${sectionHead('04',
   'All labor readings')}<p class="labor-note">${ids.length} of ${allIds.length
-  } measures · Latest readings, independent of the selected history window.</p><div `+
-  `class="labor-presets actions" aria-label="Labor comparison starters">${button('Compare breadth',
-  'data-compare="unrate,underemployment,participation"')}${button('Jobs momentum',
-  'data-compare="payroll,payrollAverage3m,weeklyHours"')}${button('Labor turnover',
-  'data-compare="hiresRate,quitsRate,layoffsRate"')}</div><div class="labor-table-controls"><div class="labor-filter-set" role="group" `+
+  } measures · Latest readings, independent of the selected history window.</p><div class="labor-table-controls"><div class="labor-filter-set" role="group" `+
   `aria-label="Labor reading groups">${[['all','All 23'],...Object.entries(groups).map(([id,value])=>[id,value.label])].map(([id,
   label])=>button(label,`data-labor-group="${id}" aria-pressed="${group===id}"`,
   'labor-filter')).join('')}</div><label for="labor-query">Find a labor measure<input id="labor-query" type="search" value="${esc(state.query
@@ -209,7 +214,7 @@ export function laborPage(input={},options={}){
   +`<nav class="labor-section-nav" aria-label="Labor sections">${[['trends','Payrolls & unemployment'],
   ['weekly','Weekly claims'],['analysis','Focused history'],['readings','All 23 measures'],['notes','Definitions & sources']].map(([id,
   label])=>button(label,`data-labor-section="labor-${id}"`,
-  'labor-section-link')).join('')}</nav><div class="labor-desk">${trends}${releaseRadar(state,options.now??new Date())}</div>${weekly
+  'labor-section-link')).join('')}</nav><div class="labor-desk">${trends}<div class="labor-side-stack">${releaseRadar(state,options.now??new Date())}${comparisonStarters()}</div></div>${weekly
   (state)}<div id="labor-analysis">${history(state,current,shown,range)}</div>${renderLaborEvidence
   (dataStatus.sources.laborEvidence,{range})}${readings(state)}${supportingDetails('labor:about-data','About this data',notes(state))}</div>`;
 }

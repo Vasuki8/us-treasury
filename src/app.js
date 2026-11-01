@@ -133,7 +133,7 @@ function applyAppearance() {
   root.dataset.theme=state.theme;
   root.dataset.density=state.density;
   document.documentElement.dataset.theme=state.theme;
-  document.querySelector('meta[name="theme-color"]').content=state.theme==='Graphite'?'#17181e':'#f5f5f4';
+  document.querySelector('meta[name="theme-color"]').content=state.theme==='Graphite'?'#131517':'#f9f9f8';
   const dark=state.theme==='Graphite',themeButton=document.getElementById('theme-toggle');
   themeButton.querySelector('[data-theme-label]').textContent=dark?'Dark':'Light';
   themeButton.querySelector('[data-theme-sun]').hidden=dark;

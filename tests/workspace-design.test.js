@@ -18,14 +18,14 @@ test('sidebar offers every research family destination without depending on a se
  assert.match(html,/data-nav-family="prices"/);
 });
 
-test('sidebar follows the active family without accumulating open groups or undoing a manual toggle during refresh',()=>{
+test('sidebar exposes all topic families initially and preserves manual disclosure choices across pages',()=>{
  const groups=['economy','fed','treasury'].map(id=>({dataset:{workspaceFamily:id},open:false}));
  const root={querySelector:()=>null,querySelectorAll:selector=>selector==='[data-workspace-family]'?groups:[]};
- syncCompactNavigation(root,{page:'labor'});assert.deepEqual(groups.map(group=>group.open),[true,false,false]);
- groups[1].open=true;
- syncCompactNavigation(root,{page:'labor'});assert.equal(groups[1].open,true,'a same-view refresh preserves manual expansion');
- syncCompactNavigation(root,{page:'fiscal'});assert.deepEqual(groups.map(group=>group.open),[false,false,true]);
- syncCompactNavigation(root,{page:'overview'});assert.deepEqual(groups.map(group=>group.open),[false,false,false]);
+ syncCompactNavigation(root,{page:'labor'});assert.deepEqual(groups.map(group=>group.open),[true,true,true]);
+ groups[1].open=false;
+ syncCompactNavigation(root,{page:'labor'});assert.equal(groups[1].open,false,'a same-view refresh preserves manual collapse');
+ syncCompactNavigation(root,{page:'fiscal'});assert.deepEqual(groups.map(group=>group.open),[true,false,true]);
+ syncCompactNavigation(root,{page:'overview'});assert.deepEqual(groups.map(group=>group.open),[true,false,true]);
 });
 
 test('preview uses native units, an explicit observation window and a full-history route without selecting comparison series',()=>{
