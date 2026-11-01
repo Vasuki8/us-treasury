@@ -5,7 +5,7 @@ import {ownershipPage,ownershipCsv} from '../src/ownership-page.js';
 import {marketFunctioningPage,marketFunctioningCsv} from '../src/market-functioning-page.js';
 import {yieldsPage,yieldCurvesCsv} from '../src/yields-page.js';
 
-const strip=html=>{const found=html.match(/<section class="stitch-kpi-strip"[^>]*>[\s\S]*?<\/section>/);assert.ok(found,'A desk starts with retained readings');assert.equal((found[0].match(/class="stitch-kpi /g)??[]).length,4);return found[0];};
+const strip=(html,count=4)=>{const found=html.match(/<section class="stitch-kpi-strip"[^>]*>[\s\S]*?<\/section>/);assert.ok(found,'A desk starts with retained readings');assert.equal((found[0].match(/class="stitch-kpi /g)??[]).length,count);return found[0];};
 const auction={id:'selected',auctionDate:'2026-10-07',securityType:'Note',securityTerm:'10-Year',originalTerm:'10-Year',reopening:false,cashManagement:false,status:'results',highYield:4.25,offeringAmount:1e9,bidToCover:2.5,competitiveAccepted:100,primaryDealerAccepted:20,directAccepted:10,indirectAccepted:70};
 const auctions={auctions:[auction],series:{auctionOfferingMonthly:{observations:[{date:'2026-10-01',value:1,partial:true}]}}};
 const sectors=[['LM263061105.Q','Rest of the world',800],['LM713061103.Q','Federal Reserve / central bank',400],['LM153061105.Q','Households and nonprofit organizations',200],['LM653061105.Q','Mutual funds',100]].map(([code,label,value])=>({code,label,value,valuation:'market value'}));
@@ -14,7 +14,7 @@ const funding={series:{sofr:{observations:[{date:'2026-10-19',value:4,percentile
 const yields={curveHistory:[{date:'2026-10-20',nominal:{'2Y':4,'10Y':4.5},real:{'10Y':2}}]};
 
 test('auction desk readings use the selected official result and keep WI coverage explicit',()=>{
- const original=JSON.stringify(auctions),csv=auctionsCsv(auctions),html=auctionsPage({},auctions),readings=strip(html);
+ const original=JSON.stringify(auctions),csv=auctionsCsv(auctions),html=auctionsPage({},auctions),readings=strip(html,7);
  for(const value of ['4.250%','2.50×','70.0%','20.0%'])assert.ok(readings.includes(value),value);
  assert.match(html,/stitch-auction-desk/);assert.match(html,/When-issued pricing[\s\S]*Not covered/);
  assert.match(html,/data-series="auctionOfferingMonthly"/);assert.match(html,/data-auction-id="selected"/);

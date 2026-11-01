@@ -10,6 +10,7 @@ import {formatDisplayValue} from '../src/display-format.js';
 import {createOverviewDisclosureMemory} from '../src/overview-disclosures.js';
 import {createResearchSaveDrafts,renderResearchSave} from '../src/research-save.js';
 import {measurementChange} from '../src/measurement-change.js';
+import {escapeHtml} from '../src/ui.js';
 
 const state=overrides=>({...defaults,saved:[],selected:[],...overrides});
 const count=(html,text)=>html.split(text).length-1;
@@ -24,9 +25,11 @@ function outsideDetails(html){
  return result;
 }
 
-test('Overview combines each top reading with context instead of a repeated briefing row',()=>{
+test('Overview separates three analytical guide cards from four native headline readings',()=>{
  const html=overviewPage(state()),top=html.slice(0,html.indexOf('class="stitch-workstation"'));
- assert.doesNotMatch(top,/class="reading-brief/);
+ assert.match(top,/data-overview-guide/);
+ assert.equal(count(top,'data-overview-guide-card='),3);
+ assert.ok(top.indexOf('data-overview-guide')<top.indexOf('stitch-headline-grid'));
  const cards=[...top.matchAll(/<article class="oh-topic stitch-card"[^]*?<\/article>/g)].map(match=>match[0]);
  for(const id of ['gdp','pceCore','unrate','yield']){
   assert.equal(count(top,`data-overview-reading="${id}"`),1,id);
@@ -35,15 +38,20 @@ test('Overview combines each top reading with context instead of a repeated brie
   assert.ok(card.includes(formatDisplayValue(series[id],latest(series[id])?.value)),id+' value');
   assert.ok(card.includes(periodLabel(series[id],latest(series[id])?.date)),id+' period');
  }
- assert.match(top,/data-overview-disclosure="reading-context:gdp"/);
- assert.match(top,/data-overview-disclosure="reading-context:pceCore"/);
+ for(const id of ['gdp','pceCore','payroll']){
+  const guide=top.match(new RegExp(`data-overview-guide-card="${id}"[^]*?</article>`))?.[0]??'';
+  assert.ok(guide.includes(formatDisplayValue(series[id],latest(series[id])?.value)),id+' guide value');
+  assert.ok(guide.includes(periodLabel(series[id],latest(series[id])?.date)),id+' guide period');
+ }
  assert.match(html,/Does recent inflation match the annual trend\?/);
- assert.match(html,/stitch-monitor-meta"><span>Net interest burden<\/span>/);
+ assert.match(html,/stitch-monitor-meta"><span>Net interest outlays · TTM<\/span>/);
+ assert.match(html,/data-overview-reading="netInterestTtm"/);assert.match(html,/data-overview-support-reading="interestRevenueRatio"/);
 });
 
-test('Labor gives four readings one home and keeps hero actions reachable in a native menu',()=>{
+test('Labor leads with three guide cards and four native readings while keeping hero actions reachable',()=>{
  const html=laborPage(state()),top=html.slice(0,html.indexOf('class="labor-revision-context"'));
- assert.doesNotMatch(top,/labor-reading-guide/);
+ assert.match(top,/labor-reading-guide/);assert.equal(count(top,'data-labor-guide-card='),3);
+ assert.ok(top.indexOf('data-labor-guide')<top.indexOf('class="labor-headlines"'));
  assert.equal(count(top,'class="labor-metric"'),4);
  for(const id of ['payroll','unrate','participation','wages'])assert.equal(count(top,`data-labor-reading="${id}"`),1,id);
  const menu=top.match(/<details class="labor-action-menu"[^]*?<\/details>/)?.[0];
@@ -97,21 +105,37 @@ test('headline warnings remain visible when interpretation is collapsed',()=>{
  }finally{series.payroll=old;}
 });
 
-test('indicator selected native reading precedes history and related readings follow it',()=>{
+test('Overview policy-bound and secondary fiscal notes remain visible outside the guide and disclosures',()=>{
+ for(const id of ['gdp','policyTargetLower','interestRevenueRatio']){
+  const original=series[id],last=latest(original);
+  series[id]={...original,dataStatus:'cached',error:`Delayed <${id}>`,observations:[...original.observations.slice(0,-1),{...last,footnotes:[`Source <${id}> qualification`]}]};
+  try{
+   const html=overviewPage(state()),primary=outsideDetails(html.slice(html.indexOf('class="oh-snapshot"'),html.indexOf('class="stitch-card stitch-provenance"')));
+   assert.match(primary,new RegExp(`Delayed &lt;${id}&gt;`));
+   assert.match(primary,new RegExp(`Source &lt;${id}&gt; qualification`));
+   assert.doesNotMatch(primary,new RegExp(`<${id}>`));
+  }finally{series[id]=original;}
+ }
+});
+
+test('indicator four-card native strip precedes family history and five related readings follow it',()=>{
  for(const id of ['payroll','payrollLevel','underemployment','wages','eciCompensation','cpiCoreMonthly']){
   const html=indicatorPage(state({seriesId:id,transform:'level'})),chart=html.indexOf('class="indicator-chart"');
   const selected=html.match(/<section class="indicator-snapshot"[^]*?<\/section>/)?.[0]??'';
-  assert.equal((selected.match(/<article class="indicator-stat(?: |")/g)??[]).length,1,id);
-  assert.match(selected,new RegExp(`data-stat-series="${id}"`));
-  assert.ok(selected.includes(formatDisplayValue(series[id],latest(series[id])?.value)),id+' selected value');
-  assert.ok(html.indexOf('class="indicator-reading-context"')>chart,id+' related context below history');
-  const context=html.match(/<details class="indicator-reading-context"[^]*?<\/details>/)?.[0]??'';
-  assert.equal((context.match(/<article class="indicator-stat(?: |")/g)??[]).length,4,id+' retained related slots');
-  assert.match(context,new RegExp(`data-page-disclosure="indicator-context-${id}"`));
+  assert.equal((selected.match(/<article class="indicator-stat(?: |")/g)??[]).length,4,id);
+  assert.match(selected,new RegExp(`data-(?:stat-series|family-input)="${id}"`));
+  const ownReading=selected.match(new RegExp(`data-stat-series="${id}"[^]*?</article>`))?.[0]??selected.match(new RegExp(`data-family-input="${id}"[^]*?</div>`))?.[0]??'';
+  assert.ok(ownReading.includes(formatDisplayValue(series[id],latest(series[id])?.value)),id+' selected value');
+  assert.ok(ownReading.includes(escapeHtml(series[id].unit)),id+' selected native unit');
+  assert.ok(html.indexOf('class="indicator-snapshot"')<chart,id+' native strip before chart');
+  assert.ok(html.indexOf('data-family-ledger=')>chart,id+' source ledger follows historical chart');
+  assert.ok(html.indexOf('class="indicator-related"')>html.indexOf('data-family-ledger='),id+' related readings follow ledger');
+  assert.equal(count(html,'class="indicator-related-card"'),5,id+' related measure slots');
+  assert.doesNotMatch(html,/<details class="indicator-reading-context"/);
   for(const marker of ['data-legend="true"','data-end-labels="true"','data-export','data-copy-link'])assert.ok(html.includes(marker),marker);
  }
  const payroll=indicatorPage(state({seriesId:'payroll',transform:'level'}));
- assert.doesNotMatch(payroll.slice(payroll.indexOf('class="indicator-chart"'),payroll.indexOf('class="indicator-reading-context"')),/U-3 and U-6/);
+ assert.doesNotMatch(payroll.slice(payroll.indexOf('class="indicator-chart"'),payroll.indexOf('data-family-analysis=')),/U-3 and U-6/);
  assert.match(indicatorPage(state({seriesId:'unrate',transform:'level'})),/overlay[^]*?U-3 and U-6 have different denominators/);
- assert.match(indicatorPage(state({seriesId:'wages'})),/Average hourly earnings reflect the employee/);
+ assert.match(indicatorPage(state({seriesId:'wages'})),/industry, occupation and worker mix/);
 });

@@ -2,6 +2,7 @@ import {searchSeries,groupSearchMeasurements} from './search.js';
 import {calendarRelatedIds} from './macro-calendar.js';
 import {escapeHtml as esc} from './ui.js';
 import {humanDate} from './ui-time.js';
+import {stitchDeskContracts} from './stitch-desk-contracts.js';
 
 const normalize=value=>String(value??'').trim().toLowerCase().replace(/\s+/g,' ');
 const pageDefinitions=[
@@ -31,6 +32,7 @@ const pageDefinitions=[
  ['Sources & terms','#/sources','data sources rights attribution reuse terms notices'],
 ];
 const matches=(query,text)=>query.split(' ').every(term=>normalize(text).includes(term));
+pageDefinitions.push(...Object.values(stitchDeskContracts).map(d=>[d.title,'#'+d.path,d.title+' official public data research desk']));
 const byName=(a,b)=>a.label.localeCompare(b.label);
 
 /** Exact identifiers resolve only when the matching identifier tier is unique. */
@@ -38,7 +40,11 @@ export function exactIndicatorMatch(query,catalog=[]) {
  const value=normalize(query);if(!value)return null;
  for(const pick of [item=>[item.id],item=>[item.code],item=>item.source?.seriesIds??[]]) {
   const matches=catalog.filter(item=>pick(item).some(candidate=>normalize(candidate)===value));
-  if(matches.length)return matches.length===1?matches[0]:null;
+  if(matches.length){
+   if(matches.length===1)return matches[0];
+   const primary=matches.find(item=>!item.canonicalId);
+   return primary&&matches.every(item=>item===primary||item.canonicalId===primary.id)?primary:null;
+  }
  }
  return null;
 }

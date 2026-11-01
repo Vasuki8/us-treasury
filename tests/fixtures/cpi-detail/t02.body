@@ -1,0 +1,680 @@
+<table class="regular" id="cpipress2">
+
+<caption><span class="tableTitle">Table 2. Consumer Price Index for All Urban Consumers (CPI-U): U.S. city average, by detailed expenditure category, September 2026</span>
+<span class="headnote">[1982-84=100, unless otherwise noted]</span></caption>
+
+
+<thead>
+<tr>
+	<th class="stubhead" id="cpipress2.h.1.1" rowspan="2">Expenditure category</th>
+	<th class="stubhead" id="cpipress2.h.1.2" rowspan="2">Relative<br />importance<br />Aug.<br />2026</th>
+	<th class="stubhead" colspan="2" id="cpipress2.h.1.3">Unadjusted percent change</th>
+	<th class="stubhead" colspan="3" id="cpipress2.h.1.5">Seasonally adjusted percent change</th>
+</tr>
+<tr>
+	<th class="stubhead" headers="cpipress2.h.1.3" id="cpipress2.h.2.3">Sep.<br />2025-<br />Sep.<br />2026</th>
+	<th class="stubhead" headers="cpipress2.h.1.3" id="cpipress2.h.2.4">Aug.<br />2026-<br />Sep.<br />2026</th>
+	<th class="stubhead" headers="cpipress2.h.1.5" id="cpipress2.h.2.5">Jun.<br />2026-<br />Jul.<br />2026</th>
+	<th class="stubhead" headers="cpipress2.h.1.5" id="cpipress2.h.2.6">Jul.<br />2026-<br />Aug.<br />2026</th>
+	<th class="stubhead" headers="cpipress2.h.1.5" id="cpipress2.h.2.7">Aug.<br />2026-<br />Sep.<br />2026</th>
+</tr>
+</thead>
+
+
+<tbody><tr>
+	<th headers="cpipress2.h.1.1" id="cpipress2.r.1"><p class="sub0">All items</p></th>
+	<td headers="cpipress2.r.1 cpipress2.h.1.2"><span class="datavalue">100.000</span></td>
+	<td headers="cpipress2.r.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">3.7</span></td>
+	<td headers="cpipress2.r.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.6</span></td>
+	<td headers="cpipress2.r.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.4</span></td>
+	<td headers="cpipress2.r.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.6</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.h.1.1" id="cpipress2.r.1.1"><p class="sub1">Food</p></th>
+	<td headers="cpipress2.r.1.1 cpipress2.h.1.2"><span class="datavalue">13.507</span></td>
+	<td headers="cpipress2.r.1.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">2.5</span></td>
+	<td headers="cpipress2.r.1.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.0</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1"><p class="sub2">Food at home</p></th>
+	<td headers="cpipress2.r.1.1.1 cpipress2.h.1.2"><span class="datavalue">8.203</span></td>
+	<td headers="cpipress2.r.1.1.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">1.8</span></td>
+	<td headers="cpipress2.r.1.1.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.1</span></td>
+	<td headers="cpipress2.r.1.1.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.0</span></td>
+	<td headers="cpipress2.r.1.1.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.1</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1"><p class="sub3">Cereals and bakery products</p></th>
+	<td headers="cpipress2.r.1.1.1.1 cpipress2.h.1.2"><span class="datavalue">1.021</span></td>
+	<td headers="cpipress2.r.1.1.1.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">2.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.0</span></td>
+	<td headers="cpipress2.r.1.1.1.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.1</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.1"><p class="sub4">Cereals and cereal products</p></th>
+	<td headers="cpipress2.r.1.1.1.1.1 cpipress2.h.1.2"><span class="datavalue">0.309</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">3.2</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.5</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.4</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.3</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.8</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.r.1.1.1.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.1.1"><p class="sub5">Flour and prepared flour mixes</p></th>
+	<td headers="cpipress2.r.1.1.1.1.1.1 cpipress2.h.1.2"><span class="datavalue">0.038</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-1.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-2.0</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">1.4</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-1.3</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.r.1.1.1.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.1.2"><p class="sub5">Breakfast cereal<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.1.1.2 cpipress2.h.1.2"><span class="datavalue">0.132</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">3.0</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.9</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">1.0</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-1.6</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.9</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.r.1.1.1.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.1.3"><p class="sub5">Rice, pasta, cornmeal</p></th>
+	<td headers="cpipress2.r.1.1.1.1.1.3 cpipress2.h.1.2"><span class="datavalue">0.139</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.3 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">4.3</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.3 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.8</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.3 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.3</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.3 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.3 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">1.2</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.r.1.1.1.1.1 cpipress2.r.1.1.1.1.1.3 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.1.3.1"><p class="sub6">Rice<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.1.1.3.1 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.3.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">7.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.3.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">1.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.3.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.9</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.3.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1.1.3.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">1.1</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.2"><p class="sub4">Bakery products<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.1.2 cpipress2.h.1.2"><span class="datavalue">0.712</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">1.7</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.0</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.0</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.r.1.1.1.1.2 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.2.1"><p class="sub5">Bread<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.1.2.1 cpipress2.h.1.2"><span class="datavalue">0.172</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">3.3</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.1</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.r.1.1.1.1.2 cpipress2.r.1.1.1.1.2.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.2.1.1"><p class="sub6">White bread<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.1.2.1.1 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.1.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">3.5</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.1.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.1.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.0</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.1.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.1.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.1</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.r.1.1.1.1.2 cpipress2.r.1.1.1.1.2.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.2.1.2"><p class="sub6">Bread other than white<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.1.2.1.2 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.1.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">3.3</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.1.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.1.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.3</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.1.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.4</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.1.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.2</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.r.1.1.1.1.2 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.2.2"><p class="sub5">Fresh biscuits, rolls, muffins<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.1.2.2 cpipress2.h.1.2"><span class="datavalue">0.116</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">2.3</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.7</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.2</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.r.1.1.1.1.2 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.2.3"><p class="sub5">Cakes, cupcakes, and cookies<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.1.2.3 cpipress2.h.1.2"><span class="datavalue">0.207</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.3 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">1.9</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.3 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-0.6</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.3 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">1.6</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.3 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.6</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.3 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.6</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.r.1.1.1.1.2 cpipress2.r.1.1.1.1.2.3 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.2.3.1"><p class="sub6">Cookies<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.1.2.3.1 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.3.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">3.6</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.3.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-1.2</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.3.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">1.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.3.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">1.9</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.3.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-1.2</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.r.1.1.1.1.2 cpipress2.r.1.1.1.1.2.3 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.2.3.2"><p class="sub6">Fresh cakes and cupcakes<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.1.2.3.2 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.3.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-1.7</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.3.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-0.6</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.3.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">2.8</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.3.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-3.5</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.3.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.6</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.r.1.1.1.1.2 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.2.4"><p class="sub5">Other bakery products</p></th>
+	<td headers="cpipress2.r.1.1.1.1.2.4 cpipress2.h.1.2"><span class="datavalue">0.217</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">0.8</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.5</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-1.3</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.8</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.5</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.r.1.1.1.1.2 cpipress2.r.1.1.1.1.2.4 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.2.4.1"><p class="sub6">Fresh sweetrolls, coffeecakes, doughnuts<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.1.2.4.1 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">1.9</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-1.5</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-1.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">1.9</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.r.1.1.1.1.2 cpipress2.r.1.1.1.1.2.4 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.2.4.2"><p class="sub6">Crackers, bread, and cracker products<span class="footnoteRefs">(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.1.2.4.2 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">1.0</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-1.9</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.8</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.6</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-1.9</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.1 cpipress2.r.1.1.1.1.2 cpipress2.r.1.1.1.1.2.4 cpipress2.h.1.1" id="cpipress2.r.1.1.1.1.2.4.3"><p class="sub6">Frozen and refrigerated bakery products, pies, tarts, turnovers<span class="footnoteRefs">(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.1.2.4.3 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4.3 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">1.3</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4.3 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">3.4</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4.3 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-2.1</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4.3 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.5</span></td>
+	<td headers="cpipress2.r.1.1.1.1.2.4.3 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">4.0</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2"><p class="sub3">Meats, poultry, fish, and eggs</p></th>
+	<td headers="cpipress2.r.1.1.1.2 cpipress2.h.1.2"><span class="datavalue">1.956</span></td>
+	<td headers="cpipress2.r.1.1.1.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">0.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.7</span></td>
+	<td headers="cpipress2.r.1.1.1.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.5</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1"><p class="sub4">Meats, poultry, and fish</p></th>
+	<td headers="cpipress2.r.1.1.1.2.1 cpipress2.h.1.2"><span class="datavalue">1.841</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">2.2</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-0.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.7</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.4</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1"><p class="sub5">Meats</p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1 cpipress2.h.1.2"><span class="datavalue">1.168</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">1.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-0.6</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-1.0</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.9</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.1"><p class="sub6">Beef and veal</p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1 cpipress2.h.1.2"><span class="datavalue">0.636</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">3.5</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-1.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.8</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-1.0</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-1.0</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.1.1"><p class="sub7">Uncooked ground beef</p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.1 cpipress2.h.1.2"><span class="datavalue">0.238</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">5.4</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-1.2</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-1.6</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.0</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.8</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.1.2"><p class="sub7">Uncooked beef roasts<span class="footnoteRefs">(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.2 cpipress2.h.1.2"><span class="datavalue">0.088</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">0.6</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-3.7</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">1.1</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-1.7</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-3.6</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.1.3"><p class="sub7">Uncooked beef steaks<span class="footnoteRefs">(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.3 cpipress2.h.1.2"><span class="datavalue">0.236</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.3 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">2.7</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.3 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-0.8</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.3 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.4</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.3 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-1.5</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.3 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-1.0</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.1.4"><p class="sub7">Uncooked other beef and veal<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.4 cpipress2.h.1.2"><span class="datavalue">0.074</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.4 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">3.2</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.4 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.0</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.4 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-1.9</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.4 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">1.1</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.1.4 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.0</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.2"><p class="sub6">Pork</p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2 cpipress2.h.1.2"><span class="datavalue">0.337</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-0.7</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.0</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-1.5</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.4</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-1.0</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.2 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.2.1"><p class="sub7">Bacon, breakfast sausage, and related products<span class="footnoteRefs">(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1 cpipress2.h.1.2"><span class="datavalue">0.131</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-1.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">1.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.4</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.4</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.2 cpipress2.r.1.1.1.2.1.1.2.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.2.1.1"><p class="sub8">Bacon and related products<span class="footnoteRefs">(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1.1 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-3.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">1.7</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.8</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.4</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.5</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.2 cpipress2.r.1.1.1.2.1.1.2.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.2.1.2"><p class="sub8">Breakfast sausage and related products<span class="footnoteRefs">(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1.2 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">3.1</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.9</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.1.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">1.0</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.2 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.2.2"><p class="sub7">Ham</p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.2 cpipress2.h.1.2"><span class="datavalue">0.067</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">4.0</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">1.4</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.8</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-1.4</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.9</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.2 cpipress2.r.1.1.1.2.1.1.2.2 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.2.2.1"><p class="sub8">Ham, excluding canned<span class="footnoteRefs">(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.2.1 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.2.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">3.7</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.2.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">1.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.2.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-2.1</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.2.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-1.2</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.2.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">1.7</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.2 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.2.3"><p class="sub7">Pork chops<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.3 cpipress2.h.1.2"><span class="datavalue">0.044</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.3 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.3 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-0.6</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.3 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-2.8</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.3 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.0</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.3 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.6</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.2 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.2.4"><p class="sub7">Other pork including roasts, steaks, and ribs<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.4 cpipress2.h.1.2"><span class="datavalue">0.095</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.4 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-3.9</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.4 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-2.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.4 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-1.9</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.4 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">2.6</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.2.4 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-2.3</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.3"><p class="sub6">Other meats</p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3 cpipress2.h.1.2"><span class="datavalue">0.195</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-1.6</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.8</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">1.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.5</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.3 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.3.1"><p class="sub7">Frankfurters<span class="footnoteRefs">(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3.1 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">1.9</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-2.4</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-1.7</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.0</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-2.4</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.3 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.3.2"><p class="sub7">Lunchmeats<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3.2 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-3.4</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-0.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.9</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.3.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.3</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.4"><p class="sub6">Poultry</p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4 cpipress2.h.1.2"><span class="datavalue">0.355</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">1.1</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.4</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.4</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.4</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.7</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.4 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.4.1"><p class="sub7">Chicken<span class="footnoteRefs">(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1 cpipress2.h.1.2"><span class="datavalue">0.278</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-0.6</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.7</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.7</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.4</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">1.3</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.4 cpipress2.r.1.1.1.2.1.1.4.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.4.1.1"><p class="sub8">Fresh whole chicken<span class="footnoteRefs">(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1.1 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">0.6</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">2.7</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.8</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.5</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">3.9</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.4 cpipress2.r.1.1.1.2.1.1.4.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.4.1.2"><p class="sub8">Fresh and frozen chicken parts<span class="footnoteRefs">(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1.2 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-1.0</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.3</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.1.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.3</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.4 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.4.2"><p class="sub7">Other uncooked poultry including turkey<span class="footnoteRefs">(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.2 cpipress2.h.1.2"><span class="datavalue">0.077</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">8.4</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-0.7</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.8</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.4.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-1.2</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.5"><p class="sub6">Fish and seafood<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5 cpipress2.h.1.2"><span class="datavalue">0.318</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">6.9</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.4</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.0</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.1</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.5 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.5.1"><p class="sub7">Fresh fish and seafood<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.1 cpipress2.h.1.2"><span class="datavalue">0.168</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">6.0</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">1.0</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-1.1</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.1</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.5 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.5.2"><p class="sub7">Processed fish and seafood<span class="footnoteRefs">(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2 cpipress2.h.1.2"><span class="datavalue">0.150</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">8.2</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.9</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.4</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.5 cpipress2.r.1.1.1.2.1.1.5.2 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.5.2.1"><p class="sub8">Shelf stable fish and seafood<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2.1 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">8.9</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.6</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.9</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.0</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.6</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.r.1.1.1.2.1.1 cpipress2.r.1.1.1.2.1.1.5 cpipress2.r.1.1.1.2.1.1.5.2 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.1.5.2.2"><p class="sub8">Frozen fish and seafood<span class="footnoteRefs">(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2.2 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">8.5</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-0.5</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">1.7</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.1.5.2.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.0</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.2 cpipress2.r.1.1.1.2.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.2.1.2"><p class="sub5">Eggs</p></th>
+	<td headers="cpipress2.r.1.1.1.2.1.2 cpipress2.h.1.2"><span class="datavalue">0.115</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-20.6</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">1.0</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.5</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">2.9</span></td>
+	<td headers="cpipress2.r.1.1.1.2.1.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-1.3</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.3"><p class="sub3">Dairy and related products<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.3 cpipress2.h.1.2"><span class="datavalue">0.741</span></td>
+	<td headers="cpipress2.r.1.1.1.3 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-0.7</span></td>
+	<td headers="cpipress2.r.1.1.1.3 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-0.9</span></td>
+	<td headers="cpipress2.r.1.1.1.3 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.3 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.3</span></td>
+	<td headers="cpipress2.r.1.1.1.3 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.9</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.3 cpipress2.h.1.1" id="cpipress2.r.1.1.1.3.1"><p class="sub4">Milk<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.3.1 cpipress2.h.1.2"><span class="datavalue">0.193</span></td>
+	<td headers="cpipress2.r.1.1.1.3.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">2.3</span></td>
+	<td headers="cpipress2.r.1.1.1.3.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-2.0</span></td>
+	<td headers="cpipress2.r.1.1.1.3.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.5</span></td>
+	<td headers="cpipress2.r.1.1.1.3.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-1.2</span></td>
+	<td headers="cpipress2.r.1.1.1.3.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-2.0</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.3 cpipress2.r.1.1.1.3.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.3.1.1"><p class="sub5">Fresh whole milk<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.3.1.1 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.3.1.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">2.8</span></td>
+	<td headers="cpipress2.r.1.1.1.3.1.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-2.1</span></td>
+	<td headers="cpipress2.r.1.1.1.3.1.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.3</span></td>
+	<td headers="cpipress2.r.1.1.1.3.1.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-1.1</span></td>
+	<td headers="cpipress2.r.1.1.1.3.1.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-2.1</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.3 cpipress2.r.1.1.1.3.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.3.1.2"><p class="sub5">Fresh milk other than whole<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.3.1.2 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.3.1.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">2.3</span></td>
+	<td headers="cpipress2.r.1.1.1.3.1.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-1.9</span></td>
+	<td headers="cpipress2.r.1.1.1.3.1.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.7</span></td>
+	<td headers="cpipress2.r.1.1.1.3.1.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-1.0</span></td>
+	<td headers="cpipress2.r.1.1.1.3.1.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-1.9</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.3 cpipress2.h.1.1" id="cpipress2.r.1.1.1.3.2"><p class="sub4">Cheese and related products<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.3.2 cpipress2.h.1.2"><span class="datavalue">0.249</span></td>
+	<td headers="cpipress2.r.1.1.1.3.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-3.0</span></td>
+	<td headers="cpipress2.r.1.1.1.3.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.3.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-1.0</span></td>
+	<td headers="cpipress2.r.1.1.1.3.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.7</span></td>
+	<td headers="cpipress2.r.1.1.1.3.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.2</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.3 cpipress2.h.1.1" id="cpipress2.r.1.1.1.3.3"><p class="sub4">Ice cream and related products</p></th>
+	<td headers="cpipress2.r.1.1.1.3.3 cpipress2.h.1.2"><span class="datavalue">0.108</span></td>
+	<td headers="cpipress2.r.1.1.1.3.3 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-2.4</span></td>
+	<td headers="cpipress2.r.1.1.1.3.3 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-1.0</span></td>
+	<td headers="cpipress2.r.1.1.1.3.3 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.3.3 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.4</span></td>
+	<td headers="cpipress2.r.1.1.1.3.3 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-1.3</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.3 cpipress2.h.1.1" id="cpipress2.r.1.1.1.3.4"><p class="sub4">Other dairy and related products<span class="footnoteRefs">(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.3.4 cpipress2.h.1.2"><span class="datavalue">0.192</span></td>
+	<td headers="cpipress2.r.1.1.1.3.4 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.3.4 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-1.1</span></td>
+	<td headers="cpipress2.r.1.1.1.3.4 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.4</span></td>
+	<td headers="cpipress2.r.1.1.1.3.4 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">1.8</span></td>
+	<td headers="cpipress2.r.1.1.1.3.4 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.8</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.4"><p class="sub3">Fruits and vegetables</p></th>
+	<td headers="cpipress2.r.1.1.1.4 cpipress2.h.1.2"><span class="datavalue">1.270</span></td>
+	<td headers="cpipress2.r.1.1.1.4 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">3.7</span></td>
+	<td headers="cpipress2.r.1.1.1.4 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">1.0</span></td>
+	<td headers="cpipress2.r.1.1.1.4 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.4 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.4</span></td>
+	<td headers="cpipress2.r.1.1.1.4 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.5</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.4 cpipress2.h.1.1" id="cpipress2.r.1.1.1.4.1"><p class="sub4">Fresh fruits and vegetables</p></th>
+	<td headers="cpipress2.r.1.1.1.4.1 cpipress2.h.1.2"><span class="datavalue">1.005</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">3.9</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">1.1</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.7</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.5</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.4 cpipress2.r.1.1.1.4.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.4.1.1"><p class="sub5">Fresh fruits</p></th>
+	<td headers="cpipress2.r.1.1.1.4.1.1 cpipress2.h.1.2"><span class="datavalue">0.526</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">4.9</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">2.0</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">2.2</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.5</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.8</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.4 cpipress2.r.1.1.1.4.1 cpipress2.r.1.1.1.4.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.4.1.1.1"><p class="sub6">Apples</p></th>
+	<td headers="cpipress2.r.1.1.1.4.1.1.1 cpipress2.h.1.2"><span class="datavalue">0.080</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">7.5</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-1.4</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">2.2</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-2.8</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">1.0</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.4 cpipress2.r.1.1.1.4.1 cpipress2.r.1.1.1.4.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.4.1.1.2"><p class="sub6">Bananas<span class="footnoteRefs">(<a href="#cpipress2.f.1" title="Click to jump to footnotes at bottom of the table">1</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.4.1.1.2 cpipress2.h.1.2"><span class="datavalue">0.058</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-0.8</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">1.0</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.0</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">1.0</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.4 cpipress2.r.1.1.1.4.1 cpipress2.r.1.1.1.4.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.4.1.1.3"><p class="sub6">Citrus fruits<span class="footnoteRefs">(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.4.1.1.3 cpipress2.h.1.2"><span class="datavalue">0.081</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.3 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">2.6</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.3 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.3 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-1.2</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.3 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.5</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.3 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-0.9</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.4 cpipress2.r.1.1.1.4.1 cpipress2.r.1.1.1.4.1.1 cpipress2.r.1.1.1.4.1.1.3 cpipress2.h.1.1" id="cpipress2.r.1.1.1.4.1.1.3.1"><p class="sub7">Oranges, including tangerines<span class="footnoteRefs">(<a href="#cpipress2.f.3" title="Click to jump to footnotes at bottom of the table">3</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.4.1.1.3.1 cpipress2.h.1.2"><span class="datavalue">-</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.3.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">-0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.3.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-0.3</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.3.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.1</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.3.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">1.0</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.3.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">-1.0</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.4 cpipress2.r.1.1.1.4.1 cpipress2.r.1.1.1.4.1.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.4.1.1.4"><p class="sub6">Other fresh fruits<span class="footnoteRefs">(<a href="#cpipress2.f.2" title="Click to jump to footnotes at bottom of the table">2</a>)</span></p></th>
+	<td headers="cpipress2.r.1.1.1.4.1.1.4 cpipress2.h.1.2"><span class="datavalue">0.308</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.4 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">6.5</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.4 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">3.6</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.4 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">2.9</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.4 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">0.3</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.1.4 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">1.0</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.4 cpipress2.r.1.1.1.4.1 cpipress2.h.1.1" id="cpipress2.r.1.1.1.4.1.2"><p class="sub5">Fresh vegetables</p></th>
+	<td headers="cpipress2.r.1.1.1.4.1.2 cpipress2.h.1.2"><span class="datavalue">0.479</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">2.8</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-2.6</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-0.9</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.1</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.4 cpipress2.r.1.1.1.4.1 cpipress2.r.1.1.1.4.1.2 cpipress2.h.1.1" id="cpipress2.r.1.1.1.4.1.2.1"><p class="sub6">Potatoes</p></th>
+	<td headers="cpipress2.r.1.1.1.4.1.2.1 cpipress2.h.1.2"><span class="datavalue">0.072</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2.1 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">1.1</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2.1 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">-1.2</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2.1 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">0.2</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2.1 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">1.2</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2.1 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">0.6</span></td>
+</tr>
+<tr>
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.4 cpipress2.r.1.1.1.4.1 cpipress2.r.1.1.1.4.1.2 cpipress2.h.1.1" id="cpipress2.r.1.1.1.4.1.2.2"><p class="sub6">Lettuce</p></th>
+	<td headers="cpipress2.r.1.1.1.4.1.2.2 cpipress2.h.1.2"><span class="datavalue">0.039</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2.2 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">2.6</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2.2 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">4.3</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2.2 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-16.4</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2.2 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-6.2</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2.2 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">3.9</span></td>
+</tr>
+<tr class="greenbar">
+	<th headers="cpipress2.r.1 cpipress2.r.1.1 cpipress2.r.1.1.1 cpipress2.r.1.1.1.4 cpipress2.r.1.1.1.4.1 cpipress2.r.1.1.1.4.1.2 cpipress2.h.1.1" id="cpipress2.r.1.1.1.4.1.2.3"><p class="sub6">Tomatoes</p></th>
+	<td headers="cpipress2.r.1.1.1.4.1.2.3 cpipress2.h.1.2"><span class="datavalue">0.064</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2.3 cpipress2.h.1.3 cpipress2.h.2.3"><span class="datavalue">6.8</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2.3 cpipress2.h.1.3 cpipress2.h.2.4"><span class="datavalue">1.2</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2.3 cpipress2.h.1.5 cpipress2.h.2.5"><span class="datavalue">-4.3</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2.3 cpipress2.h.1.5 cpipress2.h.2.6"><span class="datavalue">-3.0</span></td>
+	<td headers="cpipress2.r.1.1.1.4.1.2.3 cpipress2.h.1.5 cpipress2.h.2.7"><span class="datavalue">1.4</span></td>
+</tr></tbody>
+
+<!-- table notes --><tfoot>
+<tr class="footnotes">
+<td class="footnotes" colspan="7">
+	<p class="footnotes">
+		<span class="footnotestitle">Footnotes</span><br />
+		<a id="cpipress2.f.1" name="cpipress2.f.1">(1) </a>Not seasonally adjusted.<br />
+		<a id="cpipress2.f.2" name="cpipress2.f.2">(2) </a>Indexes on a December 1997=100 base.<br />
+		<a id="cpipress2.f.3" name="cpipress2.f.3">(3) </a>Special index based on a substantially smaller sample.<br />
+		<a id="cpipress2.f.4" name="cpipress2.f.4">(4) </a>Indexes on a December 2007=100 base.<br />
+		<a id="cpipress2.f.5" name="cpipress2.f.5">(5) </a>Indexes on a December 2005=100 base.<br />
+		<a id="cpipress2.f.6" name="cpipress2.f.6">(6) </a>Indexes on a December 1986=100 base.<br />
+		<a id="cpipress2.f.7" name="cpipress2.f.7">(7) </a>Indexes on a December 1993=100 base.<br />
+		<a id="cpipress2.f.8" name="cpipress2.f.8">(8) </a>Indexes on a December 2009=100 base.<br />
+		<a id="cpipress2.f.9" name="cpipress2.f.9">(9) </a>Indexes on a December 1990=100 base.<br />
+		<a id="cpipress2.f.10" name="cpipress2.f.10">(10) </a>Indexes on a December 1983=100 base.<br />
+		<a id="cpipress2.f.11" name="cpipress2.f.11">(11) </a>Indexes on a December 2024=100 base.<br />
+		<a id="cpipress2.f.12" name="cpipress2.f.12">(12) </a>Indexes on a December 2001=100 base.<br />
+		<a id="cpipress2.f.13" name="cpipress2.f.13">(13) </a>Indexes on a December 2019=100 base.<br />
+		<a id="cpipress2.f.14" name="cpipress2.f.14">(14) </a>Indexes on a December 1982=100 base.<br />
+		<a id="cpipress2.f.15" name="cpipress2.f.15">(15) </a>Indexes on a December 1996=100 base.<br />
+	</p>
+</td>
+</tr>
+
+</tfoot>
+</table>

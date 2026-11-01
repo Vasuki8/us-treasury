@@ -3,6 +3,8 @@ import {coverageFamilies} from './macro-registry.js';
 import {searchSeries} from './search.js';
 import {freezeCandidates} from './research-context.js';
 import {defaultWindowPreset} from './date-window.js';
+import {stitchPageSources} from './stitch-desk-contracts.js';
+import {stitchEvidenceSourceIds} from './stitch-evidence.js';
 
 const pageSources={
  overview:['bea'],
@@ -37,8 +39,9 @@ export function requiredSourceIds(state,{purpose='render',catalog=series,library
   if(key==='exportMacroMeasure')return agencies([state.macroMeasure],catalog);
   if(key!=='exportCoverage')return [];
  }
- const result=[...(pageSources[state.page]??[])];
+ const result=[...(pageSources[state.page]??[]),...stitchPageSources(state)];
  if(state.page==='indicator'){
+  if(stitchEvidenceSourceIds.includes(catalog[state.seriesId]?.agency))result.push(catalog[state.seriesId].agency);
   const window=state.window??(Object.hasOwn(state,'range')?'observations':defaultWindowPreset([catalog[state.seriesId]]));
   const count=state.range??12;
   const needsFull=purpose!=='render'||state.tab==='revisions'||(window==='observations'

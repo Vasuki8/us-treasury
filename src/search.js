@@ -23,7 +23,7 @@ const normalize = value => String(value ?? '').trim().toLowerCase().replace(/\s+
 /** Same headline, separate admitted retrieval/source evidence. No broad ID deduplication. */
 export function groupSearchMeasurements(items){
  const canonical={gdpTotalContribution:'gdp'},groups=new Map();
- for(const item of items){const key=canonical[item.id]??item.id;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item);}
+ for(const item of items){const key=item.canonicalId??canonical[item.id]??item.id;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item);}
  return [...groups].map(([id,rows])=>{const primary=rows.find(row=>row.id===id)??rows[0];return {primary,variants:rows.filter(row=>row!==primary)};});
 }
 const metadataText = value => {

@@ -18,9 +18,12 @@ test('reading groups identify native content and escape labels without replacing
 
 test('Overview keeps native reading units and moves derivation labels out of the cards',()=>{
  const html=overviewPage({saved:[]});
- const fiscal=html.match(/<a class="oh-reading" data-overview-reading="interestRevenueRatio"[\s\S]*?<\/a>/)?.[0];
+ const fiscal=html.match(/<a class="oh-reading" data-overview-reading="netInterestTtm"[\s\S]*?<\/a>/)?.[0];
  assert.ok(fiscal);
  assert.doesNotMatch(fiscal,/Calculated measure|Calculated metric/);
+ assert.match(fiscal,/reading-value">\$/);assert.match(fiscal,/USD/);assert.match(fiscal,/TTM/);
+ const ratio=html.match(/<a class="oh-reading" data-overview-support-reading="interestRevenueRatio"[\s\S]*?<\/a>/)?.[0];
+ assert.ok(ratio);assert.match(ratio,/% of receipts · TTM/);
  const gdp=html.match(/<a class="oh-reading" data-overview-reading="gdp"[\s\S]*?<\/a>/)?.[0];
  assert.ok(gdp);
  assert.doesNotMatch(gdp,/Calculated measure/);

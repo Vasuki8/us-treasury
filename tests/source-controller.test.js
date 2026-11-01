@@ -41,10 +41,10 @@ test('Overview loads BEA chart history while catalog, frozen packages and public
  for(const route of ['#/explore','#/calendar','#/research?view=packages','#/research?view=publications']){
   assert.deepEqual(requiredSourceIds(parseRoute(route)),[],route);
  }
- assert.deepEqual(requiredSourceIds(parseRoute('#/series/unrate?window=all')),['bls']);
- assert.deepEqual(requiredSourceIds(parseRoute('#/series/unrate')),['bls'],'the default five years requires full monthly history');
+ assert.deepEqual(requiredSourceIds(parseRoute('#/series/unrate?window=all')),['blsDesk','bls']);
+ assert.deepEqual(requiredSourceIds(parseRoute('#/series/unrate')),['blsDesk','bls'],'headline history and its family decomposition have independent complete inputs');
  assert.deepEqual(requiredSourceIds(parseRoute('#/series/gdp')),['bea']);
- assert.deepEqual(requiredSourceIds(parseRoute('#/series/unrate?window=1y')),[],'explicit one-year routes use the eager preview');
+ assert.deepEqual(requiredSourceIds(parseRoute('#/series/unrate?window=1y')),['blsDesk'],'headline uses the eager preview while the additional family source still loads');
  assert.deepEqual(requiredSourceIds(parseRoute('#/series/sofr')),[],'daily defaults retain the eager one-year view');
  assert.deepEqual(requiredSourceIds(parseRoute('#/explore?mode=compare&selected=unrate,gdp')),['bls','bea']);
  assert.deepEqual(requiredSourceIds(parseRoute('#/economy?family=external')),['beaIta','bea']);
@@ -67,35 +67,39 @@ test('freeze and question reviews include full supplementary histories',async()=
 
 test('source controller hydrates shared requests once and never repaints another route',async()=>{
  const {createSourceController}=await import('../src/source-controller.js');
- let route=parseRoute('#/series/unrate?window=all'),loads=0,finish;
+ let route=parseRoute('#/series/unrate?window=all');const loads=[],finish=new Map();
  const states=new Map(),hydrations=[],changes=[];
  const loader={getState:id=>states.get(id)??{status:'idle'},load:id=>{
-  loads++;states.set(id,{status:'loading'});
-  return new Promise(resolve=>{finish=source=>{states.set(id,{status:'ready',source});resolve(source);};});
+  loads.push(id);states.set(id,{status:'loading'});
+  return new Promise(resolve=>{finish.set(id,source=>{states.set(id,{status:'ready',source});resolve(source);});});
  }};
  const controller=createSourceController(loader,{getRoute:()=>route,hydrate:(...args)=>hydrations.push(args),onChange:()=>changes.push(route)});
- controller.sync(route);controller.sync(route);assert.equal(loads,1);assert.equal(controller.context(route).status,'loading');
- route=parseRoute('#/overview');finish({id:'bls',series:{}});await new Promise(resolve=>setImmediate(resolve));
+ const originalRoute=route;controller.sync(route);controller.sync(route);assert.deepEqual(loads,['blsDesk','bls']);assert.equal(controller.context(route).status,'loading');
+ route=parseRoute('#/overview');finish.get('bls')({id:'bls',series:{}});await new Promise(resolve=>setImmediate(resolve));
  assert.equal(hydrations.length,1);assert.equal(changes.length,0);
- route=parseRoute('#/series/cpi?window=all');controller.sync(route);assert.equal(loads,1);
+ assert.equal(controller.context(originalRoute).status,'loading','the second source cannot be declared ready by the headline source');
+ finish.get('blsDesk')({id:'blsDesk',series:{}});await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(hydrations.length,2);assert.equal(changes.length,0,'neither completion repaints an unrelated route');
+ route=parseRoute('#/series/underemployment?window=all');controller.sync(route);assert.deepEqual(loads,['blsDesk','bls']);
  assert.equal(controller.context(route).status,'ready');
 });
 
 test('failed full source has explicit retry and independent sources remain usable',async()=>{
  const {createSourceController}=await import('../src/source-controller.js');
- let route=parseRoute('#/series/unrate?window=all'),calls=0;
+ let route=parseRoute('#/series/unrate?window=all');const calls=[];
  const states=new Map(),error=new Error('offline');
  const loader={getState:id=>states.get(id)??{status:'idle'},load:async id=>{
-  calls++;
-  if(id==='bls'&&calls===1){states.set(id,{status:'error',error});throw error;}
+  calls.push(id);
+  if(id==='bls'&&calls.filter(value=>value==='bls').length===1){states.set(id,{status:'error',error});throw error;}
   const source={id,series:{}};states.set(id,{status:'ready',source});return source;
  }};
  const controller=createSourceController(loader,{getRoute:()=>route,hydrate(){},onChange(){}});
  await assert.rejects(controller.ensure(['bls']),/offline/);controller.sync(route);
- await Promise.resolve();assert.equal(calls,1);assert.equal(controller.context(route).status,'error');
+ await new Promise(resolve=>setImmediate(resolve));assert.deepEqual(calls,['bls','blsDesk']);assert.equal(controller.context(route).status,'error');
+ assert.equal(states.get('blsDesk').status,'ready','family input remains usable despite the independent headline failure');
  route=parseRoute('#/series/gdp?window=all');await controller.ensure(['bea']);assert.equal(controller.context(route).status,'ready');
  route=parseRoute('#/series/unrate?window=all');await controller.ensure(['bls'],{retry:true});
- assert.equal(controller.context(route).status,'ready');assert.equal(calls,3);
+ assert.equal(controller.context(route).status,'ready');assert.deepEqual(calls,['bls','blsDesk','bea','bls']);
 });
 
 test('pending full history keeps the chosen measurement and dates without rendering partial charts',()=>{

@@ -74,7 +74,7 @@ test('registered page types preserve existing paths, round trips, encoding and u
     release:'/release',credit:'/credit',research:'/research',sources:'/sources',macroCoverage:'/economy',overview:'/overview',
     labor:'/economy/labor',indicator:'/series/',calendar:'/calendar',explore:'/explore',watchlist:'/watchlist',fiscal:'/fiscal',
     refinancing:'/refinancing',yields:'/yields',auctions:'/auctions',ownership:'/ownership',macro:'/macro',vintages:'/vintages',
-    market:'/market',
+    market:'/market',refunding:'/treasury/refunding',debtCeiling:'/treasury/debt-ceiling',dealers:'/market/dealers',money:'/market/money',liquidity:'/market/liquidity',fomc:'/rates/fomc',qt:'/rates/qt',tips:'/rates/tips',wedge:'/inflation/wedge',fxBasis:'/market/fx-basis',
   };
   assert.deepEqual(pagePaths,paths);
   for(const [page,path] of Object.entries(paths)){

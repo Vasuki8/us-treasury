@@ -21,7 +21,7 @@ const ordered = (html, labels) => {
 test('Overview keeps primary readings and supporting measurements individually inspectable in the hierarchy', () => {
   const html = overviewPage(state());
   assert.match(html, /class="radar-page radar-overview overview-hierarchy stitch-overview"/);
-  for (const id of ['gdp','pceCore','payroll','unrate','policyTargetRange','yield','spread2s10s','interestRevenueRatio']) {
+  for (const id of ['gdp','pceCore','payroll','unrate','policyTargetRange','yield','spread2s10s','netInterestTtm']) {
     const reading = html.match(new RegExp('data-overview-reading="'+id+'"([^]*?)</a>'));
     assert.ok(reading, id+' remains individually inspectable');
     assert.match(reading[1], /class="reading-value">[^<]+<\/strong>/);
@@ -76,14 +76,14 @@ test('Indicator latest native snapshot stays separate from a transformed histori
     const snapshot=html.match(/<section class="indicator-snapshot"[^]*?<\/section>/)?.[0];
     assert.ok(snapshot);
     assert.match(snapshot,/>4\.2%<\/strong>/);
-    assert.match(snapshot,/Native unit[^]*?Percent/);
+    assert.match(snapshot,/class="indicator-stat-unit">Percent/);
     assert.match(snapshot,/Sep 2026/);
     assert.match(snapshot,/Feb 2025/);
     assert.match(html,/Official observation/);
     assert.match(html,/Percentage-point change/);
     assert.match(html,/Displayed: 1 observations · 1 Feb 2025 to 1 Feb 2025/);
     assert.match(html,/0\.1 Percentage points/);
-    ordered(html,['indicator-snapshot','indicator-chart','Indicator detail sections','Related indicators','About this data']);
+    ordered(html,['indicator-snapshot','indicator-chart','data-family-ledger=','Related indicators','About this data','Indicator detail sections']);
     for(const action of ['data-save="unrate"','data-add-compare="unrate"','data-export','id="transform-select"','id="window-start"','id="window-end"','data-window="all"']) assert.ok(html.includes(action));
   } finally {current.observations=saved;}
 });

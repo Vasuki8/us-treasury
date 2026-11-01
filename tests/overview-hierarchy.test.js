@@ -16,11 +16,12 @@ test('Overview has four headline cards and four monitor readings with native mom
  assert.equal((html.match(/data-overview-reading=/g)??[]).length,8);
  assert.equal((html.match(/class="oh-topic stitch-card"/g)??[]).length,4);
  assert.equal((html.match(/class="workspace-monitor-row"/g)??[]).length,4);
- for(const id of ['gdp','pceCore','payroll','unrate','policyTargetRange','yield','spread2s10s','interestRevenueRatio'])assert.ok(primary(html,id),id);
+ for(const id of ['gdp','pceCore','payroll','unrate','policyTargetRange','yield','spread2s10s','netInterestTtm'])assert.ok(primary(html,id),id);
  for(const [earlier,later] of [['oh-snapshot','oh-momentum'],['oh-momentum','oh-catalysts'],['oh-catalysts','oh-support']])assert.ok(html.indexOf(earlier)<html.indexOf(later));
  assert.match(primary(html,'gdp'),/q\/q SAAR/);
  assert.match(primary(html,'pceCore'),/y\/y/);
- assert.match(primary(html,'interestRevenueRatio'),/TTM/);
+ assert.match(primary(html,'netInterestTtm'),/TTM/);
+ assert.match(html,/data-overview-support-reading="interestRevenueRatio"/);
  assert.match(primary(html,'payroll'),/Prior month:/);
  assert.match(html,/data-series="pceMonthly,pceCoreMonthly"/);
  assert.match(html,/data-series="payrollAverage3m"/);

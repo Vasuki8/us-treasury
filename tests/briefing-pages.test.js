@@ -11,11 +11,11 @@ test('home briefing retains independent comparison periods and escapes cached-so
  const current=getSeries('payroll'),before={...current};
  try{
   Object.assign(current,{observations:[{date:'2026-06-01',value:100},{date:'2026-09-01',value:-20}],dataStatus:'cached',error:'Failed <source>'});
-  const html=overviewPage(state),brief=html.match(/<article class="workspace-monitor-row" data-overview-brief="payroll"[^]*?<\/article>/)?.[0];
-  assert.ok(brief);assert.match(brief,/reading-value">−20k<\/strong>/);assert.match(brief,/Thousands of jobs · Sep 2026/);
-  assert.match(brief,/Prior retained reading: 100k/);assert.match(brief,/Prior reference: Jun 2026/);
+  const html=overviewPage(state),brief=html.match(/<article class="stitch-brief-card" data-overview-guide-card="payroll" data-overview-brief="payroll"[^]*?<\/article>/)?.[0];
+  assert.ok(brief);assert.match(brief,/reading-value">−20k<\/strong>/);assert.match(brief,/Thousands of jobs/);assert.match(brief,/Sep 2026/);
+  assert.match(brief,/Prior retained reading: <strong>100k<\/strong> Jun 2026/);
   assert.match(brief,/Cached/);assert.match(brief,/Failed &lt;source&gt;/);assert.doesNotMatch(brief,/<source>/);
-  assert.match(brief,/href="#\/series\/payroll\?/);assert.match(brief,/Retained payroll readings may be revised/);
+  assert.match(brief,/href="#\/series\/payroll\?/);assert.match(brief,/CES job estimates can be revised/);
  }finally{Object.assign(current,before);}
 });
 

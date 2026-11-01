@@ -1,6 +1,7 @@
 import {series,dataStatus} from './data.js';
 import {requiredSourceIds} from './source-controller.js';
 import {calendarScope} from './calendar-scope.js';
+import {stitchPageSources} from './stitch-desk-contracts.js';
 
 /** Credits follow the displayed catalog page, charts and explicit specialist datasets. */
 export function pageSourceScope(state,html='',{catalog=series,sources=dataStatus.sources,calendar=dataStatus.calendar,events}={}){
@@ -12,10 +13,11 @@ export function pageSourceScope(state,html='',{catalog=series,sources=dataStatus
  }
  for(const match of html.matchAll(/class="metric" href="#\/series\/([A-Za-z0-9_]+)"/g))ids.add(match[1]);
  for(const id of ids)if(catalog[id]?.agency)sourceIds.add(catalog[id].agency);
+ const supportingSources=new Set(stitchPageSources(state));
  const selected=Object.fromEntries([...sourceIds].filter(id=>sources[id]).map(id=>{
   const source=sources[id],shown=[...ids].filter(key=>catalog[key]?.agency===id);
   const all=['fiscal','refinancing','yields','auctions','ownership','macro','market','credit','research','vintages','release']
-   .includes(state.page);
+   .includes(state.page)||supportingSources.has(id);
   const entries=Object.entries(source.series??{}).filter(([key])=>all||shown.includes(key));
   return [id,{...source,series:Object.fromEntries(entries)}];
  }));

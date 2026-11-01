@@ -7,6 +7,7 @@ import {isIsoDate} from '../../src/date-window.js';
 import {harmonizeTreasuryYieldHistory} from './treasury.mjs';
 import {BLS_API_V1,BLS_API_V2,matchesBlsApiFeed} from '../bls-api-policy.mjs';
 import {hasBlsHistory} from '../bls-history-policy.mjs';
+import {validateMarketDeskSource} from '../../src/market-desk-schema.js';
 
 const calendarLinks=[{name:'New York Fed calendar · BLS releases',url:'https://www.newyorkfed.org/research/calendars/nationalecon_cal.html'},{name:'BEA release schedule',url:'https://www.bea.gov/news/schedule/'},{name:'Census release schedule',url:'https://www.census.gov/economic-indicators/calendar-listview.html'},{name:'DOL claims release schedule',url:'https://oui.doleta.gov/unemploy/claims_arch.asp'},{name:'Treasury Fiscal Data release calendar',url:'https://fiscaldata.treasury.gov/release-calendar/'},{name:'Treasury yield publication timing',url:'https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics/treasury-yield-curve-methodology'}];
 const calendarCoverage='Employment Situation, CPI and JOLTS dates come from the secondary New York Fed calendar within its explicitly captured monthly coverage; reference periods are not supplied. Other schedules cover national GDP, Personal Income and Outlays, Census advance retail sales and New Residential Construction, DOL weekly claims and Treasury Debt to the Penny. Treasury debt entries retain the agency calendar\'s estimated dates and times. Treasury yield publication timing appears separately as ongoing guidance when a verified capture is available; it adds no dated events. DOL dates expand its published Thursday rule and explicit holiday exceptions within a 90-day upcoming window. Auctions are not ingested. Dates can change; a scheduled time does not confirm publication or results.';
@@ -86,6 +87,10 @@ export function canPublishCachedBlsData(source,now) {
   catch {return false;}
 }
 function validate(result,cutoff) {
+  if(result?.id==='fedSep'){
+    if(!validateMarketDeskSource(result))throw new Error('Invalid official SEP projection tables');
+    return;
+  }
   if(!result || !result.series || !Object.keys(result.series).length)throw new Error('Official source returned no series');
   for(const [id,series] of Object.entries(result.series)) {
     if(!Array.isArray(series.observations)||!series.observations.length)throw new Error(`No official observations for ${id}`);
@@ -147,5 +152,5 @@ export async function refreshSnapshot({previous={},collectors={},calendarCollect
   const publicationPolicy=allowCachedBlsData||retainedDataPolicy?{mode:'allow-cached-bls-data',cachedDataSources,cachedCalendarSources}:allowCachedBlsCalendar||retainedCachedCalendar?{mode:'allow-cached-bls-calendar',cachedCalendarSources}:Object.keys(calendarCollectors).length===0?priorPolicy:null;
   const seriesMetadata=Object.fromEntries(Object.entries(registry).map(([id,metadata])=>[id,{...metadata,observationType:metadata.observationType??'official'}]));
   const vintages=recordVintages(previous.vintages,previous.sources,sources,{checkedAt:generatedAt,seriesMetadata});
-  return {schemaVersion:1,generatedAt,checkedAt,sources,releases,calendar,vintages,...(publicationPolicy?{publicationPolicy}:{})};
+  return {schemaVersion:1,...(previous.stitchDataVersion===1?{stitchDataVersion:1}:{}),generatedAt,checkedAt,sources,releases,calendar,vintages,...(publicationPolicy?{publicationPolicy}:{})};
 }

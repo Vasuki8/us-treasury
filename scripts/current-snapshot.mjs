@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { encodeSnapshot } from '../src/source-codec.js';
+import {stitchEvidenceSourceIds} from '../src/stitch-evidence.js';
 
 const specialized = new Set([
   'monthly', 'fiscal', 'securities', 'totals', 'curveHistory', 'h15GapEvidence', 'auctions', 'z1', 'soma',
@@ -30,8 +31,8 @@ export function currentSnapshotAssets(snapshot, serialize) {
       observationCount:Object.values(source.series ?? {}).reduce((count, item) => count + (item.observations?.length ?? 0), 0),
     };
     sources[sourceId] = {
-      ...Object.fromEntries(Object.entries(source).filter(([key]) => !specialized.has(key))),
-      series:Object.fromEntries(Object.entries(source.series ?? {}).map(([id, item]) => [id, recentSeries(item)])),
+      ...Object.fromEntries(Object.entries(source).filter(([key]) => !specialized.has(key)&&!(stitchEvidenceSourceIds.includes(sourceId)&&['inputs','tables','documents'].includes(key)))),
+      series:Object.fromEntries(Object.entries(source.series ?? {}).map(([id, item]) => {const recent=recentSeries(item);return [id,stitchEvidenceSourceIds.includes(sourceId)?{...recent,observations:item.observations.slice(-2)}:recent];})),
     };
   }
   const current = { ...snapshot, sources, sourceArchive:{ version:1, sources:descriptors } };

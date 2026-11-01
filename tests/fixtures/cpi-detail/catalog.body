@@ -1,0 +1,21 @@
+series_id        	area_code	item_code	seasonal	periodicity_code	base_code	base_period	series_title	footnote_codes	begin_year	begin_period	end_year	end_period
+CUSR0000SA0E     	0000	SA0E	S	R	S	1982-84=100	Energy in U.S. city average, all urban consumers, seasonally adjusted		1957	M01	2026	M09
+CUSR0000SACL1E   	0000	SACL1E	S	R	S	1982-84=100	Commodities less food and energy commodities in U.S. city average, all urban consumers, seasonally adjusted		1957	M01	2026	M09
+CUSR0000SAF1     	0000	SAF1	S	R	S	1982-84=100	Food in U.S. city average, all urban consumers, seasonally adjusted		1947	M01	2026	M09
+CUSR0000SAH1     	0000	SAH1	S	R	S	1982-84=100	Shelter in U.S. city average, all urban consumers, seasonally adjusted		1953	M01	2026	M09
+CUSR0000SAM      	0000	SAM	S	R	S	1982-84=100	Medical care in U.S. city average, all urban consumers, seasonally adjusted		1947	M01	2026	M09
+CUSR0000SASL2RS  	0000	SASL2RS	S	R	S	DECEMBER 1982=100	Services less rent of shelter in U.S. city average, all urban consumers, seasonally adjusted		1985	M01	2026	M09
+CUSR0000SASLE    	0000	SASLE	S	R	S	1982-84=100	Services less energy services in U.S. city average, all urban consumers, seasonally adjusted		1967	M01	2026	M09
+CUSR0000SEHA     	0000	SEHA	S	R	S	1982-84=100	Rent of primary residence in U.S. city average, all urban consumers, seasonally adjusted		1981	M01	2026	M09
+CUSR0000SEHC     	0000	SEHC	S	R	S	DECEMBER 1982=100	Owners' equivalent rent of residences in U.S. city average, all urban consumers, seasonally adjusted		1983	M01	2026	M09
+CUSR0000SETA02   	0000	SETA02	S	R	S	1982-84=100	Used cars and trucks in U.S. city average, all urban consumers, seasonally adjusted		1953	M01	2026	M09
+CUUR0000SA0E     	0000	SA0E	U	R	S	1982-84=100	Energy in U.S. city average, all urban consumers, not seasonally adjusted		1957	M01	2026	M09
+CUUR0000SACL1E   	0000	SACL1E	U	R	S	1982-84=100	Commodities less food and energy commodities in U.S. city average, all urban consumers, not seasonally adjusted		1957	M01	2026	M09
+CUUR0000SAF1     	0000	SAF1	U	R	S	1982-84=100	Food in U.S. city average, all urban consumers, not seasonally adjusted		1913	M01	2026	M09
+CUUR0000SAH1     	0000	SAH1	U	R	S	1982-84=100	Shelter in U.S. city average, all urban consumers, not seasonally adjusted		1952	M12	2026	M09
+CUUR0000SAM      	0000	SAM	U	R	S	1982-84=100	Medical care in U.S. city average, all urban consumers, not seasonally adjusted		1935	M03	2026	M09
+CUUR0000SASL2RS  	0000	SASL2RS	U	R	S	DECEMBER 1982=100	Services less rent of shelter in U.S. city average, all urban consumers, not seasonally adjusted		1982	M12	2026	M09
+CUUR0000SASLE    	0000	SASLE	U	R	S	1982-84=100	Services less energy services in U.S. city average, all urban consumers, not seasonally adjusted		1957	M01	2026	M09
+CUUR0000SEHA     	0000	SEHA	U	R	S	1982-84=100	Rent of primary residence in U.S. city average, all urban consumers, not seasonally adjusted		1913	M13	2026	M09
+CUUR0000SEHC     	0000	SEHC	U	R	S	DECEMBER 1982=100	Owners' equivalent rent of residences in U.S. city average, all urban consumers, not seasonally adjusted		1982	M12	2026	M09
+CUUR0000SETA02   	0000	SETA02	U	R	S	1982-84=100	Used cars and trucks in U.S. city average, all urban consumers, not seasonally adjusted		1952	M12	2026	M09

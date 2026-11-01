@@ -52,7 +52,7 @@ test('selected yield curves and matched yields precede retained current context 
 test('auction selected results and peers lead history while competitive-share limitations remain visible',()=>{
  const html=auctionsPage({}, {auctions:[{id:'a',auctionDate:'2026-10-07',securityType:'Note',securityTerm:'10-Year',originalTerm:'10-Year',reopening:false,cashManagement:false,status:'results',competitiveAccepted:100,totalAccepted:110,somaAccepted:10,primaryDealerAccepted:20,directAccepted:10,indirectAccepted:70}]}),main=visible(html);
  before(html,'SELECTED AUCTION','AUCTION HISTORY');before(html,'PRIOR MATCHING RESULTS','AUCTION HISTORY');
- assert.match(detail(html,'auctions:monthly-activity'),/Current and awaiting-result months are partial/);
+ assert.match(main,/Current and awaiting-result months are partial/);
  assert.match(detail(html,'auctions:methods'),/when-issued/);
  for(const phrase of ['id="auction-type"','data-auction-id="a"','Shares use competitive accepted','not the competitive-share denominator','Indirect bidders are not a foreign-investor category','No auction tail is inferred'])assert.ok(main.includes(phrase),phrase);
 });

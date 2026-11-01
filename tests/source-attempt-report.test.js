@@ -11,11 +11,17 @@ const checkedAt='2026-10-25T12:00:00.000Z',now=new Date('2026-10-25T12:01:00.000
 const source=(extra={})=>({status:'ok',fetchedAt:'2026-10-25T12:00:01.000Z',lastAttemptAt:checkedAt,error:null,failure:null,...extra});
 const capture=(fetchedAt='2026-10-25T12:00:01.000Z')=>({id:'bea',fetchedAt,series:{gdp:{observations:[{date:'2026-01-01',value:1}]}}});
 const build=(extra={})=>buildSourceAttemptReport({checkedAt,sources:{bea:source()},calendarSources:{},attemptedDataIds:['bea'],attemptedCalendarIds:[],now,...extra});
+const legacyDataIds=['householdDebt','loanDelinquency','bankCredit','lendingSurvey','fedBalance','onRrp','treasury','bls','laborEvidence','pcePriceContributions','bea','beaIta','dol','dolAdvance','census','fiscal','refinancing','yields','auctions','ownership','macroContributions','marketFunctioning','policyRates','activity','housing'];
+const legacyCalendarIds=['fomc','bls','bea','census','dol','treasury','treasury-yield-timing'];
+const newDataIds=['blsDesk','cpiDetail','dtsDesk','ticHolders','treasuryRefunding','inflationBea','inflationCleveland','fedQt','dealerDetails','moneyRates','repoOperations','ofrRepo','ofrMmf','nyfedTriParty','dkwInflation','fedFx','fedSep','ecbFx','ecbPolicy'];
 
 test('attempt report includes only attempted known inputs and fixed collection metadata',()=>{
  const secret='private-key-canary';
  const report=build({sources:{bea:source({error:secret,provenance:[{url:`https://example.com/?key=${secret}`}]}),census:source()},calendarSources:{bls:source({status:'error',fetchedAt:'2026-10-24T12:00:00Z',error:secret,failure:{kind:'http',status:503,requestedUrl:secret}})},attemptedCalendarIds:['bls']});
- assert.equal(SOURCE_ATTEMPT_IDS.length,32);
+ const legacy=[...legacyDataIds.map(id=>'data:'+id),...legacyCalendarIds.map(id=>'calendar:'+id)];assert.equal(legacy.length,32);
+ assert.ok(legacy.every(id=>SOURCE_ATTEMPT_IDS.includes(id)),'all original 32 refresh inputs remain reportable');
+ assert.deepEqual([...SOURCE_ATTEMPT_IDS].sort(),[...legacy,...newDataIds.map(id=>'data:'+id)].sort());
+ assert.equal(new Set(SOURCE_ATTEMPT_IDS).size,51);
  assert.deepEqual(report,{schemaVersion:1,checkedAt,sources:[
   {id:'data:bea',status:'ok',fetchedAt:'2026-10-25T12:00:01.000Z',lastAttemptAt:checkedAt,httpStatus:null,cached:false},
   {id:'calendar:bls',status:'error',fetchedAt:'2026-10-24T12:00:00.000Z',lastAttemptAt:checkedAt,httpStatus:503,cached:true},
@@ -69,6 +75,14 @@ test('partial and failed calendar collections do not attribute attempts to uncha
  assert.deepEqual(report.sources.map(row=>row.id),['data:bea','calendar:bls']);
  assert.equal(report.sources[1].status,'unavailable');assert.equal(report.sources[1].fetchedAt,null);
  assert.doesNotMatch(JSON.stringify(report),/private remote data/);
+});
+
+test('all new provider attempts can report controlled initial failures without inventing cached or admitted data',async()=>{
+ let report;const previous={sources:{},calendar:{sources:{}}};
+ await assert.rejects(refreshSnapshot({previous,now:new Date(checkedAt),requireAll:true,collectors:Object.fromEntries(newDataIds.map(id=>[id,async()=>{throw Error('controlled initial failure');}])),onCollected:async candidate=>{report=buildSourceAttemptReport({...candidate,calendarSources:candidate.calendar.sources,now});}}),/Required official refresh failed/);
+ assert.deepEqual(report.sources.map(s=>s.id).sort(),newDataIds.map(id=>'data:'+id).sort());
+ assert.ok(report.sources.every(s=>s.status==='unavailable'&&s.fetchedAt===null&&s.httpStatus===null&&s.cached===false));
+ assert.deepEqual(previous,{sources:{},calendar:{sources:{}}});
 });
 
 test('CLI wires safe report collection before admission for both diagnostic and publishing modes',async()=>{

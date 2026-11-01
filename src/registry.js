@@ -5,6 +5,12 @@ import { macroRegistry } from './macro-registry.js';
 import { momentumRegistry } from './momentum-registry.js';
 import {currentAccountRegistry} from './current-account-registry.js';
 import {economicEvidenceRegistry} from './economic-evidence-registry.js';
+import {blsDeskRegistry} from './bls-desk-definitions.js';
+import {treasuryDeskRegistry} from './treasury-desk-definitions.js';
+import {marketDeskRegistry} from './market-desk-definitions.js';
+import {refundingDeskRegistry} from './refunding-desk.js';
+import {inflationDeskRegistry} from './inflation-desk-definitions.js';
+import {cpiDetailRegistry} from './cpi-detail.js';
 const bls={name:'Bureau of Labor Statistics',url:'https://www.bls.gov/'};
 const bea={name:'Bureau of Economic Analysis',url:'https://www.bea.gov/'};
 const treasury={name:'U.S. Treasury',url:'https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-statistics'};
@@ -13,6 +19,12 @@ const monthly={frequency:'Monthly',adjustment:'Seasonally adjusted'};
 
 /** Canonical meanings and units; observations live in the generated official snapshot. */
 export const registry={
+  ...blsDeskRegistry,
+  ...treasuryDeskRegistry,
+  ...marketDeskRegistry,
+  ...refundingDeskRegistry,
+  ...inflationDeskRegistry,
+  ...cpiDetailRegistry,
   ...economicEvidenceRegistry,
   ...researchRegistry,
   ...macroRegistry,

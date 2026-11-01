@@ -12,7 +12,8 @@ import {vintageMeasurementsComparable} from './vintages.js';
 import {yieldTimingPanel} from './calendar-presentation.js';
 import {releases} from './data.js';
 import {humanDate,humanTimestamp,publicationDate,scheduledReleaseDate} from './ui-time.js';
-import {indicatorStats,indicatorRelatedStats,indicatorContext,indicatorFamily} from './stitch-indicator-context.js';
+import {indicatorStats,indicatorContext,indicatorFamily} from './stitch-indicator-context.js';
+import {familyLedger,familyRelated,familyExportDock,familyChartSelection} from './stitch-family-view.js';
 
 const link=(label,href,className='action')=>`<a class="${esc(className)}" href="${esc(href)}">`
   +`${esc(sentenceCase(label.replace(/ ↗/g,'')))}</a>`;
@@ -65,7 +66,7 @@ function claimsContextLinks(current,state) {
 
 export function indicatorPage(state,historyContext={}) {
   const current=getSeries(state.seriesId)??getSeries('unrate');
-  const observation=latest(current);
+  const observation=latest(current),family=indicatorFamily(current);
   const published=publicationDate(current,observation,releases),scheduled=scheduledReleaseDate(current,observation,releases);
   const currencyUnit=displayCurrencyUnit([current]),options={currencyUnit};
   const transformed=transformSeries(current,state.transform,viewRange(state));
@@ -87,21 +88,26 @@ export function indicatorPage(state,historyContext={}) {
     +`<option value="level"${state.transform==='level'?' selected':''}>${esc(measureLabel(current))}</option>`
     +`<option value="change"${state.transform==='change'?' selected':''}>${esc(changeLabel(current))}</option>`
     +'</select></label></div>';
-  const chartIds=state.transform==='level'&&current.id==='payroll'?['payroll','payrollAverage3m']:
+  const familySelection=state.transform==='level'?familyChartSelection(current,family):null;
+  const chartIds=familySelection?.ids.length?familySelection.ids:state.transform==='level'&&current.id==='payroll'?['payroll','payrollAverage3m']:
     state.transform==='level'&&['unrate','underemployment'].includes(current.id)?[current.id,current.id==='unrate'?'underemployment':'unrate']:[current.id];
-  const chartBody=chartControls+chart(chartIds,{height:300,kind:chartIds.length>1&&current.id==='payroll'?'combo':current.id==='payroll'?'bar':'line',transform:state.transform,range:viewRange(state),legend:true,endLabels:true})
+  const chartMarkup=chart(chartIds,{height:300,kind:chartIds.length>1&&current.id==='payroll'?'combo':current.id==='payroll'?'bar':'line',transform:state.transform,range:viewRange(state),legend:true,endLabels:true});
+  const chartBody=chartControls+(familySelection?.catalog?chartMarkup.replace('data-chart ',`data-chart data-chart-catalog="${familySelection.catalog}" `):chartMarkup)
+    +(familySelection?.ids.length?`<p class="panel-note indicator-chart-basis">${esc(familySelection.note)}</p>`:'')
     +(chartIds.length>1?'<p class="panel-note">The overlay provides context. The table and CSV retain the selected indicator.'+(['unrate','underemployment'].includes(current.id)?' U-3 and U-6 have different denominators.':'')+'</p>':'')
     +coverageSummary(transformed)+(state.transform==='change'?'<p class="panel-note">'
       +'Changes use the immediately preceding retained observation before the selected window is applied; '
       +'the first displayed change can reference an observation outside the window. Missing observations remain gaps.</p>':'');
-  const family=indicatorFamily(current),desk=current.topic==='Labor'?{label:'Labor market',href:'#/economy/labor'}:current.topic==='Inflation'?{label:'Inflation',href:'#/economy?family=prices'}:related.module??{label:'Explore data',href:'#/explore'};
+  const desk=current.topic==='Labor'?{label:'Labor market',href:'#/economy/labor'}:current.topic==='Inflation'?{label:'Inflation',href:'#/economy?family=prices'}:related.module??{label:'Explore data',href:'#/explore'};
+  const relatedIds=familyRelated(family,current.id,related.seriesIds);
   const title=family==='unemployment'?'Unemployment rate · U-3 & U-6':family==='earnings'?'Average hourly earnings · CES':current.name;
   const provenance=`<div class="indicator-provenance-bar"><span>${esc(current.source.name)}</span><span class="mono">Series: ${esc(current.code)}</span><dl class="indicator-provenance"><dt>Source freshness</dt><dd>${current.dataStatus==='cached'?'Cached':current.dataStatus==='official'?'Captured':'Unavailable'}</dd>${published?`<dt>Published</dt><dd>${esc(humanDate(published))}</dd>`:'<dt>Published</dt><dd>Not verified in retained history</dd>'}${scheduled?`<dt>Scheduled release</dt><dd>${esc(humanDate(scheduled))} · publication not confirmed</dd>`:''}<dt>Retrieved</dt><dd>${esc(humanTimestamp(current.fetchedAt)||'No successful retrieval')}</dd></dl></div>`;
   const lineage=`<section class="indicator-lineage"><header><h2>Source & calculation lineage</h2>${button('Copy link','data-copy-link','link-button')}</header><dl class="facts"><dt>Official source</dt><dd>${sourceLink(current)}</dd><dt>Source IDs</dt><dd class="mono">${esc((current.source.seriesIds??[]).join(', ')||current.code)}</dd><dt>Retrieval</dt><dd>${esc(current.fetchedAt??'Unknown')}</dd><dt>Latest attempt</dt><dd>${esc(current.lastAttemptAt??'Unknown')}</dd><dt>Calculation</dt><dd>${esc(current.calculation||'No calculation metadata is available.')}</dd><dt>Latest source input</dt><dd>${esc(observation?.sourceValue??'Not retained') }${observation?.baseDate?` · base ${esc(observation.baseDate)}: ${esc(observation.baseValue??'Unavailable')}`:''}</dd>${observation?.sourceSha256?`<dt>Source receipt SHA-256</dt><dd class="mono indicator-source-digest">${esc(observation.sourceSha256)}</dd>`:''}</dl><p class="panel-note">Source receipt hashes identify retained inputs when supplied. They do not certify an economic estimate or establish its first publication.</p>${current.sourceNotice?`<p class="panel-note">${esc(current.sourceNotice)}</p>`:''}</section>`;
+  const evidence=`<section class="panel indicator-evidence"><header class="panel-head"><h2>Historical observations & retrieval revisions</h2><p class="panel-note">${esc(current.name)} · original reference periods, source footnotes and captured revision coverage.</p></header><div class="tabs" role="tablist" aria-label="Indicator detail sections">${tabs.map(([id,label])=>button(label,`role="tab" id="detail-tab-${id}" aria-controls="detail-content" aria-selected="${activeTab===id}" tabindex="${activeTab===id?0:-1}" data-tab="${id}"`,'')).join('')}</div><div class="tab-panel" id="detail-content" role="tabpanel" tabindex="0" aria-labelledby="detail-tab-${activeTab}">${content}</div></section>`;
   return `<div class="stitch-indicator" data-indicator-family="${family}"><div class="radar-page radar-indicator"><nav class="indicator-breadcrumbs${back?' return-context':''}" aria-label="${back?'Return to workspace':'Indicator breadcrumb'}">${link(back?.label??'Back to '+desk.label,back?.href??desk.href,'indicator-back')}<span>Workspace / Economy / ${esc(desk.label)} / <b>${esc(current.code)}</b></span></nav>`
     +heading(title,`${current.code} · ${current.source.name} · ${current.adjustment}`,actions)
     +`<p class="panel-note indicator-definition">${esc(current.definition)}</p>`
-    +`<div class="indicator-desk">${indicatorStats(current,state,options)}${provenance}`
+    +`<div class="indicator-desk">${provenance}${indicatorStats(current,state,options)}`
     +(current.coverageNote&&criticalCoverage?`<p class="panel-note amber">${esc(current.coverageNote)}</p>`:'')
     +(current.error?`<p class="panel-note amber" role="status">${esc(current.error)}</p>`:'')
     +claimsContextLinks(current,state)
@@ -110,11 +116,12 @@ export function indicatorPage(state,historyContext={}) {
     +'<div class="indicator-chart">'
     +panel('01',`${current.code} / ${current.agency==='dolAdvance'?'Latest release context':'Historical series'}`,chartBody,'',
       `${current.frequency} · ${transformed.unit} · ${seriesStatus(current)}`)+'</div>'
-    +indicatorRelatedStats(current,state,options)
     +indicatorContext(current,state)
-    +`<section class="panel indicator-evidence"><header class="panel-head"><h2>Historical observations & retrieval revisions</h2><p class="panel-note">${esc(current.name)} · original reference periods, source footnotes and captured revision coverage.</p></header><div class="tabs" role="tablist" aria-label="Indicator detail sections">${tabs.map(([id,label])=>button(label,`role="tab" id="detail-tab-${id}" aria-controls="detail-content" aria-selected="${activeTab===id}" tabindex="${activeTab===id?0:-1}" data-tab="${id}"`,'')).join('')}</div><div class="tab-panel" id="detail-content" role="tabpanel" tabindex="0" aria-labelledby="detail-tab-${activeTab}">${content}</div></section>`
+    +familyLedger(current,family)
+    +(family==='other'?evidence:'')
     +`</div><section class="indicator-related" aria-label="Related indicators"><header><h2>Related indicators & macro pairings</h2>${related.module?link(related.module.label,related.module.href,'link-button'):''}</header><div class="indicator-related-grid">`
-    +related.seriesIds.map(id=>{const s=getSeries(id);return `<a class="indicator-related-card" href="${esc(indicatorHref(id,state))}"><span>${esc(s.code)}</span><strong>${esc(formatDisplayValue(s,latest(s)?.value))}</strong><b>${esc(s.short)}</b><small>${esc(periodLabel(s,latest(s)?.date))} · ${esc(s.unit)}</small><small>${esc(measurementChange(s).text)}</small></a>`;}).join('')+'</div></section>'
+    +relatedIds.map(id=>{const s=getSeries(id);return `<a class="indicator-related-card" href="${esc(indicatorHref(id,state))}"><span>${esc(s.code)}</span><strong>${esc(formatDisplayValue(s,latest(s)?.value))}</strong><b>${esc(s.short)}</b><small>${esc(periodLabel(s,latest(s)?.date))} · ${esc(s.unit)}</small><small>${esc(measurementChange(s).text)}</small></a>`;}).join('')+'</div></section>'
     +(current.id==='yield'?supportingDetails('indicator:yield-timing','Rates guidance · ongoing Treasury publication timing',yieldTimingPanel()):'')
-    +`<section class="indicator-method-grid" data-page-disclosure="indicator:source:${esc(current.id)}" aria-label="About this data"><div class="indicator-methodology"><h2>About this data · methodology & coverage</h2>${metadata}${detailMethodology(current)}</div>${lineage}</section></div></div>`;
+    +`<section class="indicator-method-grid" data-page-disclosure="indicator:source:${esc(current.id)}" aria-label="About this data"><div class="indicator-methodology"><h2>About this data · methodology & coverage</h2>${metadata}${detailMethodology(current)}</div><div>${familyExportDock(current,{disabled:Boolean(transformed.error||!available)})}${lineage}</div></section>`
+    +(family!=='other'?supportingDetails(`indicator:full-history:${current.id}`,'Full selected history, methodology & retrieval revisions',evidence,{open:activeTab!=='data',className:'indicator-full-history'}):'')+'</div></div>';
 }
