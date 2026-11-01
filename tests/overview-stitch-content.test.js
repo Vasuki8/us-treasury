@@ -10,11 +10,11 @@ import {defaults} from '../src/router.js';
 const render=(context={})=>overviewPage({...defaults,saved:[],selected:[]},{now:new Date('2026-11-01T12:00:00Z'),...context});
 const briefing=(html,id)=>html.match(new RegExp(`data-overview-brief="${id}"[^]*?</article>`))?.[0];
 
-test('Stitch Overview retains its complete briefing, headline, workstation, diagnostic and provenance sections',()=>{
+test('Stitch Overview combines briefing context with headlines and retains its workstation, diagnostics and provenance',()=>{
  const html=render();
  for(const [pattern,count] of [[/data-overview-brief=/g,3],[/class="oh-topic stitch-card"/g,4],[/class="stitch-feed"/g,4],[/class="stitch-card stitch-cross-card"/g,3],[/class="stitch-stat-row"/g,9],[/class="workspace-monitor-row"/g,4]])assert.equal((html.match(pattern)??[]).length,count,String(pattern));
  let position=-1;
- for(const marker of ['stitch-overview-header','stitch-brief','stitch-headline-grid','stitch-workstation','stitch-cross-checks','overview-system-monitor','stitch-provenance','class="oh-support"']){
+ for(const marker of ['stitch-overview-header','stitch-headline-grid','stitch-workstation','stitch-cross-checks','overview-system-monitor','stitch-provenance','class="oh-support"']){
   const next=html.indexOf(marker);assert.ok(next>position,marker);position=next;
  }
  const provenance=html.slice(html.indexOf('class="stitch-provenance-grid"'),html.indexOf('class="oh-support"'));
@@ -46,7 +46,7 @@ test('unavailable readings and schedule slots remain explicit without earlier-va
   current.observations=[{date:'2026-08-01',value:987},{date:'2026-09-01',value:null,footnotes:['Withheld <estimate>']}];
   current.dataStatus='unavailable';current.error='<unsafe> feed unavailable';releases.splice(0,releases.length);
   const html=render(),card=briefing(html,'payroll');
-  assert.match(card,/<strong>—<\/strong> Sep 2026/);assert.match(card,/versus <strong>987k<\/strong> Aug 2026/);
+  assert.match(card,/reading-value">—<\/strong>/);assert.match(card,/Sep 2026/);assert.match(card,/Prior month: 987k/);assert.match(card,/Prior reference: Aug 2026/);
   assert.match(card,/Unavailable/);assert.match(card,/&lt;unsafe&gt; feed unavailable/);assert.match(card,/Withheld &lt;estimate&gt;/);
   assert.doesNotMatch(html,/<unsafe>|<estimate>/);
   assert.equal((html.match(/class="stitch-agenda-unavailable"/g)??[]).length,5);

@@ -3,20 +3,29 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const css=await readFile(new URL('../styles.css',import.meta.url),'utf8');
 const chartSource=await readFile(new URL('../src/charts.js',import.meta.url),'utf8');
-const rule=(selector,required=true)=>{
+// Exact selectors can be declared more than once. Their last declarations win.
+const rule=(selector,required=true,source=css)=>{
  const escaped=selector.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
- const body=css.match(new RegExp('(?:^|\\n)'+escaped+'\\s*\\{([^}]+)\\}'))?.[1];
- if(required)assert.ok(body,`CSS rule exists: ${selector}`);
- if(!body)return{};
- return Object.fromEntries(body.split(';').map(part=>part.split(':').map(value=>value.trim())).filter(parts=>parts.length===2));
+ const bodies=[...source.matchAll(new RegExp('(?:^|\\n)\\s*'+escaped+'\\s*\\{([^}]+)\\}','g'))].map(match=>match[1]);
+ if(required)assert.ok(bodies.length,`CSS rule exists: ${selector}`);
+ return Object.assign({},...bodies.map(body=>Object.fromEntries(body.split(';').flatMap(part=>{
+  const colon=part.indexOf(':');
+  return colon<0?[]:[[part.slice(0,colon).trim(),part.slice(colon+1).trim()]];
+ }))));
 };
-const palettes={Graphite:rule('#app'),Light:rule('#app[data-theme="Light"]')};
+// The theme selector has greater specificity than #app, including later #app rules.
+const palettes={Graphite:rule('#app'),Light:{...rule('#app'),...rule('#app[data-theme="Light"]')}};
 const rgb=hex=>{const full=hex.length===4?'#'+[...hex.slice(1)].map(value=>value+value).join(''):hex;return[1,3,5].map(i=>parseInt(full.slice(i,i+2),16));};
 const blend=(foreground,background,alpha)=>foreground.map((value,i)=>value*alpha+background[i]*(1-alpha));
 const luminance=color=>color.map(value=>value/255).map(value=>value<=.04045?value/12.92:((value+.055)/1.055)**2.4).reduce((sum,value,i)=>sum+value*[.2126,.7152,.0722][i],0);
 const contrast=(first,second)=>(Math.max(luminance(first),luminance(second))+.05)/(Math.min(luminance(first),luminance(second))+.05);
-const color=(value,palette)=>rgb(value.startsWith('var(')?palette[value.slice(4,-1)]:value);
+const color=(value,palette)=>rgb(value.startsWith('var(')?palette[/var\((--[\w-]+)/.exec(value)[1]]:value);
 const meets=(first,second,minimum,label)=>assert.ok(contrast(first,second)>=minimum,`${label}: ${contrast(first,second).toFixed(4)}:1 must be >= ${minimum}:1`);
+
+test('contrast palette resolution keeps final exact declarations and inherited values',()=>{
+ const source='#app { --accent:#000; --panel:#fff; }\n#application { --accent:#111; }\n#app .card { --panel:#222; }\n#app { --accent:#333; }';
+ assert.deepEqual(rule('#app',true,source),{'--accent':'#333','--panel':'#fff'});
+});
 
 test('normal state and explanatory text retains 4.5:1 across declared theme surfaces',()=>{
  for(const[name,palette]of Object.entries(palettes))for(const foreground of ['--text','--muted','--accent','--cyan','--link'])for(const background of ['--panel','--raised','--selected','--field','--bg'])meets(rgb(palette[foreground]),rgb(palette[background]),4.5,`${name} ${foreground} on ${background}`);
@@ -31,12 +40,20 @@ test('essential chart strokes and bar fills retain 3:1 against their panel',()=>
 
 test('funding boundaries and median retain 3:1 after both translucent bands stack',()=>{
  const outer=rule('.funding-band.outer'),inner=rule('.funding-band.inner');
+ const originalFill=chartSource.match(/class:`funding-band \$\{name\}`,fill:'([^']+)'/)[1];
  for(const[name,palette]of Object.entries(palettes)){
-  const panel=rgb(palette['--panel']),accent=rgb(palette['--accent']);
-  const outerFill=blend(accent,panel,Number(outer['fill-opacity'])),innerFill=blend(accent,outerFill,Number(inner['fill-opacity']));
+  const panel=rgb(palette['--panel']);
+  const outerFill=blend(color(outer.fill??originalFill,palette),panel,Number(outer['fill-opacity'])),innerFill=blend(color(inner.fill??originalFill,palette),outerFill,Number(inner['fill-opacity']));
   meets(blend(color(outer.stroke,palette),outerFill,Number(outer['stroke-opacity'])),outerFill,3,`${name} outer boundary on outer fill`);
   meets(blend(color(inner.stroke,palette),innerFill,Number(inner['stroke-opacity'])),innerFill,3,`${name} inner boundary on stacked fill`);
   meets(color(rule('.chart .series-line').stroke,palette),innerFill,3,`${name} median on stacked fill`);
+ }
+});
+
+test('solid accent controls retain 4.5:1 for their labels',()=>{
+ for(const[name,palette]of Object.entries(palettes)){
+  const style=rule('.action.primary');
+  meets(color(style.color,palette),color(style.background,palette),4.5,`${name} primary label on fill`);
  }
 });
 
@@ -56,4 +73,9 @@ test('input and select identifying borders retain 3:1 against field and panel',(
   const style=rule(selector),token=/var\((--[\w-]+)\)/.exec(style.border??style['border-color'])[1];
   for(const[name,palette]of Object.entries(palettes))for(const background of ['--field','--panel'])meets(rgb(palette[token]),rgb(palette[background]),3,`${name} ${selector} border on ${background}`);
  }
+});
+
+test('keyboard focus retains 3:1 against actual theme surfaces',()=>{
+ const focus=rule(':focus-visible'),token=/var\((--[\w-]+)/.exec(focus.outline)[1];
+ for(const[name,palette]of Object.entries(palettes))for(const background of ['--panel','--raised','--selected','--field','--bg'])meets(rgb(palette[token]),rgb(palette[background]),3,`${name} focus on ${background}`);
 });

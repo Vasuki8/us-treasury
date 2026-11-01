@@ -30,26 +30,21 @@ const program=id=>['unrate','underemployment','participation','employmentPopulat
  ['openings','hiresRate','quitsRate','layoffsRate'].includes(id)?'BLS JOLTS':id.startsWith('eci')?'BLS ECI':
  ['laborProductivity','unitLaborCosts'].includes(id)?'BLS Productivity':['claims','continuedClaims',...advanceIds].includes(id)?'DOL ETA':'BLS CES';
 
-function briefing(state){
- const contexts={payroll:'Payroll employment counts jobs, not unique people. The current revised history does not retain each original release estimate.',
-  unrate:'The household survey measures unemployed people as a share of the civilian labor force. U-6 includes additional forms of labor underutilization.',
-  wages:'Annual average hourly earnings growth compares the exact year-ago month. Changes in workforce composition can affect this aggregate.'};
- return `<section class="reading-brief labor-reading-guide" aria-label="What changed in the data"><div class="brief-heading"><h2>What changed this period · Analytical reading guide</h2><span>Retained observations · dates vary</span></div><div class="brief-takeaways">${['payroll','unrate','wages'].map(id=>{
-  const s=getSeries(id),o=latest(s);
-  return `<article><div class="labor-brief-code"><span>${esc(s.code)}</span><span>${esc(program(id))}</span></div>${detail(id,state,s.short,'labor-brief-title')}<strong>${esc(formatDisplayValue(s,o?.value))}</strong><p>${esc(measurementChange(s).text)}</p><p>${esc(contexts[id])}</p><footer><span>Ref: ${esc(periodLabel(s,o?.date))}</span><span>${esc(status(s))}</span></footer>${sourceError(s)}</article>`;
- }).join('')}</div></section>`;
-}
-
 function headlines(state){
+ const contexts={payroll:'Payroll employment counts jobs, not unique people. The current revised history does not retain each original release estimate.',
+  unrate:'The household survey measures unemployed people as a share of the civilian labor force. U-6 includes additional forms of labor underutilization; their denominators differ.',
+  participation:'Participation measures the labor force as a share of the civilian noninstitutional population. Prime-age participation narrows the age range to 25–54.',
+  wages:'Annual average hourly earnings growth compares the exact year-ago month. Changes in workforce composition can affect this aggregate.'};
  const cards=['payroll','unrate','participation','wages'].map(id=>{
   const s=getSeries(id),o=latest(s),change=measurementChange(s);
   const contextId={payroll:'payrollAverage3m',unrate:'underemployment',participation:'primeAgeParticipation'}[id],context=contextId?getSeries(contextId):null;
-  return `<article class="labor-metric"><div class="labor-metric-code"><span>${esc(s.code)}</span><span>${esc(program(id))}</span></div>${detail(id,state,s.short,'labor-metric-name')}`
+  const warnings=[...new Set([...(o?.footnotes??[]),s.coverageNote&&/partial|suppressed|not (?:directly )?comparable/i.test(s.coverageNote)?s.coverageNote:'',...(context?.error?[`${context.short}: ${context.error}`]:[]),...(context?.dataStatus==='cached'?[`${context.short}: cached reading.`]:[]),...(latest(context)?.footnotes??[])].filter(Boolean))];
+  return `<article class="labor-metric" data-labor-reading="${id}"><div class="labor-metric-code"><span>${esc(s.code)}</span><span>${esc(program(id))}</span></div>${detail(id,state,s.short,'labor-metric-name')}`
    +`<strong>${esc(formatDisplayValue(s,o?.value))}</strong>`
    +`<span class="labor-small">${esc(periodLabel(s,o?.date))} · ${esc(status(s))}</span>`
    +`<span class="labor-reading-basis">${esc(unit(s))} · ${esc(s.adjustment)}</span>`
-   +`<p>${id==='payroll'?`${esc(priorReadingLabel(s))}: ${esc(formatDisplayValue(s,
-  s.observations.at(-2)?.value))}`:`${esc(change.label)}: ${esc(formatDisplayChange(s))}`}</p>${context?`<p class="labor-metric-context">${esc(contextId==='payrollAverage3m'?'3M average':contextId==='underemployment'?'U-6':'Prime age 25–54')}: ${esc(formatDisplayValue(context,latest(context)?.value))} · ${esc(periodLabel(context,latest(context)?.date))}</p>`:''}${sourceError(s)}</article>`;
+   +`<p class="labor-metric-change" title="${esc(change.text)}">${id==='payroll'?`${esc(priorReadingLabel(s))}: ${esc(formatDisplayValue(s,
+  s.observations.at(-2)?.value))} · ${esc(periodLabel(s,s.observations.at(-2)?.date))}`:change.value===null?'Prior comparison unavailable':`${esc(change.label)}: ${esc(formatDisplayChange(s))} vs ${esc(change.priorPeriod)}`}</p>${sourceError(s)}${warnings.map(note=>`<p class="labor-note labor-warning" role="status">${esc(note)}</p>`).join('')}${supportingDetails(`labor:reading:${id}`,'Interpretation & related reading',`<p>${esc(contexts[id])}</p>${context?`<p class="labor-metric-context">${detail(context.id,state,context.short,'link-button')}: ${esc(formatDisplayValue(context,latest(context)?.value))} · ${esc(unit(context))} · ${esc(periodLabel(context,latest(context)?.date))}</p>`:''}`,{className:'labor-reading-context'})}</article>`;
  }).join('');
  return `<section class="labor-headlines" aria-label="Latest headline indicators">${cards}</section>`;
 }
@@ -186,8 +181,8 @@ export function laborPage(input={},options={}){
   +link('Inspect retrieval history','#/vintages?series=payroll','link-button')+'</div>';
  const preliminary=latest(getSeries('payroll'))?.footnotes?.some(note=>/preliminary/i.test(note));
  const uncertainty=`<aside class="labor-note" aria-label="Labor estimate uncertainty"><strong>${preliminary?'Preliminary payroll estimate. ':''}Survey uncertainty.</strong> Payroll estimates have sampling and nonsampling error and may be revised as reports arrive and seasonal factors are updated. A difference between two monthly job gains is a change in gains, not a separate estimate of monthly employment change. Sample response rates and confidence intervals are not supplied in the retained series metadata. No significance claim is made. <a href="https://www.bls.gov/news.release/empsit.tn.htm" target="_blank" rel="noopener noreferrer">Official BLS technical note ↗</a></aside>`;
- return `<div class="labor-radar stitch-labor"><div class="labor-desk-tags"><span>Bureau of Labor Statistics / DOL feeds</span><span>Labor research desk</span><span>CES / CPS / JOLTS / ETA</span></div>${heading('Labor market','Understand employment demand, participation and pay with source-linked indicators and transparent revision coverage.',
-  button(state.saved.includes('payroll')?'Following payrolls':'Follow payrolls',`data-save="payroll" aria-pressed="${state.saved.includes('payroll')}"`)+button('Compare measures','data-compare="unrate,claims"')+button('Data provenance','data-labor-section="labor-notes"')+button('Export focused CSV',`data-export-macro-measure${shown.error||!shown.observations.some(o=>Number.isFinite(o.value))?' disabled':''}`))}<div class="labor-briefing">${briefing(state)}${headlines(state)}</div>${revisions}`
+ return `<div class="labor-radar stitch-labor"><p class="labor-source-line">Bureau of Labor Statistics / DOL · CES / CPS / JOLTS / ETA</p>${heading('Labor market','Track employment demand, participation and pay.',
+  button(state.saved.includes('payroll')?'Following payrolls':'Follow payrolls',`data-save="payroll" aria-pressed="${state.saved.includes('payroll')}"`)+`<details class="labor-action-menu" data-page-disclosure="labor-actions"><summary>More actions</summary><div class="labor-secondary-actions" data-research-actions>${button('Compare measures','data-compare="unrate,claims"')}${button('Export focused CSV',`data-export-macro-measure${shown.error||!shown.observations.some(o=>Number.isFinite(o.value))?' disabled':''}`)}${button('Data provenance','data-labor-section="labor-notes"')}</div></details>`)}<div class="labor-briefing">${headlines(state)}</div>${revisions}`
   +supportingDetails('labor:uncertainty','Sampling uncertainty & standard error disclosure',uncertainty,{className:'labor-uncertainty'})
   +`<nav class="labor-section-nav" aria-label="Labor sections">${[['trends','Payrolls & unemployment'],
   ['weekly','Weekly claims'],['analysis','Focused history'],['readings','All 23 measures'],['notes','Definitions & sources']].map(([id,

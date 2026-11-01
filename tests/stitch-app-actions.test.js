@@ -13,13 +13,13 @@ const ids=['gdp','pceCore','unrate','yield','payroll','policyTargetUpper','sprea
 const section=(from,to)=>{
  const start=source.indexOf(from),end=source.indexOf(to,start);assert.ok(start>=0&&end>start);return source.slice(start,end);
 };
-function app({preferences={},ensure=async()=>{},storageFailure=false}={}){
+function app({preferences={},ensure=async()=>{},storageFailure=false,sectionTargets={}}={}){
  const values=new Map([['meridian.preferences.v1',JSON.stringify(preferences)]]),writes=[],renders=[],notices=[],downloads=[],sourceCalls=[];
  const storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>{writes.push({key,value});if(storageFailure)throw Error('quota');values.set(key,value);}};
  const densityButtons=['comfortable','compact'].map(value=>({dataset:{displayDensity:value},attributes:new Map(),setAttribute(name,value){this.attributes.set(name,value);}}));
  const label={textContent:''},sun={hidden:false},moon={hidden:true},themeButton={querySelector:selector=>({'[data-theme-label]':label,'[data-theme-sun]':sun,'[data-theme-moon]':moon}[selector]),setAttribute(){}};
  const desktopDensity={value:''},mobileDensity={value:''},root={dataset:{}},meta={content:''};
- const document={documentElement:{dataset:{}},querySelector:()=>meta,querySelectorAll:()=>densityButtons,getElementById:id=>({'theme-toggle':themeButton,'density-select':desktopDensity,'density-select-mobile':mobileDensity}[id])};
+ const document={documentElement:{dataset:{}},querySelector:()=>meta,querySelectorAll:()=>densityButtons,getElementById:id=>sectionTargets[id]??({'theme-toggle':themeButton,'density-select':desktopDensity,'density-select-mobile':mobileDensity}[id])};
  let handlers;
  const env={state:{...parseRoute('#/overview'),...readPreferences(storage),selected:['cpi'],freezeSelection:['gdp']},root,document,storage,writePreferences,normalizePreferences,routeFor,requiredSourceIds,toCsv,viewRange,
   announce:message=>notices.push(message),render:options=>{renders.push(options);handlers.apply();},downloadCsv:(content,name)=>downloads.push({content,name}),
@@ -32,6 +32,17 @@ function app({preferences={},ensure=async()=>{},storageFailure=false}={}){
   return {state:()=>state,apply:applyAppearance,click:async event=>{${delegated[1]}}};`)(env);
  return {...handlers,click:data=>handlers.click({target:{closest:()=>({dataset:data,disabled:false})}}),values,writes,renders,notices,downloads,sourceCalls,storage,root,document,densityButtons,desktopDensity,mobileDensity};
 }
+
+test('Labor section actions focus the destination heading before scrolling, preserving forward keyboard traversal',async()=>{
+ for(const id of ['labor-analysis','labor-weekly','labor-trends','labor-readings','labor-notes']){
+  const calls=[],heading={tabIndex:null,focus:options=>calls.push(['focus',options])};
+  const target={querySelector:selector=>{assert.equal(selector,'h2');return heading;},scrollIntoView:options=>calls.push(['scroll',options])};
+  const view=app({sectionTargets:{[id]:target}});await view.click({laborSection:id});
+  assert.equal(heading.tabIndex,-1);assert.deepEqual(calls,[['focus',{preventScroll:true}],['scroll',{block:'start'}]]);
+ }
+ const view=app();await assert.doesNotReject(view.click({laborSection:'unknown'}));
+ await assert.doesNotReject(view.click({laborSection:'labor-notes'}));
+});
 
 test('Follow Page adds the eight Overview readings once to the active named watchlist while preserving other lists and selections',async()=>{
  const view=app({preferences:{theme:'Graphite',density:'comfortable',activeWatchlistId:'rates',watchlists:[{id:'default',name:'Default',saved:['cpi']},{id:'rates',name:'Rates',saved:['sofr','yield']}]}});
