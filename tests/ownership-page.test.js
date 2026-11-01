@@ -20,14 +20,19 @@ test('quarterly ownership history requests five calendar years while ownership e
   assert.equal(api().ownershipCsv(data),csv);
 });
 
-test('ownership compact holdings keep one trillion unit even for small holdings while source tables and CSV stay exact',()=>{
+test('ownership compact holdings keep one trillion unit and follow the supplied source despite unrelated global readings',()=>{
   const ids=['foreignTreasuryHoldings','fedTreasuryHoldings'],originals=ids.map(id=>series[id].observations);
   const data=source(),original=JSON.stringify(data),csv=api().ownershipCsv(data);
   try{
     ids.forEach((id,index)=>{series[id].observations=[{date:'2026-06-30',value:index?0.000004567:0.012345}];});
-    const html=api().ownershipPage(data),headlines=[...html.matchAll(/class="metric-value">([^<]+)</g)].map(match=>match[1]);
-    assert.deepEqual(headlines,['$0.0123T','$0.00000457T']);
-    assert.ok(html.includes('<td class="num">$20.00B</td>'));
+    data.z1.sectors[0].value=0.004567;data.z1.sectors[1].value=12.345;
+    const suppliedOriginal=JSON.stringify(data),suppliedCsv=api().ownershipCsv(data);
+    const html=api().ownershipPage(data),headlines=[...html.matchAll(/class="stitch-kpi-value">([^<]+)</g)].map(match=>match[1]);
+    assert.deepEqual(headlines,['$0.0123T','$0.00000457T','Unavailable','Unavailable']);
+    assert.equal(api().ownershipCsv(data),suppliedCsv);assert.equal(JSON.stringify(data),suppliedOriginal);
+    data.z1.sectors[0].value=20;data.z1.sectors[1].value=30;
+    const exact=api().ownershipPage(data);
+    assert.ok(exact.includes('<td class="num">$20.00B</td>'));
     assert.equal(api().ownershipCsv(data),csv);
     assert.equal(JSON.stringify(data),original);
   }finally{ids.forEach((id,index)=>{series[id].observations=originals[index];});}

@@ -35,9 +35,11 @@ import {viewRange} from './workspace-context.js';
 import {pceScenarioOptions} from './workspace-context.js';
 import {economicEvidenceContext} from './economic-evidence.js';
 import {pceBaseEffectsContext} from './pce-base-effects.js';
+import {overviewChartEvidence} from './dashboard-charts.js';
+import {pceHorizonChartCatalog} from './dashboard-chart-data.js';
 
 const moduleIds={credit:['bankLoans','bankDeposits','ciStandardsLarge','onRrpAccepted'],overview:['gdp','pceCoreMonthly','payroll','policyTargetUpper'],labor:['payroll','unrate','underemployment','weeklyHours'],fiscal:['receipts','outlays','netInterest','primaryDeficit'],refinancing:['marketableDebt'],yields:['yield','realYield10','spread2s10s','inflationComp10'],auctions:['auctionOfferingMonthly'],ownership:['foreignTreasuryHoldings','fedTreasuryHoldings','somaTreasuryHoldings'],macro:['gdpTotalContribution','gdpConsumptionContribution','gdpInvestmentContribution','gdpGovernmentContribution'],market:['dealerNetTreasury','dealerRepo','dealerFailsDeliver','sofr']};
-const sourceIds={credit:['bankCredit','lendingSurvey','fedBalance','onRrp','householdDebt','loanDelinquency'],fiscal:['fiscal','treasury'],refinancing:['refinancing'],yields:['yields','treasury'],auctions:['auctions'],ownership:['ownership'],macro:['macroContributions'],market:['marketFunctioning']};
+const sourceIds={overview:['macroContributions'],credit:['bankCredit','lendingSurvey','fedBalance','onRrp','householdDebt','loanDelinquency'],fiscal:['fiscal','treasury'],refinancing:['refinancing'],yields:['yields','treasury'],auctions:['auctions'],ownership:['ownership'],macro:['macroContributions'],market:['marketFunctioning']};
 const attachment=(name,content)=>({name,content,type:'text/csv'});
 const measurementFields=['name','unit','frequency','adjustment','definition','observationType','format','precision','periodType','dateConvention','measure','calculation'];
 const strings=values=>[...new Set(values.filter(value=>typeof value==='string'&&value.trim()))];
@@ -106,7 +108,7 @@ function capturedMeasurement(current,source,item,id,agency){
 }
 
 /** Build explicitly scoped frozen inputs; never promise a mutable URL is a saved result. */
-export function buildPinContext(state,{historyState,catalog=series,sources=dataStatus.sources,snapshot=dataStatus,events=releases,now=new Date(),changes={},checkpoint={},failures=[],publicationContexts={}}={}){
+export function buildPinContext(state,{historyState,catalog=series,sources=dataStatus.sources,snapshot=dataStatus,events=releases,now=new Date(),changes={},checkpoint={},failures=[],publicationContexts={},overviewChartSettings,overviewPreview}={}){
  let selected=state.page==='indicator'?[state.seriesId]:['macroCoverage','labor'].includes(state.page)?[state.macroMeasure]:state.page==='watchlist'?state.saved:moduleIds[state.page]??state.selected;
  let capturedCatalog=catalog,capturedSources=sources;
  const context={page:state.page,route:routeFor(state,{legacyWindow:true}),
@@ -124,12 +126,15 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
   context.scope='Coverage inventory retains the filtered measurement metadata, original reference dates/values/suppression flags, source receipts and loaded publication-coverage inputs, plus its exact CSV. The compatible primary CSV retains up to four registered measurements; it is not the complete coverage inventory. Reference coverage is not publication-vintage coverage.';
  }
  if(state.page==='overview'){
-  context.overviewTopicReadings=['gdp','realSpendingMonthly','pceCoreMonthly','pceCore','payroll','unrate','claimsAdvance','continuedClaimsAdvance','policyTargetLower','policyTargetUpper','effr','yield','spread2s10s','publicDebt','interestRevenueRatio'].filter(id=>catalog[id]).map(id=>{const item=catalog[id];return {id,name:item.name,unit:item.unit,frequency:item.frequency,adjustment:item.adjustment,definition:item.definition,observationType:item.observationType,calculation:item.calculation,latest:item.observations.at(-1)??null,prior:item.observations.at(-2)??null,fetchedAt:item.fetchedAt,dataStatus:item.dataStatus,error:item.error,source:item.source,provenance:item.provenance};});
+  context.overviewComparisonCharts=overviewChartEvidence(overviewChartSettings,catalog,overviewPreview);
+  const overviewReadings=['gdp','privateDomesticDemandGrowth','gdpInventoriesContribution','realSpendingMonthly','pceCoreMonthly','pceCore','payroll','weeklyHours','unrate','claimsAdvance','continuedClaimsAdvance','policyTargetLower','policyTargetUpper','effr','yield','spread2s10s','publicDebt','interestRevenueRatio','netInterestTtm'].map(id=>catalog[id]).filter(Boolean);
+  overviewReadings.push(pceHorizonChartCatalog({lookup:id=>catalog[id]})['pce-horizons'].catalog.corePce1m);
+  context.overviewTopicReadings=overviewReadings.map(item=>({id:item.id,name:item.name,unit:item.unit,frequency:item.frequency,adjustment:item.adjustment,definition:item.definition,observationType:item.observationType,calculation:item.calculation,latest:item.observations.at(-1)??null,prior:item.observations.at(-2)??null,fetchedAt:item.fetchedAt,dataStatus:item.dataStatus,error:item.error,source:item.source,provenance:item.provenance}));
   context.overviewChartInputs=['pceMonthly','pceCoreMonthly','payroll','payrollAverage3m','realSpendingMonthly','realDisposableIncomeMonthly','industrialProduction'].filter(id=>catalog[id]).map(id=>{const item=catalog[id],shown=transformSeries(item,'level',12);return {id,name:item.name,unit:item.unit,frequency:item.frequency,adjustment:item.adjustment,calculation:item.calculation,fetchedAt:item.fetchedAt,dataStatus:item.dataStatus,error:item.error,source:item.source,provenance:item.provenance,observations:shown.observations};});
   context.overviewBrief=evidenceBrief({catalog,sources,changes:changes.rows??[],failures,publicationContexts});context.overviewCheckpoint=checkpoint;
   context.overviewFollowing=watchlistMonitor(state.saved??[],{catalog,events,now}).map(({id,current,nextEvent})=>({id,name:current.name,status:current.dataStatus,update:monitorUpdateLabel(id,changes,checkpoint),nextEvent}));
   context.nextCatalysts=nextCatalysts(events,{now});context.calendarStatus=snapshot.calendar;
-  context.scope='The primary CSV retains four registered measurements. Supplemental context retains all Overview topic readings, monthly inflation and three-month-average payroll chart inputs, supporting activity and income, factual evidence and selected upcoming schedules. Values, calculation metadata and clocks are retained independently of current data; the frozen viewer presents context rather than an exact visual replay.';
+  context.scope='The primary CSV retains four registered measurements. Supplemental context retains all Overview topic readings, including private domestic demand, inventory contribution, weekly hours, trailing net interest and the calculated one-month annualized core PCE diagnostic independently of chart selections; monthly inflation and three-month-average payroll chart inputs; supporting activity and income; contribution-source evidence; factual evidence and selected upcoming schedules. Values, calculation metadata and clocks are retained independently of current data; the frozen viewer presents context rather than an exact visual replay.';
  }
  if(['macroCoverage','labor'].includes(state.page))context.familyReadings=coverageFamilies[state.page==='labor'?'labor':state.macroFamily].ids.map(id=>({id,name:catalog[id].name,unit:catalog[id].unit,frequency:catalog[id].frequency,adjustment:catalog[id].adjustment,definition:catalog[id].definition,observationType:catalog[id].observationType,dataStatus:catalog[id].dataStatus,latest:catalog[id].observations.at(-1)??null,prior:catalog[id].observations.at(-2)??null,fetchedAt:catalog[id].fetchedAt,source:catalog[id].source}));
  if(state.page==='macroCoverage'&&state.macroFamily==='external'){

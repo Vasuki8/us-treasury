@@ -33,14 +33,21 @@ const output = path.join(root, 'dist');
 const modules = (await readdir(path.join(root, 'src'), { withFileTypes: true }))
   .filter(entry => entry.isFile() && /^[a-zA-Z0-9_-]+\.js$/.test(entry.name))
   .map(entry => `src/${entry.name}`);
-const names = ['styles.css', 'favicon.svg', ...modules].sort();
+const fonts=(await readdir(path.join(root,'fonts'))).filter(name=>/^[a-zA-Z0-9_-]+\.(?:woff2|ttf|txt)$/.test(name)).map(name=>'fonts/'+name);
+const names = ['styles.css', 'favicon.svg', ...fonts, ...modules].sort();
 const inputs = await Promise.all(names.map(async name => ({
   name, bytes: name === 'src/official-snapshot.js' ? Buffer.from(projected.module) : await readFile(path.join(root, name)),
 })));
 for (const [name, bytes] of projected.files) inputs.push({name: 'src/' + name, bytes});
 inputs.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
 const assets = new Map(), imports = {};
-for (const {name, bytes} of inputs) {
+for (const input of inputs) {
+  const {name}=input;
+  if(name==='styles.css')input.bytes=Buffer.from(input.bytes.toString('utf8').replace(/url\((['"])(\.\/fonts\/[a-zA-Z0-9_-]+\.(?:woff2|ttf))\1\)/g,(_all,quote,reference)=>{
+    const target=assets.get(reference.slice(2));if(!target)throw new Error(`Unbound local font ${reference}`);
+    return `url(${quote}./${target.slice('assets/'.length)}${quote})`;
+  }));
+  const bytes=input.bytes;
   if (bytes.length >= 20 * 1024 ** 2) throw new Error(`${name} must be below the 20 MiB build asset limit (${bytes.length} bytes).`);
   const generated = /^src\/(?:history-[a-f0-9]{64}\.(?:json|bin)(?:\.gz)?|source-[a-f0-9]{64}\.js)$/.test(name);
   const extension = path.extname(name), digest = createHash('sha256').update(bytes).digest('hex').slice(0, 16);
@@ -59,6 +66,7 @@ html = html.replace("script-src 'self'", `script-src 'self' '${importMapCspHash(
 if (path.dirname(output) !== root || path.basename(output) !== 'dist') throw new Error('Invalid build destination');
 await rm(output, {recursive:true, force:true});
 await mkdir(path.join(output, 'assets', 'src'), { recursive: true });
+await mkdir(path.join(output,'assets','fonts'),{recursive:true});
 for (const { name, bytes } of inputs) {
   await writeFile(path.join(output, assets.get(name)), bytes);
 }

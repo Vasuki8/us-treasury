@@ -91,13 +91,13 @@ export function panel(index, title, body, actions = '', note = '', extraClass = 
 
 export function chart(ids, {
   height=180,kind='line',transform='level',range={preset:defaultWindowPreset(ids.map(getSeries))},
-  comparison='native',panelId='',cursorGroup='',
+  comparison='native',panelId='',cursorGroup='',legend=false,endLabels=false,
 }={}) {
   const names = ids.map(id => getSeries(id)?.name).filter(Boolean).join(', ');
   const window=escapeHtml(typeof range==='object'?JSON.stringify(range):range);
   return `<div class="chart" data-chart data-series="${escapeHtml(ids.join(','))}" data-kind="${escapeHtml(kind)}"`
     +` data-transform="${escapeHtml(transform)}" data-range="${window}" data-comparison="${escapeHtml(comparison)}"`
-    +` data-panel-id="${escapeHtml(panelId)}" data-cursor-group="${escapeHtml(cursorGroup)}" data-height="${escapeHtml(height)}">`
+    +` data-panel-id="${escapeHtml(panelId)}" data-cursor-group="${escapeHtml(cursorGroup)}" data-height="${escapeHtml(height)}"${legend?' data-legend="true"':''}${endLabels?' data-end-labels="true"':''}>`
     +`<p class="chart-fallback muted">${escapeHtml(kind==='curve'?'Treasury yield curve':names)} chart · official snapshot</p></div>`;
 }
 

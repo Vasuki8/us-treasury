@@ -35,7 +35,7 @@ export function syncCompactNavigation(root, state) {
   }
   for(const group of root.querySelectorAll('[data-workspace-family]')){
     const activeFamily=family??'';
-    if(group.dataset.activeFamily!==activeFamily)group.open=group.dataset.workspaceFamily===family;
+    if(group.tagName==='DETAILS'&&group.dataset.activeFamily===undefined)group.open=true;
     group.dataset.activeFamily=activeFamily;
   }
   for(const group of root.querySelectorAll('.rail .rail-group')){

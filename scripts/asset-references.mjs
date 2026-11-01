@@ -45,6 +45,7 @@ export function resolveModuleReference(reference, parent, imports = new Map()) {
 
 export function isBuiltAsset(name) {
   return /^assets\/(?:styles\.[a-f0-9]{16}\.css|favicon\.[a-f0-9]{16}\.svg)$/.test(name)
+    || /^assets\/fonts\/[a-zA-Z0-9_-]+\.[a-f0-9]{16}\.(?:woff2|ttf|txt)$/.test(name)
     || /^assets\/src\/(?:[a-zA-Z0-9_-]+\.[a-f0-9]{16}\.js|source-[a-f0-9]{64}\.js)$/.test(name)
     || /^assets\/src\/history-[a-f0-9]{64}\.(?:json|bin)(?:\.gz)?$/.test(name);
 }

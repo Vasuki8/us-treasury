@@ -1,7 +1,7 @@
 const shift=(date,months)=>{const [y,m]=date.split('-').map(Number);return new Date(Date.UTC(y,m-1+months,1)).toISOString().slice(0,10);};
 const finite=Number.isFinite;
 export function annualizedMomentum(observations,months) {
- if(![3,6].includes(months))throw new RangeError('Momentum requires 3 or 6 months.');
+ if(![1,3,6].includes(months))throw new RangeError('Momentum requires 1, 3 or 6 months.');
  const map=new Map(observations.map(row=>[row.date,row]));
  return observations.map(row=>{
   const priorDate=shift(row.date,-months),prior=map.get(priorDate);

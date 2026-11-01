@@ -12,9 +12,9 @@ const primary=(html,id)=>html.match(new RegExp(`data-overview-reading="${id}"[^]
 
 test('Overview has four headline cards and four monitor readings with native momentum charts',()=>{
  const html=render();
- assert.match(html,/class="radar-page radar-overview overview-hierarchy"/);
+ assert.match(html,/class="radar-page radar-overview overview-hierarchy stitch-overview"/);
  assert.equal((html.match(/data-overview-reading=/g)??[]).length,8);
- assert.equal((html.match(/class="oh-topic"/g)??[]).length,4);
+ assert.equal((html.match(/class="oh-topic stitch-card"/g)??[]).length,4);
  assert.equal((html.match(/class="workspace-monitor-row"/g)??[]).length,4);
  for(const id of ['gdp','pceCore','payroll','unrate','policyTargetRange','yield','spread2s10s','interestRevenueRatio'])assert.ok(primary(html,id),id);
  for(const [earlier,later] of [['oh-snapshot','oh-momentum'],['oh-momentum','oh-catalysts'],['oh-catalysts','oh-support']])assert.ok(html.indexOf(earlier)<html.indexOf(later));
@@ -69,16 +69,16 @@ test('Overview supports each activity measure and distinct weekly claim referenc
  try{current.observations=[{date:'2026-10-03',value:1700,releaseStage:'prior-week-revised'}];assert.match(render(),/Prior week · revised in same release/);}finally{current.observations=saved;}
 });
 
-test('Overview groups four distinct future programs using supplied now and preserves cached schedule evidence without invented time',()=>{
+test('Overview groups five distinct future programs using supplied now and preserves cached schedule evidence without invented time',()=>{
  const saved=[...releases],source=dataStatus.calendar.sources.bls;
  try{
   releases.splice(0,releases.length,...['a','b','c','d','e'].map((id,index)=>({id,program:id,sourceId:'bls',agency:'BLS',name:`Program ${id}`,date:index<2?'2026-10-23':'2026-10-24',seriesIds:['unrate'],scheduleBasis:'listed-date',sourceUrl:'https://www.bls.gov/schedule/'})));
   dataStatus.calendar.sources.bls={...source,status:'error',fetchedAt:'2026-10-22T22:00:00Z'};
   const html=render({saved:['unrate']});
-  assert.equal((html.match(/class="oh-event-day"/g)??[]).length,2);assert.equal((html.match(/class="oh-event"/g)??[]).length,4);
+  assert.equal((html.match(/class="oh-event-day"/g)??[]).length,2);assert.equal((html.match(/class="oh-event"/g)??[]).length,5);
   assert.doesNotMatch(html,/Time not supplied/);
   assert.match(html,/Cached schedule/);assert.match(html,/Following/);assert.match(html,/Listed schedule/);
-  assert.doesNotMatch(html,/Program e|market surprise score|consensus forecast/);
+  assert.match(html,/Program e/);assert.doesNotMatch(html,/market surprise score|consensus forecast/);
   assert.match(html,/schedule does not confirm a result/);
  }finally{releases.splice(0,releases.length,...saved);dataStatus.calendar.sources.bls=source;}
 });
@@ -87,7 +87,7 @@ test('Overview reviewed archives keep historical period and clocks without repea
  const row=claimsFact({period:'2026-03-14',publicationDate:'2026-03-19',value:202});
  row.id=`dol-${row.seriesId}-${row.period}-${row.releaseStage}-${row.publicationDate}`;
  const html=render({}, {publicationContexts:{claims:{status:'ready',archive:{releases:[row]}},gdp:{status:'error',error:'<unsafe> archive'}}});
- const publications=html.slice(html.indexOf('data-overview-disclosure="publications"'),html.indexOf('class="oh-support"'));
+ const publications=html.slice(html.indexOf('data-overview-disclosure="publications"'),html.indexOf('data-overview-disclosure="chart-measurement"'));
  assert.match(publications,/reference 14 Mar 2026/);
  assert.match(publications,/Published 19 Mar 2026 · day precision/);
  assert.match(publications,/Captured 6:00 pm ET, 22 Oct/);

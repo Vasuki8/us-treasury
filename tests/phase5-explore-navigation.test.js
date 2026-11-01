@@ -72,7 +72,7 @@ test('paging preserves filters, selections and research windows and clamps inval
   assert.ok(rows(render({catalogPage:10000})).length>0,'out of range pages retain the last results');
 });
 
-test('catalog rows combine ordinary notes and source variants into one closed disclosure',()=>{
+test('catalog rows keep closed source evidence while reference filters remain visible above the catalog',()=>{
   const html=render(),row=html.match(/<tr\b[^>]*data-catalog-series="gdp"[^>]*>([^]*?)<\/tr>/)?.[1]??'';
   const details=[...row.matchAll(/<details\b([^>]*)>([^]*?)<\/details>/g)];
   assert.equal(details.length,1,'ordinary notes and separate source evidence share one disclosure');
@@ -81,9 +81,8 @@ test('catalog rows combine ordinary notes and source variants into one closed di
   assert.ok(details[0][2].includes('data-select="gdpTotalContribution"'));
   assert.ok(details[0][2].includes('Separate source evidence'));
   assert.doesNotMatch(row,/<span class="pill"/,'the disclosure replaces the redundant Notes badge');
-  const filters=html.match(/<details\b[^>]*data-page-disclosure="explore:catalog-filters"[^>]*>([^]*?)<\/details>/);
-  assert.ok(filters,'topic and frequency controls are in a native disclosure');
-  assert.doesNotMatch(filters[0].split('>')[0],/\sopen(?:\s|$)/);
+  const filters=html.match(/<div\b[^>]*class="catalog-filter-bar"[^>]*data-page-disclosure="explore:catalog-filters"[^>]*>([^]*?)<\/div><\/div>/);
+  assert.ok(filters,'topic and frequency controls remain visible in the reference filter bar');
   assert.ok(filters[1].includes('id="topic-filter"'));assert.ok(filters[1].includes('id="frequency-filter"'));
   assert.ok(html.indexOf('id="catalog-search"')<filters.index,'search remains visible before filters');
 });
@@ -99,7 +98,14 @@ test('mobile content links precede Density and Overview uses a two-column readin
   assert.match(css,/:root\s*\{[^}]*font-size:\s*14px/);
   assert.match(css,/font-family:\s*system-ui/);
   assert.match(css,/ui-monospace/);
-  assert.doesNotMatch(css,/font-size:\s*(?:[1-9]|1[0-2])(?:\.\d+)?px\b/);
+  // Stitch uses smaller metadata and table labels; reading text and mobile targets stay legible.
+  assert.match(css,/:root\s*\{[^}]*font-family:Inter[^}]*font-size:14px/);
+  assert.match(css,/\.subtitle\s*\{[^}]*font-size:14px[^}]*line-height:20px/);
+  assert.match(css,/\.brief-takeaways p\s*\{[^}]*font-size:13px[^}]*line-height:18px/);
+  assert.match(css,/table,\.table-wrap thead th,\.labor-table thead th\s*\{[^}]*font-size:12px/);
+  assert.match(css,/\.stitch-status-label,\.stitch-window-label\s*\{[^}]*font-size:10px/);
+  const responsive=css.slice(css.lastIndexOf('@media(max-width:800px)'));
+  assert.match(responsive,/\.action[^}]*min-height:44px/);
   const mobile=css.split('@container (max-width:530px)')[1]?.split('@media')[0]??'';
   assert.match(mobile,/\.oh-topic-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,minmax\(0,1fr\)\)/);
   assert.doesNotMatch(mobile,/grid-auto-flow:\s*column/);

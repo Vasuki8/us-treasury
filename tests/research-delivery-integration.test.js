@@ -24,7 +24,7 @@ test('CPI calendar and all four indicator measurements link to published evidenc
 
 test('the actual market page dispatch passes its selected window to every funding chart',()=>{
  const html=renderPage(parseRoute('#/market?window=custom&start=2026-09-01&end=2026-10-22'));
- const charts=[...html.matchAll(/<div[^>]*data-chart-catalog="funding"[^>]*>/g)].map(x=>x[0]);assert.equal(charts.length,3);
+ const charts=[...html.matchAll(/<div[^>]*data-chart-catalog="funding"[^>]*>/g)].map(x=>x[0]);assert.equal(charts.length,4);
  for(const chart of charts){assert.match(chart,/2026-09-01/);assert.match(chart,/2026-10-22/);assert.match(chart,/custom/);}
 });
 

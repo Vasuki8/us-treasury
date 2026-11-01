@@ -6,7 +6,8 @@ import {seriesPreview} from './workspace-preview.js';
 import {globalSearch,globalSearchPanel} from './global-search.js';
 import {groupSearchMeasurements} from './search.js';
 import {routeFor} from './router.js';
-import {getSeries,filterSeries,latest,formatValue,periodLabel,compareSeries,observationCoverageLabel} from './model.js';
+import {getSeries,filterSeries,latest,formatValue,formatChange,periodLabel,compareSeries,observationCoverageLabel} from './model.js';
+import {measurementChange} from './measurement-change.js';
 import {viewRange,workspaceReturn,indicatorHref} from './workspace-context.js';
 import {rangeControls,coverageSummary} from './research-controls.js';
 import {escapeHtml as esc,button,heading,panel,chart,emptyState,seriesStatus} from './ui.js';
@@ -42,6 +43,18 @@ const catalogHeadlines=['gdp','privateDomesticDemandGrowth','realSpendingMonthly
   'sofr','effr','bankLoans','bankDeposits','householdDebtService'];
 const headlineRank=id=>catalogHeadlines.includes(id)?catalogHeadlines.indexOf(id):catalogHeadlines.length;
 
+function catalogTrend(current){
+ const rows=current.observations.slice(-12),values=rows.map(row=>row.value).filter(Number.isFinite);
+ if(!values.length)return '<span class="muted">Unavailable</span>';
+ const low=Math.min(...values),span=Math.max(...values)-low||1;let gap=true;
+ const path=rows.map((row,index)=>{
+  if(!Number.isFinite(row.value)){gap=true;return '';}
+  const command=gap?'M':'L';gap=false;
+  return `${command}${(index/Math.max(1,rows.length-1)*100).toFixed(2)} ${(27-(row.value-low)/span*24).toFixed(2)}`;
+ }).join(' ');
+ return `<svg class="catalog-spark" viewBox="0 0 100 30" preserveAspectRatio="none" role="img" aria-label="${esc(current.short)} · last ${rows.length} retained observations · ${esc(current.unit)}"><path d="${path}"/></svg>`;
+}
+
 function catalogRow({primary:current,variants},state){
   const observation=latest(current),coverage=observationCoverageLabel(observation),notes=catalogCoverage(current,observation);
   const checkbox=item=>`<input type="checkbox" data-select="${esc(item.id)}" aria-label="Select ${esc(item.name)}"`+
@@ -64,8 +77,9 @@ function catalogRow({primary:current,variants},state){
     `${coverage?`<span class="table-code catalog-coverage">${esc(coverage)}</span>`:''}${notes.warning}${evidence}</th>`+
     `<td class="num catalog-reading"><strong>${esc(formatValue(current,observation?.value))}</strong>`+
     `<span class="table-code catalog-unit">${esc(current.unit)}</span>`+
-    `<span class="table-code catalog-period"><span class="sr-only">Reference period </span>${period}</span></td>`+
-    `<td class="catalog-frequency">${esc(current.frequency)}</td><td class="muted catalog-source">${esc(current.source.name)}</td></tr>`;
+    `<span class="table-code catalog-period sr-only"><span class="sr-only">Reference period </span>${period}</span></td>`+
+    `<td class="num catalog-change" title="${esc(measurementChange(current).text)}">${esc(formatChange(current))}</td><td class="catalog-reference">${period}</td>`+
+    `<td class="catalog-frequency">${esc(current.frequency)}</td><td class="muted catalog-source">${esc(current.source.name)}</td><td class="catalog-trend">${catalogTrend(current)}</td></tr>`;
 }
 
 function catalog(state,context) {
@@ -77,7 +91,7 @@ function catalog(state,context) {
   let priorTopic;
   const rows=grouped.slice(start,start+25).map(group=>{
     const topic=group.primary.topic,topicRow=topic===priorTopic?'':
-      `<tr class="catalog-topic" data-catalog-topic="${esc(topic)}"><th colspan="5" scope="rowgroup">${esc(topic)}</th></tr>`;
+      `<tr class="catalog-topic" data-catalog-topic="${esc(topic)}"><th colspan="8" scope="rowgroup">${esc(topic)}</th></tr>`;
     priorTopic=topic;return topicRow+catalogRow(group,state);
   }).join('');
   const pageLink=(label,target)=>`<a class="action" href="${esc(routeFor({...state,page:'explore',catalogPage:target}))}" `+
@@ -87,9 +101,9 @@ function catalog(state,context) {
     `${grouped.length} · Page ${page} of ${pages}</span>${page<pages?pageLink('Next',page+1):''}</nav>`:'';
   const table=rows?'<div class="table-wrap catalog-table-wrap"><table class="catalog-table">'+
     '<caption class="sr-only">Official series catalog, including unavailable indicators</caption><thead><tr>'+
-    '<th scope="col"><span class="sr-only">Select</span></th><th scope="col">Indicator / code</th>'+
-    '<th scope="col" class="num">Latest</th><th scope="col" class="catalog-frequency">Frequency</th>'+
-    `<th scope="col" class="catalog-source">Source</th></tr></thead><tbody>${rows}</tbody></table></div>`:
+    '<th scope="col"><span class="sr-only">Select</span></th><th scope="col">Series name &amp; code</th>'+
+    '<th scope="col" class="num">Latest</th><th scope="col" class="num">Change</th><th scope="col">Period</th><th scope="col" class="catalog-frequency">Freq</th>'+
+    `<th scope="col" class="catalog-source">Source</th><th scope="col">Recent trend</th></tr></thead><tbody>${rows}</tbody></table></div>`:
     emptyState('No series match your filters.','Search a series name, code, topic or agency, or clear the filters.',
       button('Clear filters','data-reset-filters'));
   const filters='<div class="filter-body"><label for="topic-filter">Topic<select id="topic-filter">'+
@@ -97,16 +111,13 @@ function catalog(state,context) {
     '<label for="frequency-filter">Frequency<select id="frequency-filter">'+
     options(['All frequencies',...new Set(allSeries().map(item=>item.frequency))],state.frequency)+'</select></label></div>';
   const results=globalSearch(state.query,{catalog:allSeries(),events:context.events??releases,library:context.library??{}});
-  const filterLabel=['Filters · topic & frequency',state.topic!=='All topics'?state.topic:'',
-    state.frequency!=='All frequencies'?state.frequency:''].filter(Boolean).join(' · ');
-  return panel('01','Series catalog','<div class="panel-body"><label class="catalog-search-label" for="catalog-search">Search everything</label>'+
+  return panel('01','Series catalog','<div class="panel-body catalog-search-bar"><label class="catalog-search-label" for="catalog-search">Search everything</label>'+
     '<input id="catalog-search" class="searchbox" type="search" placeholder="Indicators, pages, scheduled events or saved research…" '+
     `value="${esc(state.query)}"></div>${globalSearchPanel(results,{includeIndicators:false})}`+
     (state.query.trim()?'<h3 class="chart-caption">Indicators · topic and frequency filters apply below</h3>':'')+
-    '<details class="catalog-filter-details" data-page-disclosure="explore:catalog-filters">'+
-    `<summary>${esc(filterLabel)}</summary><div class="catalog-filters">${filters}`+
-    `${button('Clear filters','data-reset-filters')}</div></details>`+
-    selectionTray(state)+paging+table+paging,`<span class="small muted" id="catalog-result-count">${matching.length} series</span>`);
+    '<div class="catalog-filter-bar" data-page-disclosure="explore:catalog-filters" role="group" aria-label="Catalog filters">'+
+    `<div class="catalog-filters">${filters}${button('Clear filters','data-reset-filters')}</div></div>`+
+    selectionTray(state)+table+paging+'<p class="panel-note catalog-trend-note">Recent trends use up to 12 retained observations in each series’ original frequency and native units. Missing values remain gaps; the time span varies by frequency.</p>',`<span class="small muted" id="catalog-result-count">${matching.length} series</span>`);
 }
 
 function comparison(state) {
@@ -135,22 +146,29 @@ function inventory(state,context){
  return `<section class="panel coverage-filters"><div class="panel-body"><label class="catalog-search-label" for="catalog-search">Search measurement coverage</label><input id="catalog-search" class="searchbox" type="search" placeholder="Name, code, topic or source…" value="${esc(state.query)}"></div><div class="catalog-filters"><div class="filter-body"><label for="topic-filter">Topic<select id="topic-filter">${options(['All topics',...new Set(allSeries().map(x=>x.topic))],state.topic)}</select></label><label for="frequency-filter">Frequency<select id="frequency-filter">${options(['All frequencies',...new Set(allSeries().map(x=>x.frequency))],state.frequency)}</select></label></div>${button('CLEAR FILTERS','data-reset-filters')}<span class="small muted" id="catalog-result-count">${result.rows.length} MEASUREMENTS</span></div></section>${coverageInventoryPanel(result,{state,showExport:false})}`;
 }
 
+function catalogPreview(id,state){
+ const current=getSeries(id),recent=[...current.observations.slice(-4)].reverse();
+ const lineage=`<p class="catalog-preview-lineage"><span class="mono">Series ID: ${esc(current.code)}</span> · ${esc(current.source.name)}</p>`;
+ return seriesPreview(id,state,{title:'Selected series preview',controls:lineage})
+  +`<section class="catalog-recent-observations" aria-label="Recent preview observations"><h3>Recent observations</h3>${recent.length?`<table><caption class="sr-only">Last four retained ${esc(current.short)} observations, native units</caption><tbody>${recent.map(row=>`<tr><th scope="row"><time datetime="${esc(row.date)}">${esc(periodLabel(current,row.date))}</time></th><td class="num">${esc(formatValue(current,row.value))}</td></tr>`).join('')}</tbody></table>`:'<p class="panel-note">No observations retained.</p>'}</section>`;
+}
+
 export function explorePage(state,context={}) {
-  const previewId=getSeries(context.workspacePreview)?context.workspacePreview:'gdp';
+  const previewId=getSeries(context.workspacePreview)?context.workspacePreview:'unrate';
   state={...state,previewId};
   const back=workspaceReturn(state),result=compareSeries(state.selected,state.exploreMode==='compare'?state.comparison:'native',viewRange(state));
   const catalogDesk=`<div class="catalog-workspace">${catalog(state,context)}`
     +`<aside id="catalog-preview" tabindex="-1" data-preview-active="${Boolean(context.workspacePreview)}" aria-label="Series preview">`
-    +button('Back to catalog','data-preview-close','action preview-return')+seriesPreview(previewId,state)+'</aside></div>';
+    +button('Back to catalog','data-preview-close','action preview-return')+catalogPreview(previewId,state)+'</aside></div>';
   const content=state.exploreMode==='coverage'?inventory(state,context):state.exploreMode==='compare'?comparison(state):catalogDesk;
   const actions=state.exploreMode==='coverage'?button('CSV coverage','data-export-coverage')
     :button('CSV selected',`data-export${state.selected.length&&!result.error?'':' disabled'}`);
   const tabs=[['catalog','Series catalog'],['compare','Compare series'],['coverage','Coverage inventory']];
   const starters=state.exploreMode==='coverage'?'':state.exploreMode==='compare'?comparisonStarters()
     :supportingDetails('explore:catalog-starters','Starter comparisons · explore a question',comparisonStarters(),{className:'catalog-starters'});
-  return `<div class="radar-page radar-explore" data-explore-view="${state.exploreMode}">`
+  return `<div class="radar-page radar-explore stitch-explore" data-explore-view="${state.exploreMode}">`
     +(back?`<nav class="return-context" aria-label="Return to workspace">${link(back.label,back.href)}</nav>`:'')
-    +heading('Explore data','Find a measurement. Inspect its history. Build a comparison.',actions)
+    +heading('Explore macroeconomic series',`${allSeries().length} registered measurements · Macroeconomic, labor, price and Treasury indicators from retained official sources.`,actions)
     +`<div class="tabs explore-tabs" role="tablist" aria-label="Explore views">${tabs.map(([id,label])=>button(label,
       `role="tab" id="explore-tab-${id}" aria-controls="explore-content" aria-selected="${state.exploreMode===id}" `
       +`data-explore-mode="${id}"`,'')).join('')}</div>`

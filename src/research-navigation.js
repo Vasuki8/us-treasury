@@ -22,11 +22,17 @@ const research=[['watchlist','Watchlist','#/watchlist'],['research','Saved views
 export const researchPages=[...economy,...fed,...treasury,['vintages','Retrieval history','#/vintages']];
 export const isResearchPage=page=>researchPages.some(([id])=>id===page);
 
+const icons={activity:'trending_up',macro:'pie_chart',prices:'price_change',labor:'badge',housing:'home',external:'swap_horiz',
+ credit:'account_balance',policy:'balance',yields:'show_chart',market:'waterfall_chart',fiscal:'account_balance_wallet',
+ refinancing:'update',auctions:'gavel',ownership:'public'};
+const navIcon=key=>`<span class="material-symbols-outlined nav-icon" aria-hidden="true">${icons[key]??icons.activity}</span>`;
+const workspaceTitles={activity:'Growth & Income',external:'Trade & Account',market:'Funding & Liquidity',refinancing:'Refinancing'};
+
 export function workspaceNavigation(){
- return [['economy','Economy',economy],['fed','Fed & rates',fed],['treasury','Treasury & funding',treasury]].map(([id,label,links])=>
-  `<details class="workspace-nav-group" data-workspace-family="${id}"><summary data-nav-group="${id}">${esc(label)}</summary>`
+ return [['economy','Economy',economy],['fed','Fed & Rates',fed],['treasury','Treasury & Fiscal',treasury]].map(([id,label,links])=>
+  `<section class="workspace-nav-group" data-workspace-family="${id}" aria-label="${esc(label)}"><h2 class="rail-title" data-nav-group="${id}">${esc(label)}</h2>`
   +links.map(([page,title,href,detail])=>`<a href="${esc(href)}" data-nav="${page}"`
-   +`${page==='macroCoverage'?` data-nav-family="${detail}"`:''}>${esc(title)}</a>`).join('')+'</details>').join('');
+   +`${page==='macroCoverage'?` data-nav-family="${detail}"`:''}>${navIcon(detail??page)}${esc(workspaceTitles[detail??page]??title.replace(/\b[a-z]/g,letter=>letter.toUpperCase()))}</a>`).join('')+'</section>').join('');
 }
 
 export function navigationFamily(input={}) {

@@ -11,8 +11,8 @@ test('home briefing retains independent comparison periods and escapes cached-so
  const current=getSeries('payroll'),before={...current};
  try{
   Object.assign(current,{observations:[{date:'2026-06-01',value:100},{date:'2026-09-01',value:-20}],dataStatus:'cached',error:'Failed <source>'});
-  const html=overviewPage(state),brief=html.match(/<section class="reading-brief"[^]*?<\/section>/)?.[0];
-  assert.ok(brief);assert.match(brief,/Monthly payroll change decreased/);assert.match(brief,/Sep 2026 vs Jun 2026/);
+  const html=overviewPage(state),brief=html.match(/<section class="reading-brief stitch-card stitch-brief"[^]*?<\/section>/)?.[0];
+  assert.ok(brief);assert.match(brief,/<strong>−20k<\/strong> Sep 2026 \(monthly job change\), versus <strong>100k<\/strong> Jun 2026/);
   assert.match(brief,/Cached/);assert.match(brief,/Failed &lt;source&gt;/);assert.doesNotMatch(brief,/<source>/);
   assert.match(brief,/href="#\/series\/payroll\?/);assert.match(brief,/Retained observations/);
  }finally{Object.assign(current,before);}
@@ -50,7 +50,7 @@ test('home charts avoid repeated headline numerals while preview defaults and so
 
 test('Labor promotes native trends and keeps unavailable payroll release revisions distinct from captured history',()=>{
  const html=laborPage({...state,macroMeasure:'weeklyHours',window:'custom',startDate:'1900-01-01',endDate:'1900-02-01'});
- assert.match(html,/class="reading-brief"/);assert.match(html,/Payroll revisions/);
+ assert.match(html,/class="reading-brief labor-reading-guide"/);assert.match(html,/Payroll revisions/);
  assert.match(html,/First-published payroll estimates are not covered/);
  assert.match(html,/href="#\/vintages\?series=payroll"/);
  assert.ok(html.indexOf('id="labor-trends"')<html.indexOf('id="labor-analysis"'));

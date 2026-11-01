@@ -35,9 +35,10 @@ test('preview coverage stays readable without leaking through frozen catalog spr
  }finally{data.hydrateSource('bls',original);}
 });
 
-test('ordinary Overview, catalog, frozen packages and publication routes request no full source',async()=>{
+test('Overview loads BEA chart history while catalog, frozen packages and publication routes remain preview-only',async()=>{
  const {requiredSourceIds}=await import('../src/source-controller.js');
- for(const route of ['#/overview','#/explore','#/calendar','#/research?view=packages','#/research?view=publications']){
+ assert.deepEqual(requiredSourceIds(parseRoute('#/overview')),['bea']);
+ for(const route of ['#/explore','#/calendar','#/research?view=packages','#/research?view=publications']){
   assert.deepEqual(requiredSourceIds(parseRoute(route)),[],route);
  }
  assert.deepEqual(requiredSourceIds(parseRoute('#/series/unrate?window=all')),['bls']);

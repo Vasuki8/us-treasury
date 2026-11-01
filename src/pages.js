@@ -32,7 +32,7 @@ const refinancing=state=>refinancingPage(state);
 
 function sourceLoadingPage(state,sourceState){
   const labels={
-    indicator:getSeries(state.seriesId)?.name,explore:'Explore Data',watchlist:'Watchlist',macroCoverage:'Economy',labor:'Labor Market',
+    overview:'U.S. economy',indicator:getSeries(state.seriesId)?.name,explore:'Explore Data',watchlist:'Watchlist',macroCoverage:'Economy',labor:'Labor Market',
     fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Rates & curves',auctions:'Auction demand',ownership:'Debt ownership',
     macro:'GDP contributions',market:'Market functioning',credit:'Credit & banking',research:'Saved research',
   };

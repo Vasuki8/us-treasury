@@ -5,6 +5,7 @@ import {auctionAllocations,benchmarkAuction,auctionResultState,auctionResultCove
 import {csvCell} from './model.js';
 import {formatDisplayValue} from './display-format.js';
 import {canonicalJson} from './research-workspaces.js';
+import {deskReadings,deskContext} from './stitch-desk.js';
 import {heading,button,panel,table,chart,emptyState,escapeHtml as esc} from './ui.js';
 
 const types=['All','Bill','Note','Bond','FRN','TIPS'];
@@ -98,15 +99,32 @@ export function auctionsPage(state={},source=dataStatus.sources.auctions){
   } incomplete results · ${coverage.counts.announced} announced. ${esc(status(source))} · retrieved ${esc(source?.fetchedAt
   ??'No successful capture')} · coverage ${esc(source?.coverageStart??'unknown')} through ${esc(source?.coverageEnd??'unknown')}. ${source
   ?.error?`<span class="amber">${esc(source.error)}</span>`:''}</p></div>`);
-  return (source?.error?`<p class="panel-note amber">${esc(source.error)}</p>`:'')+heading('AUCTION DEMAND',
+  const allocation=selected?auctionAllocations(selected):{};
+  const benchmark=selected?benchmarkAuction(source,selected.id):null;
+  const rateLabel=selected?.securityType==='Bill'?'Bill high discount rate':selected?.securityType==='FRN'?'FRN high discount margin':selected?.securityType==='TIPS'?'TIPS real high yield':'Nominal high yield';
+  const resultRate=selected?.securityType==='Bill'?selected?.highDiscountRate:selected?.securityType==='FRN'?selected?.highDiscountMargin:selected?.highYield;
+  const selectedBasis=selected?`${humanDate(selected.auctionDate)} · ${selected.securityTerm} · ${selectedState.label}`:'No selected result';
+  const readings=deskReadings('Selected auction readings',[
+    {label:rateLabel,value:rate(resultRate),change:'Official reported result',basis:selectedBasis},
+    {label:'Bid-to-cover',value:finite(selected?.bidToCover)?`${number(selected.bidToCover)}×`:'Unavailable',change:`Prior matching median ${finite(benchmark?.metrics.bidToCover.median)?`${number(benchmark.metrics.bidToCover.median)}×`:'unavailable'}`,basis:selectedBasis},
+    {label:'Indirect award',value:percent(allocation.indirectShare),change:'Share of competitive accepted',basis:selectedBasis},
+    {label:'Dealer absorption',value:percent(allocation.primaryDealerShare),change:'Share of competitive accepted',basis:selectedBasis},
+  ]);
+  const pillars=deskContext('Auction evidence & coverage',[
+    {kicker:'Pillar I · pricing coverage',title:'When-issued pricing',value:'Not covered',note:'A reliable, licensed, timestamp-matched when-issued quote is not retained. Auction tails, stop-throughs and pre-auction concessions remain unavailable.'},
+    {kicker:'Pillar II · allotment basis',title:'Competitive bidder composition',value:allocation.status??'Unavailable',note:'Indirect bidders are not a foreign-investor category. Direct and indirect bidders can be domestic or foreign; SOMA and noncompetitive awards are separate.'},
+    {kicker:'Pillar III · comparison',title:'Prior matching auctions',value:`${benchmark?.sampleSize??0} retained peers`,note:'Comparisons match the stated security class, original term, new issue or reopening and cash-management status. Medians describe context without assigning a demand or stress score.'},
+  ]);
+  return '<div class="stitch-desk stitch-auction-desk">'+(source?.error?`<p class="panel-note amber">${esc(source.error)}</p>`:'')+heading('AUCTION DEMAND',
   'Official auction facts · calculated bidder shares · matched historical comparisons',button('CSV AUCTIONS','data-export-auctions')
   +button('CSV MATCHED BENCHMARK','data-export-auction-benchmark'))
-    +readingGroup('Selected auction comparison',controls
-    +`<div class="grid g11 workspace-analysis" id="auction-selected-result" tabindex="-1">${panel('01','SELECTED AUCTION',details)}${panel('02','PRIOR MATCHING RESULTS',selected?benchmarkTable(source,selected):emptyState('Matching benchmark unavailable.'))}</div>`
+    +readingGroup('Selected auction comparison',controls+readings
+    +`<div class="grid g21 stitch-chart-context workspace-analysis" id="auction-selected-result" tabindex="-1">${panel('00','RETAINED AUCTION SUPPLY HISTORY',source?.series?.auctionOfferingMonthly?chart(['auctionOfferingMonthly'],{height:260,legend:true,endLabels:true}):emptyState('Monthly offering totals unavailable.'),'','All security types, independent of the selected result and history filter. USD billions of gross face offerings, including rollovers. Current and awaiting-result months are partial; not net borrowing or cash proceeds.')}${panel('01','SELECTED AUCTION',details)}</div>`
+    +pillars+panel('02','PRIOR MATCHING RESULTS',selected?benchmarkTable(source,selected):emptyState('Matching benchmark unavailable.'))
     +panel('03','WHAT CONTRIBUTED — COMPETITIVE AWARD COMPOSITION',selected?allocationTable(selected):emptyState('Award composition unavailable.'),'','Bidder composition describes who submitted accepted competitive bids. It does not establish why auction demand changed.'),'Auction dates are Eastern dates, separate from announcement, issue and maturity dates. Result release timestamps are unknown; capture time is not publication time.')
     +panel('04','AUCTION HISTORY',`<div id="auction-history" tabindex="-1">${selectionSummary}${pager}${history}</div>`)
     +supportingDetails('auctions:monthly-activity','Gross monthly offering activity',panel('05','GROSS MONTHLY OFFERING ACTIVITY',source?.series?.auctionOfferingMonthly?chart(['auctionOfferingMonthly'],{height:190}):emptyState('Monthly offering totals unavailable.'),'','All security types, independent of the history filter. USD billions of face amounts for records with reported results, including rollovers. Current and awaiting-result months are partial; these are not net borrowing or cash proceeds.'))
-    +supportingDetails('auctions:methods','About this data',collection+panel('06','WHY IT MATTERS & LIMITATIONS',
+    +'<div class="stitch-methods">'+supportingDetails('auctions:methods','About this data',collection+panel('06','WHY IT MATTERS & LIMITATIONS',
   (`<div class="explain"><p><strong>WHY IT MATTERS.</strong> Bid-to-cover describes bids `+
   `relative to awards under the agency definition; allocation shares show competitive award `+
   `composition. Comparable prior auctions provide context, without proving a cause or `+
@@ -118,7 +136,7 @@ export function auctionsPage(state={},source=dataStatus.sources.auctions){
   `Retrieval dates do not establish when a result first became public.</p><p>${esc(source?.coverageNote
   ??'No verified Treasury auction capture is available.')}</p><p>${externalLink
   ('https://fiscaldata.treasury.gov/datasets/treasury-securities-auctions-data/','Treasury Fiscal Data, Bureau of the Fiscal Service')} · ${
-  externalLink('https://www.treasurydirect.gov/help-center/faqs/auction-faqs/','TreasuryDirect bidder definitions')}</p></div>`)));
+  externalLink('https://www.treasurydirect.gov/help-center/faqs/auction-faqs/','TreasuryDirect bidder definitions')}</p></div>`)))+'</div></div>';
 }
 
 export const MAX_GENERATED_AUCTIONS_CSV_BYTES=32*1024*1024;

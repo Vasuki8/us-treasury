@@ -38,7 +38,9 @@ test('market compact readings use billions, three significant figures and intege
   const original=JSON.stringify(data),csv=ui().marketFunctioningCsv(data);
   const html=ui().marketFunctioningPage(data);
   const headlines=[...html.matchAll(/class="metric-value">([^<]+)</g)].map(match=>match[1]);
-  assert.deepEqual(headlines,['−$445B','$121B','$137B','0.0887%','3.88%','−13 bp']);
+  const daily=[...html.matchAll(/class="stitch-kpi-value">([^<]+)</g)].map(match=>match[1]);
+  assert.deepEqual(daily,['0.0887%','3.88%','−13 bp','Unavailable']);
+  assert.deepEqual(headlines,['−$445B','$121B','$137B']);
   assert.ok(html.includes('<td class="num">−$444.683B</td>'));
   assert.ok(html.includes('<td class="num">-12.7 bp</td>'));
   assert.equal(ui().marketFunctioningCsv(data),csv);

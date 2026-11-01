@@ -23,6 +23,7 @@ import {createSourceController,requiredSourceIds} from './source-controller.js';
 import {revealedCalendarState} from './calendar-scope.js';
 import { filterSeries, getSeries, latest, toCsv,periodLabel } from './model.js';
 import {formatDisplayValue,formatDisplayChange} from './display-format.js';
+import {normalizeDashboardChartSettings,pceHorizonChartCatalog} from './dashboard-chart-data.js';
 import {fiscalFinancingCsv} from './research-exports.js';
 import {refinancingCsv} from './refinancing-page.js';
 import {yieldCurvesCsv} from './yields-page.js';
@@ -81,7 +82,7 @@ mountCompactNavigation(document.querySelector('.functionbar'));
 let storage;
 try { storage = window.localStorage; } catch { /* Session remains usable without persistence. */ }
 let state = { ...parseRoute(location.hash), ...readPreferences(storage) };
-const freshnessController=mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus,{getOptions:()=>({compact:true,relevantIds:relevantRefreshIds(state,series)})});
+const freshnessController=mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus,{warningContainer:document.getElementById('view-source-warnings'),getOptions:()=>({compact:true,relevantIds:relevantRefreshIds(state,series)})});
 const researchLibrary=await createResearchLibrary(storage);
 let changeCheckpoint=readChangeCheckpoint(storage,dataStatus.generatedAt),changeState={status:'idle',ids:[],history:null,error:null},changeKey='',activeWorkspaceId=null,researchLabel='',pinBusy=false;
 let changeRowsCache=null;
@@ -133,7 +134,7 @@ function applyAppearance() {
   root.dataset.theme=state.theme;
   root.dataset.density=state.density;
   document.documentElement.dataset.theme=state.theme;
-  document.querySelector('meta[name="theme-color"]').content=state.theme==='Graphite'?'#17181e':'#f5f5f4';
+  document.querySelector('meta[name="theme-color"]').content=state.theme==='Graphite'?'#131517':'#f9f9f8';
   const dark=state.theme==='Graphite',themeButton=document.getElementById('theme-toggle');
   themeButton.querySelector('[data-theme-label]').textContent=dark?'Dark':'Light';
   themeButton.querySelector('[data-theme-sun]').hidden=dark;
@@ -142,6 +143,7 @@ function applyAppearance() {
   themeButton.setAttribute('title',`Switch to ${dark?'Light':'Dark'} theme`);
   document.getElementById('density-select').value=state.density;
   const mobileDensity=document.getElementById('density-select-mobile');if(mobileDensity)mobileDensity.value=state.density;
+  for(const button of document.querySelectorAll('[data-display-density]'))button.setAttribute('aria-pressed',String(button.dataset.displayDensity===state.density));
 }
 
 function toggleTheme() {
@@ -237,6 +239,7 @@ function renderCurrentChartsIn(container,inspection){
   for(const evidence of Object.values(pkg.context.economicEvidence??{}))Object.assign(chartCatalogs,economicEvidenceChartCatalog(evidence.source,{frozen:true}));
   if(pkg.context.pceBaseEffects){const value=pkg.context.pceBaseEffects;Object.assign(chartCatalogs,pceBaseEffectsChartCatalog(value.indexSeries,value.model.assumptions,{frozen:true}));}
  }else{
+  if(state.page==='overview')Object.assign(chartCatalogs,pceHorizonChartCatalog());
   if(state.page==='labor'||state.page==='macroCoverage'&&state.macroFamily==='labor')Object.assign(chartCatalogs,economicEvidenceChartCatalog(dataStatus.sources.laborEvidence));
   if(state.page==='macroCoverage'&&state.macroFamily==='prices')Object.assign(chartCatalogs,economicEvidenceChartCatalog(dataStatus.sources.pcePriceContributions),pceBaseEffectsChartCatalog(getSeries(state.pceBaseIndex),pceScenarioOptions(state)));
  }
@@ -253,6 +256,15 @@ function researchActions(){
 }
 
 const workspacePreviews={overview:'gdp',explore:null};
+let overviewChartSettings=normalizeDashboardChartSettings();
+let workspacePreviewRequest=0;
+async function chooseWorkspacePreview(id){
+ const request=++workspacePreviewRequest,page=state.page,route=location.hash;
+ try{if(page==='overview')await ensureSourceAction(requiredSourceIds(state,{ids:[id]}));}
+ catch(error){if(request===workspacePreviewRequest&&state.page===page&&location.hash===route)announce(`Chart history unavailable: ${error.message}`);return false;}
+ if(request!==workspacePreviewRequest||state.page!==page||location.hash!==route)return false;
+ workspacePreviews[page]=id;render({preserveFocus:true});return true;
+}
 document.getElementById('workspace-topics').innerHTML=workspaceNavigation();
 
 function render({focusHeading=false,preserveFocus=false,captureDrafts=true}={}) {
@@ -278,9 +290,9 @@ function render({focusHeading=false,preserveFocus=false,captureDrafts=true}={}) 
     ...historyController.context(state),sourceState:sourceController.context(state),library:researchLibrary.getState(),
     questionDrafts:questionDrafts.snapshot(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationContexts,
     publicationArchive,publicationState,publicationExplanations,explanationState,
-    workspacePreview:workspacePreviews[state.page],
+    workspacePreview:workspacePreviews[state.page],overviewChartSettings,
   });
-  main.querySelector('.page-heading .actions')?.insertAdjacentHTML('beforeend',researchActions());
+  (main.querySelector('[data-research-actions]')??main.querySelector('.page-heading .actions'))?.insertAdjacentHTML('beforeend',researchActions());
   document.getElementById('workspace-page-label').textContent=main.querySelector('h1')?.textContent??pageNames[state.page];
   if(externalControlsOpen&&main.querySelector('#external-history-controls'))main.querySelector('#external-history-controls').open=true;
   researchDisclosures.restore(main);
@@ -460,6 +472,7 @@ async function handleResearchAction(d){
     if('pinGdpMatrix' in d&&state.publicationSeries!=='gdp')throw new Error('The revision matrix requires GDP publication evidence.');
     if('pinResult' in d&&state.page!=='release'){const draft=saveDrafts.get(researchSaveScope(state),{selected:state.freezeSelection??freezeCandidates(state).slice(0,4)});state.freezeSelection=[...draft.selected];}
     const pinState={...state,...(state.freezeSelection?{freezeSelection:[...state.freezeSelection]}:{})};
+    const pinChartSettings={...overviewChartSettings},pinChartPreview=workspacePreviews.overview;
     const claims=claimsPublicationIds.includes(pinState.publicationSeries),cpi=cpiPublicationIds.includes(pinState.publicationSeries);
     let args,name=document.getElementById('research-name')?.value??'';
     const initiatingScope=researchSaveScope(state),initiatingFocus=rememberStableFocus(main,{document});
@@ -486,7 +499,7 @@ async function handleResearchAction(d){
       }else{
         await ensureSourceAction(requiredSourceIds(pinState,{purpose:'freeze'}));
         args=buildPinContext(pinState,{
-          ...historyController.context(pinState),changes:changesContext(),checkpoint:changeCheckpoint,failures:trackedFailures(),
+          ...historyController.context(pinState),changes:changesContext(),checkpoint:changeCheckpoint,failures:trackedFailures(),overviewChartSettings:pinChartSettings,overviewPreview:pinChartPreview,
           publicationContexts:{
             gdp:publicationController.context('gdp'),claims:publicationController.context('claimsAdvance'),
             cpi:publicationController.context('cpiMonthly'),
@@ -550,14 +563,41 @@ root.addEventListener('click',async event=>{
   const d=button.dataset;
   if(button.disabled)return;
   if(button.id==='theme-toggle'){toggleTheme();return;}
+  if('displayDensity' in d){
+    if(!['comfortable','compact'].includes(d.displayDensity))return;
+    state.density=d.displayDensity;
+    const durable=persist();render({preserveFocus:true});
+    announce(durable?'Appearance saved in this browser.':'Appearance changed for this session; browser storage is unavailable.');return;
+  }
+  if('overviewFollow' in d||'overviewExport' in d){
+    if(state.page!=='overview')return;
+    const ids=['gdp','pceCore','unrate','yield','payroll','policyTargetUpper','spread2s10s','interestRevenueRatio'];
+    if('overviewFollow' in d){
+      const added=ids.filter(id=>!state.saved.includes(id));
+      state.saved=[...new Set([...state.saved,...ids])];delete state.freezeSelection;
+      const durable=persist(),name=state.watchlists.find(list=>list.id===state.activeWatchlistId)?.name??'active watchlist';
+      render({preserveFocus:true});
+      announce(`${added.length?`Added ${added.length} Overview readings to ${name}.`:`All eight Overview readings are already followed in ${name}.`} ${durable?'Saved in this browser.':'Changed for this session; browser storage is unavailable.'}`);
+    }else{
+      try{await ensureSourceAction(requiredSourceIds(state,{purpose:'export',ids}));exportCsv(ids);}
+      catch(error){announce(`Export unavailable: ${error.message}`);}
+    }
+    return;
+  }
   if('previewClose' in d){
     const id=workspacePreviews.explore;workspacePreviews.explore=null;
     render({preserveFocus:true});
     (main.querySelector(`[data-workspace-preview="${id}"]`)??main.querySelector('#catalog-search'))?.focus();return;
   }
+  if('dashboardRange' in d||'dashboardFamily' in d){
+    if(state.page!=='overview')return;
+    const input='dashboardFamily' in d?{...overviewChartSettings,inflationFamily:d.dashboardFamily}:
+      ['growth','inflation'].includes(d.dashboardRange)?{...overviewChartSettings,[d.dashboardRange]:d.preset}:overviewChartSettings;
+    overviewChartSettings=normalizeDashboardChartSettings(input);
+    render({preserveFocus:true});announce('Chart display updated. Research window and comparison selection are unchanged.');return;
+  }
   if('workspacePreview' in d&&getSeries(d.workspacePreview)){
-    workspacePreviews[state.page]=d.workspacePreview;
-    render({preserveFocus:true});
+    if(!await chooseWorkspacePreview(d.workspacePreview))return;
     if(state.page==='explore'&&window.matchMedia('(max-width:1000px)').matches){
       main.querySelector('#catalog-preview')?.focus();
     }
@@ -697,7 +737,7 @@ root.addEventListener('click',async event=>{
 root.addEventListener('change',async event=>{
   const target=event.target;
   if(target.matches?.('[data-workspace-series]')&&getSeries(target.value)){
-    workspacePreviews[state.page]=target.value;render({preserveFocus:true});return;
+    await chooseWorkspacePreview(target.value);return;
   }
   if(target.dataset&&'freezeSelect' in target.dataset){
     const candidates=freezeCandidates(state),scope=researchSaveScope(state),draft=saveDrafts.get(scope,{selected:candidates.slice(0,4)}),chosen=[...(state.freezeSelection??draft.selected)],id=target.dataset.freezeSelect;

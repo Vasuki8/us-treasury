@@ -34,6 +34,7 @@ import {claimsFixture} from './helpers/claims-publications-fixture.js';
 import {createPublicationController} from '../src/publication-controller.js';
 import {requiredSourceIds} from '../src/source-controller.js';
 import {watchDisclosureCharts} from '../src/page-hierarchy.js';
+import {normalizeDashboardChartSettings,pceHorizonChartCatalog} from '../src/dashboard-chart-data.js';
 
 const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8');
 function section(start,end){
@@ -72,17 +73,18 @@ async function app(hash='#/series/gdp?window=all',{
   publicationController:{context:()=>({status:publicationStatus,archive})},state:{...parseRoute(hash),saved:[]},activeWorkspaceId:null,researchLabel:'',pinBusy:false,changeCheckpoint:{enabled:true,since:'2026-10-01T12:00:00.000Z',snapshotAt:'2026-10-01T12:00:00.000Z'},changeState:{status:'ready',history:{captures:[]}},historyController:{context:()=>({historyState:{status:'idle'}})},
   document:{getElementById:id=>{const input=inputs.get(id);if(input&&!input.focus)input.focus=()=>{};return input;}},location,history,watchDisclosureCharts,main:{contains:()=>false,querySelector:()=>null,addEventListener:(name,callback,capture)=>{assert.equal(name,'toggle');assert.equal(capture,true);listeners.set(name,callback);}},window:{addEventListener:(name,callback)=>listeners.set(name,callback)},cancelAnimationFrame(){},requestAnimationFrame(callback){callback();return 1;},render(){},rememberWorkspace(){},announce:message=>announcements.push(message),renderCharts:(root,options)=>{chartRoots.push(root);chartCalls.push(options);},downloadCsv:(content,name)=>downloads.push({content,name}),downloadJson:pkg=>downloads.push({content:exportResearchPackage(pkg),name:'json'}),changesContext:()=>({status:'ready',rows:[]}),syncChanges(){}};
  Object.assign(env,{positionResearchSave:node=>positionResearchSave(node,{innerWidth:1280,innerHeight:720}),buildCpiPublicationPin,buildGdpMatrixPin,cpiPublicationIds,cpiPublicationCsv,selectCpiPublicationHistory,gdpRevisionMatrixCsv,buildCoverageInventory,coverageInventoryCsv,fundingChartCatalog,researchPackageAttachment});
- Object.assign(env,{requiredSourceIds,sourceController,actionFeedback(){}});
+ Object.assign(env,{requiredSourceIds,sourceController,actionFeedback(){},overviewChartSettings:normalizeDashboardChartSettings(),workspacePreviewRequest:0,workspacePreviews:{overview:'gdp',explore:null},pceHorizonChartCatalog,normalizeDashboardChartSettings});
  if(sourceController)env.dataStatus={...dataStatus,sourceArchive:{version:1,sources:{}}};
  const change=/root\.addEventListener\('change',async event=>\{([^]*?)\n\}\);/.exec(source);assert.ok(change,'App change delegation must exist');
  env.entryWindow=entryWindow;
  const code=`let {${Object.keys(env).join(',')}}=env;\n`
   +section('function trackedChanges()','function syncPublications(')
   +section('function currentPackage()','function researchActions()')
+  +section('async function chooseWorkspacePreview(',"document.getElementById('workspace-topics')")
   +section('function navigate(',"window.addEventListener('hashchange'")
   +section('function applyPceAssumptions(',"root.addEventListener('click'")
   +section('let resizeFrame;','\nrender();')
-  +`;return {handleResearchAction,applyPceAssumptions,changeHandler:async event=>{${change[1]}},navigate,state:()=>state,workspaceId:()=>activeWorkspaceId,checkpoint:()=>changeCheckpoint};`;
+  +`;return {handleResearchAction,applyPceAssumptions,changeHandler:async event=>{${change[1]}},navigate,state:()=>state,workspaceId:()=>activeWorkspaceId,checkpoint:()=>changeCheckpoint,chartPreview:()=>workspacePreviews.overview,chartSettings:()=>overviewChartSettings,previewState:()=>workspacePreviews};`;
  const handlers=new Function('env',code)(env);
  return {...handlers,questionDrafts,saveDrafts,researchLibrary,values,inputs,downloads,chartCalls,chartRoots,listeners,announcements,location};
 }
@@ -290,6 +292,31 @@ test('Freeze waits for full source inputs and retains its initiating measurement
  const pkg=current.researchLibrary.getPackage(current.state().packageId);
  assert.deepEqual(pkg.request.ids,['gdp']);
  assert.equal(pkg.catalog.gdp.observations.length,series.gdp.observations.length);
+});
+
+test('the latest requested Overview chart wins when full histories finish out of order',async()=>{
+ const pending=[];
+ const sourceController={ensure:ids=>new Promise(resolve=>pending.push({ids,resolve}))};
+ const current=await app('#/overview?selected=unrate',{sourceController});
+ const select=value=>current.changeHandler({target:{matches:selector=>selector==='[data-workspace-series]',value}});
+ const earlier=select('payroll'),later=select('yield');
+ assert.deepEqual(pending.map(item=>item.ids),[['bls'],['treasury']]);
+ pending[1].resolve();await later;assert.equal(current.chartPreview(),'yield');
+ pending[0].resolve();await earlier;assert.equal(current.chartPreview(),'yield');
+ assert.deepEqual(current.state().selected,['unrate']);
+});
+
+test('Overview Freeze captures the chart family, range and preview requested before history loading',async()=>{
+ let finish;
+ const sourceController={ensure:()=>new Promise(resolve=>{finish=resolve;})};
+ const current=await app('#/overview',{sourceController});
+ const pending=current.handleResearchAction({pinResult:''});await Promise.resolve();
+ current.chartSettings().inflationFamily='headline';current.chartSettings().growth='all';current.previewState().overview='payroll';
+ finish();await pending;
+ const charts=current.researchLibrary.getPackage(current.state().packageId).context.overviewComparisonCharts;
+ assert.equal(charts[0].preset,'2y');
+ assert.deepEqual(charts[0].series.map(s=>s.id),['gdp','privateDomesticDemandGrowth']);
+ assert.equal(charts[1].family,'core');
 });
 
 test('Freeze cannot save evidence from another route when source loading finishes late',async()=>{

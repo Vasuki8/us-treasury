@@ -10,7 +10,7 @@ function themeControl(storage){
   const label={textContent:''},sun={hidden:false},moon={hidden:true},attributes=new Map();
   const button={id:'theme-toggle',dataset:{},disabled:false,setAttribute:(name,value)=>attributes.set(name,value),querySelector:selector=>({'[data-theme-label]':label,'[data-theme-sun]':sun,'[data-theme-moon]':moon}[selector])};
   const root={dataset:{}},meta={content:''},density={value:''},notices=[];
-  const document={documentElement:{dataset:{}},activeElement:button,querySelector:()=>meta,getElementById:id=>id==='theme-toggle'?button:id==='density-select'?density:null};
+  const document={documentElement:{dataset:{}},activeElement:button,querySelector:()=>meta,querySelectorAll:()=>[],getElementById:id=>id==='theme-toggle'?button:id==='density-select'?density:null};
   const start=application.indexOf('function persist()'),end=application.indexOf('function rememberFocus()',start);
   assert.ok(start>=0&&end>start,'Theme helpers must remain independently usable');
   const click=/root\.addEventListener\('click',async event=>\{([^]*?)\n\}\);/.exec(application);assert.ok(click,'Native button click dispatch must exist');
@@ -145,11 +145,11 @@ test('the actual theme button switches icons, current text and accessible action
   assert.equal(view.state().theme,'Graphite');assert.equal(view.label.textContent,'Dark');
   assert.equal(view.sun.hidden,true);assert.equal(view.moon.hidden,false);
   assert.equal(view.attributes.get('aria-label'),'Dark theme. Switch to Light theme.');
-  assert.equal(view.root.dataset.theme,'Graphite');assert.equal(view.document.documentElement.dataset.theme,'Graphite');assert.equal(view.meta.content,'#17181e');
+  assert.equal(view.root.dataset.theme,'Graphite');assert.equal(view.document.documentElement.dataset.theme,'Graphite');assert.equal(view.meta.content,'#131517');
   assert.equal(view.document.activeElement,view.button);assert.equal(readPreferences(storage).theme,'Graphite');assert.match(view.notices.at(-1),/Dark theme enabled.*Saved in this browser/);
   await view.click({target:{closest:()=>view.button}});
   assert.equal(view.state().theme,'Light');assert.equal(view.label.textContent,'Light');assert.equal(view.sun.hidden,false);assert.equal(view.moon.hidden,true);
-  assert.equal(view.meta.content,'#f5f5f4');assert.equal(readPreferences(storage).theme,'Light');assert.equal(view.document.activeElement,view.button);
+  assert.equal(view.meta.content,'#f9f9f8');assert.equal(readPreferences(storage).theme,'Light');assert.equal(view.document.activeElement,view.button);
 });
 
 test('legacy dark preferences restore the moon control and unavailable persistence remains session-only',async()=>{
