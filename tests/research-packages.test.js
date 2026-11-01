@@ -3,6 +3,7 @@ import {series as liveSeries}from'../src/data.js';
 import {compareSeries,toCsv}from'../src/model.js';
 import {createHash}from'node:crypto';
 import {canonicalJson}from'../src/research-workspaces.js';
+import {researchPage}from'../src/research-page.js';
 let api;try{api=await import('../src/research-packages.js');}catch(error){if(error.code!=='ERR_MODULE_NOT_FOUND'||!error.message.includes('research-packages.js'))throw error;}
 const use=()=>{assert.ok(api,'Frozen research packages must exist');return api;};
 const now='2026-10-22T15:00:00.000Z';
@@ -71,6 +72,46 @@ async function rehashed(change){
  plain.checksum={algorithm:'SHA-256',value:createHash('sha256').update(canonicalJson(plain)).digest('hex')};
  return JSON.stringify(plain);
 }
+
+test('imports reject checksummed string footnotes even when the displayed panels and CSV match',async()=>{
+ const text=await rehashed(value=>{
+  const footnotes='Retained source note';
+  value.catalog.removedMeasure.observations[1].footnotes=footnotes;
+  value.panels[0].observations[0].footnotes=footnotes;
+  const {ids,transform,comparison,range}=value.request;
+  value.csv=toCsv(ids,{catalog:value.catalog,transform,comparison,range});
+ });
+ await assert.rejects(use().importResearchPackage(text),/footnotes.*array.*text/i);
+});
+
+test('imports validate footnotes on retained observations outside the displayed window',async t=>{
+ for(const footnotes of ['',null,1,true,{},['note',1],[null],[{}],[true],[[]]]){
+  await t.test(JSON.stringify(footnotes),async()=>{
+   const text=await rehashed(value=>{value.catalog.removedMeasure.observations[0].footnotes=footnotes;});
+   await assert.rejects(use().importResearchPackage(text),/footnotes.*array.*text/i);
+  });
+ }
+});
+
+test('omitted and valid string-array footnotes retain frozen rendering and exact exports',async()=>{
+ for(const footnotes of [undefined,[],['Retained <note>','Second note']]){
+  const captured=catalog();
+  if(footnotes!==undefined)captured.removedMeasure.observations[1].footnotes=footnotes;
+  const pkg=await create({catalog:captured}),text=use().exportResearchPackage(pkg);
+  const restored=await use().importResearchPackage(text);
+  assert.equal(use().exportResearchPackage(restored),text);
+  assert.equal(use().researchPackageCsv(restored),pkg.csv);
+  const row=restored.catalog.removedMeasure.observations[1];
+  if(footnotes===undefined)assert.equal(Object.hasOwn(row,'footnotes'),false);
+  else assert.deepEqual(row.footnotes,footnotes);
+  const html=researchPage({researchView:'packages',packageId:restored.id},{library:{packages:[restored]}});
+  assert.match(html,/READ-ONLY/);
+  if(footnotes?.length){
+   assert.match(html,/Retained &lt;note&gt;; Second note/);
+   assert.ok(pkg.csv.includes('Retained <note>; Second note'));
+  }
+ }
+});
 
 test('a valid checksum cannot admit altered panels, unchecked CSV or unsupported measurement requests',async()=>{
  for(const change of [

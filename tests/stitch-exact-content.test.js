@@ -6,13 +6,12 @@ import {series} from '../src/data.js';
 import {parseRoute} from '../src/router.js';
 
 const state=hash=>({...parseRoute(hash),saved:[]});
-const stats=html=>html.match(/<section class="indicator-snapshot"[^]*?<\/section>/)?.[0]??'';
+const stats=html=>html.match(/<details class="indicator-reading-context"[^]*?<\/details>/)?.[0]??'';
 
-test('Labor follows the retained Stitch section order with three guide tiles, four headlines and the full catalog',()=>{
+test('Labor combines its guide and four headlines before the full retained research sections',()=>{
  const html=laborPage(state('#/economy/labor'));
- const guide=html.slice(html.indexOf('class="brief-takeaways"'),html.indexOf('aria-label="Latest headline indicators"'));
  const headlines=html.slice(html.indexOf('aria-label="Latest headline indicators"'),html.indexOf('class="labor-revision-context"'));
- assert.equal((guide.match(/<article>/g)??[]).length,3);
+ assert.doesNotMatch(html,/labor-reading-guide/);
  assert.equal((headlines.match(/class="labor-metric"/g)??[]).length,4);
  assert.doesNotMatch(headlines,/<svg|labor-spark/);
  assert.equal((html.match(/data-series-row=/g)??[]).length,23);
@@ -24,11 +23,14 @@ test('Labor follows the retained Stitch section order with three guide tiles, fo
  assert.doesNotMatch(html,/90% CI|119,000 businesses|629,000 worksites|ISO-8601 DATA|62\.8% of sampled/);
 });
 
-test('all eight reference indicator families retain four reading slots, wide chart contracts and visible lineage',()=>{
+test('all eight reference indicator families lead with the selected reading and retain four context slots below history',()=>{
  for(const id of ['payroll','unrate','wages','eciCompensationQuarterly','laborProductivity','unitLaborCosts','cpi','pce']){
   const html=indicatorPage(state(`#/series/${id}?window=3y`));
   assert.equal((stats(html).match(/class="indicator-stat(?: |")/g)??[]).length,4,id);
-  const order=['indicator-stat-grid','indicator-provenance-bar','class="indicator-chart"','indicator-context-grid','Indicator detail sections','indicator-related-grid','indicator-method-grid'];
+  const selected=html.match(/<section class="indicator-snapshot"[^]*?<\/section>/)?.[0]??'';
+  assert.equal((selected.match(/<article class="indicator-stat(?: |")/g)??[]).length,1,id);
+  assert.match(selected,new RegExp(`data-stat-series="${id}"`));
+  const order=['indicator-selected-reading','indicator-provenance-bar','class="indicator-chart"','indicator-stat-grid','indicator-context-grid','Indicator detail sections','indicator-related-grid','indicator-method-grid'];
   for(let i=1;i<order.length;i++)assert.ok(html.indexOf(order[i])>html.indexOf(order[i-1]),`${id}: ${order[i]}`);
   for(const marker of ['data-save="'+id+'"','data-add-compare="'+id+'"','data-export','data-legend="true"','data-end-labels="true"'])assert.ok(html.includes(marker),`${id}: ${marker}`);
   assert.doesNotMatch(html,/api\.meridian|meridian-macro|Verified Ingestion|ISO-8601|90% CI|Response Time|Latency:/);

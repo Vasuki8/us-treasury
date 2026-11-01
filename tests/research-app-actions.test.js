@@ -74,6 +74,7 @@ async function app(hash='#/series/gdp?window=all',{
   document:{getElementById:id=>{const input=inputs.get(id);if(input&&!input.focus)input.focus=()=>{};return input;}},location,history,watchDisclosureCharts,main:{contains:()=>false,querySelector:()=>null,addEventListener:(name,callback,capture)=>{assert.equal(name,'toggle');assert.equal(capture,true);listeners.set(name,callback);}},window:{addEventListener:(name,callback)=>listeners.set(name,callback)},cancelAnimationFrame(){},requestAnimationFrame(callback){callback();return 1;},render(){},rememberWorkspace(){},announce:message=>announcements.push(message),renderCharts:(root,options)=>{chartRoots.push(root);chartCalls.push(options);},downloadCsv:(content,name)=>downloads.push({content,name}),downloadJson:pkg=>downloads.push({content:exportResearchPackage(pkg),name:'json'}),changesContext:()=>({status:'ready',rows:[]}),syncChanges(){}};
  Object.assign(env,{positionResearchSave:node=>positionResearchSave(node,{innerWidth:1280,innerHeight:720}),buildCpiPublicationPin,buildGdpMatrixPin,cpiPublicationIds,cpiPublicationCsv,selectCpiPublicationHistory,gdpRevisionMatrixCsv,buildCoverageInventory,coverageInventoryCsv,fundingChartCatalog,researchPackageAttachment});
  Object.assign(env,{requiredSourceIds,sourceController,actionFeedback(){},overviewChartSettings:normalizeDashboardChartSettings(),workspacePreviewRequest:0,workspacePreviews:{overview:'gdp',explore:null},pceHorizonChartCatalog,normalizeDashboardChartSettings});
+ env.workspaceActivation=0;
  if(sourceController)env.dataStatus={...dataStatus,sourceArchive:{version:1,sources:{}}};
  const change=/root\.addEventListener\('change',async event=>\{([^]*?)\n\}\);/.exec(source);assert.ok(change,'App change delegation must exist');
  env.entryWindow=entryWindow;
@@ -163,6 +164,47 @@ test('actual workspace actions update one saved identity and reopen its renamed 
  await current.handleResearchAction({saveWorkspace:''});assert.equal(current.researchLibrary.listWorkspaces().length,1);assert.equal(current.researchLibrary.getWorkspace(id).state.endDate,'2026-06-30');
  current.inputs.set(`workspace-label-${id}`,{value:'Renamed handler study'});await current.handleResearchAction({renameWorkspace:id});
  await current.handleResearchAction({openWorkspace:id});assert.equal(current.researchLibrary.getWorkspace(id).name,'Renamed handler study');assert.equal(current.state().page,'indicator');assert.equal(current.state().endDate,'2026-06-30');assert.equal(current.workspaceId(),id);
+});
+
+function delayFirstWorkspaceSave(library){
+ const save=library.saveWorkspace.bind(library);let finish;
+ library.saveWorkspace=record=>{library.saveWorkspace=save;return new Promise(resolve=>{finish=resolve;}).then(()=>save(record));};
+ return ()=>finish();
+}
+
+test('a late saved-view update preserves a subsequently opened view and its next update target',async()=>{
+ const current=await app('#/series/gdp');
+ for(const [id,name,seriesId]of [['view-a','View A','gdp'],['view-b','View B','cpi']])await current.researchLibrary.saveWorkspace(createWorkspace({id,name,state:{...current.state(),seriesId}}));
+ await current.handleResearchAction({openWorkspace:'view-a'});current.inputs.get('research-name').value='View A';
+ const finish=delayFirstWorkspaceSave(current.researchLibrary),pending=current.handleResearchAction({saveWorkspace:''});
+ await current.handleResearchAction({openWorkspace:'view-b'});current.inputs.get('research-name').value='View B';
+ const scope=researchSaveScope(current.state());current.saveDrafts.get(scope,{name:'View B'});
+ finish();await pending;
+ assert.equal(current.workspaceId(),'view-b');assert.equal(current.state().seriesId,'cpi');assert.equal(current.saveDrafts.get(scope).name,'View B');
+ await current.handleResearchAction({saveWorkspace:''});
+ assert.equal(current.researchLibrary.getWorkspace('view-a').name,'View A');assert.equal(current.researchLibrary.getWorkspace('view-a').state.seriesId,'gdp');
+ assert.equal(current.researchLibrary.getWorkspace('view-b').state.seriesId,'cpi');
+});
+
+test('clearing or reopening the same saved view supersedes its pending save activation',async()=>{
+ for(const action of ['clear','reopen']){
+  const current=await app();await current.handleResearchAction({saveWorkspace:''});const id=current.workspaceId();
+  const finish=delayFirstWorkspaceSave(current.researchLibrary),pending=current.handleResearchAction({saveWorkspace:''});
+  await current.handleResearchAction(action==='clear'?{clearWorkspace:''}:{openWorkspace:id});
+  const scope=researchSaveScope(current.state()),draft=current.saveDrafts.get(scope,{name:'New unsaved draft'});
+  finish();await pending;
+  assert.equal(current.workspaceId(),action==='clear'?null:id);assert.equal(current.saveDrafts.get(scope),draft);
+  assert.equal(draft.name,'New unsaved draft');assert.equal(draft.feedback,null);
+ }
+});
+
+test('a newer save activation wins when an older new-view save completes last',async()=>{
+ const current=await app(),finish=delayFirstWorkspaceSave(current.researchLibrary),pending=current.handleResearchAction({saveWorkspace:''});
+ await current.handleResearchAction({clearWorkspace:''});current.inputs.get('research-name').value='Newer view';
+ await current.handleResearchAction({saveWorkspace:''});const newest=current.workspaceId();
+ finish();await pending;
+ assert.equal(current.workspaceId(),newest);assert.equal(current.researchLibrary.getWorkspace(newest).name,'Newer view');
+ assert.equal(current.researchLibrary.listWorkspaces().length,2);
 });
 
 test('pin and import actions dispatch original frozen JSON, CSV and attachments without substituting live exports',async()=>{

@@ -84,6 +84,7 @@ try { storage = window.localStorage; } catch { /* Session remains usable without
 let state = { ...parseRoute(location.hash), ...readPreferences(storage) };
 const freshnessController=mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus,{warningContainer:document.getElementById('view-source-warnings'),getOptions:()=>({compact:true,relevantIds:relevantRefreshIds(state,series)})});
 const researchLibrary=await createResearchLibrary(storage);
+let workspaceActivation=0;
 let changeCheckpoint=readChangeCheckpoint(storage,dataStatus.generatedAt),changeState={status:'idle',ids:[],history:null,error:null},changeKey='',activeWorkspaceId=null,researchLabel='',pinBusy=false;
 let changeRowsCache=null;
 let publicationArchive=null,publicationState={status:'idle',error:null};
@@ -295,6 +296,8 @@ function render({focusHeading=false,preserveFocus=false,captureDrafts=true}={}) 
   (main.querySelector('[data-research-actions]')??main.querySelector('.page-heading .actions'))?.insertAdjacentHTML('beforeend',researchActions());
   document.getElementById('workspace-page-label').textContent=main.querySelector('h1')?.textContent??pageNames[state.page];
   if(externalControlsOpen&&main.querySelector('#external-history-controls'))main.querySelector('#external-history-controls').open=true;
+  const readingContext=main.querySelector('[data-indicator-reading-context]');
+  if(readingContext)readingContext.open=window.matchMedia('(min-width:761px)').matches;
   researchDisclosures.restore(main);
   document.getElementById('ticker').hidden=true;
   freshnessController.refresh();
@@ -413,7 +416,7 @@ async function ensureSourceAction(sourceIds,{retry=false}={}){
 }
 function stored(result,label){
   if(!result.ok)throw new Error(result.reason==='duplicate-id'?'This package ID already identifies different frozen evidence.':`Research library ${result.reason??'save failed'}.`);
-  announce(`${label}${result.persisted?' saved in this browser.':' retained for this session. Export settings for Saved Views and watchlists; download JSON for Frozen Results before reloading.'}`);
+  announce(`${label}${result.persisted?' saved in this browser.':' retained for this session. Export settings for saved views and watchlists; download JSON for saved snapshots before reloading.'}`);
 }
 function showCalendarPreview(force=false){
   if(!force&&!window.matchMedia('(max-width:736px)').matches)return;
@@ -453,19 +456,25 @@ async function handleResearchAction(d){
   }else if('saveWorkspace' in d){
     const prior=researchLibrary.getWorkspace(activeWorkspaceId),name=document.getElementById('research-name').value;
     const record=createWorkspace({name,state,...(prior?{id:prior.id,now:new Date(prior.createdAt),researchQuestion:prior.researchQuestion}:{})});
-    const scope=researchSaveScope(state),draft=saveDrafts.get(scope),initiatingFocus=rememberStableFocus(main,{document});saveDrafts.update(scope,{pending:'save',feedback:null});render({preserveFocus:true});
-    try{const result=await researchLibrary.saveWorkspace(record);stored(result,'Saved view');activeWorkspaceId=record.id;researchLabel=record.name;saveDrafts.update(scope,{name:record.name,feedback:{kind:result.persisted?'success':'warning',message:result.persisted?'Saved View saved in this browser.':'Saved View is session-only. Export settings for recovery before reloading.'}});}
-    catch(error){saveDrafts.update(scope,{feedback:{kind:'error',message:error.message},open:true});throw error;}
-    finally{draft.pending=false;render({preserveFocus:true});if(researchSaveScope(state)===scope)restoreStableFocus(main,initiatingFocus,{document});}
-  }else if('clearWorkspace' in d){activeWorkspaceId=null;researchLabel='';saveDrafts.reset(researchSaveScope(state));}
+    const activation=++workspaceActivation,scope=researchSaveScope(state),draft=saveDrafts.get(scope),initiatingFocus=rememberStableFocus(main,{document});saveDrafts.update(scope,{pending:'save',feedback:null});render({preserveFocus:true});
+    try{
+      const result=await researchLibrary.saveWorkspace(record);stored(result,`Saved view “${record.name}”`);
+      if(activation===workspaceActivation){activeWorkspaceId=record.id;researchLabel=record.name;}
+      Object.assign(draft,{name:record.name,feedback:{kind:result.persisted?'success':'warning',message:result.persisted?'Saved view saved in this browser.':'Saved view is session-only. Export settings for recovery before reloading.'}});
+    }catch(error){
+      Object.assign(draft,{feedback:{kind:'error',message:error.message},open:true});
+      if(activation===workspaceActivation)throw error;
+      announce(`Saved view “${record.name}” could not be saved: ${error.message}`);
+    }finally{draft.pending=false;if(activation===workspaceActivation){render({preserveFocus:true});if(researchSaveScope(state)===scope)restoreStableFocus(main,initiatingFocus,{document});}}
+  }else if('clearWorkspace' in d){workspaceActivation++;activeWorkspaceId=null;researchLabel='';saveDrafts.reset(researchSaveScope(state));}
   else if('openWorkspace' in d){
     const record=researchLibrary.getWorkspace(d.openWorkspace);if(!record)throw new Error('Workspace unavailable.');
-    activeWorkspaceId=record.id;researchLabel=record.name;saveDrafts.reset(researchSaveScope({...state,...openWorkspace(record)}));navigate(openWorkspace(record));announce('Saved View opened against the latest snapshot. UPDATE SAVED VIEW saves configuration changes.');
+    workspaceActivation++;activeWorkspaceId=record.id;researchLabel=record.name;saveDrafts.reset(researchSaveScope({...state,...openWorkspace(record)}));navigate(openWorkspace(record));announce('Saved View opened against the latest snapshot. UPDATE SAVED VIEW saves configuration changes.');
   }else if('renameWorkspace' in d){
     const record=researchLibrary.getWorkspace(d.renameWorkspace);if(!record)throw new Error('Workspace unavailable.');
     stored(await researchLibrary.saveWorkspace({...record,name:document.getElementById(`workspace-label-${record.id}`).value.trim()}),'Renamed workspace');
-    if(activeWorkspaceId===record.id)researchLabel=researchLibrary.getWorkspace(record.id).name;
-  }else if('removeWorkspace' in d){stored(await researchLibrary.removeWorkspace(d.removeWorkspace),'Workspace removal');if(activeWorkspaceId===d.removeWorkspace){activeWorkspaceId=null;researchLabel='';}}
+    if(activeWorkspaceId===record.id){workspaceActivation++;researchLabel=researchLibrary.getWorkspace(record.id).name;}
+  }else if('removeWorkspace' in d){stored(await researchLibrary.removeWorkspace(d.removeWorkspace),'Workspace removal');if(activeWorkspaceId===d.removeWorkspace){workspaceActivation++;activeWorkspaceId=null;researchLabel='';}}
   else if('pinResult' in d||'pinPublication' in d||'pinGdpMatrix' in d){
     if(pinBusy)return;
     if(('pinPublication' in d||'pinGdpMatrix' in d)&&publicationState.status!=='ready')throw new Error('Load the selected official publication archive before pinning.');
@@ -666,7 +675,10 @@ root.addEventListener('click',async event=>{
   else if('page' in d && pageNames[d.page])navigate({page:d.page});
   else if('compare' in d)navigate({page:'explore',selected:[...new Set(d.compare.split(',').filter(id=>getSeries(id)))].slice(0,4),exploreMode:'compare',comparison:'native',returnTo:['overview','macroCoverage','labor','fiscal','refinancing','yields','auctions','ownership','macro','vintages','market','credit','calendar'].includes(state.page)?routeFor(state):state.returnTo});
   else if('laborGroup' in d&&['all','jobs','people','pay','claims'].includes(d.laborGroup))navigate({laborGroup:d.laborGroup},{replace:true});
-  else if('laborSection' in d&&['labor-analysis','labor-weekly','labor-trends','labor-readings','labor-notes'].includes(d.laborSection))document.getElementById(d.laborSection)?.scrollIntoView({block:'start'});
+  else if('laborSection' in d&&['labor-analysis','labor-weekly','labor-trends','labor-readings','labor-notes'].includes(d.laborSection)){
+    const destination=document.getElementById(d.laborSection);
+    if(destination){const heading=destination.querySelector('h2')??destination;heading.tabIndex=-1;heading.focus({preventScroll:true});destination.scrollIntoView({block:'start'});}
+  }
   else if('calendarPreview' in d)showCalendarPreview(true);
   else if('event' in d){
     const selected=releases.find(release=>release.id===d.event);

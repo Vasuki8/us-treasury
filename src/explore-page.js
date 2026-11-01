@@ -84,7 +84,8 @@ function catalogRow({primary:current,variants},state){
 
 function catalog(state,context) {
   const matching=filterSeries({query:state.query,topic:state.topic,frequency:state.frequency});
-  const grouped=groupSearchMeasurements(matching).sort((a,b)=>
+  const grouped=groupSearchMeasurements(matching);
+  if(!state.query.trim())grouped.sort((a,b)=>
     catalogTopics.indexOf(a.primary.topic)-catalogTopics.indexOf(b.primary.topic)||
     headlineRank(a.primary.id)-headlineRank(b.primary.id)||a.primary.name.localeCompare(b.primary.name));
   const pages=Math.max(1,Math.ceil(grouped.length/25)),page=Math.max(1,Math.min(pages,state.catalogPage||1)),start=(page-1)*25;

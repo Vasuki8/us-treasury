@@ -37,6 +37,7 @@ function validateSeries(id,item){
  let previous='';
  for(const row of item.observations){
   if(!object(row)||!isIsoDate(row.date)||row.date<=previous||row.value!==null&&(typeof row.value!=='number'||!Number.isFinite(row.value)))fail('ordered unique dates and finite/null observations required');
+  if(row.footnotes!==undefined&&(!Array.isArray(row.footnotes)||row.footnotes.some(value=>typeof value!=='string')))fail('observation footnotes must be an array of text');
   previous=row.date;
   for(const url of [row.sourceUrl,...(row.sourceUrls??[])].filter(Boolean))checkedUrl(url);
  }
