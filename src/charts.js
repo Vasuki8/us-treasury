@@ -56,10 +56,26 @@ function appendMissingPeriods(container,panels){
   }
 }
 
-function draw(container, panels, {height = 180, bars = false, curve = false, transformed = false,cursor=null,evidenceLabel='Official snapshot',yDomain,exactDomain=false,yReference,distribution=false,inspection} = {}) {
+function chartValueLabel(panel,value,transformed){
+  return !finite(value)?'—':panel.unit.startsWith('Index')?value.toFixed(2)
+    :transformed?`${value.toFixed(panel.series.precision)} ${panel.unit}`:formatValue(panel.series,value);
+}
+
+function wrapLabel(text,characters){
+  const lines=[];let remaining=String(text);
+  while(remaining.length>characters){
+    const space=remaining.lastIndexOf(' ',characters),end=space>0?space:characters;
+    lines.push(remaining.slice(0,end));remaining=remaining.slice(end).trimStart();
+  }
+  if(remaining)lines.push(remaining);
+  return lines;
+}
+
+function draw(container, panels, {height = 180, bars = false, combo = false, legend = false, endLabels = false, curve = false, transformed = false,cursor=null,evidenceLabel='Official snapshot',yDomain,exactDomain=false,yReference,distribution=false,inspection} = {}) {
   const previous=inspection??chartInspection.get(container),active=document.activeElement;
   const restoreFocused=Boolean(previous&&(previous.focused||active===previous.svg));
   container.replaceChildren();
+  const hasBars=bars||combo;
   let domain;
   if(yDomain!==undefined){
     try {domain=JSON.parse(yDomain);} catch { /* An explicit comparison scale must never silently become an automatic scale. */ }
@@ -68,14 +84,14 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
     }
   }
   const width = Math.max(210, Math.round(container.clientWidth));
-  const right = 20;
+  let right = endLabels ? Math.min(148,Math.max(20,width-154)) : 20;
   const values = panels.flatMap(panel => panel.observations.flatMap(o => distribution?[o.value,o.percentile1,o.percentile25,o.percentile75,o.percentile99]:[o.value])).filter(finite);
   if (!values.length) {
     container.textContent = 'No observations available for this chart.';
     if(!curve)appendMissingPeriods(container,panels);
     return;
   }
-  if(domain&&(values.some(value=>value<domain[0]||value>domain[1])||bars&&(domain[0]>0||domain[1]<0))){
+  if(domain&&(values.some(value=>value<domain[0]||value>domain[1])||hasBars&&(domain[0]>0||domain[1]<0))){
     container.textContent='Chart configuration error: y-domain must cover every displayed value and any bar zero baseline.';return;
   }
   const dates = [...new Set(panels.flatMap(panel => panel.observations.map(o => o.date)))].sort();
@@ -88,10 +104,10 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const maxX = window ? Date.parse(`${window.endDate}T00:00:00Z`) : positions.at(-1);
   const spanX = maxX-minX || 1;
   let lo = domain?domain[0]:Math.min(...values), hi = domain?domain[1]:Math.max(...values);
-  if (bars&&!domain) { lo = Math.min(0,lo); hi = Math.max(0,hi); }
+  if (hasBars&&!domain) { lo = Math.min(0,lo); hi = Math.max(0,hi); }
   if((exactDomain&&!domain)||(yReference!==undefined&&(!domain||!finite(Number(yReference))||Number(yReference)<domain[0]||Number(yReference)>domain[1]))){container.textContent='Chart configuration error: reference and exact bounds require a valid covering y-domain.';return;}
   const pad = exactDomain?0:Math.max((hi-lo)*.13,Math.abs(hi)*.015,.05);
-  lo -= bars && !domain && lo === 0 ? 0 : pad;
+  lo -= hasBars && !domain && lo === 0 ? 0 : pad;
   hi += pad;
   if(!finite(lo)||!finite(hi)||!finite(hi-lo)||hi<=lo){
     container.textContent='Chart configuration error: y-domain cannot be represented on a finite chart scale.';return;
@@ -102,10 +118,11 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   let tickLabels = tickValues.map(value=>tickFormat.format(value));
   // Reserve seven pixels per 11px monospace character, plus the tick gap and
   // edge padding. Keep ordinary axes stable and leave at least 100px to plot.
-  const labelMargin = labels => Math.max(54,...labels.map(label=>label.length*7+12));
-  const maximumLeft = Math.min(120,width-right-100);
+  const labelMargin = labels => Math.max(54,...labels.map(label=>label.length*(endLabels?8:7)+12));
+  const maximumLeft = Math.min(120,width-(endLabels?20:right)-100);
   if(labelMargin(tickLabels)>maximumLeft)tickLabels=tickValues.map(value=>value===0?'0':value.toExponential(1));
   const left = Math.min(maximumLeft,labelMargin(tickLabels));
+  if(endLabels)right=Math.min(right,width-left-100);
   const unitLines = [], unitCharacters = Math.max(1,Math.floor((width-left-right)/7));
   let remainingUnit = panels[0].unit;
   while(remainingUnit.length>unitCharacters){
@@ -115,8 +132,20 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   unitLines.push(remainingUnit);
   const top = 28+(unitLines.length-1)*14;
   const staggerCurveLabels = curve && (width-left-right) / Math.max(1,yieldCurve.length-1) < 32;
-  const bottom = staggerCurveLabels ? 46 : 30;
-  const h = Math.max(120,height,top+bottom+60);
+  const staggerDateLabels = endLabels && width-left-right<200;
+  const bottom = staggerCurveLabels||staggerDateLabels ? 46 : 30;
+  const endpoints=endLabels?panels.flatMap((panel,index)=>{
+    // Only displayed observations qualify; an older source value outside this
+    // window must never become an apparently current endpoint.
+    const observation=panel.observations.filter(row=>finite(row.value)).reduce((latest,row)=>!latest||row.date>latest.date?row:latest,null);
+    if(!observation)return [];
+    const value=chartValueLabel(panel,observation.value,transformed),period=periodLabel(panel.series,observation.date);
+    const characters=Math.max(1,Math.floor((right-16)/8));
+    const lines=[...wrapLabel(`${panel.series.short} ${value}`,characters),...wrapLabel(period,characters)];
+    return [{index,observation,lines,height:lines.length*16,label:`${panel.series.short} ${value} · ${period} · ${panel.unit}`}];
+  }):[];
+  const endpointHeight=endpoints.reduce((total,endpoint)=>total+endpoint.height,0)+Math.max(0,endpoints.length-1)*8;
+  const h = Math.max(120,height,top+bottom+60,top+bottom+endpointHeight);
   const pw = width-left-right, ph = h-top-bottom;
   const xPosition = position => left+(position-minX)/spanX*pw;
   const xIndex = index => xPosition(positions[index]);
@@ -124,6 +153,16 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const y = value => top+(hi-value)/(hi-lo)*ph;
   const id = `chart-readout-${++chartId}`;
   const title = curve ? 'Treasury par yield curve · quantitative elapsed maturity spacing' : panels.map(panel => panel.series.name).join(' and ');
+  if(legend){
+    const list=document.createElement('div');list.setAttribute('class','chart-legend');list.setAttribute('aria-label','Chart series');
+    panels.forEach((panel,index)=>{
+      const item=document.createElement('span'),label=`${panel.series.name} · ${panel.unit}`;
+      item.setAttribute('class',`chart-legend-item series-${index}`);item.setAttribute('aria-label',label);item.setAttribute('title',label);
+      const swatch=document.createElement('span');swatch.setAttribute('class',`chart-legend-swatch${bars||combo&&index===0?' is-bar':''}`);swatch.setAttribute('aria-hidden','true');
+      item.append(swatch,`${panel.series.short} · ${panel.unit}`);list.append(item);
+    });
+    container.append(list);
+  }
   const svg = svgElement('svg',{viewBox:`0 0 ${width} ${h}`,tabindex:0,role:'group','aria-label':`${title}. ${evidenceLabel}. Use left and right arrow keys for exact values.`,'aria-describedby':id},container);
   svgElement('title',{},svg,`${title} · ${panels[0].unit} · ${evidenceLabel}`);
   const unitLabel = svgElement('text',{x:left,y:14},svg);
@@ -134,7 +173,7 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
     svgElement('line',{x1:left,x2:width-right,y1:y(value),y2:y(value),class:'gridline'},svg);
     svgElement('text',{x:left-8,y:y(value)+4,'text-anchor':'end'},svg,tickLabels[index]);
   }
-  if((domain||bars)&&lo<=0&&hi>=0){
+  if((domain||hasBars)&&lo<=0&&hi>=0){
     svgElement('line',{
       x1:left,x2:width-right,y1:y(0),y2:y(0),class:'zero-reference',stroke:'currentColor',
       'stroke-opacity':'.6','stroke-dasharray':'3 3','aria-hidden':'true',
@@ -144,14 +183,14 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
   const labelDates = curve ? ['1M','1Y','5Y','10Y','20Y','30Y'].filter(date=>orderedDates.includes(date)) : window
     ? [window.startDate, new Date(minX+(maxX-minX)/2).toISOString().slice(0,10), window.endDate]
     : [orderedDates[0], orderedDates[Math.floor((orderedDates.length-1)/2)], orderedDates.at(-1)];
-  const uniqueLabelDates = [...new Set(curve&&width<500?labelDates.filter(date=>['1M','5Y','10Y','20Y','30Y'].includes(date)):!curve&&width<350?[labelDates[0],labelDates.at(-1)]:labelDates)];
+  const uniqueLabelDates = [...new Set(curve&&width<500?labelDates.filter(date=>['1M','5Y','10Y','20Y','30Y'].includes(date)):!curve&&(endLabels?pw:width)<350?[labelDates[0],labelDates.at(-1)]:labelDates)];
   uniqueLabelDates.forEach((date,index) => {
     let label = curve ? date : window ? periodLabel({frequency:'Daily'},date) : chartDateLabel(panels,date);
     if (!curve && !window && panels[0].series.frequency === 'Weekly') label = label.replace('Week ending ','');
-    svgElement('text',{x:xDate(date),y:h-(staggerCurveLabels && index%2===0 ? 24 : 8),'text-anchor':index===0?'start':index===uniqueLabelDates.length-1?'end':'middle'},svg,label);
+    svgElement('text',{x:xDate(date),y:h-((staggerCurveLabels||staggerDateLabels) && index%2===0 ? 24 : 8),'text-anchor':index===0?'start':index===uniqueLabelDates.length-1?'end':'middle'},svg,label);
   });
   panels.forEach((panel,index) => {
-    const className = curve && index>0 ? ' previous' : ['', ' secondary', ' tertiary', ' quaternary'][index];
+    const className = curve && index>0 ? ' previous' : ['', ' secondary', ' tertiary', ' quaternary'][index]??'';
     if(distribution) {
       // Each band has its own availability calendar; a missing median cannot erase it.
       for(const [name,low,high,opacity] of [['outer','percentile1','percentile99',.12],['inner','percentile25','percentile75',.26]]) {
@@ -166,10 +205,13 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
         svgElement('path',{d:path,class:`funding-band ${name}`,fill:'var(--accent)','fill-opacity':opacity,stroke:'none','aria-hidden':'true'},svg);
       }
     }
-    if (bars) {
-      const barWidth = Math.max(4,Math.min(30,pw/orderedDates.length*.6));
+    if (bars||combo&&index===0) {
+      const desiredBarWidth=Math.min(30,pw/orderedDates.length*.6);
+      const barWidth=combo?positions.slice(1).reduce((width,position,index)=>Math.min(width,(position-positions[index])/spanX*pw*.6),desiredBarWidth)
+        :Math.max(4,desiredBarWidth);
+      const latestDate=panel.observations.filter(o=>finite(o.value)).at(-1)?.date;
       panel.observations.filter(o=>finite(o.value)).forEach(o => {
-        svgElement('rect',{x:xDate(o.date)-barWidth/2,y:Math.min(y(o.value),y(0)),width:barWidth,height:Math.max(1,Math.abs(y(o.value)-y(0))),class:'bar'},svg);
+        svgElement('rect',{x:xDate(o.date)-barWidth/2,y:Math.min(y(o.value),y(0)),width:barWidth,height:Math.max(1,Math.abs(y(o.value)-y(0))),class:`bar${combo&&o.date===latestDate?' latest-bar':''}`,'data-series-index':index},svg);
       });
     } else {
       let gap = true;
@@ -178,15 +220,28 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
         const command = gap?'M':'L'; gap=false;
         return `${command}${xDate(o.date).toFixed(2)} ${y(o.value).toFixed(2)}`;
       }).join(' ');
-      svgElement('path',{d:path,class:`series-line${className}`},svg);
+      svgElement('path',{d:path,class:`series-line${className}`,'data-series-index':index},svg);
       panel.observations.forEach((observation,point,all)=>{
         if(finite(observation.value)&&!finite(all[point-1]?.value)&&!finite(all[point+1]?.value))
-          svgElement('circle',{cx:xDate(observation.date),cy:y(observation.value),r:3,class:`dot${curve&&index>0?' previous':index%2?' secondary':''} isolated-point`,'aria-hidden':'true'},svg);
+          svgElement('circle',{cx:xDate(observation.date),cy:y(observation.value),r:3,class:`dot${curve&&index>0?' previous':index%2?' secondary':''}${legend||endLabels||combo?` series-${index}`:''} isolated-point`,'aria-hidden':'true'},svg);
       });
     }
   });
+  const placed=endpoints.map(endpoint=>({...endpoint,anchor:y(endpoint.observation.value)})).sort((a,b)=>a.anchor-b.anchor);
+  let nextTop=top;
+  for(const endpoint of placed){endpoint.top=Math.max(nextTop,endpoint.anchor-endpoint.height/2);nextTop=endpoint.top+endpoint.height+8;}
+  let nextBottom=h-bottom;
+  for(const endpoint of [...placed].reverse()){endpoint.top=Math.min(endpoint.top,nextBottom-endpoint.height);nextBottom=endpoint.top-8;}
+  for(const endpoint of placed){
+    const {index,observation,lines}=endpoint,labelX=width-right+8;
+    const attributes={class:`chart-end-leader series-${index} endpoint-series-${index}`,'data-series-index':index,'aria-hidden':'true'};
+    svgElement('line',{x1:xDate(observation.date),y1:endpoint.anchor,x2:labelX-4,y2:endpoint.top+endpoint.height/2,...attributes},svg);
+    svgElement('circle',{cx:xDate(observation.date),cy:endpoint.anchor,r:3,class:`dot chart-end-dot series-${index} endpoint-series-${index}`,'data-series-index':index,'aria-hidden':'true'},svg);
+    const text=svgElement('text',{x:labelX,y:endpoint.top+12,class:`chart-end-label series-${index} endpoint-series-${index}`,'data-series-index':index,'aria-label':endpoint.label},svg);
+    lines.forEach((line,lineIndex)=>svgElement('tspan',{x:labelX,y:endpoint.top+12+lineIndex*16},text,line));
+  }
   const guide = svgElement('line',{x1:0,x2:0,y1:top,y2:h-bottom,class:'guide'},svg);
-  const dots = panels.map((_,index)=>svgElement('circle',{cx:0,cy:0,r:3,class:`dot${curve&&index>0?' previous':index%2?' secondary':''}`},svg));
+  const dots = panels.map((_,index)=>svgElement('circle',{cx:0,cy:0,r:3,class:`dot${curve&&index>0?' previous':index%2?' secondary':''}${legend||endLabels||combo?` series-${index}`:''}`},svg));
   const hit = svgElement('rect',{x:left,y:top,width:pw,height:ph,fill:'transparent'},svg);
   const readout = document.createElement('div');
   readout.id=id; readout.className=`chart-readout${curve?' curve-readout':''}`; container.append(readout);
@@ -218,8 +273,7 @@ function draw(container, panels, {height = 180, bars = false, curve = false, tra
       dots[panelIndex].setAttribute('visibility',finite(value)?'visible':'hidden');
       const span=document.createElement('span');
       const label=distribution?'Median':curve?panel.label:panel.series.short;
-      const isIndex = panel.unit.startsWith('Index');
-      const display = !finite(value)?'—':isIndex?value.toFixed(2):transformed?`${value.toFixed(panel.series.precision)} ${panel.unit}`:formatValue(panel.series,value);
+      const display = chartValueLabel(panel,value,transformed);
       span.className = `readout-series series-${panelIndex}`;
       span.append(`${label} `);
       const strong=document.createElement('strong'); strong.textContent=display; span.append(strong);
@@ -296,6 +350,14 @@ export function renderCharts(root,{catalog,chartCatalogs={},inspection}={}) {
     const ids=(scoped?container.dataset.series??'':container.dataset.series).split(',').filter(Boolean);
     const range=readChartRange(container.dataset.range,ids.map(lookup));
     if(scoped&&(!ids.length||ids.some(id=>!lookup(id)))){container.textContent='Chart data unavailable: one or more selected series are unavailable in the requested chart catalog.';return;}
+    const combo=kind==='combo';
+    if(combo){
+      const selected=ids.map(lookup),first=selected[0];
+      if(ids.length<2||new Set(ids).size!==ids.length||selected.some(item=>!item)||transform!=='level'||comparison!=='native'||container.dataset.panelId
+        ||!first?.unit||!first?.frequency||selected.some(item=>item.unit!==first.unit||item.frequency!==first.frequency||item.format!==first.format)){
+        container.textContent='Chart configuration error: combo charts require at least two distinct available series with matching native units, formats and frequencies, in untransformed native levels.';return;
+      }
+    }
     const distribution=kind==='funding-distribution';
     const fundingSpread=scoped&&container.dataset.chartCatalog==='funding'&&ids.length===1&&ids[0]==='sofrEffrSpread'&&kind==='line'&&transform==='level'&&comparison==='native';
     if(distribution||fundingSpread){
@@ -306,8 +368,9 @@ export function renderCharts(root,{catalog,chartCatalogs={},inspection}={}) {
       if(panel.error){container.textContent=panel.error;return;}
       renderDraw(container,[panel],{height,evidenceLabel,yDomain:container.dataset.yDomain,distribution});return;
     }
-    const result=comparison!=='native'||container.dataset.panelId?compareSeries(ids,comparison,range,selectedCatalog):{panels:ids.map(id=>transformSeries(lookup(id),transform,range))};
-    if(comparison==='native'&&container.dataset.panelId&&transform!=='level'&&!result.error)result.panels=result.panels.map(panel=>transformSeries(panel.series,transform,range,result.window));
+    const endLabels=container.dataset.endLabels==='true';
+    const result=combo||endLabels||comparison!=='native'||container.dataset.panelId?compareSeries(ids,comparison,range,selectedCatalog):{panels:ids.map(id=>transformSeries(lookup(id),transform,range))};
+    if(comparison==='native'&&(container.dataset.panelId||endLabels)&&transform!=='level'&&!result.error)result.panels=result.panels.map(panel=>transformSeries(panel.series,transform,range,result.window));
     result.error??=result.panels?.find(panel=>panel.error)?.error;
     if (result.error) {container.textContent=result.error;return;}
     const panels=container.dataset.panelId?result.panels.filter(panel=>panel.series.id===container.dataset.panelId):result.panels;
@@ -318,6 +381,6 @@ export function renderCharts(root,{catalog,chartCatalogs={},inspection}={}) {
     if(!cursorCatalogs.has(cursorScope))cursorCatalogs.set(cursorScope,new Map());
     const cursors=cursorCatalogs.get(cursorScope);
     if(group&&!cursors.has(group))cursors.set(group,createLinkedCursor(result.panels));
-    renderDraw(container,panels,{height,bars:kind==='bar',transformed:transform==='change'||comparison==='difference',cursor:group?cursors.get(group):null,evidenceLabel,yDomain:container.dataset.yDomain,exactDomain:container.dataset.yDomainExact==='true',yReference:container.dataset.yReference});
+    renderDraw(container,panels,{height,bars:kind==='bar',combo,legend:container.dataset.legend==='true',endLabels,transformed:transform==='change'||comparison==='difference',cursor:group?cursors.get(group):null,evidenceLabel,yDomain:container.dataset.yDomain,exactDomain:container.dataset.yDomainExact==='true',yReference:container.dataset.yReference});
   });
 }

@@ -23,6 +23,7 @@ import {createSourceController,requiredSourceIds} from './source-controller.js';
 import {revealedCalendarState} from './calendar-scope.js';
 import { filterSeries, getSeries, latest, toCsv,periodLabel } from './model.js';
 import {formatDisplayValue,formatDisplayChange} from './display-format.js';
+import {normalizeDashboardChartSettings,pceHorizonChartCatalog} from './dashboard-chart-data.js';
 import {fiscalFinancingCsv} from './research-exports.js';
 import {refinancingCsv} from './refinancing-page.js';
 import {yieldCurvesCsv} from './yields-page.js';
@@ -237,6 +238,7 @@ function renderCurrentChartsIn(container,inspection){
   for(const evidence of Object.values(pkg.context.economicEvidence??{}))Object.assign(chartCatalogs,economicEvidenceChartCatalog(evidence.source,{frozen:true}));
   if(pkg.context.pceBaseEffects){const value=pkg.context.pceBaseEffects;Object.assign(chartCatalogs,pceBaseEffectsChartCatalog(value.indexSeries,value.model.assumptions,{frozen:true}));}
  }else{
+  if(state.page==='overview')Object.assign(chartCatalogs,pceHorizonChartCatalog());
   if(state.page==='labor'||state.page==='macroCoverage'&&state.macroFamily==='labor')Object.assign(chartCatalogs,economicEvidenceChartCatalog(dataStatus.sources.laborEvidence));
   if(state.page==='macroCoverage'&&state.macroFamily==='prices')Object.assign(chartCatalogs,economicEvidenceChartCatalog(dataStatus.sources.pcePriceContributions),pceBaseEffectsChartCatalog(getSeries(state.pceBaseIndex),pceScenarioOptions(state)));
  }
@@ -253,6 +255,15 @@ function researchActions(){
 }
 
 const workspacePreviews={overview:'gdp',explore:null};
+let overviewChartSettings=normalizeDashboardChartSettings();
+let workspacePreviewRequest=0;
+async function chooseWorkspacePreview(id){
+ const request=++workspacePreviewRequest,page=state.page,route=location.hash;
+ try{if(page==='overview')await ensureSourceAction(requiredSourceIds(state,{ids:[id]}));}
+ catch(error){if(request===workspacePreviewRequest&&state.page===page&&location.hash===route)announce(`Chart history unavailable: ${error.message}`);return false;}
+ if(request!==workspacePreviewRequest||state.page!==page||location.hash!==route)return false;
+ workspacePreviews[page]=id;render({preserveFocus:true});return true;
+}
 document.getElementById('workspace-topics').innerHTML=workspaceNavigation();
 
 function render({focusHeading=false,preserveFocus=false,captureDrafts=true}={}) {
@@ -278,7 +289,7 @@ function render({focusHeading=false,preserveFocus=false,captureDrafts=true}={}) 
     ...historyController.context(state),sourceState:sourceController.context(state),library:researchLibrary.getState(),
     questionDrafts:questionDrafts.snapshot(),changes:changesContext(),checkpoint:changeCheckpoint,failures,publicationContexts,
     publicationArchive,publicationState,publicationExplanations,explanationState,
-    workspacePreview:workspacePreviews[state.page],
+    workspacePreview:workspacePreviews[state.page],overviewChartSettings,
   });
   main.querySelector('.page-heading .actions')?.insertAdjacentHTML('beforeend',researchActions());
   document.getElementById('workspace-page-label').textContent=main.querySelector('h1')?.textContent??pageNames[state.page];
@@ -460,6 +471,7 @@ async function handleResearchAction(d){
     if('pinGdpMatrix' in d&&state.publicationSeries!=='gdp')throw new Error('The revision matrix requires GDP publication evidence.');
     if('pinResult' in d&&state.page!=='release'){const draft=saveDrafts.get(researchSaveScope(state),{selected:state.freezeSelection??freezeCandidates(state).slice(0,4)});state.freezeSelection=[...draft.selected];}
     const pinState={...state,...(state.freezeSelection?{freezeSelection:[...state.freezeSelection]}:{})};
+    const pinChartSettings={...overviewChartSettings},pinChartPreview=workspacePreviews.overview;
     const claims=claimsPublicationIds.includes(pinState.publicationSeries),cpi=cpiPublicationIds.includes(pinState.publicationSeries);
     let args,name=document.getElementById('research-name')?.value??'';
     const initiatingScope=researchSaveScope(state),initiatingFocus=rememberStableFocus(main,{document});
@@ -486,7 +498,7 @@ async function handleResearchAction(d){
       }else{
         await ensureSourceAction(requiredSourceIds(pinState,{purpose:'freeze'}));
         args=buildPinContext(pinState,{
-          ...historyController.context(pinState),changes:changesContext(),checkpoint:changeCheckpoint,failures:trackedFailures(),
+          ...historyController.context(pinState),changes:changesContext(),checkpoint:changeCheckpoint,failures:trackedFailures(),overviewChartSettings:pinChartSettings,overviewPreview:pinChartPreview,
           publicationContexts:{
             gdp:publicationController.context('gdp'),claims:publicationController.context('claimsAdvance'),
             cpi:publicationController.context('cpiMonthly'),
@@ -555,9 +567,15 @@ root.addEventListener('click',async event=>{
     render({preserveFocus:true});
     (main.querySelector(`[data-workspace-preview="${id}"]`)??main.querySelector('#catalog-search'))?.focus();return;
   }
+  if('dashboardRange' in d||'dashboardFamily' in d){
+    if(state.page!=='overview')return;
+    const input='dashboardFamily' in d?{...overviewChartSettings,inflationFamily:d.dashboardFamily}:
+      ['growth','inflation'].includes(d.dashboardRange)?{...overviewChartSettings,[d.dashboardRange]:d.preset}:overviewChartSettings;
+    overviewChartSettings=normalizeDashboardChartSettings(input);
+    render({preserveFocus:true});announce('Chart display updated. Research window and comparison selection are unchanged.');return;
+  }
   if('workspacePreview' in d&&getSeries(d.workspacePreview)){
-    workspacePreviews[state.page]=d.workspacePreview;
-    render({preserveFocus:true});
+    if(!await chooseWorkspacePreview(d.workspacePreview))return;
     if(state.page==='explore'&&window.matchMedia('(max-width:1000px)').matches){
       main.querySelector('#catalog-preview')?.focus();
     }
@@ -697,7 +715,7 @@ root.addEventListener('click',async event=>{
 root.addEventListener('change',async event=>{
   const target=event.target;
   if(target.matches?.('[data-workspace-series]')&&getSeries(target.value)){
-    workspacePreviews[state.page]=target.value;render({preserveFocus:true});return;
+    await chooseWorkspacePreview(target.value);return;
   }
   if(target.dataset&&'freezeSelect' in target.dataset){
     const candidates=freezeCandidates(state),scope=researchSaveScope(state),draft=saveDrafts.get(scope,{selected:candidates.slice(0,4)}),chosen=[...(state.freezeSelection??draft.selected)],id=target.dataset.freezeSelect;

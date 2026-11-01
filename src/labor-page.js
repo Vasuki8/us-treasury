@@ -198,11 +198,11 @@ export function laborPage(input={},options={}){
  // Resolve once against the focused series; each core source retains its own gaps.
  const coreRange={preset:'custom',startDate:shown.window.mode==='calendar'?shown.window.startDate??'':shown.observations[0]?.date??'',endDate:shown.window.mode==='calendar'?shown.window.endDate??'':shown.observations.at(-1)?.date??''};
  const trends=`<section id="labor-trends">${sectionHead('01','Payrolls & unemployment',
-  '<span class="labor-small">Same selected window · separate scales</span>')}<div class="labor-dual">${[['payroll','Monthly payroll gains',
-  'bar'],['unrate','Unemployment rate','line']].map(([id,title,chartKind])=>`<article><div class="labor-chart-title"><h3>${title}</h3>${detail
+  '<div class="dashboard-range" role="group" aria-label="Labor chart time range">'+[['1y','1Y'],['3y','3Y'],['5y','5Y'],['all','MAX']].map(([value,label])=>button(label,`data-window="${value}" aria-pressed="${state.window===value}"`)).join('')+'</div>')}<p class="labor-note">Shared selected window · each panel has its own native scale.</p><div class="labor-dual">${[['payroll','Monthly payroll gains',
+  'combo'],['unrate','Unemployment rate','line']].map(([id,title,chartKind])=>`<article><div class="labor-chart-title"><h3>${title}</h3>${detail
   (id,state,'Detail','link-button')}</div><p class="labor-axis-unit">${esc(getSeries(id).unit)} · ${esc(getSeries(id).adjustment)}</p>${id==='payroll'?detail('payrollAverage3m',state,
    `Latest 3-month average: ${formatDisplayValue(getSeries('payrollAverage3m'),latest(getSeries('payrollAverage3m'))?.value)} · ${periodLabel(getSeries('payrollAverage3m'),latest(getSeries('payrollAverage3m'))?.date)}`,'labor-average'):''}${chart
-  ([id],{range:coreRange,kind:chartKind,height:210})}</article>`).join('')}</div><div class="actions labor-trend-links">${button('Compare payroll momentum',
+  (id==='payroll'?['payroll','payrollAverage3m']:['unrate','underemployment'],{range:coreRange,kind:chartKind,height:255,legend:true,endLabels:true})}${id==='unrate'?'<p class="labor-note">U-3 and U-6 use different denominators; the shared percent scale does not make them interchangeable.</p>':''}</article>`).join('')}</div><div class="actions labor-trend-links">${button('Compare payroll momentum',
   'data-compare="payroll,payrollAverage3m,weeklyHours"','link-button')}${button('Compare participation & employment',
   'data-compare="unrate,participation,primeAgeEmploymentPopulation"','link-button')}</div></section>`;
  const revisions='<div class="labor-revision-context"><strong>Payroll revisions</strong><span>First-published payroll estimates are not covered. Current revised history cannot establish release revisions.</span>'

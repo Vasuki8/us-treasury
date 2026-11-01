@@ -12,7 +12,7 @@ import { indicatorHref } from './workspace-context.js';
 import {inflationHorizonTable} from './inflation-comparison.js';
 import {displayCurrencyUnit,displayUnitLabel,formatDisplayValue,formatDisplayChange} from './display-format.js';
 import {humanDate,humanTimestamp} from './ui-time.js';
-import {seriesPreview} from './workspace-preview.js';
+import {overviewComparisonCharts} from './dashboard-charts.js';
 
 const a=(text,href,className='action')=>`<a class="${esc(className)}" href="${esc(href)}">`
  +`${esc(sentenceCase(/^https?:/.test(href)?text:text.replace(/ ↗[︎]?/g,'')))}</a>`;
@@ -139,8 +139,7 @@ export function overviewPage(state={},context={}){
  const trendPicker='<label class="workspace-trend-picker" for="overview-trend">Measurement '
   +`<select id="overview-trend" data-workspace-series>${trendIds.map(id=>`
    <option value="${id}"${id===preview?' selected':''}>${esc(getSeries(id).short)}</option>`).join('')}</select></label>`;
- const trend=seriesPreview(preview,{...state,page:'overview'},{title:'Growth & macro trends',controls:trendPicker,definition:false,summary:false});
- const inflationTrend=seriesPreview('pceCore',{...state,page:'overview'},{title:'Core inflation · year over year',definition:false,summary:false});
+ const mainCharts=overviewComparisonCharts({...state,page:'overview'},{settings:context.overviewChartSettings,preview,controls:trendPicker});
  const monitorRows=[['payroll','Monthly payroll gain'],['policyTargetUpper','Fed funds target range'],
   ['spread2s10s','2s10s curve spread'],['interestRevenueRatio','Net interest / revenue · TTM']].map(([id,label])=>
   `<div class="workspace-monitor-row"${preview===id?' data-active="true"':''}>`
@@ -160,7 +159,7 @@ export function overviewPage(state={},context={}){
   'Thousands of jobs · three-month average of monthly payroll gains; establishment jobs differ from household people measures.','oh-chart-panel');
  const horizons=disclosure('inflation-horizons','Inflation horizons',
   `<div class="oh-inflation-comparison">${inflationHorizonTable({...state,page:'overview'})}</div>`,'Monthly · annual · annualized');
- const momentum=`<section class="oh-momentum" aria-label="Economic trends"><div class="oh-plots">${trend}${inflationTrend}</div></section>`;
+ const momentum=`<section class="oh-momentum" aria-label="Economic trends"><div class="oh-plots">${mainCharts}</div></section>`;
  const monitorLinks=a('Policy & rates','#/economy?family=policy','link-button')+a('Fiscal & funding','#/fiscal','link-button');
  const crossChecks=panel('','Cross-check the headlines','<div class="brief-questions">'
   +`<article><h3>Is growth broad-based?</h3><p>Compare GDP with private domestic demand to put the headline in context.</p>${button('Compare growth','data-compare="gdp,privateDomesticDemandGrowth"','link-button')}</article>`

@@ -80,9 +80,9 @@ test('core charts share quarterly and weekly focus dates for calendar presets an
    ['claimsAdvance','&range=6','2026-10-10','2026-10-17'],
   ]){
   const html=render('&measure='+focus+windowQuery);
-  const windows=[...html.matchAll(/data-chart data-series="([^"]+)"[^>]*data-range="([^"]+)"/g)].map(([,id,encoded])=>({id,...transformSeries(series[id],'level',JSON.parse(encoded.replaceAll('&quot;','"')))}));
+  const windows=[...html.matchAll(/data-chart data-series="([^"]+)"[^>]*data-range="([^"]+)"/g)].flatMap(([,ids,encoded])=>ids.split(',').map(id=>({id,...transformSeries(series[id],'level',JSON.parse(encoded.replaceAll('&quot;','"')))})));
   assert.deepEqual(windows.map(({id,window,observations})=>[id,window.mode==='calendar'?window.startDate:observations[0]?.date,window.mode==='calendar'?window.endDate:observations.at(-1)?.date]),[
-   ['payroll',start,end],['unrate',start,end],[focus,start,end],
+   ['payroll',start,end],['payrollAverage3m',start,end],['unrate',start,end],['underemployment',start,end],[focus,start,end],
   ]);
   }
  }finally{for(const id of ids)series[id]=priors[id];}

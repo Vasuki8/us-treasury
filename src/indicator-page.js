@@ -90,7 +90,10 @@ export function indicatorPage(state,historyContext={}) {
     +`<option value="level"${state.transform==='level'?' selected':''}>${esc(measureLabel(current))}</option>`
     +`<option value="change"${state.transform==='change'?' selected':''}>${esc(changeLabel(current))}</option>`
     +'</select></label></div>';
-  const chartBody=chartControls+chart([current.id],{height:260,transform:state.transform,range:viewRange(state)})
+  const chartIds=state.transform==='level'&&current.id==='payroll'?['payroll','payrollAverage3m']:
+    state.transform==='level'&&['unrate','underemployment'].includes(current.id)?[current.id,current.id==='unrate'?'underemployment':'unrate']:[current.id];
+  const chartBody=chartControls+chart(chartIds,{height:300,kind:chartIds.length>1&&current.id==='payroll'?'combo':current.id==='payroll'?'bar':'line',transform:state.transform,range:viewRange(state),legend:true,endLabels:true})
+    +(chartIds.length>1?'<p class="panel-note">The overlay provides context. The table and CSV retain the selected indicator. U-3 and U-6 have different denominators.</p>':'')
     +coverageSummary(transformed)+(state.transform==='change'?'<p class="panel-note">'
       +'Changes use the immediately preceding retained observation before the selected window is applied; '
       +'the first displayed change can reference an observation outside the window. Missing observations remain gaps.</p>':'');

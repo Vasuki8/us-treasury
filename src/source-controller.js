@@ -5,6 +5,7 @@ import {freezeCandidates} from './research-context.js';
 import {defaultWindowPreset} from './date-window.js';
 
 const pageSources={
+ overview:['bea'],
  credit:['bankCredit','lendingSurvey','fedBalance','onRrp','householdDebt','loanDelinquency'],
  fiscal:['fiscal','treasury','bea'],refinancing:['refinancing'],yields:['yields','treasury'],
  auctions:['auctions'],ownership:['ownership'],macro:['macroContributions'],market:['marketFunctioning'],

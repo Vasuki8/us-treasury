@@ -1715,6 +1715,49 @@ tbody tr:not(.catalog-topic):hover { background:var(--hover); }
 }
 
 /* Meridian Macro Research Workspace — adapted from the user's latest Stitch design. */
+/* Chart palettes apply only to explicitly adorned charts; evidence/funding charts retain their own scales. */
+.chart[data-legend="true"],.chart[data-end-labels="true"] { --series-0:var(--accent); --series-1:var(--cyan); --series-2:#e9bc7a; --series-3:#c8baff; --bar-history:#858e9c; }
+#app[data-theme="Light"] .chart[data-legend="true"],#app[data-theme="Light"] .chart[data-end-labels="true"] { --series-2:#a44a0a; --series-3:#586174; --bar-history:#858991; }
+.chart[data-kind="combo"] { --series-1:#f6ae87; }
+#app[data-theme="Light"] .chart[data-kind="combo"] { --series-1:#bf470d; }
+.chart[data-series="unrate,underemployment"],.chart[data-series="underemployment,unrate"] { --series-1:#b1bccb; }
+#app[data-theme="Light"] .chart[data-series="unrate,underemployment"],#app[data-theme="Light"] .chart[data-series="underemployment,unrate"] { --series-1:#475569; }
+.chart-legend { display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; padding:12px 16px 8px; font-size:13px; color:var(--muted); line-height:1.4; }
+.chart-legend-item { display:inline-flex; align-items:center; gap:7px; min-width:0; overflow-wrap:anywhere; }
+.chart .series-0 { --series-color:var(--series-0,var(--accent)); }
+.chart .series-1 { --series-color:var(--series-1,var(--cyan)); }
+.chart .series-2 { --series-color:var(--series-2,var(--accent)); }
+.chart .series-3 { --series-color:var(--series-3,var(--cyan)); }
+.chart-legend-swatch { display:inline-block; width:16px; height:0; border-top:2px solid var(--series-color); flex-shrink:0; }
+.chart-legend-swatch.is-bar { height:10px; width:10px; border:0; background:var(--series-color); }
+.chart[data-kind="combo"] .bar { fill:var(--bar-history); opacity:1; }
+.chart[data-kind="combo"] .bar.latest-bar { fill:var(--series-0); }
+.chart[data-legend="true"] .series-line.secondary,.chart[data-end-labels="true"] .series-line.secondary { stroke:var(--series-1); }
+.chart[data-legend="true"] .series-line.tertiary,.chart[data-end-labels="true"] .series-line.tertiary { stroke:var(--series-2); stroke-dasharray:none; }
+.chart[data-legend="true"] .series-line.quaternary,.chart[data-end-labels="true"] .series-line.quaternary { stroke:var(--series-3); }
+.chart[data-series="unrate,underemployment"] .series-line.secondary,.chart[data-series="underemployment,unrate"] .series-line.secondary { stroke-dasharray:3 3; }
+.chart .dot[class*="series-"] { stroke:var(--series-color); }
+.chart text.chart-end-label { fill:var(--series-color); font-size:13px; font-weight:600; }
+.chart .chart-end-leader { fill:none; stroke:var(--series-color); stroke-width:1; stroke-dasharray:2 2; opacity:.8; }
+.chart[data-legend="true"] .readout-series::before { border-color:var(--series-color); }
+.dashboard-range,.dashboard-family { display:flex; align-items:center; flex-wrap:wrap; gap:2px; }
+.dashboard-range { padding:2px; background:var(--raised); border:1px solid var(--border); border-radius:3px; }
+.dashboard-range .action,.dashboard-family .action { padding:5px 8px; min-height:30px; font-size:13px; border:1px solid transparent; background:transparent; }
+.dashboard-range .action[aria-pressed="true"],.dashboard-family .action[aria-pressed="true"] { border-color:var(--border); background:var(--selected); color:var(--accent); }
+.dashboard-family { padding:10px 16px 0; }
+.dashboard-chart-links { display:flex; flex-wrap:wrap; gap:8px 18px; padding:8px 16px 12px; border-top:1px solid var(--divider); font-size:13px; }
+.dashboard-chart-summary { padding:10px 16px; line-height:1.55; }
+.dashboard-comparison .panel-head { align-items:flex-start; flex-wrap:wrap; }
+.dashboard-comparison .panel-head h2 { max-width:65ch; }
+.dashboard-comparison .panel-head .actions { margin-left:auto; }
+@media(max-width:800px) {
+ .dashboard-range .action,.dashboard-family .action { min-height:44px; min-width:44px; }
+ .dashboard-comparison .panel-head .actions { margin-left:0; }
+ .chart-legend { padding-inline:10px; gap:8px 12px; }
+ .dashboard-chart-links { padding-inline:10px; }
+ .dashboard-chart-links a { min-height:44px; display:inline-flex; align-items:center; }
+ .labor-section-head .dashboard-range .action { min-height:44px; }
+}
 :root { font-family:Inter,"Segoe UI",system-ui,-apple-system,sans-serif; }
 #app { font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1,"cv05" 1,"calt" 1; }
 .brand::before { display:none; }
