@@ -44,6 +44,10 @@ try {
       for (const reference of moduleAssetReferences(source)) pending.push(resolveModuleReference(reference, url, imports));
     } else if (asset.endsWith('.css')) {
       assert.match(result.headers.get('content-type'), /^text\/css(?:;|$)/, `Built stylesheet must have a CSS MIME type: ${asset}`);
+      const css=await result.text();
+      for(const [,reference]of css.matchAll(/url\(['"]?(\.\/fonts\/[^'")]+)['"]?\)/g))pending.push(new URL(reference,url));
+    } else if (/\.(?:woff2|ttf)$/.test(asset)) {
+      assert.match(result.headers.get('content-type'),/^font\/(?:woff2|ttf)$/,'Local font MIME type');
     } else if (asset.endsWith('.svg')) {
       assert.match(result.headers.get('content-type'), /^image\/svg\+xml(?:;|$)/, `Built icon must have an SVG MIME type: ${asset}`);
     } else if(asset.endsWith('.json')){

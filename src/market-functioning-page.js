@@ -10,6 +10,7 @@ import {DEALER_METRICS,dealerWeeklyChanges,NY_FED_DATA_NOTICE,NY_FED_REFERENCE_R
 import {csvCell} from './model.js';
 import {formatDisplayValue} from './display-format.js';
 import {canonicalJson} from './research-workspaces.js';
+import {deskReadings,deskContext} from './stitch-desk.js';
 import {heading,button,panel,chart,table,emptyState,escapeHtml as esc} from './ui.js';
 
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
@@ -33,10 +34,12 @@ function sourceNotice(source,id){
   return provided;
 }
 
-function headline(source,id){
-  const row=latest(source,id);
+function displayReading(id,value){
   const unit=definitions[id][1],format=unit==='USD billions'?'billions':unit==='Percent'?'percent':'basisPoints';
-  const value=formatDisplayValue({id,unit,format},row?.value,{currencyUnit:'B'});
+  return formatDisplayValue({id,unit,format},value,{currencyUnit:'B'});
+}
+function headline(source,id){
+  const row=latest(source,id),unit=definitions[id][1],value=displayReading(id,row?.value);
   const flag=row?.suppressed?'SUPPRESSED':revised(row)?'REVISED':id==='sofrEffrSpread'?'':'Official observation';
   return `<a class="metric" href="#/series/${id}"><span class="metric-name">${esc(definitions[id][0])}</span>`
     +`<strong class="metric-value">${esc(value)}</strong><span class="metric-change">${flag}</span>`
@@ -58,12 +61,13 @@ export function marketFunctioningPage(source=dataStatus.sources.marketFunctionin
   const range=viewRange(state),{catalog}=fundingChartCatalog(source),window=resolveDateWindow(range,Object.values(catalog));
   const spread=transformSeries(catalog.sofrEffrSpread,'level',range,window);
   const spreadChart=chart(['sofrEffrSpread'],{height:200,range}).replace('data-chart data-series','data-chart data-chart-catalog="funding" data-series');
+  const fundingChart=chart(['sofr','effr'],{height:300,range,legend:true,endLabels:true}).replace('data-chart data-series','data-chart data-chart-catalog="funding" data-series');
   const hasData=Object.values(source?.series??{}).some(series=>series.observations?.length);
   const rates=['sofr','effr','sofrEffrSpread'];
-  const rateTable=table(['FUNDING CONTEXT',{label:'LATEST',numeric:true},'EFFECTIVE DATE','SOURCE FLAGS'],rates.map(id=>{const row=latest(source,
+  const rateTable=table(['FUNDING CONTEXT',{label:'LATEST',numeric:true},...['1ST PERCENTILE','25TH PERCENTILE','75TH PERCENTILE','99TH PERCENTILE','DAILY VOLUME / USD B'].map(label=>({label,numeric:true})),'EFFECTIVE DATE','SOURCE FLAGS'],rates.map(id=>{const row=latest(source,
   id);return `<tr><th scope="row">${esc(definitions[id][0])}<span class="table-code muted">${id==='sofrEffrSpread'?
   'Calculated same-date difference':'Published volume-weighted median rate'}</span></th><td class="num">${esc(format(id,row?.value))
-  }</td><td class="mono">${esc(humanDate(row?.date))}</td><td>${row?.revisionIndicator?`${revised(row)?'REVISED · ':''}Source revision flag ${esc
+  }</td>${['percentile1','percentile25','percentile75','percentile99'].map(key=>`<td class="num">${esc(format('sofr',row?.[key]))}</td>`).join('')}<td class="num">${finite(row?.volumeInBillions)?esc(row.volumeInBillions.toLocaleString('en-US',{maximumFractionDigits:3})):'—'}</td><td class="mono">${esc(humanDate(row?.date))}</td><td>${row?.revisionIndicator?`${revised(row)?'REVISED · ':''}Source revision flag ${esc
   (row.revisionIndicator)}`:'No revision flag supplied'}${finite(row?.volumeInBillions)?` · underlying volume $${esc(row.volumeInBillions)}B`:''
   }${row?.footnoteId!=null?` · Footnote ${esc(row.footnoteId)}`:''}${row?.footnotes?.length?` · ${esc(row.footnotes.join(' '))}`:''}</td></tr>`;}).join(''));
   const dealerDates=Object.keys(DEALER_METRICS).flatMap(id=>(source?.series?.[id]?.observations??[]).map(row=>row.date)).sort();
@@ -72,18 +76,31 @@ export function marketFunctioningPage(source=dataStatus.sources.marketFunctionin
   } · last successful retrieval ${esc(source?.fetchedAt??'No successful capture')} · latest attempt ${esc(source?.lastAttemptAt??'Not recorded')
   }. Exact release timestamps are unknown; reference dates and retrieval dates remain separate.${source?.error?` <span class="amber">${esc
   (source.error)}</span>`:''}</p></div>`;
-  return heading('FUNDING & MARKET FUNCTIONING','Official dealer aggregates and funding reference rates · partial indicators',button('CSV INDICATORS · FULL RETAINED','data-export-market'))
+  const sofr=latest(source,'sofr'),iqr=finite(sofr?.percentile25)&&finite(sofr?.percentile75)?100*(sofr.percentile75-sofr.percentile25):null;
+  const readings=deskReadings('Retained overnight funding readings',[
+    ...rates.map(id=>({label:definitions[id][0],value:displayReading(id,latest(source,id)?.value),change:latest(source,id)?.revisionIndicator?`Source revision flag ${latest(source,id).revisionIndicator}`:id==='sofrEffrSpread'?'Calculated same-date median difference':'Published volume-weighted median',basis:`${humanDate(latest(source,id)?.date)||'Unavailable'} · ${definitions[id][1]}`,seriesId:id})),
+    {label:'SOFR interquartile range',value:finite(iqr)?`${iqr.toFixed(1)} bp`:'Unavailable',change:'100 × (published p75 − p25)',basis:`${humanDate(sofr?.date)||'Unavailable'} · transaction-rate dispersion`},
+  ]);
+  const pillars=deskContext('Funding & liquidity evidence coverage',[
+    {kicker:'Pillar I · benchmark scope',title:'Secured & unsecured funding',value:'SOFR / EFFR',note:'SOFR describes secured Treasury repo and EFFR unsecured federal funds. Published percentiles describe each market’s transaction-rate distribution, not a distribution of their median spread.'},
+    {kicker:'Pillar II · clearing coverage',title:'FICC cleared volumes',value:'Not covered',note:'Retained SOFR transaction volume does not identify FICC sponsored repo totals, clearing shares, collateral composition or dealer netting capacity. Those reference metrics remain unavailable.'},
+    {kicker:'Pillar III · microstructure coverage',title:'Market depth',value:'Not covered',note:'Order-book depth, executable bid–ask spreads, TRACE turnover and on/off-the-run wedges are not retained. Dealer positions, settlement fails and funding rates remain partial indicators, not a liquidity score.'},
+  ]);
+  return '<div class="stitch-desk stitch-funding-desk">'+heading('FUNDING & MARKET FUNCTIONING','Official dealer aggregates and funding reference rates · partial indicators',button('CSV INDICATORS · FULL RETAINED','data-export-market'))
     +(source?.error?`<p class="panel-note amber">${esc(source.error)}</p>`:'')
     +`<div class="workspace-basis">`
     +`<p class="panel-note">${esc(MARKET_FUNCTIONING_LIMITATION)} Suppressed latest values remain missing; older observations are not substituted.</p></div>`
     +(hasData?'':emptyState('No verified market-functioning capture is available.','Source errors and missing values remain visible; no sample observations are substituted.'))
-    +`<div class="grid g11 workspace-analysis">${readingGroup('Weekly dealer stocks',(hasData?`<section class="metrics" aria-label="Dealer stock readings">${headline(source,'dealerNetTreasury')}</section>`:'')+panel('','DEALER POSITION & FINANCING STOCKS',hasData?dealerTable(source,['dealerNetTreasury','dealerRepo','dealerReverseRepo']):emptyState('Dealer stocks unavailable.'),'','Wednesday positions and outstanding financing, USD billions. Nominal Treasury securities excluding TIPS. Repo and reverse repo describe separate dealer financing directions; they are not netted into a score.'),`Dealer coverage ${dealerDates[0]??source?.coverageStart??'unknown'} through ${dealerDates.at(-1)??source?.coverageEnd??'unknown'}. Each measure keeps its own reference date.`)}${readingGroup('Weekly settlement fails',(hasData?`<section class="metrics" aria-label="Settlement fail readings">${['dealerFailsDeliver','dealerFailsReceive'].map(id=>headline(source,id)).join('')}</section>`:'')+panel('','CUMULATIVE WEEKLY SETTLEMENT FAILS',hasData?dealerTable(source,['dealerFailsDeliver','dealerFailsReceive']):emptyState('Settlement fails unavailable.'),'','Cumulative weekly dollar amounts. A fail can recur while unsettled; delivery and receipt sides are not added into unique failures or treated as issuer defaults.'),'Weekly cumulative amounts remain separate from Wednesday stocks and daily funding rates; delivery and receipt sides are not summed.')}</div>`
-    +readingGroup('Daily funding rates',(hasData?`<section class="metrics" aria-label="Daily funding readings">${rates.map(id=>headline(source,id)).join('')}</section>`:'')+panel('','SHARED FUNDING HISTORY WINDOW',rangeControls(state,Object.keys(catalog),{catalog})+'<p class="panel-note">The date window applies to both funding distributions and the median-rate spread. CSV INDICATORS exports the full retained history, including published percentile fields, independently of this window. Generic selected-series CSV exports do not include distribution bands.</p>')
+    +readings
+    +readingGroup('Daily funding rates',panel('','SHARED FUNDING HISTORY WINDOW',rangeControls(state,Object.keys(catalog),{catalog})+'<p class="panel-note">The date window applies to both funding distributions and the median-rate spread. CSV INDICATORS exports the full retained history, including published percentile fields, independently of this window. Generic selected-series CSV exports do not include distribution bands.</p>')
+    +'<div class="grid g21 stitch-chart-context">'+panel('','SECURED & UNSECURED FUNDING HISTORY',hasData?fundingChart:emptyState('Funding history unavailable.'),'','SOFR and EFFR published daily medians, percent. These distinct markets share a rate unit; their difference is shown separately in basis points.')
+    +panel('','SOFR − EFFR',spread.error?emptyState('Funding spread unavailable.',spread.error):spreadChart+coverageSummary(spread),'','Basis points · Meridian calculation from published medians, exact matching dates only. This is a difference between distinct markets, not a transaction-rate distribution of their spread.')+'</div>'
     +fundingDistributionPanels(source,range)
-    +panel('','SOFR − EFFR',spread.error?emptyState('Funding spread unavailable.',spread.error):spreadChart+coverageSummary(spread),'','Basis points · Meridian calculation from published medians, exact matching dates only. This is a difference between distinct markets, not a transaction-rate distribution of their spread.')
+    +pillars
     +panel('','DAILY FUNDING-RATE CONTEXT',hasData?rateTable:emptyState('Funding rates unavailable.'),'','SOFR is secured Treasury repo funding; EFFR is unsecured federal-funds funding. The same-effective-date difference is descriptive, not an exact credit or liquidity decomposition.'),`Daily effective-date coverage: ${fundingCoverage}. Published medians are percent; SOFR − EFFR is a same-date difference in basis points.`)
+    +`<div class="grid g11 workspace-analysis">${readingGroup('Weekly dealer stocks',(hasData?`<section class="metrics" aria-label="Dealer stock readings">${headline(source,'dealerNetTreasury')}</section>`:'')+panel('','DEALER POSITION & FINANCING STOCKS',hasData?dealerTable(source,['dealerNetTreasury','dealerRepo','dealerReverseRepo']):emptyState('Dealer stocks unavailable.'),'','Wednesday positions and outstanding financing, USD billions. Nominal Treasury securities excluding TIPS. Repo and reverse repo describe separate dealer financing directions; they are not netted into a score.'),`Dealer coverage ${dealerDates[0]??source?.coverageStart??'unknown'} through ${dealerDates.at(-1)??source?.coverageEnd??'unknown'}. Each measure keeps its own reference date.`)}${readingGroup('Weekly settlement fails',(hasData?`<section class="metrics" aria-label="Settlement fail readings">${['dealerFailsDeliver','dealerFailsReceive'].map(id=>headline(source,id)).join('')}</section>`:'')+panel('','CUMULATIVE WEEKLY SETTLEMENT FAILS',hasData?dealerTable(source,['dealerFailsDeliver','dealerFailsReceive']):emptyState('Settlement fails unavailable.'),'','Cumulative weekly dollar amounts. A fail can recur while unsettled; delivery and receipt sides are not added into unique failures or treated as issuer defaults.'),'Weekly cumulative amounts remain separate from Wednesday stocks and daily funding rates; delivery and receipt sides are not summed.')}</div>`
     +panel('','SOURCE CREDIT & REUSE CONDITIONS',`<div class="explain"><p>${esc(NY_FED_DATA_NOTICE)}</p><p>${esc(NY_FED_REFERENCE_RATE_NOTICE)}</p><p>${esc(NY_FED_PRODUCT_NOTICE)}</p><p>USD-billion conversions and the SOFR−EFFR difference are Meridian calculations. Source data are available without charge and remain subject to the same <a href="${NY_FED_TERMS_URL}" target="_blank" rel="noopener noreferrer">New York Fed Terms of Use ↗</a>, including disclaimers and limitations. These notices accompany CSV exports.</p></div>`)
-    +supportingDetails('market:methods','About this data',collection+panel('','WHAT CONTRIBUTED, WHY IT MATTERS & LIMITATIONS',
+    +'<div class="stitch-methods">'+supportingDetails('market:methods','About this data',collection+panel('','WHAT CONTRIBUTED, WHY IT MATTERS & LIMITATIONS',
   (`<div class="explain"><p><strong>WHAT CONTRIBUTED.</strong> These separate indicators `+
   `describe dealer inventory, financing, settlement delays and funding costs. Their changes `+
   `are presented on each measure’s own period and basis. This module does not infer a single `+
@@ -103,7 +120,7 @@ export function marketFunctioningPage(source=dataStatus.sources.marketFunctionin
   `href="https://www.newyorkfed.org/markets/reference-rates/sofr" target="_blank" `+
   `rel="noopener noreferrer">Secured Overnight Financing Rate Data ↗</a> · <a `+
   `href="https://www.newyorkfed.org/markets/reference-rates/effr" target="_blank" `+
-  `rel="noopener noreferrer">Effective Federal Funds Rate ↗</a></p></div>`)));
+  `rel="noopener noreferrer">Effective Federal Funds Rate ↗</a></p></div>`)))+'</div></div>';
 }
 
 export const MAX_GENERATED_FUNDING_CSV_BYTES=32*1024*1024;

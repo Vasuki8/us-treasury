@@ -3,6 +3,7 @@ import {readingGroup,supportingDetails} from './page-hierarchy.js';
 import {dataStatus} from './data.js';
 import {NOMINAL_YIELD_TENORS,REAL_YIELD_TENORS,selectCurveOverlays,H15_3M_GAP_NOTE,yieldComparisonShortcuts,selectedYieldChanges,yieldEventComparisons} from './yields.js';
 import {tabularCsv} from './model.js';
+import {deskReadings,deskContext} from './stitch-desk.js';
 import {heading,button,panel,metrics,chart,table,emptyState,escapeHtml as esc} from './ui.js';
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
 const display=(value,unit='%')=>finite(value)?`${value.toFixed(2)}${unit}`:'Unavailable';
@@ -55,10 +56,24 @@ export function yieldsPage(state={},source=dataStatus.sources.yields){
   ??'unavailable')} · ${source.status==='ok'?'Official source capture':source.fetchedAt?'CACHED':'Unavailable'
   }. Release instants are not supplied.</p><p class="panel-note">Current revised Treasury `+
   `par-yield history · no reconstructed original release vintages.${source.error?` <span class="amber">${esc(source.error)}</span>`:''}</p></div>`);
-  return (source?.error?`<p class="panel-note amber">${esc(source.error)}</p>`:'')+heading('RATES & CURVES',
+  const nominal=current?.nominal?.['10Y'],real=current?.real?.['10Y'],twoYear=current?.nominal?.['2Y'];
+  const selectedBasis=current?.available?`${humanDate(current.date)} · selected Curve A`:'Selected Curve A unavailable';
+  const readings=deskReadings('Selected Curve A readings',[
+    {label:'10Y nominal par yield',value:display(nominal),change:'Official Treasury fitted par yield',basis:selectedBasis},
+    {label:'10Y TIPS real par yield',value:display(real),change:'Official Treasury fitted real par yield',basis:selectedBasis},
+    {label:'10Y inflation compensation',value:display(finite(nominal)&&finite(real)?100*(nominal-real):null,' bp'),change:'100 × same-date nominal − real',basis:selectedBasis},
+    {label:'10Y − 2Y curve slope',value:display(finite(nominal)&&finite(twoYear)?100*(nominal-twoYear):null,' bp'),change:'100 × same-date 10Y − 2Y',basis:selectedBasis},
+  ]);
+  const pillars=deskContext('Curve evidence & model coverage',[
+    {kicker:'Component 01 · retained observations',title:'Nominal & real par yields',value:'Official fitted curves',note:'Nominal and real yields use the selected actual observation dates and matching tenors. Distinct underlying securities and cash flows limit an economic decomposition.'},
+    {kicker:'Component 02 · model coverage',title:'Inflation risk premium',value:'Not covered',note:'A separate model-derived expected inflation or inflation risk premium is not retained. Inflation compensation includes risk and liquidity effects; it is not pure expected inflation.'},
+    {kicker:'Component 03 · liquidity coverage',title:'TIPS liquidity premium',value:'Not covered',note:'No retained model isolates a TIPS liquidity discount, CPI-to-PCE adjustment or forward inflation forecast. These components are not inferred from the nominal-minus-real difference.'},
+  ]);
+  return '<div class="stitch-desk stitch-yields-desk">'+(source?.error?`<p class="panel-note amber">${esc(source.error)}</p>`:'')+heading('RATES & CURVES',
   'Treasury par curves · same-date spreads and matched nominal / real yields',button('CSV CURVES',
   `data-export-yield-curves${curves.some(curve=>curve.available)?'':' disabled'}`)+button('CSV INDICATORS','data-export-yield-indicators'))
-    +readingGroup('Selected curve comparison',controls+panel('00','HISTORICAL CURVE OVERLAYS',(dates.length?`<div class="chart" data-chart data-kind="history-curve" data-dates="${esc(dates.join(','))}" data-height="260"><p class="muted">Historical Treasury nominal par curves</p></div>`:emptyState('No verified curves captured.')),'','Percent · solid A / dashed B · maturity axis uses elapsed years; exact values available by pointer or keyboard.')
+    +readingGroup('Selected curve comparison',controls+readings+panel('00','HISTORICAL CURVE OVERLAYS',(dates.length?`<div class="chart" data-chart data-kind="history-curve" data-dates="${esc(dates.join(','))}" data-height="300" data-legend="true" data-end-labels="true"><p class="muted">Historical Treasury nominal par curves</p></div>`:emptyState('No verified curves captured.')),'','Percent · solid A / dashed B · maturity axis uses elapsed years; exact values available by pointer or keyboard.')
+    +pillars
     +`<div class="grid g11 workspace-analysis">${panel('01','SELECTED-DATE RATE CHANGES',curveTable,'',
   ('100 × (Curve A − Curve B), basis points; exact selected observation dates, missing tenors '+
   'remain unavailable. Published fitted par yields are reference measures, not executable '+
@@ -71,7 +86,7 @@ export function yieldsPage(state={},source=dataStatus.sources.yields){
   ||'unavailable'} · Curve B ${humanDate(dates[1])||'unavailable'}. Nominal and real par yields are percent; differences are basis points.`)
     +readingGroup('Current retained rate context',panel('03','CURRENT RETAINED RATE CONTEXT',metrics(['spread2s10s','spread3m10y','realYield10','inflationComp10']),'','Current retained observations use their own dates; these readings do not track the selected historical Curve A or Curve B dates.')
     +panel('04','CURVE SPREADS',chart(['spread2s10s','spread3m10y'],{height:210}),'','Basis points: 100 × (10Y − 2Y), and 100 × (10Y − 3M), exact same observation date.'),'Retained indicators use their own dates; they do not move with selected historical curve dates.')
-    +supportingDetails('yields:policy-context','Policy & overnight funding context',panel('05','POLICY & OVERNIGHT CONTEXT',metrics(['policyTargetLower','policyTargetUpper','effr','sofr']),'','Current retained observations use their own dates; not a decomposition of selected-date yields.'))
+    +'<div class="stitch-methods">'+supportingDetails('yields:policy-context','Policy & overnight funding context',panel('05','POLICY & OVERNIGHT CONTEXT',metrics(['policyTargetLower','policyTargetUpper','effr','sofr']),'','Current retained observations use their own dates; not a decomposition of selected-date yields.'))
     +supportingDetails('yields:source-coverage','Historical coverage & source exceptions',`<p class="panel-note">${esc(source.coverageNote
   ??'Yield history not captured.')}</p>`)+supportingDetails('yields:methods','About this data',collection+panel('06',
   'WHAT CONTRIBUTED / WHY IT MATTERS / LIMITATIONS',(`<div class="explain"><p><strong>WHAT CONTRIBUTED.</strong> Real par yields and inflation `+
@@ -91,5 +106,5 @@ export function yieldsPage(state={},source=dataStatus.sources.yields){
   `decomposition. A model estimate must remain labeled as modeled.</p><p><a `+
   `href="https://home.treasury.gov/policy-issues/financing-the-government/interest-rate-stati`+
   `stics/treasury-yield-curve-methodology" target="_blank" rel="noopener noreferrer">Treasury `+
-  `curve methodology ↗</a> · source credit: U.S. Treasury, Office of Debt Management.</p></div>`)));
+  `curve methodology ↗</a> · source credit: U.S. Treasury, Office of Debt Management.</p></div>`)))+'</div></div>';
 }

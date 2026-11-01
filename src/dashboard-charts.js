@@ -11,8 +11,8 @@ function definitions(input={},lookup=getSeries){
  const scoped=pceHorizonChartCatalog({lookup})['pce-horizons'].catalog;
  const inflation=['Yoy','3m','1m'].map(suffix=>scoped[family+suffix]);
  return [
-  {id:'growth',title:'Real GDP vs. private domestic final demand',preset:settings.growth,range:dashboardChartRange(settings.growth,growth),series:growth},
-  {id:'inflation',title:'PCE inflation horizons · momentum breakdown',preset:settings.inflation,range:dashboardChartRange(settings.inflation,inflation),series:inflation,family:settings.inflationFamily},
+  {id:'growth',title:'Real GDP vs. Private Domestic Final Demand',preset:settings.growth,range:dashboardChartRange(settings.growth,growth),series:growth},
+  {id:'inflation',title:'PCE Inflation Horizons: Momentum Breakdown',preset:settings.inflation,range:dashboardChartRange(settings.inflation,inflation),series:inflation,family:settings.inflationFamily},
  ];
 }
 
@@ -63,7 +63,7 @@ export function overviewComparisonCharts(state,{settings={},preview='gdp',contro
  const familyControls=`<div class="dashboard-family" role="group" aria-label="PCE inflation family">`
   +['core','headline'].map(family=>button(family==='core'?'Core PCE':'Headline PCE',
    `data-dashboard-family="${family}" aria-pressed="${normalized.inflationFamily===family}"`)).join('')+'</div>';
- const inflationBody=familyControls+measurementNotes(inflation.series)
+ const inflationBody=familyControls+`<p class="panel-note dashboard-chart-summary">${inflation.series.map(reading).join(' <span aria-hidden="true">/</span> ')}</p>`+measurementNotes(inflation.series)
   +chart(inflation.series.map(s=>s.id),{height:275,range:inflation.range,legend:true,endLabels:true})
    .replace('data-chart ', 'data-chart data-chart-catalog="pce-horizons" ')
   +`<div class="dashboard-chart-links"><a class="link-button" href="${esc(indicatorHref(normalized.inflationFamily==='core'?'pceCoreIndex':'pceIndex',state))}">Inspect source index & data</a></div>`;

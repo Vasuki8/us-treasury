@@ -69,12 +69,13 @@ test('funding chart calendar axis keeps requested empty extent before retained o
 });
 test('live market page shares explicit controls and chart windows while frozen panels have no active controls',()=>{
  api();const input=source(),state={window:'custom',startDate:'2026-02-01',endDate:'2026-03-01'},html=marketFunctioningPage(input,state);
- assert.match(html,/data-window="all"/);assert.equal((html.match(/data-chart-catalog="funding"/g)??[]).length,3);
+ assert.match(html,/data-window="all"/);assert.equal((html.match(/data-chart-catalog="funding"/g)??[]).length,4);
+ assert.match(html,/data-chart-catalog="funding" data-series="sofr,effr"/,'same-unit reference overlay uses the scoped funding catalog');
  assert.equal((html.match(/data-kind="funding-distribution"/g)??[]).length,2);
  assert.match(html,/CSV INDICATORS · FULL RETAINED/i);assert.match(html,/Retained: 4 observations.*2026-01-01.*2026-04-01/);assert.match(html,
   /Displayed: 2 observations.*2026-02-01.*2026-03-01/);
  assert.match(html,/transaction-rate distributions/);assert.match(html,/not confidence intervals/);
- assert.equal((html.match(/data-range="\{&quot;preset&quot;:&quot;custom&quot;,&quot;startDate&quot;:&quot;2026-02-01&quot;,&quot;endDate&quot;:&quot;2026-03-01&quot;\}"/g)??[]).length,3);
+ assert.equal((html.match(/data-range="\{&quot;preset&quot;:&quot;custom&quot;,&quot;startDate&quot;:&quot;2026-02-01&quot;,&quot;endDate&quot;:&quot;2026-03-01&quot;\}"/g)??[]).length,4);
  const frozen=view.fundingDistributionPanels(input,{preset:'all'},{frozen:true});assert.match(frozen,/Frozen/);for(const notice of [NY_FED_DATA_NOTICE,NY_FED_REFERENCE_RATE_NOTICE,NY_FED_PRODUCT_NOTICE,NY_FED_TERMS_URL])assert.ok(frozen.includes(notice));assert.doesNotMatch(frozen,/data-window|data-range="12"|data-export|<input|<button/);
 
 });

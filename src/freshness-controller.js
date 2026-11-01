@@ -2,7 +2,7 @@ import { freshnessBanner } from './ui.js';
 
 /** Keep age warnings current without fetching data or rerendering the page. */
 export function mountFreshnessBanner(container, snapshot, {
-  now = () => new Date(), timerHost = window, visibilityTarget = container.ownerDocument, getOptions = () => ({}),
+  now = () => new Date(), timerHost = window, visibilityTarget = container.ownerDocument, getOptions = () => ({}), warningContainer = null,
 } = {}) {
   let previousMarkup;
   let destroyed = false;
@@ -20,6 +20,7 @@ export function mountFreshnessBanner(container, snapshot, {
     const open = details?.open ?? false;
 
     container.innerHTML = markup;
+    if(warningContainer)warningContainer.replaceChildren(...container.querySelectorAll('.view-source-warning'));
     previousMarkup = markup;
     const nextDetails = container.querySelector('.freshness-details');
     if (nextDetails) nextDetails.open = open;

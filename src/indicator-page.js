@@ -1,18 +1,18 @@
 import {cpiPublicationIds} from './cpi-publication-history.js';
 import {supportingDetails} from './page-hierarchy.js';
-import {getSeries,latest,formatValue,formatChange,periodLabel,transformSeries,observationCoverageLabel} from './model.js';
-import {displayCurrencyUnit,displayUnitLabel,formatDisplayValue,formatDisplayChange} from './display-format.js';
+import {getSeries,latest,formatValue,periodLabel,transformSeries,observationCoverageLabel} from './model.js';
+import {displayCurrencyUnit,formatDisplayValue} from './display-format.js';
 import {escapeHtml as esc,button,heading,panel,chart,table,emptyState,sourceLink,seriesStatus,sentenceCase} from './ui.js';
 import {viewRange,workspaceReturn,indicatorHref,contextualHref} from './workspace-context.js';
 import {rangeControls,coverageSummary,measureLabel,changeLabel} from './research-controls.js';
 import {relatedIndicators} from './related.js';
-import {measurementChange,priorReadingLabel} from './measurement-change.js';
-import {routeFor} from './router.js';
+import {measurementChange} from './measurement-change.js';
 import {historyStatusMessage} from './vintages-page.js';
 import {vintageMeasurementsComparable} from './vintages.js';
 import {yieldTimingPanel} from './calendar-presentation.js';
 import {releases} from './data.js';
 import {humanDate,humanTimestamp,publicationDate,scheduledReleaseDate} from './ui-time.js';
+import {indicatorStats,indicatorContext,indicatorFamily} from './stitch-indicator-context.js';
 
 const link=(label,href,className='action')=>`<a class="${esc(className)}" href="${esc(href)}">`
   +`${esc(sentenceCase(label.replace(/ ↗/g,'')))}</a>`;
@@ -65,10 +65,9 @@ function claimsContextLinks(current,state) {
 
 export function indicatorPage(state,historyContext={}) {
   const current=getSeries(state.seriesId)??getSeries('unrate');
-  const observation=latest(current),previous=current.observations.at(-2);
+  const observation=latest(current);
   const published=publicationDate(current,observation,releases),scheduled=scheduledReleaseDate(current,observation,releases);
   const currencyUnit=displayCurrencyUnit([current]),options={currencyUnit};
-  const change=measurementChange(current),changeText=change.text.replace(formatChange(current),formatDisplayChange(current,options));
   const transformed=transformSeries(current,state.transform,viewRange(state));
   const available=transformed.observations.length>0;
   const related=relatedIndicators(current.id),back=workspaceReturn(state);
@@ -83,8 +82,6 @@ export function indicatorPage(state,historyContext={}) {
     +`<dd>${esc(current.observationType==='calculated'?'Derived':measureLabel(current))}</dd></dl>`;
   const criticalCoverage=['dol','dolAdvance'].includes(current.agency)||observation?.partial||observation?.suppressed
     ||/\b(?:partial|suppressed)\b|\bnot (?:directly )?comparable\b/i.test(current.coverageNote??'');
-  const payrollChange=current.id==='payroll'
-    ?`${priorReadingLabel(current)}: ${formatDisplayValue(current,previous?.value,options)}`:changeText;
   const chartControls=`<div class="toolbar">${rangeControls(state,[current.id])}`
     +'<label for="transform-select">View <select id="transform-select">'
     +`<option value="level"${state.transform==='level'?' selected':''}>${esc(measureLabel(current))}</option>`
@@ -97,37 +94,26 @@ export function indicatorPage(state,historyContext={}) {
     +coverageSummary(transformed)+(state.transform==='change'?'<p class="panel-note">'
       +'Changes use the immediately preceding retained observation before the selected window is applied; '
       +'the first displayed change can reference an observation outside the window. Missing observations remain gaps.</p>':'');
-  return `<div class="radar-page radar-indicator">${back?`<nav class="return-context" aria-label="Return to workspace">${link(back.label,back.href)}</nav>`:''}`
-    +heading(current.name,`${current.code} · ${current.source.name} · ${current.adjustment}`,actions)
-    +`<div class="indicator-desk"><div class="workspace-basis"><section class="indicator-snapshot" aria-label="Latest retained reading">`
-    +`<div class="indicator-reading"><p class="indicator-latest-label">`
-    +`Latest retained reading — independent of the selected history window and transformation</p>`
-    +`<div class="indicator-native-reading"><strong class="big-value">${esc(formatDisplayValue(current,observation?.value,options))}</strong>`
-    +`<span>${currencyUnit?'Display unit':'Native unit'}<br><b>${esc(displayUnitLabel(current,options))}</b></span></div>`
-    +`<p class="indicator-reference">Observation <b>${esc(observation?periodLabel(current,observation.date):'—')}</b></p>`
-    +`<p class="indicator-change">${esc(payrollChange)}</p><p class="indicator-prior">Prior `
-    +`<b>${esc(formatDisplayValue(current,previous?.value,options))}</b> · `
-    +`${esc(previous?periodLabel(current,previous.date):'Unavailable')}</p></div>`
-    +`<dl class="indicator-provenance"><dt>Source freshness</dt>`
-    +`<dd>${current.dataStatus==='cached'?'Cached':current.dataStatus==='official'?'Captured':'Unavailable'}</dd>`
-    +(published?`<dt>Published</dt><dd>${esc(humanDate(published))}</dd>`:'')
-    +(!published&&scheduled?`<dt>Scheduled release</dt><dd>${esc(humanDate(scheduled))} · publication not confirmed</dd>`:'')
-    +`<dt>Retrieved</dt><dd>${esc(humanTimestamp(current.fetchedAt)||'No successful retrieval')}</dd></dl></section>`
+  const family=indicatorFamily(current),desk=current.topic==='Labor'?{label:'Labor market',href:'#/economy/labor'}:current.topic==='Inflation'?{label:'Inflation',href:'#/economy?family=prices'}:related.module??{label:'Explore data',href:'#/explore'};
+  const title=family==='payroll'?'Total nonfarm payroll employment':family==='unemployment'?'Unemployment rate · U-3 & U-6':family==='earnings'?'Average hourly earnings · CES':current.name;
+  const provenance=`<div class="indicator-provenance-bar"><span>${esc(current.source.name)}</span><span class="mono">Series: ${esc(current.code)}</span><dl class="indicator-provenance"><dt>Source freshness</dt><dd>${current.dataStatus==='cached'?'Cached':current.dataStatus==='official'?'Captured':'Unavailable'}</dd>${published?`<dt>Published</dt><dd>${esc(humanDate(published))}</dd>`:'<dt>Published</dt><dd>Not verified in retained history</dd>'}${scheduled?`<dt>Scheduled release</dt><dd>${esc(humanDate(scheduled))} · publication not confirmed</dd>`:''}<dt>Retrieved</dt><dd>${esc(humanTimestamp(current.fetchedAt)||'No successful retrieval')}</dd></dl></div>`;
+  const lineage=`<section class="indicator-lineage"><header><h2>Source & calculation lineage</h2>${button('Copy link','data-copy-link','link-button')}</header><dl class="facts"><dt>Official source</dt><dd>${sourceLink(current)}</dd><dt>Source IDs</dt><dd class="mono">${esc((current.source.seriesIds??[]).join(', ')||current.code)}</dd><dt>Retrieval</dt><dd>${esc(current.fetchedAt??'Unknown')}</dd><dt>Latest attempt</dt><dd>${esc(current.lastAttemptAt??'Unknown')}</dd><dt>Calculation</dt><dd>${esc(current.calculation||'No calculation metadata is available.')}</dd><dt>Latest source input</dt><dd>${esc(observation?.sourceValue??'Not retained') }${observation?.baseDate?` · base ${esc(observation.baseDate)}: ${esc(observation.baseValue??'Unavailable')}`:''}</dd>${observation?.sourceSha256?`<dt>Source receipt SHA-256</dt><dd class="mono indicator-source-digest">${esc(observation.sourceSha256)}</dd>`:''}</dl><p class="panel-note">Source receipt hashes identify retained inputs when supplied. They do not certify an economic estimate or establish its first publication.</p>${current.sourceNotice?`<p class="panel-note">${esc(current.sourceNotice)}</p>`:''}</section>`;
+  return `<div class="stitch-indicator" data-indicator-family="${family}"><div class="radar-page radar-indicator"><nav class="indicator-breadcrumbs${back?' return-context':''}" aria-label="${back?'Return to workspace':'Indicator breadcrumb'}">${link(back?.label??'Back to '+desk.label,back?.href??desk.href,'indicator-back')}<span>Workspace / Economy / ${esc(desk.label)} / <b>${esc(current.code)}</b></span></nav>`
+    +heading(title,`${current.code} · ${current.source.name} · ${current.adjustment}`,actions)
     +`<p class="panel-note indicator-definition">${esc(current.definition)}</p>`
+    +`<div class="indicator-desk">${indicatorStats(current,state,options)}${provenance}`
     +(current.coverageNote&&criticalCoverage?`<p class="panel-note amber">${esc(current.coverageNote)}</p>`:'')
     +(current.error?`<p class="panel-note amber" role="status">${esc(current.error)}</p>`:'')
     +claimsContextLinks(current,state)
     +(cpiPublicationIds.includes(current.id)?`<p class="panel-note indicator-publication-link">${link('VERIFIED RELEASE & PUBLICATION EVIDENCE ↗',contextualHref({page:'release',publicationSeries:current.id,publicationPeriod:observation?.date??''},state))}<br>Published CPI rates use the dated release, with monthly seasonally adjusted and twelve-month unadjusted bases. This chart retains its current index-derived history.</p>`:'')
     +(['gdp','claimsAdvance','continuedClaimsAdvance','claims','continuedClaims'].includes(current.id)?`<p class="panel-note indicator-publication-link">${link('VERIFIED RELEASE & PUBLICATION EVIDENCE ↗',contextualHref({page:'release',publicationSeries:current.id==='gdp'?'gdp':current.id.includes('ontinued')?'continuedClaimsAdvance':'claimsAdvance',publicationPeriod:observation?.date??'',publicationCutoff:current.agency==='dolAdvance'?observation?.publishedAt??'':''},state))}</p>`:'')
-    +'</div><div class="workspace-analysis"><div class="indicator-chart">'
+    +'<div class="indicator-chart">'
     +panel('01',`${current.code} / ${current.agency==='dolAdvance'?'Latest release context':'Historical series'}`,chartBody,'',
       `${current.frequency} · ${transformed.unit} · ${seriesStatus(current)}`)+'</div>'
-    +`<section class="panel indicator-evidence"><div class="tabs" role="tablist" aria-label="Indicator detail sections">${tabs.map(([id,label])=>button(label,`role="tab" id="detail-tab-${id}" aria-controls="detail-content" aria-selected="${activeTab===id}" tabindex="${activeTab===id?0:-1}" data-tab="${id}"`,'')).join('')}</div><div class="tab-panel" id="detail-content" role="tabpanel" tabindex="0" aria-labelledby="detail-tab-${activeTab}">${content}</div></section>`
-    +`</div></div><nav class="context-strip related-series" aria-label="Related indicators"><span class="muted">Related</span>`
-    +related.seriesIds.map(id=>link(getSeries(id).short,indicatorHref(id,state))).join('')
-    +(related.module?link(related.module.label,related.module.href):'')+'</nav>'
+    +indicatorContext(current,state)
+    +`<section class="panel indicator-evidence"><header class="panel-head"><h2>Historical observations & retrieval revisions</h2><p class="panel-note">${esc(current.name)} · original reference periods, source footnotes and captured revision coverage.</p></header><div class="tabs" role="tablist" aria-label="Indicator detail sections">${tabs.map(([id,label])=>button(label,`role="tab" id="detail-tab-${id}" aria-controls="detail-content" aria-selected="${activeTab===id}" tabindex="${activeTab===id?0:-1}" data-tab="${id}"`,'')).join('')}</div><div class="tab-panel" id="detail-content" role="tabpanel" tabindex="0" aria-labelledby="detail-tab-${activeTab}">${content}</div></section>`
+    +`</div><section class="indicator-related" aria-label="Related indicators"><header><h2>Related indicators & macro pairings</h2>${related.module?link(related.module.label,related.module.href,'link-button'):''}</header><div class="indicator-related-grid">`
+    +related.seriesIds.map(id=>{const s=getSeries(id);return `<a class="indicator-related-card" href="${esc(indicatorHref(id,state))}"><span>${esc(s.code)}</span><strong>${esc(formatDisplayValue(s,latest(s)?.value))}</strong><b>${esc(s.short)}</b><small>${esc(periodLabel(s,latest(s)?.date))} · ${esc(s.unit)}</small><small>${esc(measurementChange(s).text)}</small></a>`;}).join('')+'</div></section>'
     +(current.id==='yield'?supportingDetails('indicator:yield-timing','Rates guidance · ongoing Treasury publication timing',yieldTimingPanel()):'')
-    +supportingDetails(`indicator:source:${current.id}`,'About this data',
-      panel('02','Series information',metadata+detailMethodology(current),button('Copy link','data-copy-link','link-button')))
-    +`</div>`;
+    +`<section class="indicator-method-grid" data-page-disclosure="indicator:source:${esc(current.id)}" aria-label="About this data"><div class="indicator-methodology"><h2>About this data · methodology & coverage</h2>${metadata}${detailMethodology(current)}</div>${lineage}</section></div></div>`;
 }

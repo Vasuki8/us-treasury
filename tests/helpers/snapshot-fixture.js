@@ -6,7 +6,7 @@ import {decodeStoredSnapshot,writeStoredSnapshot} from '../../scripts/snapshot-s
 
 export const snapshot=decodeStoredSnapshot(readFileSync(new URL('../fixtures/ui-snapshot/snapshot.json.gz',import.meta.url)));
 const root=fileURLToPath(new URL('../../',import.meta.url));
-const defaults=['src','scripts','index.html','styles.css','favicon.svg','package.json','server.mjs'];
+const defaults=['src','scripts','fonts','index.html','styles.css','favicon.svg','package.json','server.mjs'];
 function scratchDirectory(destination){
   const target=path.resolve(destination),relative=path.relative(root,target),parent=path.relative(target,root);
   if(!parent||!parent.startsWith('..')&&!path.isAbsolute(parent))throw new Error('A fixture cannot replace the repository or its parents');

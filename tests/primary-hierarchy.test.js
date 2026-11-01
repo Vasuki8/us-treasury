@@ -21,11 +21,12 @@ function outsideDetails(html){
  return result;
 }
 
-test('Labor focus has one CSV and data action while retaining weekly distinctions and supporting source access',()=>{
+test('Labor header and focus retain scoped CSV actions with one focused data action and supporting source access',()=>{
  const html=laborPage(state({macroMeasure:'unrate'}));
- assert.equal(count(html,'data-export-macro-measure'),1);
+ assert.equal(count(html,'data-export-macro-measure'),2);
  const focus=html.match(/<section class="labor-history"[^]*?<\/section>/)?.[0]??'';
  assert.ok(focus);
+ assert.equal(count(focus,'data-export-macro-measure'),1);
  assert.equal(count(focus,'Details &amp; data table'),1);
  assert.doesNotMatch(focus,/Inspect data/);
  assert.match(focus,/data-page-disclosure="labor:definition:unrate"/);

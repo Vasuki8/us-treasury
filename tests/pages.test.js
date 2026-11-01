@@ -146,16 +146,16 @@ test('HTML helpers escape untrusted values and expose declarative chart controls
 
 test('overview leads with four cards and retains all eight dated readings, momentum and publication evidence', () => {
  const html=render(),current=getSeries('unrate');
- assert.equal((html.match(/class="oh-topic"/g)||[]).length,4);
+ assert.equal((html.match(/class="oh-topic stitch-card"/g)||[]).length,4);
  assert.equal((html.match(/data-overview-reading=/g)||[]).length,8);
  assert.ok(html.includes(formatValue(current,latest(current)?.value)));
  assert.match(html,/data-series="pceMonthly,pceCoreMonthly"/);
  assert.match(html,/data-series="payrollAverage3m"/);
  assert.doesNotMatch(html,/data-chart[^>]*data-series="(?:pceMonthly|payroll),unrate"/);
- assert.match(html,/data-overview-disclosure="publications"/);assert.match(html,/Upcoming releases/);
- assert.ok(html.indexOf('class="oh-topic-grid"')<html.indexOf('Upcoming releases'));
- assert.ok(html.indexOf('class="oh-topic-grid"')<html.indexOf('class="oh-momentum"'));
- assert.ok(html.indexOf('class="oh-momentum"')<html.indexOf('Upcoming releases'));
+ assert.match(html,/data-overview-disclosure="publications"/);assert.match(html,/Upcoming Releases/);
+ assert.ok(html.indexOf('class="oh-topic-grid stitch-headline-grid"')<html.indexOf('Upcoming Releases'));
+ assert.ok(html.indexOf('class="oh-topic-grid stitch-headline-grid"')<html.indexOf('class="oh-momentum"'));
+ assert.ok(html.indexOf('class="oh-momentum"')<html.indexOf('Upcoming Releases'));
  assert.doesNotMatch(html,/Source health, coverage and methodology/);
  assert.match(html,/Collection failures and retained-source status are in Refresh details above/);
  assert.doesNotMatch(html,/synthetic|sample week|sample observations/i);
@@ -235,8 +235,8 @@ test('overview release watch selects upcoming ET dates rather than old schedule 
   const events = [calendarEvent({ id: 'past', name: 'Past release', date: dateAfter(-1) }), calendarEvent({ id: 'elapsed', name: 'Elapsed today', date: today, scheduledAt: new Date(Date.now() - 60000).toISOString() }), ...[1, 2, 3, 4, 5, 40].map(days => calendarEvent({ id: `future-${days}`, name: `Future release ${days}`, program:`program-${days}`, date: dateAfter(days), scheduledAt: `${dateAfter(days)}T13:30:00Z` }))];
   withCalendar(events, calendarFixture, () => {
     const html = render();
-    assert.doesNotMatch(html, /Past release|Elapsed today|Future release 5|Future release 40/);
-    for (const days of [1, 2, 3, 4]) assert.ok(html.includes(`Future release ${days}`));
+    assert.doesNotMatch(html, /Past release|Elapsed today|Future release 40/);
+    for (const days of [1, 2, 3, 4, 5]) assert.ok(html.includes(`Future release ${days}`));
     assert.match(html, /Cached schedule/);
     assert.doesNotMatch(html, />OUT<|>NEXT</);
   });

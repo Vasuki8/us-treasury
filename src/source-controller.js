@@ -10,7 +10,7 @@ const pageSources={
  fiscal:['fiscal','treasury','bea'],refinancing:['refinancing'],yields:['yields','treasury'],
  auctions:['auctions'],ownership:['ownership'],macro:['macroContributions'],market:['marketFunctioning'],
 };
-const overviewSources=['bea','bls','policyRates','marketFunctioning','treasury','yields','fiscal','activity','dolAdvance'];
+const overviewSources=['bea','bls','policyRates','marketFunctioning','treasury','yields','fiscal','activity','dolAdvance','macroContributions'];
 const agencies=(ids,catalog)=>ids.map(id=>catalog[id]?.agency).filter(Boolean);
 const questionIds=question=>[
  ...(question?.supportingSeriesIds??[]),...(question?.contradictingSeriesIds??[]),

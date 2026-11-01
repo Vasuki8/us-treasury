@@ -82,7 +82,7 @@ mountCompactNavigation(document.querySelector('.functionbar'));
 let storage;
 try { storage = window.localStorage; } catch { /* Session remains usable without persistence. */ }
 let state = { ...parseRoute(location.hash), ...readPreferences(storage) };
-const freshnessController=mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus,{getOptions:()=>({compact:true,relevantIds:relevantRefreshIds(state,series)})});
+const freshnessController=mountFreshnessBanner(document.getElementById('data-freshness'),dataStatus,{warningContainer:document.getElementById('view-source-warnings'),getOptions:()=>({compact:true,relevantIds:relevantRefreshIds(state,series)})});
 const researchLibrary=await createResearchLibrary(storage);
 let changeCheckpoint=readChangeCheckpoint(storage,dataStatus.generatedAt),changeState={status:'idle',ids:[],history:null,error:null},changeKey='',activeWorkspaceId=null,researchLabel='',pinBusy=false;
 let changeRowsCache=null;
@@ -143,6 +143,7 @@ function applyAppearance() {
   themeButton.setAttribute('title',`Switch to ${dark?'Light':'Dark'} theme`);
   document.getElementById('density-select').value=state.density;
   const mobileDensity=document.getElementById('density-select-mobile');if(mobileDensity)mobileDensity.value=state.density;
+  for(const button of document.querySelectorAll('[data-display-density]'))button.setAttribute('aria-pressed',String(button.dataset.displayDensity===state.density));
 }
 
 function toggleTheme() {
@@ -291,7 +292,7 @@ function render({focusHeading=false,preserveFocus=false,captureDrafts=true}={}) 
     publicationArchive,publicationState,publicationExplanations,explanationState,
     workspacePreview:workspacePreviews[state.page],overviewChartSettings,
   });
-  main.querySelector('.page-heading .actions')?.insertAdjacentHTML('beforeend',researchActions());
+  (main.querySelector('[data-research-actions]')??main.querySelector('.page-heading .actions'))?.insertAdjacentHTML('beforeend',researchActions());
   document.getElementById('workspace-page-label').textContent=main.querySelector('h1')?.textContent??pageNames[state.page];
   if(externalControlsOpen&&main.querySelector('#external-history-controls'))main.querySelector('#external-history-controls').open=true;
   researchDisclosures.restore(main);
@@ -562,6 +563,27 @@ root.addEventListener('click',async event=>{
   const d=button.dataset;
   if(button.disabled)return;
   if(button.id==='theme-toggle'){toggleTheme();return;}
+  if('displayDensity' in d){
+    if(!['comfortable','compact'].includes(d.displayDensity))return;
+    state.density=d.displayDensity;
+    const durable=persist();render({preserveFocus:true});
+    announce(durable?'Appearance saved in this browser.':'Appearance changed for this session; browser storage is unavailable.');return;
+  }
+  if('overviewFollow' in d||'overviewExport' in d){
+    if(state.page!=='overview')return;
+    const ids=['gdp','pceCore','unrate','yield','payroll','policyTargetUpper','spread2s10s','interestRevenueRatio'];
+    if('overviewFollow' in d){
+      const added=ids.filter(id=>!state.saved.includes(id));
+      state.saved=[...new Set([...state.saved,...ids])];delete state.freezeSelection;
+      const durable=persist(),name=state.watchlists.find(list=>list.id===state.activeWatchlistId)?.name??'active watchlist';
+      render({preserveFocus:true});
+      announce(`${added.length?`Added ${added.length} Overview readings to ${name}.`:`All eight Overview readings are already followed in ${name}.`} ${durable?'Saved in this browser.':'Changed for this session; browser storage is unavailable.'}`);
+    }else{
+      try{await ensureSourceAction(requiredSourceIds(state,{purpose:'export',ids}));exportCsv(ids);}
+      catch(error){announce(`Export unavailable: ${error.message}`);}
+    }
+    return;
+  }
   if('previewClose' in d){
     const id=workspacePreviews.explore;workspacePreviews.explore=null;
     render({preserveFocus:true});

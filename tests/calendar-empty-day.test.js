@@ -20,3 +20,20 @@ test('impossible dates and months are still rejected',()=>{
  const state=parseRoute('#/calendar?month=2026-13&day=2026-02-30');
  assert.equal(state.day,'all');assert.equal(state.calendarMonth,'upcoming');
 });
+
+test('empty selected days anchor both calendar highlights and their own week after date or watchlist filtering',()=>{
+ for(const [query,selected,monday] of [
+  ['scope=treasury&calendarTopic=Rates&month=2099-01&day=2099-01-03','2099-01-03','2098-12-29'],
+  ['month=2026-11&day=2026-11-18&calendarTopic=Labor&watch=1','2026-11-18','2026-11-16'],
+ ]){
+  const state={...parseRoute('#/calendar?'+query),saved:[]};
+  assert.deepEqual(calendarScope(state).filtered,[]);
+  const html=calendarPage(state);
+  const week=html.match(/<nav class="calendar-week-strip"[^]*?<\/nav>/)?.[0]??'';
+  assert.match(week,new RegExp(`aria-current="date"><time datetime="${selected}"`));
+  assert.match(week,new RegExp(`<time datetime="${monday}"`));
+  assert.match(html,new RegExp(`class="calendar-month-day[^\"]* is-selected"[^>]*aria-current="date">${Number(selected.slice(-2))}<`));
+  assert.match(html,/No releases match these filters/);
+  assert.match(html,/No release selected/);
+ }
+});

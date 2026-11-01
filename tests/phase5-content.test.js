@@ -33,10 +33,17 @@ const renderers={fiscal:()=>fiscalPage(base),refinancing:()=>refinancingPage({},
  auctions:()=>auctionsPage({},base),ownership:()=>ownershipPage(ownership),macro:()=>macroPage(base),
  market:()=>marketFunctioningPage(base),credit:()=>creditContextPage({},{}),labor:()=>laborPage(),
  coverage:()=>macroCoveragePage({macroFamily:'activity'})};
-for(const [name,render]of Object.entries(renderers))test(`${name} puts collection evidence in closed About this data below content`,()=>{
+for(const [name,render]of Object.entries(renderers).filter(([name])=>name!=='labor'))test(`${name} puts collection evidence in closed About this data below content`,()=>{
  const html=render(),main=visible(html);
  assert.match(html,/<summary><span>About this data<\/span>/);
  assert.doesNotMatch(main,/2026-10-22T02:00:00Z|Release date: unknown|Actual release date: unknown/i);
+ assert.doesNotMatch(main,/WHAT CHANGED\.<\/strong>\s*(?:Select|CAPTURED|Captured)/);
+});
+test('Labor keeps reference methodology and provenance visible below its indicator catalog',()=>{
+ const html=renderers.labor(),main=visible(html);
+ assert.match(main,/class="labor-methodology-grid"[^]*?Establishment survey[^]*?Household survey/);
+ assert.match(main,/Data provenance &amp; coverage[^]*?Retrieved[^]*?Last attempt/);
+ assert.ok(html.indexOf('id="labor-notes"')>html.indexOf('id="labor-readings"'));
  assert.doesNotMatch(main,/WHAT CHANGED\.<\/strong>\s*(?:Select|CAPTURED|Captured)/);
 });
 test('fiscal total deficit uses exact twelve-month outlays less receipts and remains missing for an incomplete input',()=>{

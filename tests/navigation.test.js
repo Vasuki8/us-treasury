@@ -10,7 +10,7 @@ function themeControl(storage){
   const label={textContent:''},sun={hidden:false},moon={hidden:true},attributes=new Map();
   const button={id:'theme-toggle',dataset:{},disabled:false,setAttribute:(name,value)=>attributes.set(name,value),querySelector:selector=>({'[data-theme-label]':label,'[data-theme-sun]':sun,'[data-theme-moon]':moon}[selector])};
   const root={dataset:{}},meta={content:''},density={value:''},notices=[];
-  const document={documentElement:{dataset:{}},activeElement:button,querySelector:()=>meta,getElementById:id=>id==='theme-toggle'?button:id==='density-select'?density:null};
+  const document={documentElement:{dataset:{}},activeElement:button,querySelector:()=>meta,querySelectorAll:()=>[],getElementById:id=>id==='theme-toggle'?button:id==='density-select'?density:null};
   const start=application.indexOf('function persist()'),end=application.indexOf('function rememberFocus()',start);
   assert.ok(start>=0&&end>start,'Theme helpers must remain independently usable');
   const click=/root\.addEventListener\('click',async event=>\{([^]*?)\n\}\);/.exec(application);assert.ok(click,'Native button click dispatch must exist');

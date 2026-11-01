@@ -12,6 +12,13 @@ import {importMapSource} from '../scripts/asset-references.mjs';
 import {copyFixtureProject} from './helpers/snapshot-fixture.js';
 
 const run = promisify(execFile);
+const fontLicenses={
+  'inter-variable.ttf':'inter-OFL.txt',
+  'jetbrains-mono-regular.woff2':'jetbrains-mono-OFL.txt',
+  'jetbrains-mono-medium.woff2':'jetbrains-mono-OFL.txt',
+  'material-symbols-outlined.woff2':'material-symbols-LICENSE.txt',
+};
+const publicFontFiles=new Set([...Object.keys(fontLicenses),...Object.values(fontLicenses)]);
 
 function elements(html,name){
   return [...html.matchAll(new RegExp(`<${name}\\b[^>]*>`,'gi'))].map(match=>({
@@ -43,7 +50,7 @@ async function build(root) {
   return { html, entry, imports: map.imports };
 }
 
-test('each asset keeps its URL unless its own bytes change, including snapshot-only and stylesheet refreshes', async t => {
+test('each asset keeps its URL unless its bytes or a stylesheet font dependency change', async t => {
   const root = await fixture(t);
   const first = await build(root);
   assert.deepEqual(await build(root), first);
@@ -66,6 +73,19 @@ test('each asset keeps its URL unless its own bytes change, including snapshot-o
   assert.equal(styled.entry, refreshed.entry);
   assert.deepEqual(styled.imports, refreshed.imports);
   assert.notEqual(stylesheet(styled.html),stylesheet(refreshed.html));
+  const fontsBefore=(await readdir(path.join(root,'dist','assets','fonts'))).sort();
+  const fontPath=path.join(root,'fonts','inter-variable.ttf');
+  await writeFile(fontPath,Buffer.concat([await readFile(fontPath),Buffer.from([0])]));
+  const retyped=await build(root),fontsAfter=(await readdir(path.join(root,'dist','assets','fonts'))).sort();
+  assert.equal(retyped.entry,styled.entry);assert.deepEqual(retyped.imports,styled.imports);
+  assert.equal(elements(retyped.html,'link').find(link=>link.attributes.rel==='icon')?.attributes.href,elements(styled.html,'link').find(link=>link.attributes.rel==='icon')?.attributes.href);
+  assert.notEqual(stylesheet(retyped.html),stylesheet(styled.html),'A changed font URL invalidates its dependent stylesheet');
+  const removed=fontsBefore.filter(name=>!fontsAfter.includes(name)),added=fontsAfter.filter(name=>!fontsBefore.includes(name));
+  assert.equal(removed.length,1);assert.equal(added.length,1);
+  assert.match(removed[0],/^inter-variable\.[a-f0-9]{16}\.ttf$/);assert.match(added[0],/^inter-variable\.[a-f0-9]{16}\.ttf$/);
+  const css=await readFile(path.join(root,'dist',stylesheet(retyped.html)),'utf8');
+  assert.ok(css.includes(`./fonts/${added[0]}`));assert.ok(!css.includes(removed[0]));
+  assert.doesNotMatch(css,/url\(['"]?https?:/,'Local typography must not add runtime font CDN requests');
 });
 
 test('build packages only the entry and allowlisted versioned application files, which pass the HTTP smoke check', async t => {
@@ -78,15 +98,28 @@ test('build packages only the entry and allowlisted versioned application files,
   const icon=elements(built.html,'link').find(link=>link.attributes.rel==='icon')?.attributes.href;
   assert.match(icon, /^\.\/assets\/favicon\.[a-f0-9]{16}\.svg$/);
   const files = (await readdir(path.join(root, 'dist'), { recursive: true, withFileTypes: true })).filter(item => item.isFile());
+  const fontFiles=new Set();
   for (const item of files) {
     const relative = path.relative(path.join(root, 'dist'), path.join(item.parentPath, item.name)).replaceAll(path.sep, '/');
     if (relative === 'index.html') continue;
     const hashed = relative.match(/^assets\/(?:src\/)?[a-zA-Z0-9_-]+\.([a-f0-9]{16})\.(?:js|css|svg)$/);
     const generated = relative.match(/^assets\/src\/(?:history|source)-([a-f0-9]{64})\.(?:js|json(?:\.gz)?)$/);
-    assert(hashed || generated, `Unexpected public file: ${relative}`);
+    const font=relative.match(/^assets\/fonts\/([a-zA-Z0-9_-]+)\.([a-f0-9]{16})\.(woff2|ttf|txt)$/);
+    assert(hashed || generated || font, `Unexpected public file: ${relative}`);
     const bytes = await readFile(path.join(root, 'dist', relative));
     const digest = createHash('sha256').update(bytes).digest('hex');
-    assert.equal(hashed ? digest.slice(0, 16) : digest, (hashed || generated)[1], relative);
+    assert.equal(hashed||font?digest.slice(0,16):digest,font?font[2]:(hashed||generated)[1],relative);
+    if(font){
+      const original=`${font[1]}.${font[3]}`;
+      assert(publicFontFiles.has(original),`Unreviewed public font or license: ${original}`);
+      assert.deepEqual(bytes,await readFile(path.join(root,'fonts',original)),`Font and license bytes remain intact: ${original}`);
+      fontFiles.add(original);
+    }
+  }
+  assert.deepEqual([...fontFiles].sort(),[...publicFontFiles].sort(),'Only the four official fonts and their three licenses are public');
+  for(const [font,license]of Object.entries(fontLicenses)){
+    assert(fontFiles.has(font)&&fontFiles.has(license),`${font} requires its bundled license`);
+    assert.match(await readFile(path.join(root,'fonts',license),'utf8'),license.endsWith('-OFL.txt')?/SIL Open Font License, Version 1\.1/:/Apache License\s+Version 2\.0/);
   }
   const checked = await run(process.execPath, ['scripts/check-build.mjs'], { cwd: root });
   const checkedCount=checked.stdout.match(/smoke check passed \((\d+) assets\)/);

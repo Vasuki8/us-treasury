@@ -17,23 +17,44 @@
   <a class="skip-link" href="#main-content">Skip to content</a>
   <div id="app" data-theme="Light" data-density="compact">
     <header class="brandbar">
-      <a class="brand" href="#/overview" aria-label="Meridian overview"><svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 17 5-5 4 3 8-9M15 6h5v5"/><path d="m5 6 1-2 1 2 2 1-2 1-1 2-1-2-2-1Z" stroke-width="1.2"/></svg>MERIDIAN</a>
-      <div class="workspace-breadcrumb"><span>U.S. Macro</span><span aria-hidden="true">/</span><strong id="workspace-page-label">Overview</strong></div>
-      <form class="commandbar" id="command-form" role="search">
-        <label class="sr-only" for="command-input">Search indicators, pages and research</label>
-        <input id="command-input" placeholder="Search data or pages" aria-description="Exact indicator codes open the indicator. Commands US, LABOR, UNRATE, CAL and FIND remain available." autocomplete="off" spellcheck="false" maxlength="200">
-        <kbd class="command-hint">Ctrl K</kbd><button class="go" type="submit" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></button>
-      </form>
+      <a class="brand mobile-brand" href="#/overview" aria-label="Meridian overview"><span class="material-symbols-outlined brand-mark" aria-hidden="true">insights</span>MERIDIAN</a>
+      <div class="header-leading">
+        <div class="workspace-breadcrumb"><span>Workspace</span><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span><strong id="workspace-page-label">Overview</strong></div>
+        <form class="commandbar" id="command-form" role="search">
+          <label class="sr-only" for="command-input">Search indicators, pages and research</label>
+          <input id="command-input" placeholder="Search indicators, tickers, releases…" aria-description="Exact indicator codes open the indicator. Commands US, LABOR, UNRATE, CAL and FIND remain available." autocomplete="off" spellcheck="false" maxlength="200">
+          <kbd class="command-hint">Ctrl K</kbd><button class="go" type="submit" aria-label="Search"><span class="material-symbols-outlined" aria-hidden="true">search</span></button>
+        </form>
+      </div>
+      <div class="header-utilities">
+      <div id="data-freshness" class="header-source-status"></div>
+      <div class="density-switch" role="group" aria-label="Display density">
+        <button type="button" data-display-density="comfortable" aria-pressed="false">COMF</button>
+        <button type="button" data-display-density="compact" aria-pressed="true">DENSE</button>
+      </div>
+      <button type="button" class="header-icon-button" data-copy-link aria-label="Share this view" title="Copy link to this view"><span class="material-symbols-outlined" aria-hidden="true">ios_share</span></button>
       <button id="theme-toggle" type="button" class="appearance theme-toggle" aria-label="Light theme. Switch to Dark theme." title="Switch to Dark theme">
         <span class="theme-icon" data-theme-sun aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg></span>
         <span class="theme-icon" data-theme-moon aria-hidden="true" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M20.9 13A9 9 0 1 1 11 3.1 7 7 0 0 0 20.9 13Z"></path></svg></span>
         <span data-theme-label hidden>Light</span>
       </button>
-      <button type="button" class="appearance theme-toggle display-options-toggle" popovertarget="display-options" aria-label="Display options" title="Display options"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="3" fill="currentColor" stroke="none"/></svg></button>
+      <button type="button" class="local-research-toggle" popovertarget="local-research-menu" aria-label="Local research" title="Research saved in this browser"><span class="material-symbols-outlined" aria-hidden="true">person</span></button>
+      </div>
       <div id="display-options" class="display-options" popover aria-label="Display options">
         <label class="appearance density-label">Display density <select id="density-select"><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select></label>
       </div>
+      <div id="local-research-menu" class="local-research-menu" popover aria-label="Local research">
+        <p class="rail-title">My Research</p>
+        <p class="rail-note">Saved in this browser</p>
+        <a href="#/watchlist" data-nav="watchlist"><span class="material-symbols-outlined nav-icon" aria-hidden="true">bookmark</span>Watchlist</a>
+        <a href="#/research" data-nav="research" data-nav-view="workspaces"><span class="material-symbols-outlined nav-icon" aria-hidden="true">tab</span>Saved Views</a>
+        <a href="#/research?view=packages" data-nav="research" data-nav-view="packages"><span class="material-symbols-outlined nav-icon" aria-hidden="true">camera</span>Snapshots</a>
+        <button type="button" class="action link-button display-options-toggle" popovertarget="display-options"><span class="material-symbols-outlined nav-icon" aria-hidden="true">tune</span>Display options</button>
+        <p class="rail-title">Followed indicators <span id="saved-count">0</span></p>
+        <div id="saved-list" class="saved-list"></div>
+      </div>
     </header>
+    <div id="view-source-warnings" aria-live="polite"></div>
     <nav class="functionbar" aria-label="Main navigation">
       <a href="#/overview" data-nav="overview" class="mobile-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg><span>Overview</span></a>
       <a href="#/economy" data-nav-group="economy" class="nav-secondary">Economy</a>
@@ -41,8 +62,8 @@
       <a href="#/explore" data-nav="explore" class="mobile-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 15 5-6 4 3 5-8M14 4h3v3"/><circle cx="16" cy="16" r="4"/><path d="m19 19 3 3"/></svg>
         <span class="nav-full-label">Explore data</span><span class="nav-short-label">Explore</span>
       </a>
-      <a class="nav-secondary" href="#/economy?family=policy" data-nav-group="fed">Fed &amp; rates</a>
-      <a class="nav-secondary" href="#/fiscal" data-nav-group="treasury">Treasury &amp; funding</a>
+      <a class="nav-secondary" href="#/economy?family=policy" data-nav-group="fed">Fed &amp; Rates</a>
+      <a class="nav-secondary" href="#/fiscal" data-nav-group="treasury">Treasury &amp; Fiscal</a>
       <details class="navigation-more" id="navigation-more">
         <summary aria-label="More pages"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>More</span></summary>
         <div class="navigation-menu">
@@ -54,22 +75,22 @@
           <a href="#/economy?family=housing" data-nav="macroCoverage" data-nav-family="housing">Housing</a>
           <a href="#/economy?family=external" data-nav="macroCoverage" data-nav-family="external">Trade &amp; current account</a>
           <a href="#/credit" data-nav="credit">Credit &amp; banking</a>
-          <p class="navigation-group-label">Fed &amp; rates</p>
+          <p class="navigation-group-label">Fed &amp; Rates</p>
           <a href="#/economy?family=policy" data-nav="macroCoverage" data-nav-family="policy">Policy rates</a>
           <a href="#/yields" data-nav="yields">Rates &amp; curves</a>
           <a href="#/market" data-nav="market">Funding &amp; market functioning</a>
-          <p class="navigation-group-label">Treasury &amp; funding</p>
+          <p class="navigation-group-label">Treasury &amp; Fiscal</p>
           <a href="#/fiscal" data-nav="fiscal">Fiscal pressure</a>
           <a href="#/refinancing" data-nav="refinancing">Refinancing exposure</a>
           <a href="#/auctions" data-nav="auctions">Auction demand</a>
           <a href="#/ownership" data-nav="ownership">Debt ownership</a>
-          <p class="navigation-group-label">Data &amp; evidence</p>
+          <p class="navigation-group-label">Data &amp; Evidence</p>
           <a href="#/research?view=publications" data-nav="research" data-nav-view="publications">Publication history</a>
           <a href="#/vintages" data-nav="vintages">Retrieval history</a>
           <a href="#/research?view=changes" data-nav="research" data-nav-view="changes">Capture changes</a>
           <a href="#/sources" data-nav="sources">Sources &amp; terms</a>
           <button type="button" class="action link-button" data-source-health>Source health &amp; coverage</button>
-          <p class="navigation-group-label">My research</p>
+          <p class="navigation-group-label">My Research</p>
           <a href="#/series/unrate" data-nav="indicator" id="indicator-mobile">Recent indicator</a>
           <a href="#/watchlist" data-nav="watchlist">Watchlist <span class="nav-count" id="mobile-saved-count">0</span></a>
           <a href="#/research" data-nav="research" data-nav-view="workspaces">Saved views</a>
@@ -82,35 +103,29 @@
       </details>
     </nav>
     <div class="ticker" id="ticker" aria-label="Official macro snapshot"></div>
-    <div id="data-freshness"></div>
     <div class="shell">
       <aside class="rail" aria-label="Workspace navigation">
-        <a class="brand rail-brand" href="#/overview" aria-label="Meridian overview"><svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 17 5-5 4 3 8-9M15 6h5v5"/><path d="m5 6 1-2 1 2 2 1-2 1-1 2-1-2-2-1Z" stroke-width="1.2"/></svg><span>MERIDIAN<small>U.S. MACRO</small></span></a>
-        <div class="rail-title">Workspace</div>
-        <a href="#/overview" data-nav="overview"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>Overview</a>
-        <a href="#/calendar" data-nav="calendar"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 11h18"/></svg>Calendar</a>
-        <a href="#/explore" data-nav="explore"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 15 5-6 4 3 5-8M14 4h3v3"/><circle cx="16" cy="16" r="4"/><path d="m19 19 3 3"/></svg>Explore data</a>
+        <a class="brand rail-brand" href="#/overview" aria-label="Meridian overview"><span class="material-symbols-outlined brand-mark" aria-hidden="true">insights</span><span>MERIDIAN<small>U.S. MACRO</small></span><span class="brand-version">v0.1.0</span></a>
+        <nav class="rail-navigation" aria-label="Research workspace">
+        <section class="workspace-nav-group" aria-label="Workspace"><h2 class="rail-title">Workspace</h2>
+        <a href="#/overview" data-nav="overview"><span class="material-symbols-outlined nav-icon" aria-hidden="true">dashboard</span>Overview</a>
+        <a href="#/calendar" data-nav="calendar"><span class="material-symbols-outlined nav-icon" aria-hidden="true">calendar_today</span>Calendar</a>
+        <a href="#/explore" data-nav="explore"><span class="material-symbols-outlined nav-icon" aria-hidden="true">dataset</span>Explore Data</a>
+        </section>
         <div id="workspace-topics"></div>
-        <hr><div class="rail-title">Research</div>
-        <a href="#/watchlist" data-nav="watchlist">Watchlist</a>
-        <a href="#/research" data-nav="research" data-nav-view="workspaces">Saved views</a>
-        <a href="#/research?view=packages" data-nav="research" data-nav-view="packages">Saved snapshots</a>
-        <hr><details class="rail-group"><summary class="rail-title">Shortcuts</summary>
-          <div class="rail-title">Quick series</div>
-          <a href="#/series/gdp"><span class="code">GDP</span>Real growth</a>
-          <a href="#/series/cpi"><span class="code">CPI</span>Inflation</a>
-          <a href="#/series/debt"><span class="code">DBT</span>Federal debt</a>
-          <a href="#/series/yield"><span class="code">UST</span>Treasury 10Y</a>
-          <div class="rail-title">Followed indicators <span id="saved-count">0</span></div>
-          <div id="saved-list" class="saved-list"></div>
-        </details>
-        <details class="rail-group"><summary class="rail-title">Data &amp; evidence</summary>
-          <a href="#/research?view=publications" data-nav="research" data-nav-view="publications">Publication history</a>
-          <a href="#/vintages" data-nav="vintages">Retrieval history</a>
-          <a href="#/research?view=changes" data-nav="research" data-nav-view="changes">Capture changes</a>
-          <a href="#/sources" data-nav="sources">Sources &amp; terms</a>
-          <button type="button" class="action link-button" data-source-health>Source health &amp; coverage</button>
-        </details>
+        <section class="workspace-nav-group" aria-label="My Research"><h2 class="rail-title">My Research</h2>
+        <a href="#/watchlist" data-nav="watchlist"><span class="material-symbols-outlined nav-icon" aria-hidden="true">bookmark</span>Watchlist</a>
+        <a href="#/research" data-nav="research" data-nav-view="workspaces"><span class="material-symbols-outlined nav-icon" aria-hidden="true">tab</span>Saved Views</a>
+        <a href="#/research?view=packages" data-nav="research" data-nav-view="packages"><span class="material-symbols-outlined nav-icon" aria-hidden="true">camera</span>Snapshots</a>
+        </section>
+        <section class="workspace-nav-group" aria-label="Data &amp; Evidence"><h2 class="rail-title">Data &amp; Evidence</h2>
+        <a href="#/research?view=publications" data-nav="research" data-nav-view="publications"><span class="material-symbols-outlined nav-icon" aria-hidden="true">history</span>Releases</a>
+        <a href="#/vintages" data-nav="vintages"><span class="material-symbols-outlined nav-icon" aria-hidden="true">sync_alt</span>Retrievals</a>
+        <a href="#/research?view=changes" data-nav="research" data-nav-view="changes"><span class="material-symbols-outlined nav-icon" aria-hidden="true">difference</span>Capture Changes</a>
+        <a href="#/sources" data-nav="sources"><span class="material-symbols-outlined nav-icon" aria-hidden="true">menu_book</span>Sources &amp; Method</a>
+        </section>
+        </nav>
+        <div class="rail-footer"><a href="#/sources">FED / BEA / BLS</a><button type="button" class="action link-button" data-source-health>Source health</button></div>
       </aside>
       <main id="main-content" tabindex="-1"><div class="loading">Loading workspace…</div></main>
     </div>

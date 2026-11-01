@@ -2,6 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {isBuiltAsset,moduleAssetReferences,staticModuleReferences,parseImportMap,resolveModuleReference} from '../scripts/asset-references.mjs';
 import {readFile} from 'node:fs/promises';
+
+test('font and license build paths require content hashes and reject arbitrary nested files',()=>{
+ for(const extension of ['woff2','ttf','txt'])assert.equal(isBuiltAsset(`assets/fonts/inter-variable.0123456789abcdef.${extension}`),true);
+ for(const name of ['assets/fonts/inter.ttf','assets/fonts/other.js','assets/fonts/nested/inter.0123456789abcdef.ttf','assets/fonts/inter.0123456789ABCDEF.ttf'])assert.equal(isBuiltAsset(name),false,name);
+});
 test('static discovery includes imports and re-exports while excluding lazy modules and history descriptors', () => {
   const source = [
     "import './side-effect.js';",

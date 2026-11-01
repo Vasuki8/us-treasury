@@ -29,15 +29,16 @@ test('navigation families distinguish policy, economy, treasury and evidence',()
  assert.match(researchNavigation({page:'macroCoverage',macroFamily:'labor'}),/<a[^>]*data-nav="labor"[^>]*aria-current="page"/);
 });
 
-test('the compact shell makes Economy primary and separates rates and evidence from Treasury',async()=>{
+test('the shell exposes flat reference research and evidence families while retaining mobile primary destinations',async()=>{
  const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
  const top=html.match(/<nav class="functionbar"[^]*?<details/)?.[0]??'';
  assert.match(top,/href="#\/economy"[^>]*data-nav-group="economy"/);
- assert.match(top,/Fed &amp; rates/);
+ assert.match(top,/Fed &amp; Rates/);assert.match(top,/Treasury &amp; Fiscal/);
  assert.doesNotMatch(top,/Recent indicator|Labor market/);
  const rail=html.match(/<aside class="rail"[^]*?<\/aside>/)?.[0]??'';
- assert.match(rail,/<div class="rail-title">Research<\/div>/);
- assert.match(rail,/<summary class="rail-title">Data &amp; evidence<\/summary>/);
+ assert.match(rail,/<h2 class="rail-title">My Research<\/h2>/);
+ assert.match(rail,/<h2 class="rail-title">Data &amp; Evidence<\/h2>/);
+ assert.doesNotMatch(rail,/<details|<summary/);
  for(const href of ['#/watchlist','#/research','#/research?view=packages'])assert.ok(rail.includes(`href="${href}"`),href);
  assert.doesNotMatch(rail,/Recent indicator|Refinancing risk/);
  assert.match(html,/data-source-health/);

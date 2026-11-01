@@ -19,13 +19,20 @@ test('sidebar offers every research family destination without depending on a se
 });
 
 test('sidebar exposes all topic families initially and preserves manual disclosure choices across pages',()=>{
- const groups=['economy','fed','treasury'].map(id=>({dataset:{workspaceFamily:id},open:false}));
+ const groups=['economy','fed','treasury'].map(id=>({tagName:'DETAILS',dataset:{workspaceFamily:id},open:false}));
  const root={querySelector:()=>null,querySelectorAll:selector=>selector==='[data-workspace-family]'?groups:[]};
  syncCompactNavigation(root,{page:'labor'});assert.deepEqual(groups.map(group=>group.open),[true,true,true]);
  groups[1].open=false;
  syncCompactNavigation(root,{page:'labor'});assert.equal(groups[1].open,false,'a same-view refresh preserves manual collapse');
  syncCompactNavigation(root,{page:'fiscal'});assert.deepEqual(groups.map(group=>group.open),[true,false,true]);
  syncCompactNavigation(root,{page:'overview'});assert.deepEqual(groups.map(group=>group.open),[true,false,true]);
+});
+
+test('flat sidebar families stay visible without gaining disclosure state during navigation',()=>{
+ const groups=['economy','fed','treasury'].map(id=>({tagName:'SECTION',dataset:{workspaceFamily:id},set open(value){assert.fail(`Flat family must not receive disclosure state: ${id}`);}}));
+ const root={querySelector:()=>null,querySelectorAll:selector=>selector==='[data-workspace-family]'?groups:[]};
+ for(const page of ['overview','labor','fiscal'])syncCompactNavigation(root,{page});
+ assert.deepEqual(groups.map(group=>group.dataset.activeFamily),['treasury','treasury','treasury']);
 });
 
 test('preview uses native units, an explicit observation window and a full-history route without selecting comparison series',()=>{

@@ -7,7 +7,7 @@ import {assertCommercialData} from './scripts/data-policy.mjs';
 import {importMapCspHash, isBuiltAsset} from './scripts/asset-references.mjs';
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
-const types = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.json':'application/json; charset=utf-8','.gz':'application/gzip'};
+const types = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.json':'application/json; charset=utf-8','.gz':'application/gzip','.woff2':'font/woff2','.ttf':'font/ttf','.txt':'text/plain; charset=utf-8'};
 
 export function createAppServer(root = projectRoot) {
   let cachedProjection=null,projectionKey='';
@@ -33,6 +33,7 @@ export function createAppServer(root = projectRoot) {
     catch { res.writeHead(400); res.end('Invalid URL'); return; }
     const asset = pathname === '/' ? 'index.html' : pathname.slice(1);
     const allowed = ['index.html','styles.css','favicon.svg'].includes(asset)
+      || /^fonts\/[a-zA-Z0-9_-]+\.(?:woff2|ttf|txt)$/.test(asset)
       || /^src\/[a-zA-Z0-9_-]+\.js$/.test(asset)
       || /^src\/(?:history-[a-f0-9]{64}\.(?:json|bin)(?:\.gz)?|source-[a-f0-9]{64}\.js)$/.test(asset)
       || isBuiltAsset(asset);

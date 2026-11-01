@@ -31,10 +31,12 @@ function fixture() {
         : selector === '.freshness-details summary' ? this.summary
           : selector === '[data-reload-snapshot]' ? this.reload : null;
     },
+    querySelectorAll(selector) { return selector==='.view-source-warning'?this.warnings:[]; },
     set innerHTML(value) {
       if (this.contains(document.activeElement)) document.activeElement = {};
       this.writes++;
       this.markup = value;
+      this.warnings=[...value.matchAll(/<p class="view-source-warning">([^]*?)<\/p>/g)].map(match=>({markup:match[0]}));
       this.details = value.includes('class="freshness-details"') ? { open: false } : null;
       const control = () => ({ focus(options) { this.focusOptions = options; document.activeElement = this; } });
       this.summary = this.details ? control() : null;
@@ -44,8 +46,8 @@ function fixture() {
   };
   let currentTime = new Date('2026-10-21T23:30:00.000Z');
   const data = snapshot();
-  function mount() {
-    return mountFreshnessBanner(container, data, { now: () => currentTime, timerHost, visibilityTarget: document });
+  function mount(options={}) {
+    return mountFreshnessBanner(container, data, { now: () => currentTime, timerHost, visibilityTarget: document,...options });
   }
   return {
     container, document, timerHost, intervals, data, mount,
@@ -53,6 +55,18 @@ function fixture() {
     tick() { for (const { callback } of intervals.values()) callback(); },
   };
 }
+
+test('a compact header can move affected-view warnings into a visible content mount and clear resolved failures',()=>{
+ const view=fixture(),warningContainer={children:[],replaceChildren(...nodes){this.children=nodes;}};
+ view.data.sources.bls={status:'error',fetchedAt:capturedAt,lastAttemptAt:capturedAt,error:'HTTP 503 <retained>'};
+ const mounted=view.mount({warningContainer,getOptions:()=>({compact:true,relevantIds:['data:bls']})});
+ assert.equal(warningContainer.children.length,1);
+ assert.equal(warningContainer.children[0],view.container.warnings[0],'move the source warning node rather than duplicating its wording');
+ assert.match(warningContainer.children[0].markup,/BLS data.*HTTP 503 &lt;retained&gt;/);
+ view.container.details.open=true;view.data.sources.bls.status='ok';delete view.data.sources.bls.error;
+ mounted.refresh();assert.deepEqual(warningContainer.children,[]);assert.equal(view.container.details.open,true);
+ mounted.destroy();
+});
 
 test('mount renders the supplied snapshot and starts a one-minute freshness check', () => {
   const view = fixture();

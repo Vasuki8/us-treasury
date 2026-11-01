@@ -16,6 +16,10 @@ test('server serves app assets and keeps project internals private', async t => 
   assert.match(await root.text(), /src\/app.js/);
   const css = await fetch(`${origin}/styles.css`);
   assert.equal(css.headers.get('content-type'), 'text/css; charset=utf-8');
+  for(const [name,type]of [['inter-variable.ttf','font/ttf'],['jetbrains-mono-regular.woff2','font/woff2'],['inter-OFL.txt','text/plain; charset=utf-8']]){
+    const font=await fetch(`${origin}/fonts/${name}`);assert.equal(font.status,200,name);assert.equal(font.headers.get('content-type'),type,name);assert.ok((await font.arrayBuffer()).byteLength>1000);
+  }
+  assert.equal((await fetch(`${origin}/fonts/../package.json`)).status,404);
   assert.equal((await fetch(`${origin}/package.json`)).status, 404);
   assert.equal((await fetch(`${origin}/economy-pulse-preview.html`)).status, 404);
   assert.equal((await fetch(`${origin}/src/%2e%2e%2fpackage.json`)).status, 404);

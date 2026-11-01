@@ -33,7 +33,7 @@ const before=(html,first,second)=>assert.ok(html.indexOf(first)>=0&&html.indexOf
 test('Indicator retains native reading and clocks beside its working history in every detail tab',()=>{
  for(const tab of ['data','methodology','revisions']){
   const html=indicatorPage(state({seriesId:'claims',tab}),{historyState:{status:'error',error:{message:'Archive failed'}}}),lead=visible(html);
-  assert.match(html,/<div class="workspace-basis"><section class="indicator-snapshot"/);
+  assert.match(html,/<section class="indicator-snapshot"[^>]*aria-label="Latest retained reading"/);
   for(const text of ['Native unit','Published','Retrieved','independent of the selected history window','separate captures'])assert.ok(lead.includes(text),text);
   before(html,'id="transform-select"','data-page-disclosure="indicator:source:claims"');
   if(tab==='revisions')assert.match(lead,/data-retry-history/);
