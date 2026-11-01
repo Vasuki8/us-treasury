@@ -1,6 +1,6 @@
 import {getFreshness} from '../src/freshness.js';
 
-export const SOURCE_ATTEMPT_IDS=Object.freeze(getFreshness({}, {now:new Date(0)}).entries.map(entry=>entry.id));
+export const SOURCE_ATTEMPT_IDS=Object.freeze(getFreshness({stitchDataVersion:1}, {now:new Date(0)}).entries.map(entry=>entry.id));
 const knownIds=new Set(SOURCE_ATTEMPT_IDS);
 const invalid=()=>{throw new Error('Invalid source attempt report.');};
 function timestamp(value){

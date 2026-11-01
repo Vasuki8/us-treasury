@@ -2,6 +2,8 @@ import { asKnownOn, recordVintages, normalizeVintageTimestamp } from '../src/vin
 import {hasBlsHistory} from './bls-history-policy.mjs';
 import {BLS_API_V1,BLS_API_V2} from './bls-api-policy.mjs';
 import {BLS_IDS,BLS_DEPTH_IDS} from './sources/bls.mjs';
+import {BLS_DESK_API,blsDeskNativeCodes} from '../src/bls-desk-definitions.js';
+import {CPI_DETAIL_CODES} from '../src/cpi-detail.js';
 
 const fail=message=>{throw new Error(`Invalid vintage archive: ${message}`);};
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -10,7 +12,8 @@ const blsHistoryProvenanceFields=new Set(['startYear','endYear','seriesIds']);
 const blsNativeIds=new Set([...Object.values(BLS_IDS),...Object.values(BLS_DEPTH_IDS)]);
 const censusProvenanceFields=new Set(['filename','fileUpdatedAt','usageNote']);
 const censusZipMembers={census:'MARTS-mf.csv',housing:'RESCONST-mf.csv'};
-const boardZipMembers={bankCredit:'H8_data.xml',lendingSurvey:'SLOOS_data.xml',fedBalance:'H41_data.xml',householdDebt:'DSR_data.xml',loanDelinquency:'CHGDEL_data.xml'};
+const boardZipMembers={bankCredit:'H8_data.xml',lendingSurvey:'SLOOS_data.xml',fedBalance:'H41_data.xml',householdDebt:'DSR_data.xml',loanDelinquency:'CHGDEL_data.xml',fedQt:'H41_data.xml',fedFx:'H10_data.xml'};
+const blsDeskProvenanceFields=new Set(['startYear','endYear','requestedSeries']);
 
 function canonical(value){
   if(value===null||typeof value==='string'||typeof value==='boolean')return JSON.stringify(value);
@@ -25,8 +28,10 @@ function retrievalProvenance(capture,capturedAt){
   const zipMember=Object.hasOwn(censusZipMembers,capture.sourceId)?censusZipMembers[capture.sourceId]:null;
   const boardMember=Object.hasOwn(boardZipMembers,capture.sourceId)?boardZipMembers[capture.sourceId]:null;
   const blsHistory=capture.sourceId==='bls'&&hasBlsHistory(capture.metadata);
+  const blsDesk=['blsDesk','cpiDetail'].includes(capture.sourceId),deskCodes=capture.sourceId==='cpiDetail'?CPI_DETAIL_CODES:blsDeskNativeCodes;
   const retrievals=capture.provenance.map(item=>{
-    if(!object(item)||Object.keys(item).some(key=>!provenanceFields.has(key)&&!(blsHistory&&blsHistoryProvenanceFields.has(key))&&!(zipMember&&censusProvenanceFields.has(key))&&!(boardMember&&key==='filename'))||typeof item.url!=='string'||!/^[a-f0-9]{64}$/.test(item.sha256))fail('invalid provenance fields, content or SHA256');
+    if(!object(item)||Object.keys(item).some(key=>!provenanceFields.has(key)&&!(blsHistory&&blsHistoryProvenanceFields.has(key))&&!(blsDesk&&blsDeskProvenanceFields.has(key))&&!(zipMember&&censusProvenanceFields.has(key))&&!(boardMember&&key==='filename'))||typeof item.url!=='string'||!/^[a-f0-9]{64}$/.test(item.sha256))fail('invalid provenance fields, content or SHA256');
+    if(blsDesk&&item.url===BLS_DESK_API&&(!Number.isInteger(item.startYear)||!Number.isInteger(item.endYear)||item.startYear<1900||item.endYear-item.startYear!==9||!Array.isArray(item.requestedSeries)||!item.requestedSeries.length||item.requestedSeries.length>25||new Set(item.requestedSeries).size!==item.requestedSeries.length||item.requestedSeries.some(code=>!deskCodes.includes(code))))fail('invalid BLS specialist public query provenance scope');
     if(blsHistory){
       const years=item.url===BLS_API_V1?10:item.url===BLS_API_V2?20:0;
       if(!years||!Number.isInteger(item.startYear)||!Number.isInteger(item.endYear)||item.startYear<1900||item.endYear>9999||item.startYear>item.endYear||item.endYear-item.startYear>=years||!Array.isArray(item.seriesIds)||!item.seriesIds.length||item.seriesIds.length>20||new Set(item.seriesIds).size!==item.seriesIds.length||item.seriesIds.some(code=>!blsNativeIds.has(code)))fail('invalid BLS history query provenance scope');

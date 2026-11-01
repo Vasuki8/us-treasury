@@ -37,6 +37,10 @@ import {economicEvidenceContext} from './economic-evidence.js';
 import {pceBaseEffectsContext} from './pce-base-effects.js';
 import {overviewChartEvidence} from './dashboard-charts.js';
 import {pceHorizonChartCatalog} from './dashboard-chart-data.js';
+import {stitchDeskContracts,stitchPageSources} from './stitch-desk-contracts.js';
+import {createStitchEvidence,stitchEvidenceSourceIds,validateStitchLegacySources} from './stitch-evidence.js';
+import {fxScenario} from './specialist-desks.js';
+import {validateFrozenFomcCalendar} from './fomc-calendar-validation.js';
 
 const moduleIds={credit:['bankLoans','bankDeposits','ciStandardsLarge','onRrpAccepted'],overview:['gdp','pceCoreMonthly','payroll','policyTargetUpper'],labor:['payroll','unrate','underemployment','weeklyHours'],fiscal:['receipts','outlays','netInterest','primaryDeficit'],refinancing:['marketableDebt'],yields:['yield','realYield10','spread2s10s','inflationComp10'],auctions:['auctionOfferingMonthly'],ownership:['foreignTreasuryHoldings','fedTreasuryHoldings','somaTreasuryHoldings'],macro:['gdpTotalContribution','gdpConsumptionContribution','gdpInvestmentContribution','gdpGovernmentContribution'],market:['dealerNetTreasury','dealerRepo','dealerFailsDeliver','sofr']};
 const sourceIds={overview:['macroContributions'],credit:['bankCredit','lendingSurvey','fedBalance','onRrp','householdDebt','loanDelinquency'],fiscal:['fiscal','treasury'],refinancing:['refinancing'],yields:['yields','treasury'],auctions:['auctions'],ownership:['ownership'],macro:['macroContributions'],market:['marketFunctioning']};
@@ -48,7 +52,7 @@ export function freezeCandidates(state,{catalog=series,events=releases,now=new D
  let ids=state.page==='indicator'?[state.seriesId]:['macroCoverage','labor'].includes(state.page)?[state.macroMeasure]:state.page==='watchlist'?state.saved:state.page==='vintages'?[state.vintageSeries]:moduleIds[state.page]??state.selected;
  if(state.page==='calendar')ids=calendarRelatedIds(calendarScope(state,{events,catalog,now}).selected);
  if(state.page==='explore'&&state.exploreMode==='coverage')ids=buildCoverageInventory(catalog,state).rows.map(row=>row.id);
- return [...new Set(ids??[])].filter(id=>Object.hasOwn(catalog,id));
+ return [...new Set(stitchDeskContracts[state.page]?.ids??ids??[])].filter(id=>Object.hasOwn(catalog,id));
 }
 
 function yieldPinInputs(state,catalog,sources){
@@ -110,11 +114,28 @@ function capturedMeasurement(current,source,item,id,agency){
 /** Build explicitly scoped frozen inputs; never promise a mutable URL is a saved result. */
 export function buildPinContext(state,{historyState,catalog=series,sources=dataStatus.sources,snapshot=dataStatus,events=releases,now=new Date(),changes={},checkpoint={},failures=[],publicationContexts={},overviewChartSettings,overviewPreview}={}){
  let selected=state.page==='indicator'?[state.seriesId]:['macroCoverage','labor'].includes(state.page)?[state.macroMeasure]:state.page==='watchlist'?state.saved:moduleIds[state.page]??state.selected;
+ if(stitchDeskContracts[state.page])selected=stitchDeskContracts[state.page].ids;
  let capturedCatalog=catalog,capturedSources=sources;
  const context={page:state.page,route:routeFor(state,{legacyWindow:true}),
   moduleSources:Object.fromEntries((sourceIds[state.page]??[]).filter(id=>sources[id]).map(id=>[id,sources[id]])),
   attachments:[],scope:'Selected registered measurements; explicitly retained supplementary inputs and CSVs when present.'};
  const assumptions={comparison:state.page==='explore'&&state.exploreMode==='compare'?state.comparison:'native',transform:state.page==='indicator'?state.transform:'level',missingDates:'No interpolation or frequency aggregation; unmatched dates remain unavailable.'};
+ const stitchEvidence=createStitchEvidence(state,sources,viewRange(state));
+ if(stitchEvidence){
+  context.stitchEvidence=stitchEvidence;
+  const keys=['page','seriesId','window','startDate','endDate','range','fxScenario','fxFedShock','fxForeignShock','fxHorizon','specialistView','specialistRange'];
+  context.stitchRenderState=Object.fromEntries(keys.filter(key=>state[key]!==undefined).map(key=>[key,state[key]]));
+  const oldSources=[...(stitchDeskContracts[state.page]?.sources??[]),...(state.page==='indicator'?[catalog[state.seriesId]?.agency]:[]),...(state.page==='ownership'?['ownership']:[])].filter(id=>!stitchEvidenceSourceIds.includes(id)&&sources[id]);
+  Object.assign(context.moduleSources,Object.fromEntries(oldSources.map(id=>[id,sources[id]])));
+  if(!validateStitchLegacySources(context))throw Error('Specialist supporting inputs require complete native measurements, reviewed source receipts and calculation lineage before freezing');
+  context.scope+=' '+stitchEvidence.scope;
+  if(state.page==='fxBasis'){const m=fxScenario(sources,state);assumptions.fxScenario={type:'user-scenario',scenario:m.scenario,fedShockBps:m.fedShockBps,foreignShockBps:m.foreignShockBps,horizonMonths:m.horizonMonths,observedBasis:'Unavailable: official reference spot and administered policy rates do not establish market FX forwards, OIS or cross-currency basis.'};}
+  if(state.page==='fomc'){
+   const calendar={version:1,asOf:now.toISOString(),source:snapshot.calendar?.sources?.fomc};
+   if(!validateFrozenFomcCalendar(calendar))throw Error('Complete verified FOMC date-only calendar must be retained before freezing this desk');
+   context.stitchCalendar=calendar;
+  }
+ }
  if(state.page==='explore'&&state.exploreMode==='coverage'){
   const inventory=buildCoverageInventory(catalog,{...state,publicationContexts});
   if(!inventory.rows.length)throw new Error('No matching measurement coverage is available to freeze.');

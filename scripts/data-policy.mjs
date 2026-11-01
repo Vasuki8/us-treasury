@@ -1,5 +1,12 @@
 import {isDeepStrictEqual} from 'node:util';
 import {economicEvidencePolicies,matchesEconomicEvidenceFeed,assertEconomicEvidenceSources} from './economic-evidence-policy.mjs';
+import {blsDeskPolicies,matchesBlsDeskFeed,assertBlsDeskData} from './bls-desk-policy.mjs';
+import {treasuryDeskPolicies,matchesTreasuryDeskFeed,assertTreasuryDeskSources} from './treasury-desks-policy.mjs';
+import {marketDeskPolicies,matchesMarketDesksFeed,assertMarketDeskSources} from './market-desks-policy.mjs';
+import {refundingDeskPolicy,matchesRefundingDeskFeed,assertRefundingDeskData} from './refunding-desk-policy.mjs';
+import {inflationDeskPolicies,matchesInflationDeskFeed,assertInflationDeskSources} from './inflation-desks-policy.mjs';
+import {stitchEvidenceSourceIds} from '../src/stitch-evidence.js';
+import {cpiDetailPolicy,matchesCpiDetailFeed,assertCpiDetailData} from './cpi-detail-policy.mjs';
 import {normalizeVintageTimestamp} from '../src/vintages.js';
 import {creditContextPolicies,matchesCreditContextFeed,assertCreditContextData,fomcCalendarPolicy,matchesFomcCalendarFeed,assertFomcCalendarData} from './credit-context-policy.mjs';
 import { easternFields } from './sources/calendar-utils.mjs';
@@ -19,6 +26,12 @@ import {assertDebtFallbackData} from './debt-fallback-policy.mjs';
 // Dataset-specific commercial reuse review. Evidence and limitations: docs/data-sources.md.
 // An official-looking hostname alone does not establish reuse rights.
 export const dataPolicies = [
+  ...blsDeskPolicies,
+  ...treasuryDeskPolicies,
+  ...marketDeskPolicies,
+  refundingDeskPolicy,
+  ...inflationDeskPolicies,
+  cpiDetailPolicy,
   ...economicEvidencePolicies,
   beaItaPolicy,
   ...creditContextPolicies,
@@ -67,6 +80,12 @@ export const dataPolicies = [
 ];
 
 function matchesFeed(value, feed) {
+  if(feed==='bls-desk-api')return matchesBlsDeskFeed(value);
+  if(matchesTreasuryDeskFeed(value,feed))return true;
+  if(matchesMarketDesksFeed(value,feed))return true;
+  if(matchesRefundingDeskFeed(value,feed))return true;
+  if(matchesInflationDeskFeed(value,feed))return true;
+  if(matchesCpiDetailFeed(value,feed))return true;
   if(matchesEconomicEvidenceFeed(value,feed))return true;
   if(value===DTS_DEBT_URL&&feed==='treasury-debt')return true;
   if(feed==='bls-api')return matchesBlsApiFeed(value);
@@ -245,6 +264,13 @@ function assertCalendarData(snapshot) {
 
 /** Stop publication or snapshot replacement when data exceed the reviewed scope. */
 export function assertCommercialData(snapshot) {
+  if(snapshot.stitchDataVersion===1&&stitchEvidenceSourceIds.some(id=>!snapshot.sources?.[id]?.fetchedAt))throw new Error('Incomplete specialist source expansion; original and additional capture safeguards remain required');
+  assertBlsDeskData(snapshot);
+  assertTreasuryDeskSources(snapshot.sources);
+  assertMarketDeskSources(snapshot.sources??{},{complete:false});
+  assertRefundingDeskData(snapshot);
+  assertInflationDeskSources(snapshot.sources??{},{complete:false});
+  assertCpiDetailData(snapshot);
   assertEconomicEvidenceSources(snapshot.sources??{},{complete:false});
   assertDebtFallbackData(snapshot);
   assertBeaItaData(snapshot);

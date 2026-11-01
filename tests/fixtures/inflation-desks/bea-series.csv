@@ -1,0 +1,26 @@
+%SeriesCode,SeriesLabel,MetricName,CalculationType,DefaultScale,TableId:LineNo,SeriesCodeParents
+DFXARC,Food and beverages purchased for off-premises consumption,Current Dollars,Level,-6,T10505:10|T20305:9|T20405:26|T20505:3|T20805:9|U20305:31|U20305:9|U20405:73,DNDGRC|DPHCRC
+DFXARG,Food and beverages purchased for off-premises consumption,Fisher Price Index,Level,0,T10504:10|T10604:10|T20304:9|T20404:26|T20504:3|T20804:9|U20304:31|U20304:9|U20404:73,NONE
+DFXARGM,Food and beverages purchased for off-premises consumption,Fisher Price Index,Percent change,0,T20807:9,NONE
+DGDSRC,Goods,Current Dollars,Level,-6,T10105:3|T10505:3|T20305:2|T20405:2|T20805:2|U20305:2|U20405:2,DPCERC
+DGDSRG,Goods,Fisher Price Index,Level,0,T10104:3|T10504:3|T10604:3|T20304:2|T20404:2|T20804:2|U20304:2|U20404:2,NONE
+DGDSRGM,Goods,Fisher Price Index,Percent change,0,T20807:2,NONE
+DNRGRC,Energy goods and services,Current Dollars,Level,-6,T20305:27|T20805:27|U20305:26|U20405:371,NONE
+DNRGRG,Energy goods and services,Fisher Price Index,Level,0,T20304:27|T20804:27|U20304:26|U20404:371,NONE
+DNRGRGM,Energy goods and services,Fisher Price Index,Percent change,0,T20807:27,NONE
+DPCERC,Personal consumption expenditures,Current Dollars,Level,-6,OECD10205:3|T10105:2|T10505:2|T20100:29|T20305:1|T20405:1|T20505:1|T20600:29|T20805:1|U20305:1|U20305:29|U20405:1,A068RC|A191RC|LA000385|LA000409
+DPCXRG,Market-based PCE excluding food and energy,Fisher Price Index,Level,0,T20304:31|T20804:31|U20304:28|U20404:402,NONE
+DPCXRGM,Market-based PCE excluding food and energy,Fisher Price Index,Percent change,0,T20807:31,NONE
+DSERRC,Services,Current Dollars,Level,-6,T10105:6|T10505:14|T20305:13|T20405:47|T20805:13|U20305:13|U20405:150,DPCERC
+DSERRG,Services,Fisher Price Index,Level,0,T10104:6|T10504:14|T10604:14|T20304:13|T20404:47|T20804:13|U20304:13|U20404:150,NONE
+DSERRGM,Services,Fisher Price Index,Percent change,0,T20807:13,NONE
+IA001260,PCE services excluding energy and housing,Fisher Price Index,Level,0,T20304:28|T20804:28,NONE
+LA001260,PCE services excluding energy and housing,Current Dollars,Level,-6,T20305:28|T20805:28,NONE
+PP001260,PCE services excluding energy and housing,Fisher Price Index,Percent change,0,T20807:28,NONE
+QPCERV,PCE Chain-type price index (percent change),Ratio,Level,0,U90100:1,NONE
+SRSA0V,Equals: CPI (percent change),Ratio,Level,0,U90100:39,NONE
+W902RV,Less: Formula effect (percentage points),Price Contributions,Level,0,U90100:2,NONE
+W913RV,Less: Weight effect (percentage points),Price Contributions,Level,0,U90100:13,NONE
+W921RV,Less: Scope effect - PCE price index items out-of-scope of the CPI (percentage points),Price Contributions,Level,0,U90100:21,NONE
+W927RV,Plus: Scope effect - CPI items out-of-scope of the PCE price index (percentage points),Price Contributions,Level,0,U90100:28,NONE
+W931RV,Less: Other effects (percentage points),Price Contributions,Level,0,U90100:32,NONE

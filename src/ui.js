@@ -219,11 +219,17 @@ const agencyCredits={
  census:['U.S. Census Bureau, Advance Monthly Retail Trade Survey','https://www.census.gov/retail/index.html'],
  housing:['U.S. Census Bureau, New Residential Construction','https://www.census.gov/construction/nrc/'],
  fed:['Board of Governors of the Federal Reserve System','https://www.federalreserve.gov/'],
+ ecb:['European Central Bank','https://www.ecb.europa.eu/'],
+ ofr:['Office of Financial Research','https://www.financialresearch.gov/'],
+ cleveland:['Federal Reserve Bank of Cleveland','https://www.clevelandfed.org/'],
+ nyfed:['Federal Reserve Bank of New York','https://www.newyorkfed.org/'],
 };
-const agencyFor=id=>['fiscal','refinancing','yields','auctions'].includes(id)?'treasury'
- :['laborEvidence'].includes(id)?'bls':['pcePriceContributions','macroContributions','beaIta'].includes(id)?'bea'
+const agencyFor=id=>['fiscal','refinancing','yields','auctions','dtsDesk','ticHolders','treasuryRefunding'].includes(id)?'treasury'
+ :['laborEvidence','blsDesk','cpiDetail'].includes(id)?'bls':['pcePriceContributions','macroContributions','beaIta','inflationBea'].includes(id)?'bea'
+ :['ecbFx','ecbPolicy'].includes(id)?'ecb':['ofrRepo','ofrMmf'].includes(id)?'ofr'
+ :id==='inflationCleveland'?'cleveland':['dealerDetails','moneyRates','repoOperations','nyfedTriParty','marketFunctioning','onRrp'].includes(id)?'nyfed'
  :id==='dolAdvance'?'dol':['activity','policyRates','bankCredit','lendingSurvey','fedBalance','householdDebt','loanDelinquency']
-  .includes(id)?'fed':id;
+  .concat(['fedQt','fedSep','fedFx','dkwInflation']).includes(id)?'fed':id;
 
 function additionalNotices(sources,{calendar=false}={}){
  const groups=new Map();
@@ -254,7 +260,7 @@ function scopedSourceNotice(sources,{includeAll=false,calendarSources={}}={}){
  }).join(' · ');
  const original=includeAll?sourceNotice(sources):'';
  const bls=Object.keys(sources).some(id=>agencyFor(id)==='bls');
- const retrieval=sources.bls?.fetchedAt??sources.laborEvidence?.fetchedAt;
+ const retrieval=sources.bls?.fetchedAt??sources.laborEvidence?.fetchedAt??sources.blsDesk?.fetchedAt??sources.cpiDetail?.fetchedAt;
  const credit=includeAll?'':(links?`<p>Data sources: ${links}. `
   +'Meridian is an independent site and is not endorsed by these agencies.</p>':'')
   +(bls?`<p>${escapeHtml(BLS_DATA_NOTICE)} `

@@ -7,11 +7,15 @@ import {encodeStoredSnapshot,decodeStoredSnapshot} from '../scripts/snapshot-sto
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {copyFixtureProject} from './helpers/snapshot-fixture.js';
+import {stitchEvidenceSourceIds} from '../src/stitch-evidence.js';
 
 const execute=promisify(execFile);
 const root=fileURLToPath(new URL('../',import.meta.url));
 const scratchRoot=path.join(root,'test-results');
 const publicationTimeout=20000;
+const legacyDataSourceIds=['laborEvidence','pcePriceContributions','beaIta','householdDebt','loanDelinquency','bankCredit','lendingSurvey','fedBalance','onRrp','treasury','bls','bea','dol','dolAdvance','census','fiscal','refinancing','yields','auctions','ownership','macroContributions','marketFunctioning','policyRates','activity','housing'];
+const legacySelection=`--sources=${legacyDataSourceIds.join(',')},calendar`;
+const newProviderModules=[['bls-desk.mjs','collectBlsDesk'],['cpi-detail.mjs','collectCpiDetail'],['refunding-desk.mjs','collectRefundingDesk'],['treasury-desks.mjs','treasuryDeskCollectors'],['market-desks.mjs','marketDeskCollectors'],['inflation-desks.mjs','inflationDeskCollectors']];
 const independentCalendars=[
   ['calendar-bea.mjs','collectBeaCalendar','bea'],
   ['calendar-census.mjs','collectCensusCalendar','census'],
@@ -43,6 +47,8 @@ async function withCliFixture(run) {
     await writeFile(path.join(directory,'scripts','sources','dol-revised.mjs'),"export {collectDol as collectDolWithRevisions} from './dol.mjs';\n");
     const destination=path.join(directory,'src','official-snapshot.json.gz');
     const fixtureSnapshot=decodeStoredSnapshot(await readFile(destination));
+    assert.equal(legacyDataSourceIds.length+independentCalendars.length+1,32,'legacy fixture scope retains all original refresh inputs');
+    assert.deepEqual(Object.keys(fixtureSnapshot.sources).sort(),[...legacyDataSourceIds].sort());
     const annual='https://www.bls.gov/schedule/2026/home.htm',captured='2026-10-20T12:00:00.000Z';
     fixtureSnapshot.calendar.sources.bls={id:'bls',agency:'U.S. Bureau of Labor Statistics',status:'ok',fetchedAt:captured,lastAttemptAt:captured,error:null,failure:null,coveredYears:[2026],failedYears:[],warnings:[],provenance:[{url:annual,sha256:'a'.repeat(64),retrievedAt:captured,lastModified:null}],events:[{id:'bls-consumer-price-index-september-2026',sourceId:'bls',program:'consumer-price-index',name:'Consumer Price Index',agency:'BLS',seriesId:'cpi',seriesIds:['cpi'],topic:'Inflation',date:'2026-10-14',time:'08:30',scheduledAt:'2026-10-14T12:30:00.000Z',period:null,periodLabel:'September 2026',sourceUrl:annual,sourceUid:null}]};
     fixtureSnapshot.releases=Object.values(fixtureSnapshot.calendar.sources).flatMap(source=>source.events??[]).sort((a,b)=>(a.scheduledAt??a.date).localeCompare(b.scheduledAt??b.date)||a.id.localeCompare(b.id));
@@ -50,6 +56,16 @@ async function withCliFixture(run) {
     await writeFile(destination,original);
     await writeFile(path.join(directory,'package.json'),'{"type":"module"}');
     await writeFile(path.join(directory,'unavailable.mjs'),"globalThis.fetch=async()=>new Response('Official service unavailable',{status:503});\n");
+    // A missing future source is a controlled failed first attempt, never a
+    // fabricated healthy official capture. Legacy publication cases select
+    // their original 32 real retained inputs explicitly.
+    for(const [filename,name]of newProviderModules){
+      const stem=filename.replace('.mjs',''),originalName=stem+'-fixture-original.mjs';
+      await cp(path.join(directory,'scripts','sources',filename),path.join(directory,'scripts','sources',originalName));
+      const declaration=name.endsWith('Collectors')?`import {${name} as original} from './${originalName}';\nexport const ${name}=Object.fromEntries(Object.keys(original).map(id=>[id,async()=>{throw Error('Controlled initial '+id+' collection failure');}]));`:`export async function ${name}(){throw Error('Controlled initial ${name} collection failure');}`;
+      await writeFile(path.join(directory,'scripts','sources',filename),`export * from './${originalName}';\n${declaration}\n`);
+    }
+    await cp(path.join(directory,'scripts','sources','calendar-fomc.mjs'),path.join(directory,'scripts','sources','calendar-fomc-fixture-original.mjs'));
     await run({directory,destination,original});
   } finally {
     const resolvedDirectory=await realpath(directory);
@@ -72,6 +88,10 @@ test('strict all-source CLI failure leaves the snapshot byte-for-byte unchanged'
       return true;
     });
     assert.ok((await readFile(destination)).equals(original),'strict failure must not replace any snapshot bytes');
+    const attempts=JSON.parse(await readFile(path.join(directory,'source-attempt-status.json'),'utf8'));
+    assert.equal(attempts.sources.length,51,'strict default refresh reports every original and additional input');
+    const initial=attempts.sources.filter(row=>stitchEvidenceSourceIds.includes(row.id.replace(/^data:/,'')));
+    assert.equal(initial.length,19);assert.ok(initial.every(row=>row.status==='unavailable'&&row.fetchedAt===null&&!row.cached),'controlled first failures cannot become fabricated retained captures');
     await assert.rejects(readFile(path.join(directory,'src','.official-snapshot.tmp')),error=>error.code==='ENOENT');
   });
 });
@@ -132,7 +152,7 @@ test('legacy calendar CLI publishes successful current coverage when BLS has nev
     await writeFile(destination,encodeStoredSnapshot(snapshot));
     // Hold independent, already-verified agency responses constant while
     // exercising the real BLS collector, strict refresh assembly and CLI writer.
-    for(const [filename,exportName,id] of independentCalendars)await writeFile(path.join(directory,'scripts','sources',filename),`import {snapshot} from '../../src/official-snapshot.js';\nexport async function ${exportName}(){return snapshot.calendar.sources[${JSON.stringify(id)}];}\n`);
+    for(const [filename,exportName,id] of independentCalendars)await writeFile(path.join(directory,'scripts','sources',filename),`${id==='fomc'?"export {FOMC_CALENDAR_URL} from './calendar-fomc-fixture-original.mjs';\n":''}import {snapshot} from '../../src/official-snapshot.js';\nexport async function ${exportName}(){return snapshot.calendar.sources[${JSON.stringify(id)}];}\n`);
     const attemptAt=nextFixtureAttemptAt(snapshot);
     const html='<title>Schedule of Selected Releases 2026</title><table class="release-list"><thead><tr><th>Date</th><th>Time</th><th>Release</th></tr></thead><tbody><tr><td class="date-cell">Friday, November 6, 2026</td><td class="time-cell">08:30 AM</td><td class="desc-cell"><strong>Employment Situation</strong> for October 2026</td></tr></tbody></table><p>All times on calendar are Eastern Time.</p>';
     await writeFile(path.join(directory,'first-year-only.mjs'),`
@@ -190,6 +210,7 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
   // Preserve the collector's admission constants while replacing only its fetch.
   await cp(path.join(directory,'scripts','sources','dol-advance.mjs'),path.join(directory,'scripts','sources','dol-advance-original.mjs'));
   await cp(path.join(directory,'scripts','sources','treasury.mjs'),path.join(directory,'scripts','sources','treasury-original.mjs'));
+  await cp(path.join(directory,'scripts','sources','bea.mjs'),path.join(directory,'scripts','sources','bea-original.mjs'));
   const creditCollectors=[['collectBankCredit','bankCredit'],['collectLendingSurvey','lendingSurvey'],['collectFedBalance','fedBalance'],['collectOnRrp','onRrp'],['collectHouseholdDebt','householdDebt'],['collectLoanDelinquency','loanDelinquency']];
   await writeFile(path.join(directory,'scripts','sources','credit-context.mjs'),`import {snapshot} from '../../src/official-snapshot.js';\nimport {refreshedCapture} from './fixture-retrieval.mjs';\n${creditCollectors.map(([name,id])=>`export async function ${name}(){return refreshedCapture(snapshot.sources[${JSON.stringify(id)}]);}`).join('\n')}\n`);
   for(const [filename,exportName,id,calendar] of [
@@ -213,7 +234,7 @@ async function blockedBlsFixture(directory,{failOther=false}={}) {
     ['activity.mjs','collectActivity','activity',false],
     ['housing.mjs','collectHousing','housing',false],
     ...independentCalendars.map(row=>[...row,true]),
-  ])await writeFile(path.join(directory,'scripts','sources',filename),`${id==='dolAdvance'?"export * from './dol-advance-original.mjs';\n":id==='treasury'&&!calendar?"export * from './treasury-original.mjs';\n":id==='bls'&&!calendar?"export * from './bls-original.mjs';\n":''}import {snapshot} from '../../src/official-snapshot.js';\nimport {refreshedCapture} from './fixture-retrieval.mjs';\nexport async function ${exportName}(){${failOther&&id==='bea'&&!calendar?"throw new Error('BEA unavailable');":`return refreshedCapture(snapshot.${calendar?'calendar.':''}sources[${JSON.stringify(id)}]);`}}\n`);
+  ])await writeFile(path.join(directory,'scripts','sources',filename),`${id==='dolAdvance'?"export * from './dol-advance-original.mjs';\n":id==='treasury'&&!calendar?"export * from './treasury-original.mjs';\n":id==='bls'&&!calendar?"export * from './bls-original.mjs';\n":id==='bea'&&!calendar?"export * from './bea-original.mjs';\n":id==='fomc'?"export {FOMC_CALENDAR_URL} from './calendar-fomc-fixture-original.mjs';\n":''}import {snapshot} from '../../src/official-snapshot.js';\nimport {refreshedCapture} from './fixture-retrieval.mjs';\nexport async function ${exportName}(){${failOther&&id==='bea'&&!calendar?"throw new Error('BEA unavailable');":`return refreshedCapture(snapshot.${calendar?'calendar.':''}sources[${JSON.stringify(id)}]);`}}\n`);
   await writeFile(path.join(directory,'blocked-bls.mjs'),`
     const NativeDate=Date;
     globalThis.Date=class extends NativeDate {
@@ -230,7 +251,7 @@ test('approved statistical service-failure mode publishes healthy captures while
     const prior=decodeStoredSnapshot(await readFile(destination));
     const attemptedAt=await blockedBlsFixture(directory);
     await writeFile(path.join(directory,'scripts','sources','bls.mjs'),"export * from './bls-original.mjs';\nimport {OfficialSourceHttpError} from './http.mjs';\nexport async function collectBls(){throw new OfficialSourceHttpError(503,'https://api.bls.gov/publicAPI/v1/timeseries/data/');}\n");
-    const result=await execute(process.execPath,['--import','./blocked-bls.mjs','scripts/refresh-data.mjs','--allow-cached-bls'],{cwd:directory,timeout:publicationTimeout});
+    const result=await execute(process.execPath,['--import','./blocked-bls.mjs','scripts/refresh-data.mjs',legacySelection,'--allow-cached-bls'],{cwd:directory,timeout:publicationTimeout});
     const published=decodeStoredSnapshot(await readFile(destination));
     assert.equal(published.sources.bls.status,'error');
     assert.equal(published.sources.bls.fetchedAt,prior.sources.bls.fetchedAt);
@@ -268,7 +289,7 @@ test('approved cached-BLS CLI mode publishes other sources and reports the origi
     const prior=decodeStoredSnapshot(await readFile(destination));
     const attemptAt=await blockedBlsFixture(directory);
     const summary=path.join(directory,'summary.md');
-    const result=await execute(process.execPath,['--import','./blocked-bls.mjs','scripts/refresh-data.mjs','--allow-cached-bls-calendar'],{cwd:directory,timeout:publicationTimeout,env:{...process.env,GITHUB_STEP_SUMMARY:summary}});
+    const result=await execute(process.execPath,['--import','./blocked-bls.mjs','scripts/refresh-data.mjs',legacySelection,'--allow-cached-bls-calendar'],{cwd:directory,timeout:publicationTimeout,env:{...process.env,GITHUB_STEP_SUMMARY:summary}});
     const published=decodeStoredSnapshot(await readFile(destination));
     assert.notDeepEqual(await readFile(destination),original);
     assert.deepEqual(published.publicationPolicy,{mode:'allow-cached-bls-calendar',cachedCalendarSources:['bls']});

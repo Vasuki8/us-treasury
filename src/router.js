@@ -2,6 +2,7 @@ import { series, releases } from './data.js';
 import {coverageFamilies} from './macro-registry.js';
 import {defaultWindowPreset,isIsoDate} from './date-window.js';
 import {pagePaths} from './page-registry.js';
+import {stitchDeskContracts,stitchDeskPages} from './stitch-desk-contracts.js';
 
 const validIds = ids => [...new Set(ids.filter(id => Object.hasOwn(series, id)))].slice(0, 4);
 const topics = ['All topics', ...new Set(Object.values(series).map(s => s.topic))];
@@ -17,12 +18,14 @@ export const defaults = {
   auctionType:'All',auctionId:'',auctionHistoryPage:null,
   vintageCutoff:null,vintageSeries:'gdp',
   window:'1y',startDate:'',endDate:'',returnTo:null,
+  fxScenario:'year-end',fxFedShock:0,fxForeignShock:0,fxHorizon:3,
+  specialistView:'',specialistRange:'1Y',
   macroFamily:'activity',macroMeasure:'realSpendingMonthly',laborGroup:'all',
   researchView:'workspaces',packageId:'',changeSince:'',changePage:1,publicationCutoff:'',publicationPeriod:'',publicationSeries:'gdp',publicationMode:'quarter',
 };
 
-export const returnPages=['overview','explore','watchlist','macroCoverage','labor','fiscal','refinancing','yields','auctions','ownership','macro','vintages','market','credit','calendar'];
-const returnPath=/^#\/(?:overview|explore|watchlist|economy(?:\/labor)?|fiscal|refinancing|yields|auctions|ownership|macro|vintages|market|credit|calendar|release|research|series\/[A-Za-z0-9]+)(?:\?|$)/;
+export const returnPages=['overview','explore','watchlist','macroCoverage','labor','fiscal','refinancing','yields','auctions','ownership','macro','vintages','market','credit','calendar',...stitchDeskPages];
+const returnPath=/^#\/(?:overview|explore|watchlist|economy(?:\/labor)?|fiscal|refinancing|yields|auctions|ownership|macro|vintages|market(?:\/(?:dealers|money|liquidity|fx-basis))?|treasury\/(?:refunding|debt-ceiling)|rates\/(?:fomc|qt|tips)|inflation\/wedge|credit|calendar|release|research|series\/[A-Za-z0-9]+)(?:\?|$)/;
 /** Local return journeys retain at most three origins, without recursive route growth. */
 export function safeReturnTo(value,depth=0,seen=[]){
  if(typeof value!=='string'||value.length>4000||/[\u0000-\u001f\u007f]/.test(value)||!returnPath.test(value)||depth>=3)return null;
@@ -63,6 +66,12 @@ export function parseRoute(hash = '') {
     else if (path === '/watchlist') state.page = 'watchlist';
     else if (path === '/research') state.page = 'research';
     else if (path === '/sources') state.page = 'sources';
+    const desk=Object.entries(stitchDeskContracts).find(([,d])=>d.path===path);if(desk)state.page=desk[0];
+    state.specialistView=['coupons','bills','repo','fails','rates','corridor','cleared','rrp','assets','liabilities','facilities','term','history','dkw','issuance','cash','headroom','flows','spread','effects'].includes(p.get('deskView'))?p.get('deskView'):'';
+    state.specialistRange=['1M','1Y','3Y','5Y','MAX'].includes(p.get('deskRange'))?p.get('deskRange'):'1Y';
+    state.fxScenario=['fed-cut','policy-divergence'].includes(p.get('scenario'))?p.get('scenario'):'year-end';
+    for(const[field,param]of [['fxFedShock','fedShock'],['fxForeignShock','foreignShock']]){const value=Number(p.get(param));state[field]=p.has(param)&&Number.isFinite(value)?Math.max(-500,Math.min(500,value)):field==='fxFedShock'&&state.fxScenario!=='year-end'?-50:field==='fxForeignShock'&&state.fxScenario==='policy-divergence'?-25:0;}
+    state.fxHorizon=[1,3,6,12].includes(Number(p.get('fxHorizon')))?Number(p.get('fxHorizon')):3;
     state.researchView=['packages','changes','publications'].includes(p.get('view'))?p.get('view'):'workspaces';
     state.packageId=/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(p.get('package')??'')?p.get('package'):'';
     state.changeSince=(p.get('since')??'').slice(0,64);state.changePage=Math.max(1,Math.min(10000,Number.parseInt(p.get('changePage'),10)||1));
@@ -122,6 +131,16 @@ export function routeFor(input,{legacyWindow=false}={}) {
   if(!Object.hasOwn(input,'window'))state.window=Object.hasOwn(input,'range')?'observations':defaultRouteWindow(state);
   const path = {...pagePaths,indicator:pagePaths.indicator+encodeURIComponent(state.seriesId)}[state.page] || '/overview';
   const p = new URLSearchParams();
+  if(stitchDeskContracts[state.page]){
+    if(state.specialistView)p.set('deskView',state.specialistView);
+    if(state.specialistRange!=='1Y')p.set('deskRange',state.specialistRange);
+  }
+  if(state.page==='fxBasis'){
+    if(['fed-cut','policy-divergence'].includes(state.fxScenario))p.set('scenario',state.fxScenario);
+    if(state.fxFedShock!==defaults.fxFedShock||state.fxScenario!=='year-end')p.set('fedShock',String(state.fxFedShock));
+    if(state.fxForeignShock!==defaults.fxForeignShock||state.fxScenario==='policy-divergence')p.set('foreignShock',String(state.fxForeignShock));
+    if(state.fxHorizon!==3)p.set('fxHorizon',String(state.fxHorizon));
+  }
   if(state.alignment==='quarter')p.set('alignment','quarter');
   if(['research','release'].includes(state.page)){
     p.set('view',state.researchView);if(state.packageId)p.set('package',state.packageId);

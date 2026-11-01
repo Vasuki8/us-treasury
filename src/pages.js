@@ -8,7 +8,9 @@ import {fiscalPage} from './fiscal-page.js';
 import {refinancingPage} from './refinancing-page.js';
 import {yieldsPage} from './yields-page.js';
 import {auctionsPage} from './auctions-page.js';
-import {ownershipPage} from './ownership-page.js';
+import {ownershipReferencePage} from './ownership-page.js';
+import {specialistDeskPage} from './specialist-desks-page.js';
+import {stitchDeskContracts} from './stitch-desk-contracts.js';
 import {macroPage} from './macro-page.js';
 import {vintagesPage} from './vintages-page.js';
 import {marketFunctioningPage} from './market-functioning-page.js';
@@ -29,6 +31,7 @@ const defaults={...routeDefaults,saved:[],density:'compact'};
 const seriesIds=values=>[...new Set(values)].filter(id=>getSeries(id));
 const labor=state=>laborPage(state);
 const refinancing=state=>refinancingPage(state);
+const ownershipPage=()=>ownershipReferencePage(dataStatus.sources.ownership,dataStatus.sources.ticHolders,{catalog:series});
 
 function sourceLoadingPage(state,sourceState){
   const labels={
@@ -56,6 +59,7 @@ export function renderPage(input = {}, historyContext = {}) {
   state.saved = seriesIds(Array.isArray(state.saved) ? state.saved : []);
   if(!Object.hasOwn(input,'window'))state.window=Object.hasOwn(input,'range')?'observations':defaultRouteWindow(state);
   if(historyContext.sourceState&&historyContext.sourceState.status!=='ready')return sourceLoadingPage(state,historyContext.sourceState);
+  if(stitchDeskContracts[state.page])return researchNavigation(state)+`<div class="page-hierarchy" data-hierarchy-page="${esc(state.page)}">${specialistDeskPage(state)}</div>`;
   if(state.page==='sources')return researchNavigation(state)+`<div class="page-hierarchy">${sourcesPage()}</div>`;
   const content=({ research:()=>researchPage(state,historyContext),overview:()=>overviewPage(state,historyContext), labor, release:()=>releasePage(state,{archive:historyContext.publicationArchive,publicationState:historyContext.publicationState,explanations:historyContext.publicationExplanations,explanationState:historyContext.explanationState}), macroCoverage:()=>state.macroFamily==='labor'?labor(state):macroCoveragePage(state), credit:()=>creditContextPage(), indicator:()=>indicatorPage(state, historyContext), calendar:()=>calendarPage(state), explore:()=>explorePage(state,historyContext),watchlist:()=>`<div class="watchlist-workspace">${watchlistPage(state,historyContext)}</div>`, fiscal:()=>fiscalPage(),refinancing,yields:()=>yieldsPage(state),auctions:()=>auctionsPage(state),ownership:()=>ownershipPage(),macro:()=>macroPage(),vintages:()=>vintagesPage(state, historyContext.historyState?.history, historyContext.historyState),market:()=>marketFunctioningPage(undefined,state) }[state.page] ?? (()=>overviewPage(state,historyContext)))(state);
   const styled=['overview','labor','indicator','calendar','explore'].includes(state.page)||(state.page==='macroCoverage'&&state.macroFamily==='labor');

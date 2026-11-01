@@ -29,7 +29,8 @@ import {refinancingCsv} from './refinancing-page.js';
 import {yieldCurvesCsv} from './yields-page.js';
 import {nearestCurveDate} from './yields.js';
 import {auctionsCsv} from './auctions-page.js';
-import {ownershipCsv} from './ownership-page.js';
+import {ownershipCsv,ownershipDeskChartCatalog,ticHoldingsCsv} from './ownership-page.js';
+import {auctionDeskChartCatalog} from './auctions-page.js';
 import {macroContributionsCsv} from './macro-page.js';
 import {vintagesCsv,normalizedCutoff} from './vintages-page.js';
 import {marketFunctioningCsv} from './market-functioning-page.js';
@@ -72,6 +73,10 @@ import {publicationExplanationsCsv} from './publication-explanation-view.js';
 import {economicEvidenceCsv,economicEvidenceChartCatalog} from './economic-evidence.js';
 import {pceBaseEffectsCsv,pceBaseEffectsChartCatalog,buildPceBaseEffects} from './pce-base-effects.js';
 import {pceScenarioOptions} from './workspace-context.js';
+import {indicatorFamilyChartCatalog} from './stitch-family-view.js';
+import {stitchEvidenceCatalog,stitchFrozenSources} from './stitch-evidence.js';
+import {stitchDeskContracts} from './stitch-desk-contracts.js';
+import {specialistDeskChartCatalog,specialistDeskCsv,fxSensitivityCsv} from './specialist-desks.js';
 
 const root = document.getElementById('app');
 const main = document.getElementById('main-content');
@@ -109,7 +114,7 @@ const sourceController=createSourceController(createSourceLoader(dataStatus.sour
   getRoute:()=>state,getLibrary:()=>researchLibrary.getState(),hydrate:hydrateSource,
   onChange:()=>preserveHistoryView(main,()=>render()),
 });
-const pageNames = {release:'Release evidence',credit:'Credit & banking',research:"Saved research",macroCoverage:'Economy',overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',watchlist:'Watchlist',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Rates & curves',auctions:'Auction demand',ownership:'Debt ownership',macro:'GDP contributions',vintages:'Retrieval history',market:'Market functioning'};
+const pageNames = {...Object.fromEntries(Object.entries(stitchDeskContracts).map(([id,desk])=>[id,desk.title])),release:'Release evidence',credit:'Credit & banking',research:"Saved research",macroCoverage:'Economy',overview:'Overview',labor:'Labor Market',indicator:'Indicator Detail',calendar:'Calendar',explore:'Explore Data',watchlist:'Watchlist',fiscal:'Fiscal pressure',refinancing:'Refinancing risk',yields:'Rates & curves',auctions:'Auction demand',ownership:'Debt ownership',macro:'GDP contributions',vintages:'Retrieval history',market:'Market functioning'};
 
 document.querySelector('.skip-link').addEventListener('click',event=>{
   event.preventDefault();
@@ -243,6 +248,14 @@ function renderCurrentChartsIn(container,inspection){
   if(state.page==='overview')Object.assign(chartCatalogs,pceHorizonChartCatalog());
   if(state.page==='labor'||state.page==='macroCoverage'&&state.macroFamily==='labor')Object.assign(chartCatalogs,economicEvidenceChartCatalog(dataStatus.sources.laborEvidence));
   if(state.page==='macroCoverage'&&state.macroFamily==='prices')Object.assign(chartCatalogs,economicEvidenceChartCatalog(dataStatus.sources.pcePriceContributions),pceBaseEffectsChartCatalog(getSeries(state.pceBaseIndex),pceScenarioOptions(state)));
+ }
+ if(pkg?.context.stitchEvidence||!pkg&&['indicator','ownership','auctions','refunding','debtCeiling','dealers','money','liquidity','fomc','qt','tips','wedge','fxBasis'].includes(state.page)){
+   const supplementary=pkg?stitchEvidenceCatalog(stitchFrozenSources(pkg.context)):series;
+   const chartSources=pkg?stitchFrozenSources(pkg.context):dataStatus.sources;
+   Object.assign(chartCatalogs,specialistDeskChartCatalog(chartSources,{catalog:pkg?{...supplementary,...pkg.catalog}:series,frozen:Boolean(pkg)}));
+   Object.assign(chartCatalogs,ownershipDeskChartCatalog(chartSources.ownership,chartSources.ticHolders,{frozen:Boolean(pkg)}));
+   Object.assign(chartCatalogs,auctionDeskChartCatalog(chartSources.auctions,pkg?.context.stitchRenderState??state,{frozen:Boolean(pkg)}));
+   Object.assign(chartCatalogs,indicatorFamilyChartCatalog({lookup:id=>supplementary[id]??pkg?.catalog[id],frozen:Boolean(pkg)}));
  }
  renderCharts(container,{...(pkg?{catalog:pkg.catalog}:{}),chartCatalogs,...(inspection?{inspection}:{})});
 }
@@ -571,6 +584,19 @@ root.addEventListener('click',async event=>{
   if(!button)return;
   const d=button.dataset;
   if(button.disabled)return;
+  if(['specialistTab','specialistRange','fxScenario','specialistLineage','specialistExport','specialistMatrix','fxSensitivity'].some(key=>key in d)&&stitchDeskContracts[state.page]){
+    if('specialistTab' in d){navigate({specialistView:d.specialistTab});return;}
+    if('specialistRange' in d){navigate({specialistRange:d.specialistRange});return;}
+    if('fxScenario' in d){navigate({fxScenario:d.fxScenario,fxFedShock:d.fxScenario==='year-end'?0:-50,fxForeignShock:d.fxScenario==='policy-divergence'?-25:0});return;}
+    if('specialistLineage' in d){main.querySelector('#specialist-lineage')?.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});return;}
+    if('specialistExport' in d||'specialistMatrix' in d||'fxSensitivity' in d){
+      try{await ensureSourceAction(requiredSourceIds(state,{purpose:'export'}));
+        const csv='fxSensitivity' in d?fxSensitivityCsv(dataStatus.sources,state,{policyDivergence:state.fxScenario==='policy-divergence'}):specialistDeskCsv(dataStatus.sources,state,{matrix:'specialistMatrix' in d});
+        downloadCsv(csv,`meridian-${state.page}${'specialistMatrix' in d?'-matrix':'fxSensitivity' in d?'-sensitivity':''}.csv`,'Source-backed desk CSV downloaded with native dates, source receipts and scenario assumptions.');
+      }catch(error){actionFeedback(error.message,'error');}return;
+    }
+  }
+  if('exportTic' in d){try{await ensureSourceAction(['ticHolders']);downloadCsv(ticHoldingsCsv(dataStatus.sources.ticHolders),'meridian-tic-holdings.csv','Official TIC custodial holdings downloaded with native month ends and source receipts.');}catch(error){actionFeedback(error.message,'error');}return;}
   if(button.id==='theme-toggle'){toggleTheme();return;}
   if('displayDensity' in d){
     if(!['comfortable','compact'].includes(d.displayDensity))return;
@@ -580,7 +606,7 @@ root.addEventListener('click',async event=>{
   }
   if('overviewFollow' in d||'overviewExport' in d){
     if(state.page!=='overview')return;
-    const ids=['gdp','pceCore','unrate','yield','payroll','policyTargetUpper','spread2s10s','interestRevenueRatio'];
+    const ids=['gdp','pceCore','unrate','yield','payroll','policyTargetUpper','spread2s10s','netInterestTtm'];
     if('overviewFollow' in d){
       const added=ids.filter(id=>!state.saved.includes(id));
       state.saved=[...new Set([...state.saved,...ids])];delete state.freezeSelection;
@@ -748,6 +774,11 @@ root.addEventListener('click',async event=>{
 
 root.addEventListener('change',async event=>{
   const target=event.target;
+  if(target.matches?.('[data-fx-fed-shock],[data-fx-foreign-shock],[data-fx-horizon]')&&state.page==='fxBasis'){
+    const key=target.hasAttribute('data-fx-fed-shock')?'fxFedShock':target.hasAttribute('data-fx-foreign-shock')?'fxForeignShock':'fxHorizon',value=Number(target.value);
+    if(!Number.isFinite(value)||key==='fxHorizon'&&![1,3,6,12].includes(value)||key!=='fxHorizon'&&(value< -500||value>500)){announce('Enter a supported horizon or a rate shock between −500 and 500 basis points.');return;}
+    navigate({[key]:value});return;
+  }
   if(target.matches?.('[data-workspace-series]')&&getSeries(target.value)){
     await chooseWorkspacePreview(target.value);return;
   }

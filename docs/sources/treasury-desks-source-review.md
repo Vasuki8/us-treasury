@@ -1,0 +1,9 @@
+# Treasury specialist desks — reviewed November 1, 2026
+
+These additive captures use official U.S. Treasury federal statistics. Fiscal Data explicitly allows copying, adaptation and commercial redistribution: https://fiscaldata.treasury.gov/api-documentation/#license-and-authorization. Treasury site policies: https://home.treasury.gov/subfooter/site-policies-and-notices. Attribute the originating program and do not imply endorsement.
+
+`dtsDesk` admits only the reviewed Daily Treasury Statement Table III-C and Table I endpoints. It retains a three-year bounded, fully paginated interval and actual SHA-256 retrieval receipts. Six exact-date debt components reconstruct debt subject to limit; statutory headroom subtracts this from the published legal limit. It is not gross-debt headroom, extraordinary-measure capacity or an X-date forecast. Missing or suspended legal values remain null. Table I's explicitly labelled closing-cash row carries the amount in `open_today_bal` in the current schema; `close_today_bal` is empty. Deposits and withdrawals include financing and must not be described as budget receipts/outlays.
+
+`ticHolders` admits only the official TIC Table 5 rolling table at https://ticdata.treasury.gov/Publish/slt_table5.html. It retains the exact thirteen month-end reference dates, native USD-billion values and reviewed country/aggregate labels. Holdings largely follow custodial residence, not ultimate beneficial ownership. Long-term market values and bills differ from the Z.1/SOMA valuation and population. Stock changes include valuation/other changes and are not net purchases. No publication timestamp or original vintage is inferred from a retrieval.
+
+Source observations, calculation dependencies, nulls and receipt hashes are preserved. Shared browser and server admission replay all numerical calculations. The existing debt, fiscal and ownership captures and their immutable histories remain separate.

@@ -41,8 +41,15 @@ test('original and admitted research indicators have traced observations and ret
     assert.match(s.source.url,/^https:\/\//);
     assert.ok(Number.isInteger(s.precision));
     assert.equal(Object.hasOwn(s,'revisions'),false,'ordinary startup does not compute archived revision rows');
+    if(!dataStatus.sources[s.agency]?.series?.[id]){
+      assert.equal(s.dataStatus,'unavailable',`${id}: a definition alone is not an admitted capture`);
+      assert.deepEqual(s.observations,[]);assert.deepEqual(s.source.seriesIds,[]);
+      assert.equal(latest(s),undefined);assert.ok(!s.fetchedAt,`${id}: unavailable definitions cannot invent a retrieval`);
+      assert.match(s.error,/not connected|unavailable/i);continue;
+    }
     assert.equal(s.dataStatus,expectedCaptureStatus(s.agency),id);
     if(s.agency==='dolAdvance')assert.equal(s.observations.length,2,'latest release context contains the prior comparison and current advance only');
+    else if(s.dateConvention==='announcement-date')assert.ok(s.observations.filter(o=>Number.isFinite(o.value)).length>=1,`${id}: dated announcements retain their actual available history`);
     else assert.ok(s.observations.filter(o=>Number.isFinite(o.value)).length>=12,id);
     assert.match(s.fetchedAt,/^\d{4}-\d{2}-\d{2}T/);
     assert.ok(s.source.seriesIds.length);
@@ -60,7 +67,7 @@ test('official observations follow their real frequencies and maintain source pr
   assert.equal(series.gdp.frequency,'Quarterly');
   assert.ok(series.gdp.observations.every(o=>/^\d{4}-(01|04|07|10)-01$/.test(o.date)));
   for (const s of Object.values(series).filter(s=>s.frequency==='Monthly')) {
-    assert.ok(s.observations.every(o=>s.dateConvention==='month-end'?new Date(Date.parse(`${o.date}T00:00:00Z`)+86400000).getUTCDate()===1:o.date.endsWith('-01')),`${s.id} follows its declared monthly dating convention`);
+    assert.ok(s.observations.every(o=>['month-end','source-month-end'].includes(s.dateConvention)?new Date(Date.parse(`${o.date}T00:00:00Z`)+86400000).getUTCDate()===1:o.date.endsWith('-01')),`${s.id} follows its declared monthly dating convention`);
   }
   assert.equal(series.cpi.adjustment,'Not seasonally adjusted');
   assert.ok(series.claims.observations.every(o=>new Date(`${o.date}T00:00:00Z`).getUTCDay()===6),'claims dates are week endings');

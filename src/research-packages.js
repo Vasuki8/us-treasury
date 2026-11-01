@@ -9,6 +9,10 @@ import {generatedFundingCsv}from'./market-functioning-page.js';
 import {generatedAuctionsCsv}from'./auctions-page.js';
 import {aggregateAuctionOfferings}from'./auctions.js';
 import {validateEconomicEvidenceContext,validatePceBaseEffectsContext}from'./economic-evidence-validation.js';
+import {validateStitchEvidence,validateStitchLegacySources} from './stitch-evidence.js';
+import {stitchFrozenSources} from './stitch-evidence.js';
+import {specialistDeskCsv,fxSensitivityCsv} from './specialist-desks.js';
+import {validateFrozenFomcCalendar} from './fomc-calendar-validation.js';
 import {canonicalJson,deepFreeze,researchJsonCopy,researchByteLength,researchId,researchName,researchTimestamp,MAX_RESEARCH_JSON_BYTES}from'./research-workspaces.js';
 
 const verified=new WeakSet(),classes=new Set(['level','count','amount','rate','growth','contribution','balance','change','unknown']);
@@ -210,6 +214,15 @@ function validateAuctionContext(context){
  for(const benchmark of [false,true])generatedAuctionsCsv(source,{securityType:profile.securityType,auctionId:profile.auctionId,benchmark,validateOnly:true});
 }
 function validateContext(context){
+ if(context?.stitchEvidence!==undefined&&!validateStitchEvidence(context.stitchEvidence))fail('specialist source evidence differs from native measurements or calculation lineage');
+ if(context.stitchEvidence){
+  if(!validateStitchLegacySources(context))fail('specialist supporting source differs from registered native measurements, reviewed receipt lineage or calculations');
+  const state=context.stitchRenderState;
+  if(!object(state)||state.page!==context.stitchEvidence.page||Object.keys(state).some(key=>!['page','seriesId','window','startDate','endDate','range','fxScenario','fxFedShock','fxForeignShock','fxHorizon','specialistView','specialistRange'].includes(key)))fail('specialist frozen display state');
+  if(context.attachments?.some(f=>['specialist-evidence.csv','fx-policy-matrix.csv','fx-sensitivity.csv'].includes(f?.name?.toLowerCase())))fail('specialist generated export conflicts with stored copy');
+  if(state.page==='fomc'&&!validateFrozenFomcCalendar(context.stitchCalendar))fail('specialist FOMC calendar source, native dates or display reference clock');
+ }
+ if(context.stitchCalendar!==undefined&&(!validateFrozenFomcCalendar(context.stitchCalendar)||context.stitchEvidence?.page!=='fomc'))fail('unscoped specialist FOMC calendar');
  if(!object(context))fail('context must be data');
  if(context.economicEvidence!==undefined){
   if(!object(context.economicEvidence)||Object.keys(context.economicEvidence).some(id=>!['laborEvidence','pcePriceContributions'].includes(id)))fail('economic evidence source scope');
@@ -372,6 +385,7 @@ export function researchPackageAttachments(pkg){
  const context=branded(pkg).context,files=(context.attachments??[]).map(({name,type})=>({name,type,generated:false}));
  if(context.fundingDistributions?.version===2)files.push({name:'market-functioning.csv',type:'text/csv',generated:true});
  if(context.auctionExports?.version===1)for(const name of ['auction-results.csv','auction-peers.csv'])files.push({name,type:'text/csv',generated:true});
+ if(context.stitchEvidence){files.push({name:'specialist-evidence.csv',type:'text/csv',generated:true});if(context.stitchRenderState?.page==='fxBasis')for(const name of ['fx-policy-matrix.csv','fx-sensitivity.csv'])files.push({name,type:'text/csv',generated:true});}
  return files;
 }
 /** Resolve the existing specialist-download action from validated frozen inputs. */
@@ -380,6 +394,11 @@ export function researchPackageAttachment(pkg,index){
  if(!Number.isInteger(index)||index<0)fail('frozen attachment unavailable');
  const descriptor=researchPackageAttachments(pkg)[index];if(!descriptor)fail('frozen attachment unavailable');
  if(!descriptor.generated)return pkg.context.attachments[index];
+ if(['specialist-evidence.csv','fx-policy-matrix.csv','fx-sensitivity.csv'].includes(descriptor.name)){
+  const sources=stitchFrozenSources(pkg.context),state=pkg.context.stitchRenderState;
+  const options={matrix:descriptor.name==='fx-policy-matrix.csv',sourceIds:Object.keys(sources),calendar:pkg.context.stitchCalendar?{sources:{fomc:pkg.context.stitchCalendar.source}}:{},now:new Date(pkg.context.stitchCalendar?.asOf??pkg.createdAt)};
+  return {name:descriptor.name,type:descriptor.type,content:descriptor.name==='fx-sensitivity.csv'?fxSensitivityCsv(sources,state,{policyDivergence:state.fxScenario==='policy-divergence'}):specialistDeskCsv(sources,state,options)};
+ }
  const profile=pkg.context.auctionExports;
  const content=descriptor.name==='market-functioning.csv'?generatedFundingCsv(pkg.context.moduleSources.marketFunctioning):generatedAuctionsCsv(pkg.context.moduleSources.auctions,{securityType:profile.securityType,auctionId:profile.auctionId,benchmark:descriptor.name==='auction-peers.csv'});
  return {name:descriptor.name,type:descriptor.type,content};

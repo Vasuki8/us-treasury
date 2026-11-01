@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {viewportCss} from './helpers/viewport-css.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {defaults,parseRoute,routeFor} from '../src/router.js';
@@ -104,7 +105,7 @@ test('mobile content links precede Density and Overview uses a two-column readin
   assert.match(css,/\.brief-takeaways p\s*\{[^}]*font-size:13px[^}]*line-height:18px/);
   assert.match(css,/table,\.table-wrap thead th,\.labor-table thead th\s*\{[^}]*font-size:12px/);
   assert.match(css,/\.stitch-status-label,\.stitch-window-label\s*\{[^}]*font-size:10px/);
-  const responsive=css.slice(css.lastIndexOf('@media(max-width:800px)'));
+  const responsive=viewportCss(css,390);
   assert.match(responsive,/\.action[^}]*min-height:44px/);
   const mobile=css.split('@container (max-width:530px)')[1]?.split('@media')[0]??'';
   assert.match(mobile,/\.oh-topic-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,minmax\(0,1fr\)\)/);

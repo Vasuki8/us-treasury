@@ -78,23 +78,21 @@ function readingNotes(measures){
  ]).filter(Boolean))].map(note=>`<p class="stitch-source-note amber" role="status">${esc(note)}</p>`).join('');
 }
 
-function readingContext(id,state){
- const gdp=getSeries('gdp'),demand=getSeries('privateDomesticDemandGrowth'),pce=getSeries('pceCore'),payroll=getSeries('payroll');
- const coreOneMonth=pceHorizonChartCatalog()['pce-horizons'].catalog.corePce1m;
- const contexts={
-  gdp:{body:`Private domestic final demand: ${fact(demand)} (q/q SAAR). These are current retained readings; original-release estimates require reviewed publication evidence.`,measures:[gdp,demand]},
-  pceCore:{body:`The calculated 1-month annualized core rate is ${fact(coreOneMonth)}, versus ${fact(coreOneMonth,{prior:true})}. Annual and annualized monthly rates describe different horizons.`,measures:[pce,coreOneMonth]},
-  payroll:{body:`The 3-month average is ${fact(getSeries('payrollAverage3m'))} per month. Household survey unemployment is ${fact(getSeries('unrate'))}. Retained payroll readings may be revised; original payroll vintages are not covered.`,measures:[payroll,getSeries('payrollAverage3m'),getSeries('unrate')]},
- };
- const context=contexts[id];
- const current=getSeries(id),prior=current.observations.at(-2);
- return context?readingNotes(context.measures)+disclosure(`reading-context:${id}`,'Interpretation & related readings',`<p>${context.body}</p><p class="panel-note">REF: ${esc(current.code)} · ${esc(retainedStatus(current))}. Prior reference: ${esc(prior?periodLabel(current,prior.date):'Unavailable')}.</p>${detail(id,state,'Table & history','link-button')}`,'','overview-reading-context'):readingNotes([current]);
-}
-
 function headline(id,state,label,footer){
  const current=getSeries(id),prior=current.observations.at(-2);
  const priorText=`Prior: ${formatDisplayValue(current,prior?.value,{currencyUnit:displayCurrencyUnit([current])})} (${prior?periodLabel(current,prior.date):'reference unavailable'})`;
- return `<article class="oh-topic stitch-card"${['gdp','pceCore'].includes(id)?` data-overview-brief="${id}"`:''}>${reading(id,state,{label})}<footer class="stitch-headline-footer"><span>${esc(priorText)}<br>REF: ${esc(current.code)} · ${esc(retainedStatus(current))}${footer?` · ${esc(footer)}`:''}</span>${outward}</footer>${readingContext(id,state)}</article>`;
+ return `<article class="oh-topic stitch-card">${reading(id,state,{label})}<footer class="stitch-headline-footer"><span title="${esc(`${current.code} · ${retainedStatus(current)}${footer?' · '+footer:''}`)}">${esc(priorText)}</span>${outward}</footer>${readingNotes([current])}</article>`;
+}
+
+function readingGuide(state){
+ const oneMonth=pceHorizonChartCatalog()['pce-horizons'].catalog.corePce1m;
+ const cards=[
+  ['gdp','Real GDP growth',`${fact(getSeries('gdp'))} q/q SAAR, versus ${fact(getSeries('gdp'),{prior:true})}. Private domestic final demand: ${fact(getSeries('privateDomesticDemandGrowth'))} q/q SAAR. Current revised estimates.`],
+  ['pceCore','Core PCE inflation',`${fact(getSeries('pceCore'))} year over year, versus ${fact(getSeries('pceCore'),{prior:true})}. One-month annualized core PCE: ${fact(oneMonth)}, versus ${fact(oneMonth,{prior:true})}. The horizons are distinct.`],
+  ['payroll','Nonfarm payrolls',`${fact(getSeries('payroll'))} jobs change. ${esc(priorReadingLabel(getSeries('payroll')))}: ${fact(getSeries('payroll'),{prior:true})}. Three-month average: ${fact(getSeries('payrollAverage3m'))} jobs per month. CES job estimates can be revised; original payroll vintages are not covered.`],
+ ];
+ return '<section class="stitch-brief" data-overview-guide aria-labelledby="overview-guide-title"><div class="brief-heading"><h2 id="overview-guide-title">What changed this period · Analytical reading guide</h2><span class="stitch-status-label">Latest retained observations</span></div><div class="stitch-brief-grid">'
+  +cards.map(([id,title,body])=>{const current=getSeries(id),program={gdp:'BEA national accounts',pceCore:'PCE price indexes',payroll:'CES employment survey'}[id];return `<article class="stitch-brief-card" data-overview-guide-card="${id}" data-overview-brief="${id}"><div class="stitch-brief-meta"><span>${esc(program)}</span><span>${esc(retainedStatus(current))}</span></div><h3>${detail(id,state,title,'')}</h3><p class="stitch-guide-summary" title="${esc(current.unit)} · ${esc(current.adjustment)}">${body.replace('<strong>','<strong class="reading-value">')}</p>${readingNotes([current])}<footer class="stitch-brief-footer"><span>REF: ${esc(current.code)}</span>${detail(id,state,'Table & history','link-button')}</footer></article>`;}).join('')+'</div></section>';
 }
 
 function statistic(label,current,{href='',suffix=''}={}){
@@ -215,13 +213,15 @@ export function overviewPage(state={},context={}){
   ['payroll','Monthly Payroll Gain','BLS CES',`Monthly establishment job change. ${priorReadingLabel(getSeries('payroll'))} comparisons use the same retained history.`,'Open Labor Details →','#/economy/labor'],
   ['policyTargetUpper','Fed Funds Target','FOMC bounds','The official lower and upper target bounds are paired only when their reference dates align.','View Policy Rate Path →','#/economy?family=policy'],
   ['spread2s10s','2s10s Treasury Spread','Treasury slope',`The 10-year minus 2-year nominal Treasury par-yield spread; each curve observation retains its reference date.`,'Explore Term Structure →','#/yields'],
-  ['interestRevenueRatio','Net interest burden','US Treasury',`TTM net interest outlays: ${value(getSeries('netInterestTtm'))} (${reference(getSeries('netInterestTtm'))}). The ratio uses trailing twelve-month receipts.`,'Inspect Fiscal Pressure →','#/fiscal'],
+  ['netInterestTtm','Net interest outlays · TTM','US Treasury','Trailing twelve-month net interest outlays, USD. The accompanying burden ratio uses trailing twelve-month receipts.','Inspect Fiscal Pressure →','#/fiscal'],
  ].map(([id,label,agency,narrative,link,href])=>
-  `<article class="workspace-monitor-row"${id==='payroll'?' data-overview-brief="payroll"':''}${preview===id?' data-active="true"':''}>`
+  `<article class="workspace-monitor-row"${preview===id?' data-active="true"':''}>`
   +`<div class="stitch-monitor-meta"><span>${esc(label)}</span><span>${esc(agency)}</span></div>`
-  +(id==='policyTargetUpper'?policyReading(state):reading(id,state,{label:id==='interestRevenueRatio'?'Net interest / revenue · TTM':label}))
-  +`<p class="stitch-monitor-note">${esc(narrative)}</p>${id==='payroll'?readingContext(id,state):''}<div class="stitch-monitor-actions">${a(link,href,'link-button')}`
-  +button('Chart',`data-workspace-preview="${id}" aria-label="Chart ${esc(label)}" aria-pressed="${preview===id}"`)
+  +(id==='policyTargetUpper'?policyReading(state):reading(id,state,{label}))
+  +(id==='netInterestTtm'?`<div class="stitch-monitor-secondary">${reading('interestRevenueRatio',state,{label:'Net interest / revenue · TTM',primary:false})}</div>`:'')
+  +readingNotes((id==='policyTargetUpper'?['policyTargetLower','policyTargetUpper']:id==='netInterestTtm'?['netInterestTtm','interestRevenueRatio']:[id]).map(getSeries))
+  +`<p class="stitch-monitor-note">${esc(narrative)}</p><div class="stitch-monitor-actions">${a(link,href,'link-button')}`
+  +button('Chart',`data-workspace-preview="${id==='netInterestTtm'?'interestRevenueRatio':id}" aria-label="Chart ${esc(label)}" aria-pressed="${preview===id}"`)
   +'</div></article>').join('');
  const snapshotContext=disclosure('growth-demand','Domestic demand',reading('privateDomesticDemandGrowth',state,{label:'Private domestic final demand',primary:false,compact:true})+'<p class="panel-note oh-growth-note">Private consumption and fixed investment; excludes inventories, government and net exports.</p>'+button('Compare growth','data-compare="gdp,privateDomesticDemandGrowth"','link-button'),'','oh-context-details')
   +disclosure('policy-effective','Effective rate',reading('effr',state,{label:'Effective federal funds rate',primary:false})+`<p class="panel-note">Effective rates and target bounds can refer to different days. Inspect ${detail('policyTargetLower',state,'lower bound')} or ${detail('policyTargetUpper',state,'upper bound')}.</p>`,'','oh-context-details')
@@ -255,7 +255,7 @@ export function overviewPage(state={},context={}){
     now:context.now??new Date()}),{disclosure:false,hrefFor:id=>indicatorHref(id,{...state,page:'overview'})})
    +`<div class="oh-research-links">${a('Growth & income','#/economy?family=activity')}${a('Inflation','#/economy?family=prices')}${a('Published estimates','#/research?view=publications')}</div>`,'Reference periods & provenance');
  const next=nextCatalysts(releases,{now:context.now??new Date(),limit:1})[0];
- const primaryIds=['gdp','pceCore','unrate','yield','payroll','policyTargetUpper','spread2s10s','interestRevenueRatio'];
+ const primaryIds=['gdp','pceCore','unrate','yield','payroll','policyTargetUpper','spread2s10s','netInterestTtm'];
  const affected=primaryIds.filter(id=>getSeries(id)?.dataStatus!=='official');
  const operationStatus=affected.length?`${affected.length} cached or unavailable readings`:'8 retained readings';
  const actions=`<div class="stitch-overview-actions"><div class="stitch-operation-status"><span class="stitch-status-dot" aria-hidden="true"></span>${button(operationStatus,'data-source-health','stitch-source-health')}<span class="stitch-operation-next">${esc(next?`Next: ${next.name} · ${releaseDate(next.date)}`:'Next schedule unavailable')}</span></div>`
@@ -273,6 +273,7 @@ export function overviewPage(state={},context={}){
   +button('Export Overview CSV','data-overview-export')+'</div></section></div></footer>';
  return '<div class="radar-page radar-overview overview-hierarchy stitch-overview">'
   +'<header class="stitch-overview-header"><div class="stitch-overview-title"><div class="page-heading"><div><div class="stitch-title-line"><h1>U.S. economy</h1><span class="stitch-terminal-badge">Terminal feed</span></div><p class="subtitle">Growth, inflation, employment and rates. One research workspace.</p></div></div></div>'+actions+'</header>'
+  +readingGuide(state)
   +'<section class="oh-snapshot" aria-label="Economic conditions">'
   +`<div class="oh-topic-grid stitch-headline-grid" role="region" aria-label="Economy at a glance">${cards}</div></section>`
   +`<div class="stitch-workstation">${momentum}${catalystPanel(state,context)}</div>`

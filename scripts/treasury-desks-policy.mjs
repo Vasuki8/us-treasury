@@ -1,0 +1,6 @@
+import {DTS_DESK_BASE,TIC_HOLDERS_URL,TREASURY_DESK_TERMS,treasuryDeskDefinitions} from '../src/treasury-desk-definitions.js';
+import {validateTreasuryDeskSource,treasuryDeskFeedRequest} from '../src/treasury-desk-schema.js';
+import {isEmptyFailedSource} from './empty-source-attempt.mjs';
+export const treasuryDeskPolicies=Object.entries(treasuryDeskDefinitions).map(([agency,defs])=>({id:`treasury-desk-${agency}`,agency,reviewedOn:'2026-11-01',commercialUse:true,basis:'U.S. Treasury federal statistics with exact official fields, current revised reference periods, native values and hashed retrieval receipts; no third-party content or executable quotes.',terms:[TREASURY_DESK_TERMS,'https://home.treasury.gov/subfooter/site-policies-and-notices'],feed:`treasury-desk-${agency}`,series:Object.fromEntries(Object.entries(defs).map(([id,d])=>[id,[d.code]]))}));
+export function matchesTreasuryDeskFeed(value,feed){const request=treasuryDeskFeedRequest(value);return Boolean(request&&feed===`treasury-desk-${request.kind}`);}
+export function assertTreasuryDeskSources(sources){for(const id of Object.keys(treasuryDeskDefinitions))if(sources?.[id]&&!isEmptyFailedSource(sources[id],id)&&!validateTreasuryDeskSource(sources[id]))throw Error(`Invalid or unreviewed Treasury desk source: ${id}`);}

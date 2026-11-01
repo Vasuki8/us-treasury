@@ -9,7 +9,7 @@ import {viewRange} from '../src/workspace-context.js';
 import {overviewPage} from '../src/overview-page.js';
 
 const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8');
-const ids=['gdp','pceCore','unrate','yield','payroll','policyTargetUpper','spread2s10s','interestRevenueRatio'];
+const ids=['gdp','pceCore','unrate','yield','payroll','policyTargetUpper','spread2s10s','netInterestTtm'];
 const section=(from,to)=>{
  const start=source.indexOf(from),end=source.indexOf(to,start);assert.ok(start>=0&&end>start);return source.slice(start,end);
 };
@@ -48,6 +48,7 @@ test('Follow Page adds the eight Overview readings once to the active named watc
  const view=app({preferences:{theme:'Graphite',density:'comfortable',activeWatchlistId:'rates',watchlists:[{id:'default',name:'Default',saved:['cpi']},{id:'rates',name:'Rates',saved:['sofr','yield']}]}});
  await view.click({overviewFollow:''});
  assert.deepEqual(view.state().saved,['sofr','yield',...ids.filter(id=>id!=='yield')]);
+ assert.equal(view.state().saved.includes('interestRevenueRatio'),false,'the ratio remains secondary to the dollar-denominated primary reading');
  assert.equal(view.state().activeWatchlistId,'rates');assert.deepEqual(view.state().selected,['cpi']);assert.equal(view.state().freezeSelection,undefined);
  const restored=readPreferences(view.storage);
  assert.deepEqual(restored.watchlists[0].saved,['cpi']);assert.deepEqual(restored.watchlists[1].saved,view.state().saved);

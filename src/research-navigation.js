@@ -1,4 +1,5 @@
 import {escapeHtml as esc} from './ui.js';
+import {stitchDeskContracts} from './stitch-desk-contracts.js';
 
 // One home per research question; secondary navigation contains only siblings.
 const economy=[
@@ -19,6 +20,7 @@ const evidence=[['research','Publication history','#/research?view=publications'
  ['sources','Sources & terms','#/sources']];
 const research=[['watchlist','Watchlist','#/watchlist'],['research','Saved views','#/research','workspaces'],
  ['research','Saved snapshots','#/research?view=packages','packages']];
+for(const[id,d]of Object.entries(stitchDeskContracts))({economy,fed,treasury}[d.family]).push([id,d.title,'#'+d.path]);
 export const researchPages=[...economy,...fed,...treasury,['vintages','Retrieval history','#/vintages']];
 export const isResearchPage=page=>researchPages.some(([id])=>id===page);
 
@@ -26,7 +28,7 @@ const icons={activity:'trending_up',macro:'pie_chart',prices:'price_change',labo
  credit:'account_balance',policy:'balance',yields:'show_chart',market:'waterfall_chart',fiscal:'account_balance_wallet',
  refinancing:'update',auctions:'gavel',ownership:'public'};
 const navIcon=key=>`<span class="material-symbols-outlined nav-icon" aria-hidden="true">${icons[key]??icons.activity}</span>`;
-const workspaceTitles={activity:'Growth & Income',external:'Trade & Account',market:'Funding & Liquidity',refinancing:'Refinancing'};
+const workspaceTitles={activity:'Growth & Income',external:'Trade & Account',market:'Funding & Liquidity',refinancing:'Refinancing',dealers:'Primary Dealers',money:'Money Markets',liquidity:'Treasury Liquidity',fomc:'FOMC & Projections',qt:'Balance Sheet & QT',tips:'TIPS & Breakevens',fxBasis:'FX Funding',refunding:'Refunding & TBAC',debtCeiling:'Debt Ceiling & Cash',wedge:'CPI–PCE Wedge'};
 
 export function workspaceNavigation(){
  return [['economy','Economy',economy],['fed','Fed & Rates',fed],['treasury','Treasury & Fiscal',treasury]].map(([id,label,links])=>
@@ -37,6 +39,7 @@ export function workspaceNavigation(){
 
 export function navigationFamily(input={}) {
  const state=typeof input==='string'?{page:input}:input;
+ if(stitchDeskContracts[state.page])return stitchDeskContracts[state.page].family;
  if(state.page==='macroCoverage')return state.macroFamily==='policy'?'fed':'economy';
  if(['labor','macro','credit'].includes(state.page))return 'economy';
  if(['yields','market'].includes(state.page))return 'fed';

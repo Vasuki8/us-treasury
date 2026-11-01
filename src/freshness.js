@@ -1,3 +1,4 @@
+import {stitchEvidenceSourceIds} from './stitch-evidence.js';
 const targets = [
   ['data','householdDebt','Federal Reserve household debt service'],
   ['data','loanDelinquency','Federal Reserve bank loan delinquency'],
@@ -73,7 +74,8 @@ function newest(values) {
 /** Summarize captures against the daily deadline using a valid Date clock. */
 export function getFreshness(snapshot = {}, { now = new Date() } = {}) {
   const { expectedRefreshAt, refreshDeadline } = refreshWindow(now);
-  const entries = targets.map(([kind, sourceId, label]) => {
+  const additional=stitchEvidenceSourceIds.filter(id=>snapshot?.stitchDataVersion===1||Object.hasOwn(snapshot?.sources??{},id)).map(id=>['data',id,`Specialist source · ${id}`]);
+  const entries = [...targets,...additional].map(([kind, sourceId, label]) => {
     const source = kind === 'data' ? snapshot?.sources?.[sourceId] : snapshot?.calendar?.sources?.[sourceId];
     const fetchedAt = timestamp(source?.fetchedAt);
     const stale = fetchedAt !== null && fetchedAt < expectedRefreshAt;

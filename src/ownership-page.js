@@ -6,6 +6,7 @@ import {tabularCsv} from './model.js';
 import {formatDisplayValue} from './display-format.js';
 import {deskReadings,deskContext} from './stitch-desk.js';
 import {heading,button,panel,chart,table,emptyState,escapeHtml as esc} from './ui.js';
+import {ticDeskDefinitions,TIC_COUNTRIES,TIC_HOLDERS_URL} from './treasury-desk-definitions.js';
 
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
 const money=value=>finite(value)
@@ -22,7 +23,7 @@ const TERMS='https://www.newyorkfed.org/privacy/termsofuse.html';
 export function ownershipPage(source=dataStatus.sources.ownership) {
   const summary=summarizeOwnership(source),available=summary.status==='ok';
   const header='<div class="stitch-desk stitch-ownership-desk">'+heading('DEBT OWNERSHIP','Official sector positions · distinct reporting dates, valuation bases and coverage',button('CSV OWNERSHIP',`data-export-ownership${available?'':' disabled aria-describedby="ownership-availability"'}`));
-  if(!available)return header+panel('01','OFFICIAL OWNERSHIP POSITIONS',`<div id="ownership-availability">${emptyState('Ownership data unavailable.','Verified Federal Reserve sector positions and source metadata are required; missing holdings are not treated as zero.')}</div>${source?.error?`<p class="panel-note amber">${esc(source.error)}</p>`:''}`)+panel('02','SOURCE LIMITATIONS',`<p class="panel-note">TIC country holdings are not ingested pending a source-specific commercial reuse review. No country breakdown or combined ownership share is invented.</p>`)+'</div>';
+  if(!available)return header+panel('01','OFFICIAL OWNERSHIP POSITIONS',`<div id="ownership-availability">${emptyState('Ownership data unavailable.','Verified Federal Reserve sector positions and source metadata are required; missing holdings are not treated as zero.')}</div>${source?.error?`<p class="panel-note amber">${esc(source.error)}</p>`:''}`)+panel('02','SOURCE LIMITATIONS',`<p class="panel-note">TIC country holdings are a separate source family. This Z.1/SOMA capture does not supply country positions or a combined ownership share.</p>`)+'</div>';
   const z1=source.z1,soma=source.soma??{},fedCapture=capture(source,'/z1/current/z1_csv_files.zip'),somaCapture=capture(source,'/api/soma/summary.json');
   const weeklyException=note=>/SOMA|FRN|weekly|2014-0[2-5]/i.test(note);
   const weeklyNotes=(source.warnings??[]).filter(weeklyException),quarterNotes=(source.warnings??[]).filter(note=>!weeklyException(note));
@@ -32,7 +33,7 @@ export function ownershipPage(source=dataStatus.sources.ownership) {
   ].map(([code,label,seriesId])=>{const sector=summary.sectors.find(item=>item.code===code),display=value=>finite(value)?formatDisplayValue({format:'billions',unit:'USD billions'},value,{currencyUnit:'T'}):'Unavailable';return {label,seriesId,value:display(sector?.value),change:`Quarter change ${finite(sector?.change)&&sector.change>0?'+':''}${display(sector?.change)}`,basis:`${humanDate(summary.asOf)} · USD trillions · ${sector?.valuation??'sector position unavailable'}`};}));
   const changes=summary.sectors.filter(item=>finite(item.change)).sort((a,b)=>Math.abs(b.change)-Math.abs(a.change)).slice(0,6);
   const pillars=deskContext('Ownership evidence & coverage',[
-    {kicker:'Pillar I · cross-border coverage',title:'Country holdings',value:'Not covered',note:'TIC country holdings and official/private foreign splits are not retained. Country custody locations do not establish ultimate beneficial ownership; no country amounts or shares are inferred.'},
+    {kicker:'Pillar I · cross-border coverage',title:'Country holdings',value:'Not covered',note:'TIC country holdings and official/private foreign splits are separate from this Z.1/SOMA capture. Country custody locations do not establish ultimate beneficial ownership.'},
     {kicker:'Pillar II · position changes',title:'Sector absorption',value:`${changes.length} largest retained changes`,note:'Reported positions can change through transactions and valuation. Exact preceding-quarter comparisons are shown without treating changes as purchases, sales or causal contributions to yields.'},
     {kicker:'Pillar III · valuation basis',title:'Federal Reserve & SOMA',value:'Separate observations',note:'Quarterly Z.1 central-bank market values and weekly Treasury-only SOMA par holdings have different dates and valuation bases. They are not added into a combined ownership total.'},
   ]);
@@ -72,7 +73,7 @@ export function ownershipPage(source=dataStatus.sources.ownership) {
   `reports Treasury exposure and how that distribution changes. Differences in investor `+
   `mandates and instrument demand can inform research, but these stock measures alone do not `+
   `establish the cause of a yield move.</p><p><strong>LIMITATIONS.</strong></p>${lists(summary.limitations)
-  }<p>TIC country holdings are not ingested pending verified source-specific redistribution `+
+  }<p>TIC country holdings require their own separately captured source `+
   `evidence. Country figures can reflect custody locations rather than ultimate ownership. No `+
   `incompatible cross-source pie chart or total is calculated.</p><p>Source release dates, `+
   `retrieval timestamps and period ends remain distinct. Previously uncaptured original `+
@@ -82,6 +83,66 @@ export function ownershipPage(source=dataStatus.sources.ownership) {
   `· <a href="https://home.treasury.gov/data/treasury-international-capital-tic-system" `+
   `target="_blank" rel="noopener noreferrer">Treasury TIC methodology and limitations ↗</a>. `+
   `Provenance and per-row valuations accompany CSV exports.</p></div>`)))+'</div></div>';
+}
+
+function ticCatalog(source){
+ return Object.fromEntries(Object.entries(ticDeskDefinitions).map(([id,definition])=>{const native=source?.series?.[id];return [id,{...definition,...native,source:{...definition.source,seriesIds:native?.sourceIds??[]},observations:native?.observations??[],fetchedAt:source?.fetchedAt??null,provenance:source?.provenance??[],dataStatus:native?(source?.status==='ok'?'official':'cached'):'unavailable'}];}));
+}
+const ticLast=series=>series?.observations?.at(-1);
+const ticExact=(series,date)=>series?.observations?.find(row=>row.date===date)??null;
+const ticTrillions=value=>finite(value)?formatDisplayValue({format:'billions',unit:'USD billions'},value,{currencyUnit:'T'}):'Unavailable';
+function ticPriorMonth(date){const parsed=new Date(`${date}T00:00:00Z`);return Number.isFinite(parsed.getTime())?new Date(Date.UTC(parsed.getUTCFullYear(),parsed.getUTCMonth(),0)).toISOString().slice(0,10):null;}
+function ticChange(series,date){const current=ticExact(series,date),previous=ticExact(series,ticPriorMonth(date));return finite(current?.value)&&finite(previous?.value)?current.value-previous.value:null;}
+
+/** These aliases keep the native TIC billions and exact conversion inputs inspectable. */
+export function ownershipDeskChartCatalog(ownershipSource,ticSource,{frozen=false}={}){
+ const source=ticCatalog(ticSource),catalog={};
+ for(const [id,inputId,short]of [['ticForeignHoldings','ticTotal','Foreign holdings'],['ticOfficialHoldings','ticOfficial','Foreign official']]){
+  const input=source[inputId];catalog[id]={...input,id,name:`${short} · TIC month-end stock`,short,unit:'USD trillions',format:'trillions',precision:3,observationType:'calculated',calculation:'TIC Table 5 native USD billions / 1,000; exact source month ends.',observations:input.observations.map(row=>({...row,value:finite(row.value)?row.value/1000:null,inputValues:[row.value],inputDates:[row.date]}))};
+ }
+ return {'ownership-tic':{catalog,evidenceLabel:`${frozen?'Frozen':'Captured'} U.S. Treasury TIC Table 5; billions converted to trillions`}};
+}
+
+/** The canonical TIC composition accompanies the retained Z.1/SOMA research tool. */
+export function ownershipReferencePage(ownershipSource=dataStatus.sources.ownership,ticSource,{catalog={}}={}){
+ if(arguments.length===0)ticSource=dataStatus.sources.ticHolders;
+ const tic=ticCatalog(ticSource),total=ticLast(tic.ticTotal),date=total?.date,official=ticExact(tic.ticOfficial,date),privateValue=finite(total?.value)&&finite(official?.value)&&official.value>=0&&official.value<=total.value?total.value-official.value:null;
+ const share=finite(total?.value)&&total.value>0&&finite(official?.value)?100*official.value/total.value:null;
+ const debt=catalog.debt,debtRow=debt?.observations?.at(-1),debtValue=debt?formatDisplayValue(debt,debtRow?.value):'Unavailable';
+ const readings=deskReadings('TIC & Treasury ownership readings',[
+  {label:'Total federal debt',value:debtValue,change:'Gross federal debt, including intragovernmental holdings',basis:debtRow?`${humanDate(debtRow.date)} · ${debt.unit}`:'Separate Treasury par-debt source required'},
+  {label:'Foreign holdings',value:ticTrillions(total?.value),change:`Exact prior-month change ${signed(ticChange(tic.ticTotal,date))}`,basis:`${humanDate(date)||'No retained month'} · TIC stock, not net purchases`},
+  {label:'Official vs private',value:`${ticTrillions(official?.value)} / ${ticTrillions(privateValue)}`,change:finite(share)?`Official share of TIC foreign total ${share.toFixed(1)}%`:'Exact same-month official/total inputs required',basis:`${humanDate(date)||'No retained month'} · same TIC population`},
+  {label:'Japan · custodial residence',value:money(ticExact(tic.ticJapan,date)?.value),change:`Exact prior-month change ${signed(ticChange(tic.ticJapan,date))}`,basis:`${humanDate(date)||'No retained month'} · USD billions`},
+  {label:'China · custodial residence',value:money(ticExact(tic.ticChina,date)?.value),change:`Exact prior-month change ${signed(ticChange(tic.ticChina,date))}`,basis:`${humanDate(date)||'No retained month'} · USD billions`},
+  {label:'FRBNY foreign official custody',value:'Unavailable',change:'A separate foreign-official custody capture is required',basis:'SOMA own-account holdings are a different population'},
+  {label:'12-month net foreign inflow',value:'Unavailable',change:'Net purchases require TIC transaction data',basis:'Changes in holdings include valuation and other changes'},
+ ]);
+ const countries=Object.entries(TIC_COUNTRIES).filter(([id])=>!['ticTotal','ticOfficial','ticOfficialBills','ticOfficialCoupons','ticOther'].includes(id)).map(([id,label])=>({id,label,row:ticExact(tic[id],date)})).sort((a,b)=>(b.row?.value??-Infinity)-(a.row?.value??-Infinity)).slice(0,15);
+ const countryRows=countries.map(({id,label,row},index)=>`<tr${id==='ticJapan'||id==='ticChina'?' class="selected-row"':''}><th scope="row">${index+1}. ${esc(label)}</th><td class="num">${esc(money(row?.value))}</td><td class="num">${esc(signed(ticChange(tic[id],date)))}</td><td class="num">${finite(row?.value)&&finite(total?.value)&&total.value>0?`${(100*row.value/total.value).toFixed(2)}%`:'Unavailable'}</td><td>${esc(humanDate(date)||'Not retained')} · custodial residence</td></tr>`).join('');
+ const pillars=deskContext('Ownership analytical framework',[
+  {kicker:'Pillar I · custodial geography',title:'Custody is not beneficial ownership',value:'TIC residence basis',note:'Positions can be attributed to a custodian or broker-dealer country. Japan, China and financial-center holdings are not adjusted with invented beneficial-owner estimates.'},
+  {kicker:'Pillar II · stock vs flow',title:'Nominal holdings & reported changes',value:ticTrillions(total?.value),note:'Changes in Treasury positions include transactions, valuation and other changes. A rising stock does not establish net purchases or a causal effect on yields.'},
+  {kicker:'Pillar III · official / private',title:'Foreign investor composition',value:finite(share)?`${share.toFixed(1)}% official`:'Unavailable',note:'Official and private positions use the same TIC reference month. Z.1 market-value sectors and weekly SOMA par positions remain separate below.'},
+ ]);
+ const summary=summarizeOwnership(ownershipSource),sectors=summary.sectors??[];
+ const sectorCards=sectors.map(item=>`<article class="ownership-sector-card"><h3>${esc(item.label)}</h3><strong>${esc(money(item.value))}</strong><p>${esc(item.valuation)}</p><small>${esc(humanDate(summary.asOf))} · ${esc(item.code)}</small></article>`).join('');
+ const plot=chart(['ticForeignHoldings','ticOfficialHoldings'],{height:300,range:{preset:'all'},legend:true,endLabels:true}).replace('data-chart ','data-chart data-chart-catalog="ownership-tic" ');
+ const actions=button('Export TIC holdings CSV',`data-export-tic${total?'':' disabled'}`)+button('Export Z.1 / SOMA CSV',`data-export-ownership${summary.status==='ok'?'':' disabled'}`);
+ return '<div class="stitch-desk stitch-ownership-desk stitch-ownership-reference"><nav class="desk-breadcrumbs"><a href="#/yields">Rates & curves</a><span>Workspace / Treasury & Fiscal / Debt ownership</span></nav>'
+  +heading('U.S. Treasury debt ownership & foreign holdings desk','TIC Table 5 · custodial residence, official/private split and distinct domestic sector evidence',actions)
+  +`<div class="workspace-basis"><p class="panel-note">TIC reference ${esc(humanDate(date)||'unavailable')} · ${esc(state(ticSource))} · captured ${esc(ticSource?.fetchedAt??'Not captured')}. Holdings are month-end stocks, distinct from publication and retrieval dates.</p>${ticSource?.error?`<p class="amber" role="status">${esc(ticSource.error)}</p>`:''}</div>`+readings
+  +`<div class="grid g21 stitch-chart-context">${panel('','Foreign ownership evolution & official/private composition',plot,'','USD trillions · exact retained TIC month ends. Marketable-debt ownership shares and a domestic absorption wedge require a matching compatible denominator and are not inferred.')}${panel('','Custodial geography & methodological audit','<div class="explain"><h3>Official reporting basis</h3><p>Long-term Treasury holdings at market value plus Treasury bills; custodial geography does not establish ultimate beneficial ownership.</p><h3>Foreign share of marketable debt</h3><p>Unavailable without a matching compatible Treasury denominator. Gross federal debt is not substituted.</p><h3>Reporting coverage</h3><p>The retained current-vintage table covers thirteen months. It does not reconstruct the reference’s 2011–2024 history.</p></div>')}</div>`
+  +pillars+panel('','Major foreign holders of U.S. Treasury securities · TIC Table 5',table(['Holder / custodial residence',{label:'Position · USD B',numeric:true},{label:'Exact month change · USD B',numeric:true},{label:'Share of TIC foreign total',numeric:true},'Reference / scope'],countryRows,'Fifteen largest retained foreign country holdings; custodial residence, not beneficial ownership'),'','These rows are a ranked subset. Grand total includes other holders. Country shares use only the same-month TIC foreign grand total.')
+  +panel('','Total Treasury ownership decomposition by sector · separate Z.1 evidence',`<p class="panel-note">${esc(humanDate(summary.asOf)||'Quarter unavailable')} · ${esc(state(ownershipSource))}. Quarterly sector positions retain their reported valuation bases. TIC, Z.1 and weekly SOMA are not added into a cross-source ownership pie.</p><div class="ownership-sector-grid">${sectorCards||emptyState('Z.1 sector positions unavailable.','No residual owner or zero holding is invented.')}</div>`)
+  +`<div class="ownership-source-dock">${panel('','Official source access & local research',`<div class="explain"><p><a href="${TIC_HOLDERS_URL}" target="_blank" rel="noopener noreferrer">U.S. Treasury TIC Table 5 ↗</a></p><p>${esc(ticSource?.coverageNote??'Official TIC capture unavailable.')}</p><pre><code>source_id,series_id,reference_month,value,unit,retrieved_at,source_url,provenance</code></pre></div>`,actions,'Actual receipts accompany exports. Publication dates remain unknown unless independently supplied.')}</div>`
+  +supportingDetails('ownership:z1-soma','Quarterly Z.1 positions & weekly SOMA holdings · full retained research',ownershipPage(ownershipSource))+'</div>';
+}
+
+export function ticHoldingsCsv(source){
+ const catalog=ticCatalog(source),rows=[];
+ for(const [id,s]of Object.entries(catalog))for(const row of s.observations)rows.push(['ticHolders',id,s.name,row.date,row.value,'USD billions',source?.status==='ok'?'captured':'cached',source?.fetchedAt??'',TIC_HOLDERS_URL,JSON.stringify(source?.provenance??[]),row.sourceValue??'',row.publishedAt??'',s.attribution??'Source: U.S. Department of the Treasury.',s.licenseUrl??'',s.sourceNotice??'',(row.footnotes??[]).join('; ')]);
+ return tabularCsv(['source_id','series_id','name','reference_month','value','unit','data_status','retrieved_at','source_url','provenance','source_value','publication_date','attribution','license_url','source_notice','source_notes'],rows);
 }
 
 const COLUMNS=['dataset','series_code','holder','period','value','unit','source_unit','valuation','change_from_exact_prior','prior_period','observation_type','data_status','source_name','source_title','source_url','retrieved_at','release_date','vintage_release_date','release_date_basis','methodology','attribution','terms_url','redistribution_notice','limitations','provenance'];

@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {viewportCss} from './helpers/viewport-css.mjs';
 
 const css=await readFile(new URL('../styles.css',import.meta.url),'utf8');
-const desktop=css.slice(0,css.lastIndexOf('@media(max-width:800px)'));
+const desktop=viewportCss(css,1280);
 const value=(selector,property)=>[...desktop.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
  .filter(match=>match[1].trim().split(',').some(part=>part.trim()===selector))
  .flatMap(match=>match[2].split(';'))

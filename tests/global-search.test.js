@@ -28,6 +28,8 @@ test('exact indicator resolution is case insensitive and does not resolve loose 
  assert.ok(search,'Grouped search module must exist');
  assert.equal(search.exactIndicatorMatch(' UNRATE ',catalog)?.id,'unrate');
  assert.equal(search.exactIndicatorMatch('LNS14000000',catalog)?.id,'unrate');
+ assert.equal(search.exactIndicatorMatch('LNS14000000',[...catalog].reverse())?.id,'unrate','the declared U3 canonical identity does not depend on catalog insertion order');
+ assert.equal(search.exactIndicatorMatch('u3RateDesk',catalog)?.id,'u3RateDesk','the separate source identity remains directly addressable');
  assert.equal(search.exactIndicatorMatch('jobs',catalog),null);
  assert.equal(search.exactIndicatorMatch('shared',[{id:'one',code:'shared'},{id:'two',code:'shared'}]),null);
  assert.equal(search.exactIndicatorMatch('one',[{id:'one',code:'shared'},{id:'two',code:'one'}])?.id,'one');

@@ -35,6 +35,11 @@ import {createPublicationController} from '../src/publication-controller.js';
 import {requiredSourceIds} from '../src/source-controller.js';
 import {watchDisclosureCharts} from '../src/page-hierarchy.js';
 import {normalizeDashboardChartSettings,pceHorizonChartCatalog} from '../src/dashboard-chart-data.js';
+import {stitchEvidenceCatalog,stitchFrozenSources} from '../src/stitch-evidence.js';
+import {specialistDeskChartCatalog} from '../src/specialist-desks.js';
+import {ownershipDeskChartCatalog} from '../src/ownership-page.js';
+import {auctionDeskChartCatalog} from '../src/auctions-page.js';
+import {indicatorFamilyChartCatalog} from '../src/stitch-family-view.js';
 
 const source=await readFile(new URL('../src/app.js',import.meta.url),'utf8');
 function section(start,end){
@@ -78,6 +83,7 @@ async function app(hash='#/series/gdp?window=all',{
  if(sourceController)env.dataStatus={...dataStatus,sourceArchive:{version:1,sources:{}}};
  const change=/root\.addEventListener\('change',async event=>\{([^]*?)\n\}\);/.exec(source);assert.ok(change,'App change delegation must exist');
  env.entryWindow=entryWindow;
+ Object.assign(env,{stitchEvidenceCatalog,stitchFrozenSources,specialistDeskChartCatalog,ownershipDeskChartCatalog,auctionDeskChartCatalog,indicatorFamilyChartCatalog});
  const code=`let {${Object.keys(env).join(',')}}=env;\n`
   +section('function trackedChanges()','function syncPublications(')
   +section('function currentPackage()','function researchActions()')
