@@ -15,6 +15,45 @@ const headline = 'date,cpi_index,ann_monthly_chg\r\n08/01/2026,334.1,4.9\r\n09/0
 const core = 'date,core_index,ann_monthly_chg\n08/01/2026,337.8,3.5\n09/01/2026,338.9,4.1\n';
 const options = {series: 'headline', through: '2026-10-24'};
 const okFetch = async url => new Response(url === headlineUrl ? headline : core);
+function assertAvailabilityOnly(value) {
+  const prices = new Set([336.3, 338.9, 8.1]);
+  const restricted = /ann_monthly_chg|cpi_index|core_index|cpi_10142026/;
+  function visit(item, path = '$') {
+    if (Array.isArray(item)) { item.forEach((child, index) => visit(child, `${path}[${index}]`)); return; }
+    if (item !== null && typeof item === 'object') {
+      for (const [key, child] of Object.entries(item)) {
+        assert.doesNotMatch(key, restricted, `Restricted native field or release filename leak at ${path}`);
+        visit(child, `${path}.${key}`);
+      }
+      return;
+    }
+    if (typeof item === 'string') {
+      assert.doesNotMatch(item, restricted, `Restricted native field or release filename leak at ${path}`);
+      const receiptClock = path.endsWith('.retrievedAt') && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(item)
+        && Number.isFinite(Date.parse(item)) && new Date(item).toISOString() === item;
+      if (!receiptClock) assert.doesNotMatch(item, /336\.3|338\.9|8\.1/, `Restricted CPI price text leak at ${path}`);
+      const numeric = item.trim();
+      if (/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(numeric)) {
+        assert.equal(prices.has(Number(numeric)), false, `Restricted CPI price leak at ${path}`);
+      }
+    } else if (typeof item === 'number') assert.equal(prices.has(item), false, `Restricted CPI price leak at ${path}`);
+  }
+  visit(value);
+}
+
+test('availability leak checks accept receipt clock substrings but reject price leaves and restricted fields', () => {
+  const metadata = {provenance: [{retrievedAt: '2026-11-01T17:59:08.164Z'}], latestReferencePeriod: '2026-09-01', availablePeriodCount: 2};
+  assert.doesNotThrow(() => assertAvailabilityOnly(metadata));
+  for (const price of [336.3, 338.9, 8.1, '336.3', '338.9', '8.1', '8.10', ' 336.30 ', '8.1e0']) {
+    assert.throws(() => assertAvailabilityOnly({...metadata, nested: {values: [price]}}), /price|leak/i);
+  }
+  for (const leak of [{ann_monthly_chg: null}, {cpi_index: null}, {core_index: null}, {debug: 'date,cpi_index,ann_monthly_chg'}, {release: 'cpi_10142026.htm'}]) {
+    assert.throws(() => assertAvailabilityOnly({...metadata, nested: leak}), /field|release|leak/i);
+  }
+  for (const text of ['Index value: 336.3', 'Source said 338.9', 'Annualized change 8.1%', '{"value":8.1}']) {
+    assert.throws(() => assertAvailabilityOnly({...metadata, note: text}), /price|leak/i);
+  }
+});
 
 test('parser retains only availability metadata and excludes the known missing October 2025 even if later numeric', () => {
   const result = parse('\ufeffdate,cpi_index,ann_monthly_chg\r\n"09/01/2025","324.7",\r\n10/01/2025,325.1,1.5\r\n11/01/2025,,\r\n09/01/2026,336.3,8.1\r\n', options);
@@ -112,7 +151,7 @@ test('aligned observations produce only a reference-period review candidate with
   assert.equal(result.license.url, 'https://creativecommons.org/licenses/by-sa/4.0/');
   assert.match(result.changesNotice, /availability/i);
   assert.match(result.note, /publication|release/i);
-  assert.doesNotMatch(JSON.stringify(result), /336\.3|338\.9|8\.1|ann_monthly_chg|cpi_index|cpi_10142026/);
+  assertAvailabilityOnly(result);
 });
 
 test('a newly available month queues its reference period without inventing a release date', async () => {

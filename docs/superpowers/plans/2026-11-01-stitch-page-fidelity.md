@@ -39,7 +39,7 @@
 - [x] Match reference styling, tables, chart grids/annotations and responsive behavior; preserve contrast and keyboard fixes.
 - [x] Collect/admit new public datasets, preserving existing snapshots/history and actual timestamps; verify real-source fixtures and rejection cases.
 - [x] Run full tests/build/strict smoke, compare every reference page visually, and obtain independent review.
-- [ ] Open the new PR and stop without merging/deploying.
+- [x] Open code PR #32 and stacked draft data PR #33; leave both unmerged and undeployed.
 
 ## Source extension interfaces
 
