@@ -14,6 +14,7 @@ import {parseCsv} from '../scripts/sources/http.mjs';
 import {parseBlsDeskBatch} from '../scripts/sources/bls-desk.mjs';
 import {buildBlsDeskSeries,validateBlsDeskSource} from '../src/bls-desk-schema.js';
 import {BLS_DESK_COVERAGE_NOTE} from '../src/bls-desk-definitions.js';
+import {researchPage} from '../src/research-page.js';
 
 const json=async path=>JSON.parse(await readFile(new URL('./fixtures/'+path,import.meta.url),'utf8'));
 const market=Object.fromEntries(await Promise.all(['fedSep','fedFx','ecbFx','ecbPolicy'].map(async id=>[id,await json('market-desks/'+id+'-candidate.json')])));
@@ -34,6 +35,33 @@ function pin(state,sources){return buildPinContext(state,{catalog:{...series,...
 async function makePackage(state,sources,id){return createResearchPackage({id,name:'Frozen '+id,now,...pin(state,sources)});}
 function fomcSources(){return {...copy(dataStatus.sources),fedSep:copy(market.fedSep)};}
 function fxSources(){return {fedFx:copy(market.fedFx),ecbFx:copy(market.ecbFx),ecbPolicy:copy(market.ecbPolicy),policyRates:copy(dataStatus.sources.policyRates)};}
+
+test('new real-earnings chart packages freeze the selected view and its economic inputs without live fallback',async()=>{
+ const sources={...copy(dataStatus.sources),blsDesk:blsSource()},state={...parseRoute('#/series/wages?chartView=earnings-real'),window:'all',freezeSelection:['wages']};
+ const pkg=await makePackage(state,sources,'real-earnings-view');
+ assert.equal(pkg.context.stitchRenderState.indicatorView,'earnings-real');
+ assert.ok(pkg.context.economicEvidence.laborEvidence.source.series.realHourlyEarnings);
+ const csv=generated(pkg,'indicator-chart.csv'),records=rows(csv);
+ assert.ok(records.some(row=>row.series_id==='realEarningsAnnual'&&row.value!==''&&Number.isFinite(Number(row.value))));
+ const input=series.realHourlyEarnings,previous=input.observations;
+ try{
+  input.observations=[{date:'2026-09-01',value:999}];
+  const imported=await importResearchPackage(exportResearchPackage(pkg));
+  assert.equal(generated(imported,'indicator-chart.csv'),csv);
+  const html=researchPage({researchView:'packages',packageId:imported.id},{library:{packages:[imported]}});
+  assert.match(html,/Frozen retained-data chart/);assert.match(html,/data-chart-catalog="indicator-family"/);
+ }finally{input.observations=previous;}
+ const legacy=await importResearchPackage(resealed(pkg,value=>{delete value.context.stitchRenderState.retainedViewVersion;delete value.context.stitchRenderState.indicatorView;delete value.context.stitchRenderState.transform;}));
+ assert.ok(!researchPackageAttachments(legacy).some(file=>file.name==='indicator-chart.csv'));
+ await assert.rejects(importResearchPackage(resealed(pkg,value=>{value.context.stitchRenderState.indicatorView='eci-quarterly';})),/chart mode/);
+});
+
+test('non-family-root frozen indicators use the captured primary catalog rather than an empty binding',async()=>{
+ const sources={bls:copy(dataStatus.sources.bls),blsDesk:blsSource()},state={...parseRoute('#/series/payrollLevel'),window:'all',freezeSelection:['payrollLevel']};
+ const pkg=await makePackage(state,sources,'native-payroll-level'),html=researchPage({researchView:'packages',packageId:pkg.id},{library:{packages:[pkg]}});
+ assert.match(html,/Frozen retained-data chart/);assert.doesNotMatch(html,/data-chart-catalog=""/);
+ assert.ok(generated(pkg,'indicator-chart.csv').includes('payrollLevel'));
+});
 const fomcState=()=>({...parseRoute('#/rates/fomc'),window:'all',specialistRange:'MAX',freezeSelection:['policyTargetUpper']});
 const fxState=()=>({...parseRoute('#/market/fx-basis'),window:'all',specialistRange:'MAX',fxScenario:'policy-divergence',fxFedShock:-50,fxForeignShock:-25,fxHorizon:3,freezeSelection:['fxUsdEur']});
 

@@ -34,6 +34,22 @@ import {series,releases} from './data.js';
 import {stitchDeskContracts} from './stitch-desk-contracts.js';
 import {stitchFrozenSources,stitchEvidenceCatalog} from './stitch-evidence.js';
 import {specialistDeskPage} from './specialist-desks-page.js';
+import {indicatorChartSelection} from './stitch-family-view.js';
+import {auctionViewModel} from './auctions-page.js';
+import {ownershipTicModel} from './ownership-page.js';
+
+function frozenRetainedChart(pkg){
+ const state=pkg.context.stitchRenderState;if(state?.retainedViewVersion!==1||!['indicator','auctions','ownership'].includes(state.page))return '';
+ const sources={...stitchFrozenSources(pkg.context),...Object.fromEntries(Object.entries(pkg.context.economicEvidence??{}).map(([id,evidence])=>[id,evidence.source]))};
+ const supplementary=stitchEvidenceCatalog(sources),lookup=id=>pkg.catalog[id]??supplementary[id];
+ let ids,catalog,options,note;
+ if(state.page==='indicator'){const current=lookup(state.seriesId);if(!current)return '';const selected=indicatorChartSelection(current,state,{lookup});ids=selected.ids;catalog=selected.catalog;options={range:selected.range,transform:selected.transform,kind:selected.kind};note=selected.note;}
+ else if(state.page==='auctions'){const selected=auctionViewModel(sources.auctions,state);ids=selected.seriesIds;catalog='auction-demand';options={range:{preset:'all'}};note=selected.title+' · matched prior results and selected result; native ratio, percent or USD billions.';}
+ else{const selected=ownershipTicModel(sources.ticHolders,state);ids=selected.seriesIds;catalog='ownership-tic';options={range:{preset:'all'}};note='TIC month-end positions · chart in USD trillions; chart CSV retains native USD billions and exact-period stock changes.';}
+ const nativeMarkup=chart(ids,{...options,height:260,legend:true,endLabels:true});
+ const markup=catalog?nativeMarkup.replace('data-chart ',`data-chart data-chart-catalog="${esc(catalog)}" `):nativeMarkup;
+ return panel('','Frozen retained-data chart',markup+`<p class="panel-note">${esc(note)} Read-only captured view; chart CSV is available in the attachments.</p>`);
+}
 
 const views={workspaces:'SAVED VIEWS',packages:'Saved snapshots',changes:'CAPTURE CHANGES',publications:'PUBLICATION HISTORY'};
 const val=value=>value===null||value===undefined?'—':String(value);
@@ -140,7 +156,7 @@ function frozenViewer(pkg){
  }).join('');
  const frozenSources=stitchFrozenSources(pkg.context),frozenState=pkg.context.stitchRenderState;
  const frozenDesk=pkg.context.stitchEvidence&&stitchDeskContracts[frozenState?.page]?specialistDeskPage(frozenState,{sources:frozenSources,catalog:stitchEvidenceCatalog(frozenSources),calendar:pkg.context.stitchCalendar?{sources:{fomc:pkg.context.stitchCalendar.source}}:{},now:new Date(pkg.context.stitchCalendar?.asOf??pkg.createdAt)}).replace(/<button\b/g,'<button disabled').replace(/<(input|select)\b/g,'<$1 disabled'):'';
- const deskReplay=frozenDesk?supportingDetails(`research:package:${pkg.id}:stitch-desk`,'Frozen desk · retained charts and tables',`<p class="panel-note">Read-only saved composition. Controls are disabled; generated CSVs below use these frozen inputs and assumptions. Indicator links open current data.</p>${frozenDesk}`,{open:true}):'';
+ const deskReplay=(frozenDesk?supportingDetails(`research:package:${pkg.id}:stitch-desk`,'Frozen desk · retained charts and tables',`<p class="panel-note">Read-only saved composition. Controls are disabled; generated CSVs below use these frozen inputs and assumptions. Indicator links open current data.</p>${frozenDesk}`,{open:true}):'')+frozenRetainedChart(pkg);
  const attachments=researchPackageAttachments(pkg);
  const attachmentActions=attachments.map((file,index)=>button(file.name,`data-package-attachment="${index}"`,'link-button')).join('');
  const evidence={snapshot:pkg.snapshot,assumptions:pkg.assumptions,sources:pkg.sources,context:{...pkg.context,moduleSources:moduleEvidence(pkg.context.moduleSources),attachments:attachments.map(({name,type,generated})=>({name,type,retainedInJson:!generated,...(generated?{csvMode:'generated-full-retained-v1'}:{})}))}};

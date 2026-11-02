@@ -3,19 +3,23 @@ import {coverageFamilies} from './macro-registry.js';
 import {defaultWindowPreset,isIsoDate} from './date-window.js';
 import {pagePaths} from './page-registry.js';
 import {stitchDeskContracts,stitchDeskPages} from './stitch-desk-contracts.js';
+import {indicatorViewDefinitions} from './indicator-view-definitions.js';
+import {laborHistoryIds} from './labor-history-views.js';
+
+export const normalizedIndicatorView=(id,value)=>Object.values(indicatorViewDefinitions).find(d=>d.root===id)?.views.some(([key])=>key===value)?value:'';
 
 const validIds = ids => [...new Set(ids.filter(id => Object.hasOwn(series, id)))].slice(0, 4);
 const topics = ['All topics', ...new Set(Object.values(series).map(s => s.topic))];
 const frequencies = ['All frequencies', 'Daily', 'Weekly', 'Monthly', 'Quarterly'];
 export const defaults = {
-  page: 'overview', seriesId: 'unrate', range: 12, transform: 'level', tab: 'data',
+  page: 'overview', seriesId: 'unrate', range: 12, transform: 'level', tab: 'data',indicatorView:'',
   query: '', topic: 'All topics', frequency: 'All frequencies', selected: [],catalogPage:1,
   exploreMode: 'catalog', comparison: 'native', alignment:'exact',calendarMonth: 'upcoming', day: 'all', calendarTopic: 'All topics',
   watchOnly: false, eventId: '',calendarView:'macro',externalView:'summary',
   refinancingHorizon:12,refinancingShock:100,
   yieldDateA:'',yieldDateB:'',
   pceBaseIndex:'pceIndex',pceMonthlyRate:0.2,pceHorizonMonths:12,pceTargetAnnualRate:2,
-  auctionType:'All',auctionId:'',auctionHistoryPage:null,
+  auctionType:'All',auctionId:'',auctionHistoryPage:null,auctionView:'bid-to-cover',auctionRange:12,ownershipView:'total',ownershipRange:'all',
   vintageCutoff:null,vintageSeries:'gdp',
   window:'1y',startDate:'',endDate:'',returnTo:null,
   fxScenario:'year-end',fxFedShock:0,fxForeignShock:0,fxHorizon:3,
@@ -67,7 +71,12 @@ export function parseRoute(hash = '') {
     else if (path === '/research') state.page = 'research';
     else if (path === '/sources') state.page = 'sources';
     const desk=Object.entries(stitchDeskContracts).find(([,d])=>d.path===path);if(desk)state.page=desk[0];
-    state.specialistView=['coupons','bills','repo','fails','rates','corridor','cleared','rrp','assets','liabilities','facilities','term','history','dkw','issuance','cash','headroom','flows','spread','effects'].includes(p.get('deskView'))?p.get('deskView'):'';
+    state.specialistView=['coupons','bills','repo','fails','rates','corridor','cleared','rrp','assets','liabilities','facilities','term','history','dkw','issuance','cash','headroom','flows','spread','effects','sectors','fan','forward','liquidity','context','formula','weight','scope','other','package'].includes(p.get('deskView'))?p.get('deskView'):'';
+    state.indicatorView=normalizedIndicatorView(state.seriesId,p.get('chartView'));
+    state.auctionView=['allocations','offering'].includes(p.get('auctionView'))?p.get('auctionView'):'bid-to-cover';
+    state.auctionRange=[6,12,36].includes(Number(p.get('auctionRange')))?Number(p.get('auctionRange')):12;
+    state.ownershipView=['official-private','top-holders'].includes(p.get('ownershipView'))?p.get('ownershipView'):'total';
+    state.ownershipRange=['3m','6m'].includes(p.get('ownershipRange'))?p.get('ownershipRange'):'all';
     state.specialistRange=['1M','1Y','3Y','5Y','MAX'].includes(p.get('deskRange'))?p.get('deskRange'):'1Y';
     state.fxScenario=['fed-cut','policy-divergence'].includes(p.get('scenario'))?p.get('scenario'):'year-end';
     for(const[field,param]of [['fxFedShock','fedShock'],['fxForeignShock','foreignShock']]){const value=Number(p.get(param));state[field]=p.has(param)&&Number.isFinite(value)?Math.max(-500,Math.min(500,value)):field==='fxFedShock'&&state.fxScenario!=='year-end'?-50:field==='fxForeignShock'&&state.fxScenario==='policy-divergence'?-25:0;}
@@ -82,7 +91,7 @@ export function parseRoute(hash = '') {
     state.vintageCutoff=p.has('cutoff')?p.get('cutoff').slice(0,64):null;
     state.macroFamily=state.page==='labor'?'labor':
       Object.hasOwn(coverageFamilies,p.get('family'))?p.get('family'):defaults.macroFamily;
-    state.macroMeasure=coverageFamilies[state.macroFamily].ids.includes(p.get('measure'))?p.get('measure'):coverageFamilies[state.macroFamily].defaultMeasure;
+    state.macroMeasure=[...coverageFamilies[state.macroFamily].ids,...(state.page==='labor'?laborHistoryIds:[])].includes(p.get('measure'))&&Object.hasOwn(series,p.get('measure'))?p.get('measure'):coverageFamilies[state.macroFamily].defaultMeasure;
     state.laborGroup=['jobs','people','pay','claims'].includes(p.get('group'))?p.get('group'):'all';
     state.externalView=['trends','decomposition','methods'].includes(p.get('section'))?p.get('section'):'summary';
     state.vintageSeries=Object.hasOwn(series,p.get('series'))?p.get('series'):'gdp';
@@ -158,7 +167,10 @@ export function routeFor(input,{legacyWindow=false}={}) {
     }
     if(state.macroFamily==='external'&&['trends','decomposition','methods'].includes(state.externalView))p.set('section',state.externalView);
   }
-  if(state.page==='labor')p.set('measure',coverageFamilies.labor.ids.includes(state.macroMeasure)?state.macroMeasure:coverageFamilies.labor.defaultMeasure);
+  if(state.page==='labor'){
+    p.set('measure',[...coverageFamilies.labor.ids,...laborHistoryIds].includes(state.macroMeasure)&&Object.hasOwn(series,state.macroMeasure)?state.macroMeasure:coverageFamilies.labor.defaultMeasure);
+    if(state.transform==='change')p.set('transform','change');
+  }
   if(state.page==='labor'||state.page==='macroCoverage'&&state.macroFamily==='labor'){
     if(['jobs','people','pay','claims'].includes(state.laborGroup))p.set('group',state.laborGroup);
     if(state.query)p.set('q',state.query);
@@ -168,10 +180,17 @@ export function routeFor(input,{legacyWindow=false}={}) {
     if(state.vintageSeries!=='gdp')p.set('series',state.vintageSeries);
   }
   if(state.page==='auctions'){
+    if(['allocations','offering'].includes(state.auctionView))p.set('auctionView',state.auctionView);
+    if([6,36].includes(state.auctionRange))p.set('auctionRange',String(state.auctionRange));
     if(state.auctionType!=='All')p.set('type',state.auctionType);
     if(state.auctionId)p.set('auction',state.auctionId);
     if(Number.isInteger(state.auctionHistoryPage)&&state.auctionHistoryPage>=0)p.set('historyPage',String(Math.min(10000,state.auctionHistoryPage)));
   }
+  if(state.page==='ownership'){
+    if(['official-private','top-holders'].includes(state.ownershipView))p.set('ownershipView',state.ownershipView);
+    if(['3m','6m'].includes(state.ownershipRange))p.set('ownershipRange',state.ownershipRange);
+  }
+  if(state.page==='indicator'&&normalizedIndicatorView(state.seriesId,state.indicatorView))p.set('chartView',state.indicatorView);
   if(state.page==='yields'){
     if(state.yieldDateA)p.set('curveA',state.yieldDateA);
     if(state.yieldDateB)p.set('curveB',state.yieldDateB);

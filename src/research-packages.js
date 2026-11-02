@@ -1,12 +1,15 @@
 import {series as currentCatalog,dataStatus}from'./data.js';
 import {compareSeries,transformSeries,toCsv,comparisonClassification,BLS_DATA_NOTICE}from'./model.js';
 import {isIsoDate}from'./date-window.js';
-import {defaults}from'./router.js';
+import {defaults,normalizedIndicatorView}from'./router.js';
 import {viewRange}from'./workspace-context.js';
 import {MAX_CURRENT_ACCOUNT_GDP_HISTORY_QUARTERS,currentAccountGdpQuarterSpan}from'./current-account-gdp.js';
 import {DEALER_METRICS}from'./market-functioning.js';
 import {generatedFundingCsv}from'./market-functioning-page.js';
-import {generatedAuctionsCsv}from'./auctions-page.js';
+import {generatedAuctionsCsv,auctionViewCsv}from'./auctions-page.js';
+import {ticViewCsv} from './ownership-page.js';
+import {indicatorChartCsv} from './stitch-family-view.js';
+import {stitchEvidenceCatalog} from './stitch-evidence.js';
 import {aggregateAuctionOfferings}from'./auctions.js';
 import {validateEconomicEvidenceContext,validatePceBaseEffectsContext}from'./economic-evidence-validation.js';
 import {validateStitchEvidence,validateStitchLegacySources} from './stitch-evidence.js';
@@ -215,11 +218,22 @@ function validateAuctionContext(context){
 }
 function validateContext(context){
  if(context?.stitchEvidence!==undefined&&!validateStitchEvidence(context.stitchEvidence))fail('specialist source evidence differs from native measurements or calculation lineage');
- if(context.stitchEvidence){
-  if(!validateStitchLegacySources(context))fail('specialist supporting source differs from registered native measurements, reviewed receipt lineage or calculations');
+ if(context.stitchEvidence||context.stitchRenderState!==undefined){
+  if(context.stitchEvidence&&!validateStitchLegacySources(context))fail('specialist supporting source differs from registered native measurements, reviewed receipt lineage or calculations');
   const state=context.stitchRenderState;
-  if(!object(state)||state.page!==context.stitchEvidence.page||Object.keys(state).some(key=>!['page','seriesId','window','startDate','endDate','range','fxScenario','fxFedShock','fxForeignShock','fxHorizon','specialistView','specialistRange'].includes(key)))fail('specialist frozen display state');
-  if(context.attachments?.some(f=>['specialist-evidence.csv','fx-policy-matrix.csv','fx-sensitivity.csv'].includes(f?.name?.toLowerCase())))fail('specialist generated export conflicts with stored copy');
+  if(!object(state)||state.page!==(context.stitchEvidence?.page??(context.auctionExports?.version===1?'auctions':null))||Object.keys(state).some(key=>!['page','seriesId','window','startDate','endDate','range','fxScenario','fxFedShock','fxForeignShock','fxHorizon','specialistView','specialistRange','retainedViewVersion','indicatorView','transform','auctionView','auctionRange','auctionType','auctionId','ownershipView','ownershipRange','macroMeasure'].includes(key)))fail('specialist or auction frozen display state');
+  if(!context.stitchEvidence&&(state.retainedViewVersion!==1||state.auctionType!==context.auctionExports.securityType||state.auctionId!==context.auctionExports.auctionId))fail('retained auction selection differs from frozen export profile');
+  if(state.retainedViewVersion!==undefined&&state.retainedViewVersion!==1)fail('retained view version');
+  if(state.indicatorView!==undefined&&(state.page!=='indicator'||state.indicatorView!==normalizedIndicatorView(state.seriesId,state.indicatorView)))fail('retained indicator chart mode');
+  if(state.transform!==undefined&&!['level','change'].includes(state.transform))fail('retained measurement transformation');
+  if(state.auctionView!==undefined&&(state.page!=='auctions'||!['bid-to-cover','allocations','offering'].includes(state.auctionView)))fail('retained auction chart mode');
+  if(state.auctionRange!==undefined&&![6,12,36].includes(state.auctionRange))fail('retained auction range');
+  if(state.auctionType!==undefined&&!['All','Bill','Note','Bond','FRN','TIPS'].includes(state.auctionType))fail('retained auction filter');
+  if(state.auctionId!==undefined&&(typeof state.auctionId!=='string'||state.auctionId.length>200))fail('retained auction selection');
+  if(state.ownershipView!==undefined&&(state.page!=='ownership'||!['total','official-private','top-holders'].includes(state.ownershipView)))fail('retained TIC chart mode');
+  if(state.ownershipRange!==undefined&&!['3m','6m','all'].includes(state.ownershipRange))fail('retained TIC chart range');
+  if(state.macroMeasure!==undefined&&(state.page!=='labor'||!Object.hasOwn(currentCatalog,state.macroMeasure)))fail('retained Labor measure');
+  if(context.attachments?.some(f=>['specialist-evidence.csv','fx-policy-matrix.csv','fx-sensitivity.csv','indicator-chart.csv','auction-chart.csv','tic-chart.csv'].includes(f?.name?.toLowerCase())))fail('specialist generated export conflicts with stored copy');
   if(state.page==='fomc'&&!validateFrozenFomcCalendar(context.stitchCalendar))fail('specialist FOMC calendar source, native dates or display reference clock');
  }
  if(context.stitchCalendar!==undefined&&(!validateFrozenFomcCalendar(context.stitchCalendar)||context.stitchEvidence?.page!=='fomc'))fail('unscoped specialist FOMC calendar');
@@ -386,6 +400,7 @@ export function researchPackageAttachments(pkg){
  if(context.fundingDistributions?.version===2)files.push({name:'market-functioning.csv',type:'text/csv',generated:true});
  if(context.auctionExports?.version===1)for(const name of ['auction-results.csv','auction-peers.csv'])files.push({name,type:'text/csv',generated:true});
  if(context.stitchEvidence){files.push({name:'specialist-evidence.csv',type:'text/csv',generated:true});if(context.stitchRenderState?.page==='fxBasis')for(const name of ['fx-policy-matrix.csv','fx-sensitivity.csv'])files.push({name,type:'text/csv',generated:true});}
+ if(context.stitchRenderState?.retainedViewVersion===1){const name={indicator:'indicator-chart.csv',auctions:'auction-chart.csv',ownership:'tic-chart.csv'}[context.stitchRenderState.page];if(name)files.push({name,type:'text/csv',generated:true});}
  return files;
 }
 /** Resolve the existing specialist-download action from validated frozen inputs. */
@@ -394,9 +409,14 @@ export function researchPackageAttachment(pkg,index){
  if(!Number.isInteger(index)||index<0)fail('frozen attachment unavailable');
  const descriptor=researchPackageAttachments(pkg)[index];if(!descriptor)fail('frozen attachment unavailable');
  if(!descriptor.generated)return pkg.context.attachments[index];
+ if(['indicator-chart.csv','auction-chart.csv','tic-chart.csv'].includes(descriptor.name)){
+  const sources={...stitchFrozenSources(pkg.context),...Object.fromEntries(Object.entries(pkg.context.economicEvidence??{}).map(([id,evidence])=>[id,evidence.source]))},state=pkg.context.stitchRenderState,supplementary=stitchEvidenceCatalog(sources),lookup=id=>pkg.catalog[id]??supplementary[id];
+  const content=descriptor.name==='indicator-chart.csv'?indicatorChartCsv(lookup(state.seriesId),state,{lookup}):descriptor.name==='auction-chart.csv'?auctionViewCsv(sources.auctions,state):ticViewCsv(sources.ticHolders,state);
+  return{name:descriptor.name,type:descriptor.type,content};
+ }
  if(['specialist-evidence.csv','fx-policy-matrix.csv','fx-sensitivity.csv'].includes(descriptor.name)){
   const sources=stitchFrozenSources(pkg.context),state=pkg.context.stitchRenderState;
-  const options={matrix:descriptor.name==='fx-policy-matrix.csv',sourceIds:Object.keys(sources),calendar:pkg.context.stitchCalendar?{sources:{fomc:pkg.context.stitchCalendar.source}}:{},now:new Date(pkg.context.stitchCalendar?.asOf??pkg.createdAt)};
+  const options={matrix:descriptor.name==='fx-policy-matrix.csv',retainedViews:state.retainedViewVersion===1,sourceIds:Object.keys(sources),calendar:pkg.context.stitchCalendar?{sources:{fomc:pkg.context.stitchCalendar.source}}:{},now:new Date(pkg.context.stitchCalendar?.asOf??pkg.createdAt)};
   return {name:descriptor.name,type:descriptor.type,content:descriptor.name==='fx-sensitivity.csv'?fxSensitivityCsv(sources,state,{policyDivergence:state.fxScenario==='policy-divergence'}):specialistDeskCsv(sources,state,options)};
  }
  const profile=pkg.context.auctionExports;

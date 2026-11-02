@@ -33,6 +33,23 @@ function args(input=source(),route='#/auctions?window=all'){
 const create=options=>packages.createResearchPackage({id:'auction-frozen',name:'Frozen auction',now:'2026-10-27T12:00:00.000Z',...args(),...options});
 function rehash(value){delete value.checksum;value.checksum={algorithm:'SHA-256',value:hash(canonicalJson(value))};return JSON.stringify(value);}
 
+test('new auction chart pins retain mode/range and replay chart CSV independently of live auctions',async()=>{
+ const pkg=await create(args(source(),'#/auctions?auctionView=allocations&auctionRange=36&window=all'));
+ assert.equal(pkg.context.stitchRenderState.auctionView,'allocations');
+ assert.equal(pkg.context.stitchRenderState.auctionRange,36);
+ const index=packages.researchPackageAttachments(pkg).findIndex(row=>row.name==='auction-chart.csv');assert.ok(index>=0);
+ const csv=packages.researchPackageAttachment(pkg,index).content,original=dataStatus.sources.auctions;
+ try{
+  dataStatus.sources.auctions={auctions:[]};
+  const imported=await packages.importResearchPackage(packages.exportResearchPackage(pkg));
+  assert.equal(packages.researchPackageAttachment(imported,index).content,csv);
+  const html=researchPage({researchView:'packages',packageId:imported.id},{library:{packages:[imported]}});
+  assert.match(html,/Frozen retained-data chart/);assert.match(html,/data-chart-catalog="auction-demand"/);
+ }finally{dataStatus.sources.auctions=original;}
+ const forged=JSON.parse(packages.exportResearchPackage(pkg));forged.context.stitchRenderState.auctionId='different-selection';
+ await assert.rejects(packages.importResearchPackage(rehash(forged)),/auction.*selection|display state/);
+});
+
 test('four genuine baseline auction packages retain exact JSON, primary CSV and both stored exports',async()=>{
  for(const [name,text]of Object.entries(baseline)){
   const expected=manifest.packages[name],pkg=await packages.importResearchPackage(text);
@@ -64,7 +81,7 @@ test('new auction profiles retain complete inputs and expose both generated expo
  assert.ok(input.auctions.some(row=>row.id===profile.auctionId));assert.deepEqual(options.context.attachments,[]);
  const pkg=await create(options),json=packages.exportResearchPackage(pkg),restored=await packages.importResearchPackage(json);
  assert.equal(packages.exportResearchPackage(restored),json);assert.deepEqual(restored.context.moduleSources.auctions,JSON.parse(canonicalJson(input)));
- assert.deepEqual(packages.researchPackageAttachments(restored),['auction-results.csv','auction-peers.csv'].map(name=>({name,type:'text/csv',generated:true})));
+ assert.deepEqual(packages.researchPackageAttachments(restored),['auction-results.csv','auction-peers.csv','auction-chart.csv'].map(name=>({name,type:'text/csv',generated:true})));
  for(const index of [0,1]){
   const file=packages.researchPackageAttachment(restored,index);
   assert.equal(file.content,packages.researchPackageAttachment(pkg,index).content);
@@ -73,10 +90,10 @@ test('new auction profiles retain complete inputs and expose both generated expo
  const html=researchPage(parseRoute('#/research?view=packages&package='+pkg.id),{library:{packages:[restored]}});
  const actions=[...html.matchAll(/<button\b[^>]*data-package-attachment="(\d+)"[^>]*>([^<]*)<\/button>/g)];
  assert.deepEqual(actions.map(([,index,label])=>({index:Number(index),label})),[
-  {index:0,label:'auction-results.csv'},{index:1,label:'auction-peers.csv'},
+  {index:0,label:'auction-results.csv'},{index:1,label:'auction-peers.csv'},{index:2,label:'auction-chart.csv'},
  ]);
  assert.throws(()=>packages.researchPackageAttachment({...restored},0),/validated/i);
- assert.throws(()=>packages.researchPackageAttachment(restored,2),/unavailable/i);
+ assert.throws(()=>packages.researchPackageAttachment(restored,3),/unavailable/i);
  const prior=dataStatus.sources.auctions;dataStatus.sources.auctions={auctions:[]};
  try{assert.equal(packages.researchPackageAttachment(restored,0).content,packages.researchPackageAttachment(pkg,0).content);}finally{dataStatus.sources.auctions=prior;}
 });
@@ -124,5 +141,7 @@ test('generated auction CSV neutralizes control-prefixed formulas and absent pro
  const pkg=await create(args(input)),[headers,...rows]=parseCsv(packages.researchPackageAttachment(pkg,0).content);
  assert.ok(rows[0][headers.indexOf('coverage_note')].startsWith("'\u0001="));
  const options=args();delete options.context.auctionExports;
+ await assert.rejects(create(options),/display state/);
+ delete options.context.stitchRenderState;
  assert.deepEqual(packages.researchPackageAttachments(await create(options)),[]);
 });
