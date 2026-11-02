@@ -28,8 +28,8 @@ import {fiscalFinancingCsv} from './research-exports.js';
 import {refinancingCsv} from './refinancing-page.js';
 import {yieldCurvesCsv} from './yields-page.js';
 import {nearestCurveDate} from './yields.js';
-import {auctionsCsv} from './auctions-page.js';
-import {ownershipCsv,ownershipDeskChartCatalog,ticHoldingsCsv} from './ownership-page.js';
+import {auctionsCsv,auctionViewCsv} from './auctions-page.js';
+import {ownershipCsv,ownershipDeskChartCatalog,ticHoldingsCsv,ticViewCsv} from './ownership-page.js';
 import {auctionDeskChartCatalog} from './auctions-page.js';
 import {macroContributionsCsv} from './macro-page.js';
 import {vintagesCsv,normalizedCutoff} from './vintages-page.js';
@@ -42,7 +42,8 @@ import {pageSourceScope} from './page-source-scope.js';
 import {humanTimestamp} from './ui-time.js';
 import { mountFreshnessBanner } from './freshness-controller.js';
 import { renderCharts,captureChartInspection } from './charts.js';
-import { parseRoute, routeFor,destinationChanged,entryWindow } from './router.js';
+import { parseRoute, routeFor,destinationChanged,entryWindow,normalizedIndicatorView } from './router.js';
+import {laborHistoryIds,laborHistoryViews} from './labor-history-views.js';
 import {readPreferences,writePreferences,normalizePreferences,saveNamedWatchlist,selectNamedWatchlist,removeNamedWatchlist} from './storage.js';
 import {exportResearchSettings,importResearchSettings,mergeResearchSettings,MAX_RESEARCH_SETTINGS_BYTES} from './research-settings.js';
 import {parseResearchQuestion} from './research-questions.js';
@@ -73,7 +74,7 @@ import {publicationExplanationsCsv} from './publication-explanation-view.js';
 import {economicEvidenceCsv,economicEvidenceChartCatalog} from './economic-evidence.js';
 import {pceBaseEffectsCsv,pceBaseEffectsChartCatalog,buildPceBaseEffects} from './pce-base-effects.js';
 import {pceScenarioOptions} from './workspace-context.js';
-import {indicatorFamilyChartCatalog} from './stitch-family-view.js';
+import {indicatorFamilyChartCatalog,indicatorChartCsv} from './stitch-family-view.js';
 import {stitchEvidenceCatalog,stitchFrozenSources} from './stitch-evidence.js';
 import {stitchDeskContracts} from './stitch-desk-contracts.js';
 import {specialistDeskChartCatalog,specialistDeskCsv,fxSensitivityCsv} from './specialist-desks.js';
@@ -249,11 +250,12 @@ function renderCurrentChartsIn(container,inspection){
   if(state.page==='labor'||state.page==='macroCoverage'&&state.macroFamily==='labor')Object.assign(chartCatalogs,economicEvidenceChartCatalog(dataStatus.sources.laborEvidence));
   if(state.page==='macroCoverage'&&state.macroFamily==='prices')Object.assign(chartCatalogs,economicEvidenceChartCatalog(dataStatus.sources.pcePriceContributions),pceBaseEffectsChartCatalog(getSeries(state.pceBaseIndex),pceScenarioOptions(state)));
  }
- if(pkg?.context.stitchEvidence||!pkg&&['indicator','ownership','auctions','refunding','debtCeiling','dealers','money','liquidity','fomc','qt','tips','wedge','fxBasis'].includes(state.page)){
+ if(pkg?.context.stitchEvidence||pkg?.context.stitchRenderState?.retainedViewVersion===1||!pkg&&['indicator','ownership','auctions','refunding','debtCeiling','dealers','money','liquidity','fomc','qt','tips','wedge','fxBasis'].includes(state.page)){
    const supplementary=pkg?stitchEvidenceCatalog(stitchFrozenSources(pkg.context)):series;
-   const chartSources=pkg?stitchFrozenSources(pkg.context):dataStatus.sources;
+   const chartSources=pkg?{...stitchFrozenSources(pkg.context),...Object.fromEntries(Object.entries(pkg.context.economicEvidence??{}).map(([id,evidence])=>[id,evidence.source]))}:dataStatus.sources;
+   if(pkg)Object.assign(supplementary,stitchEvidenceCatalog(chartSources));
    Object.assign(chartCatalogs,specialistDeskChartCatalog(chartSources,{catalog:pkg?{...supplementary,...pkg.catalog}:series,frozen:Boolean(pkg)}));
-   Object.assign(chartCatalogs,ownershipDeskChartCatalog(chartSources.ownership,chartSources.ticHolders,{frozen:Boolean(pkg)}));
+   Object.assign(chartCatalogs,ownershipDeskChartCatalog(chartSources.ownership,chartSources.ticHolders,{frozen:Boolean(pkg),state:pkg?.context.stitchRenderState??state}));
    Object.assign(chartCatalogs,auctionDeskChartCatalog(chartSources.auctions,pkg?.context.stitchRenderState??state,{frozen:Boolean(pkg)}));
    Object.assign(chartCatalogs,indicatorFamilyChartCatalog({lookup:id=>supplementary[id]??pkg?.catalog[id],frozen:Boolean(pkg)}));
  }
@@ -350,6 +352,7 @@ function navigate(patch,{replace=false,preserveFocus=true}={}) {
   if(destinationChanged(state,{...state,...patch}))rememberWorkspace();
   if(['page','seriesId','macroFamily','macroMeasure','vintageSeries','eventId','selected'].some(key=>key in patch&&patch[key]!==state[key]))delete state.freezeSelection;
   state={...state,...patch};
+  if(state.page==='indicator')state.indicatorView=parseRoute(routeFor(state)).indicatorView;
   if(['explore','watchlist'].includes(previous.page)&&!(previous.selected?.length)&&patch.selected?.length
     &&!Object.hasOwn(patch,'window')&&!Object.hasOwn(patch,'range'))state.window=entryWindow(state,location.hash);
   const automaticOrigin=['overview','fiscal','refinancing','auctions','ownership','macro','credit','calendar'].includes(previous.page);
@@ -396,7 +399,7 @@ function exportCsv(selection=null) {
   if(!ids.length){announce('Select at least one series to export.');return;}
   try {
     const comparison=state.page==='explore' && state.exploreMode==='compare'?state.comparison:'native';
-    const content=toCsv(ids,{transform:state.page==='indicator'?state.transform:'level',range:['indicator','explore','watchlist','macroCoverage','labor'].includes(state.page)?viewRange(state):state.range,comparison});
+    const content=toCsv(ids,{transform:['indicator','labor'].includes(state.page)?state.transform:'level',range:['indicator','explore','watchlist','macroCoverage','labor'].includes(state.page)?viewRange(state):state.range,comparison});
     downloadCsv(content,`meridian-${ids.join('-')}.csv`,'CSV downloaded with displayed observations, units, official source identifiers, retrieval times and per-series data status. Unknown publication dates remain empty.');
   } catch(error) {announce(`Export unavailable: ${error.message}`);}
 }
@@ -591,7 +594,7 @@ root.addEventListener('click',async event=>{
     if('specialistLineage' in d){main.querySelector('#specialist-lineage')?.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});return;}
     if('specialistExport' in d||'specialistMatrix' in d||'fxSensitivity' in d){
       try{await ensureSourceAction(requiredSourceIds(state,{purpose:'export'}));
-        const csv='fxSensitivity' in d?fxSensitivityCsv(dataStatus.sources,state,{policyDivergence:state.fxScenario==='policy-divergence'}):specialistDeskCsv(dataStatus.sources,state,{matrix:'specialistMatrix' in d});
+        const csv='fxSensitivity' in d?fxSensitivityCsv(dataStatus.sources,state,{policyDivergence:state.fxScenario==='policy-divergence'}):specialistDeskCsv(dataStatus.sources,state,{matrix:'specialistMatrix' in d,retainedViews:true});
         downloadCsv(csv,`meridian-${state.page}${'specialistMatrix' in d?'-matrix':'fxSensitivity' in d?'-sensitivity':''}.csv`,'Source-backed desk CSV downloaded with native dates, source receipts and scenario assumptions.');
       }catch(error){actionFeedback(error.message,'error');}return;
     }
@@ -619,6 +622,9 @@ root.addEventListener('click',async event=>{
     }
     return;
   }
+  for(const[key,field,values,page]of [['auctionView','auctionView',['bid-to-cover','allocations','offering'],'auctions'],['auctionRange','auctionRange',['6','12','36'],'auctions'],['ownershipView','ownershipView',['total','official-private','top-holders'],'ownership'],['ownershipRange','ownershipRange',['3m','6m','all'],'ownership']]){
+    if(key in d){if(state.page===page&&values.includes(d[key]))navigate({[field]:key==='auctionRange'?Number(d[key]):d[key]});return;}
+  }
   if('previewClose' in d){
     const id=workspacePreviews.explore;workspacePreviews.explore=null;
     render({preserveFocus:true});
@@ -643,6 +649,9 @@ root.addEventListener('click',async event=>{
     try{await ensureSourceAction(requiredSourceIds(state,{purpose:'export',action:d}));}
     catch(error){announce(`Export unavailable: ${error.message}`);return;}
   }
+  if('exportIndicatorChart' in d&&state.page==='indicator'){downloadCsv(indicatorChartCsv(getSeries(state.seriesId),state),'meridian-indicator-chart.csv','Chart CSV downloaded with the selected plotted measurements, window and source lineage.');return;}
+  if('exportAuctionView' in d&&state.page==='auctions'){downloadCsv(auctionViewCsv(dataStatus.sources.auctions,state),'meridian-auction-chart.csv','Matched-auction chart CSV downloaded with native values and source receipts.');return;}
+  if('exportTicView' in d&&state.page==='ownership'){downloadCsv(ticViewCsv(dataStatus.sources.ticHolders,state),'meridian-tic-chart.csv','TIC chart CSV downloaded with exact month-end positions and stock comparisons.');return;}
   if('retrySources' in d){
     try{
       await ensureSourceAction(d.retrySources.split(','),{retry:true});
@@ -838,7 +847,9 @@ root.addEventListener('change',async event=>{
     'alignment-select':'alignment','calendar-topic':'calendarTopic','auction-type':'auctionType',
     'vintage-cutoff':'vintageCutoff','vintage-series':'vintageSeries'};
   if(target.id==='macro-family'&&Object.hasOwn(coverageFamilies,target.value))navigate({macroFamily:target.value,macroMeasure:coverageFamilies[target.value].defaultMeasure});
-  else if(target.id==='macro-measure'&&coverageFamilies[state.macroFamily].ids.includes(target.value))navigate({macroMeasure:target.value});
+  else if(target.id==='macro-measure'&&[...coverageFamilies[state.macroFamily].ids,...(state.page==='labor'?laborHistoryIds:[])].includes(target.value))navigate({macroMeasure:target.value});
+  else if(target.id==='labor-history-view'&&state.page==='labor'&&laborHistoryViews(state.macroMeasure).includes(target.value))navigate({macroMeasure:target.value,transform:'level'});
+  else if(target.id==='indicator-view'&&state.page==='indicator')navigate({indicatorView:normalizedIndicatorView(state.seriesId,target.value)});
   else if(target.id==='current-account-comparison-measure'&&state.macroFamily==='external'&&CURRENT_ACCOUNT_GDP_COMPARISON_MEASURES.some(item=>item.id===target.value))navigate({macroMeasure:target.value});
   else if(target.id==='current-account-effect-component'&&state.macroFamily==='external'&&CURRENT_ACCOUNT_GDP_EFFECT_COMPONENTS.some(item=>item.id===target.value))navigate({macroMeasure:target.value});
   else if(target.id==='refinancing-horizon')navigate({refinancingHorizon:Number(target.value)});

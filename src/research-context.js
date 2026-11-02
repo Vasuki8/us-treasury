@@ -119,12 +119,12 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
  const context={page:state.page,route:routeFor(state,{legacyWindow:true}),
   moduleSources:Object.fromEntries((sourceIds[state.page]??[]).filter(id=>sources[id]).map(id=>[id,sources[id]])),
   attachments:[],scope:'Selected registered measurements; explicitly retained supplementary inputs and CSVs when present.'};
- const assumptions={comparison:state.page==='explore'&&state.exploreMode==='compare'?state.comparison:'native',transform:state.page==='indicator'?state.transform:'level',missingDates:'No interpolation or frequency aggregation; unmatched dates remain unavailable.'};
+ const assumptions={comparison:state.page==='explore'&&state.exploreMode==='compare'?state.comparison:'native',transform:['indicator','labor'].includes(state.page)?state.transform??'level':'level',missingDates:'No interpolation or frequency aggregation; unmatched dates remain unavailable.'};
  const stitchEvidence=createStitchEvidence(state,sources,viewRange(state));
  if(stitchEvidence){
   context.stitchEvidence=stitchEvidence;
-  const keys=['page','seriesId','window','startDate','endDate','range','fxScenario','fxFedShock','fxForeignShock','fxHorizon','specialistView','specialistRange'];
-  context.stitchRenderState=Object.fromEntries(keys.filter(key=>state[key]!==undefined).map(key=>[key,state[key]]));
+  const keys=['page','seriesId','window','startDate','endDate','range','fxScenario','fxFedShock','fxForeignShock','fxHorizon','specialistView','specialistRange',...({indicator:['indicatorView','transform'],auctions:['auctionView','auctionRange','auctionType','auctionId'],ownership:['ownershipView','ownershipRange'],labor:['macroMeasure','transform']}[state.page]??[])];
+  context.stitchRenderState={...Object.fromEntries(keys.filter(key=>state[key]!==undefined).map(key=>[key,state[key]])),retainedViewVersion:1};
   const oldSources=[...(stitchDeskContracts[state.page]?.sources??[]),...(state.page==='indicator'?[catalog[state.seriesId]?.agency]:[]),...(state.page==='ownership'?['ownership']:[])].filter(id=>!stitchEvidenceSourceIds.includes(id)&&sources[id]);
   Object.assign(context.moduleSources,Object.fromEntries(oldSources.map(id=>[id,sources[id]])));
   if(!validateStitchLegacySources(context))throw Error('Specialist supporting inputs require complete native measurements, reviewed source receipts and calculation lineage before freezing');
@@ -196,6 +196,7 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
  if(state.page==='auctions'){
   const {type,selected}=auctionSelection(sources.auctions,state.auctionType,state.auctionId);
   context.auctionExports={version:1,securityType:type,auctionId:selected?.id??'',csvMode:'generated-full-retained-v1'};
+  context.stitchRenderState={page:'auctions',auctionType:type,auctionId:selected?.id??'',auctionView:state.auctionView??'bid-to-cover',auctionRange:Number(state.auctionRange??12),retainedViewVersion:1};
   context.scope='Complete auction source, original response receipts and monthly offering inputs are retained independently of the selected security filter and analysis window. Both specialist CSVs are generated from these frozen inputs with the recorded security type, selected auction and versioned method; duplicated CSV content is not stored. Explicit response-page lineage resolves each row to its actual capture receipt. Retrieval does not reconstruct historical publication vintages.';
  }
  if(state.page==='ownership'){
@@ -224,7 +225,7 @@ export function buildPinContext(state,{historyState,catalog=series,sources=dataS
   const selectedCaptureHistory={version:1,captures:historyState.history.captures.filter(row=>row.sourceId===agency&&normalizeVintageTimestamp(row.capturedAt)<=cutoff).map(row=>({...row,series:Object.hasOwn(row.series,id)?{[id]:row.series[id]}:{},removedSeries:row.removedSeries.filter(key=>key===id)}))};
   Object.assign(context,{captureCutoff:cutoff,selectedCaptureHistory});context.attachments=[attachment('captured-by-values.csv',vintagesCsv(selectedCaptureHistory,{seriesId:id,cutoff}))];
  }
- if(state.page==='labor'||state.page==='macroCoverage'&&state.macroFamily==='labor'){
+ if(state.page==='labor'||state.page==='macroCoverage'&&state.macroFamily==='labor'||state.page==='indicator'&&state.seriesId==='wages'&&sources.laborEvidence){
   const evidence=economicEvidenceContext(sources.laborEvidence,{range:viewRange(state)});context.economicEvidence={laborEvidence:evidence};context.attachments.push(...evidence.attachments);
  }
  if(state.page==='macroCoverage'&&state.macroFamily==='prices'){

@@ -361,7 +361,7 @@ export function renderCharts(root,{catalog,chartCatalogs={},inspection}={}) {
     const distribution=kind==='funding-distribution';
     const fundingSpread=scoped&&container.dataset.chartCatalog==='funding'&&ids.length===1&&ids[0]==='sofrEffrSpread'&&kind==='line'&&transform==='level'&&comparison==='native';
     if(distribution||fundingSpread){
-      if(distribution&&(!scoped||container.dataset.chartCatalog!=='funding'||ids.length!==1||!['sofr','effr'].includes(ids[0])||transform!=='level'||comparison!=='native')){
+      if(distribution&&(!scoped||!['funding','specialist'].includes(container.dataset.chartCatalog)||ids.length!==1||!['sofr','effr'].includes(ids[0])||transform!=='level'||comparison!=='native')){
         container.textContent='Chart configuration error: funding distributions require one bound SOFR or EFFR population in published levels.';return;
       }
       const window=resolveDateWindow(range,Object.values(selectedCatalog)),panel=transformSeries(lookup(ids[0]),'level',range,window);

@@ -23,13 +23,21 @@ class Element {
  get textContent(){return this.children.map(child=>typeof child==='string'?child:child.textContent).join('');}
 }
 const nodes=node=>[node,...node.children.filter(child=>typeof child!=='string').flatMap(nodes)];
-function rendered(input,range,run,{frozen=false,id='sofr',binding=true,kind='funding-distribution',yDomain}={}){
+function rendered(input,range,run,{frozen=false,id='sofr',binding=true,kind='funding-distribution',yDomain,catalogKey='funding'}={}){
  const prior=globalThis.document;globalThis.document={createElementNS:(_ns,tag)=>new Element(tag),createElement:tag=>new Element(tag)};
- try {const container=new Element('div');container.clientWidth=232;container.dataset={series:id,kind,chartCatalog:'funding',range:JSON.stringify(range),...(yDomain?{yDomain:JSON.stringify(yDomain)}:{})};
- renderCharts({querySelectorAll:()=>[container]},{chartCatalogs:binding?{funding:api().fundingChartCatalog(input,{frozen})}:{}});
+ try {const container=new Element('div');container.clientWidth=232;container.dataset={series:id,kind,chartCatalog:catalogKey,range:JSON.stringify(range),...(yDomain?{yDomain:JSON.stringify(yDomain)}:{})};
+ renderCharts({querySelectorAll:()=>[container]},{chartCatalogs:binding?{[catalogKey]:api().fundingChartCatalog(input,{frozen})}:{}});
  run({container,all:nodes(container),key:key=>nodes(container).find(node=>node.tag==='svg').listeners.keydown({key,preventDefault(){}})});
  }finally{if(prior===undefined)delete globalThis.document;else globalThis.document=prior;}
 }
+
+test('specialist SOFR fan uses its bound native percentiles and preserves unavailable-band gaps',()=>{
+ rendered(source(),{preset:'all'},({all,key})=>{
+  assert.equal(all.filter(node=>node.attributes.class?.includes('funding-band')).length,2);
+  key('Home');assert.match(all.find(node=>node.className==='chart-readout').textContent,/Median 3\.00%.*p25 2\.00%.*p75 4\.00%/);
+ },{catalogKey:'specialist'});
+ rendered(source(),{preset:'all'},({all,container})=>{assert.equal(all.some(node=>node.tag==='svg'),false);assert.match(container.textContent,/configuration error/);},{catalogKey:'unreviewed'});
+});
 test('funding populations retain exact published endpoints, original flags and their own dates',()=>{
  const input=source(),binding=api().fundingChartCatalog(input),result=funding.fundingDistributionHistory(input,{preset:'all'});
  assert.deepEqual(Object.keys(binding.catalog),['sofr','effr','sofrEffrSpread']);

@@ -5,6 +5,7 @@ import {dataStatus} from './data.js';
 import {blsPayrollSectors} from './bls-desk-definitions.js';
 import {cpiDetailCategories} from './cpi-detail.js';
 import {normalizeSourceNotes} from './source-notes.js';
+import {annualLevelGrowthSeries} from './indicator-calculations.js';
 
 const finite=Number.isFinite;
 function point(read,id,date){const s=read(id),row=date===undefined?latest(s):s?.observations?.find(item=>item.date===date)??null;return {id,s,row,value:row?.value};}
@@ -45,7 +46,12 @@ function unemployment(read){
  return spectrum+section('CPS population classifications',metricTiles([['Civilian labor force',point(read,'laborForceLevel',date)],['Employed people',point(read,'employedLevel',date)],['Unemployed people',point(read,'unemployedLevel',date)]]))
   +section('Demographic unemployment ledger',table(['Group',{label:'Published unemployment rate',numeric:true},'Reference'],demographicRows,'Published CPS unemployment rates, separate subgroup denominators')+'<p class="panel-note">Race and ethnicity categories overlap; these rates are not added or used as population shares.</p>');
 }
-function wageGrowth(read,id){const s=read(id),row=latest(s);if(!row)return {id,s,row:null,value:null};const priorDate=`${Number(row.date.slice(0,4))-1}${row.date.slice(4)}`,prior=s.observations.find(item=>item.date===priorDate);return {id,s:{...s,unit:'Percent year over year',format:'percent',precision:2},row,value:finite(row.value)&&finite(prior?.value)&&row.value>0&&prior.value>0?100*(row.value/prior.value-1):null};}
+function wageGrowth(read,id){const s=annualLevelGrowthSeries(read(id),{id}),row=latest(s);return {id,s,row,value:row?.value};}
+function wageBenchmark(read){
+ const items=[['CES average hourly earnings','wages','Payroll-job average; all private employees, composition-sensitive.'],['ECI civilian wages & salaries','eciCivilianWagesAnnual','Fixed employment weights; civilian workers excluding federal government.'],['Nonfarm business unit labor costs','unitLaborCostsAnnual','Nominal labor cost per unit of output; compensation relative to productivity.']];
+ const rows=items.map(([label,id,scope])=>{const item=point(read,id);return `<tr><th scope="row">${esc(label)}</th><td class="num" data-family-input="${id}">${esc(shown(item))}</td><td>${esc(reference(item))}</td><td>${esc(item.s?.adjustment??'Unavailable')}</td><td>${esc(scope)}</td></tr>`;}).join('');
+ return section('Cross-program annual wage & labor-cost benchmarks',`<div data-wage-benchmark>${table(['Measurement',{label:'Annual / four-quarter growth',numeric:true},'Own reference period','Adjustment','Scope'],rows,'CES, ECI and ULC retained annual benchmarks with independent reference periods')}</div><p class="panel-note">Each reading uses its own latest reference period. Monthly CES annual growth, quarterly NSA ECI annual growth and quarterly SA unit labor costs are different measurements; this table neither aligns their dates nor estimates a wage target.</p>`);
+}
 function earnings(read){
  const nominal=point(read,'wages'),production=wageGrowth(read,'productionHourlyEarnings'),real=wageGrowth(read,'realHourlyEarnings');
  const cohorts=[['All private employees','hourlyEarnings','weeklyHours','weeklyEarnings'],['Production / nonsupervisory','productionHourlyEarnings','productionWeeklyHours','productionWeeklyEarnings']];
@@ -53,7 +59,7 @@ function earnings(read){
  return barRows([{label:'All private employees · nominal',primary:nominal},{label:'Production / nonsupervisory · nominal',primary:production},{label:'All private employees · CPI-U deflated',primary:real}],{unit:'Percent year over year'})
   +'<p class="panel-note">Annual rates use each cohort’s exact year-ago endpoints. Monthly CES real earnings use CPI-U; this comparison does not isolate fixed-worker wage growth or remove workforce composition effects.</p>'
   +section('Earnings cohorts & paid-hours architecture',table(['CES cohort',{label:'Hourly earnings · USD',numeric:true},{label:'Hours / week',numeric:true},{label:'Weekly earnings · USD',numeric:true},'Reference'],rows,'CES private employee earnings and paid hours, exact source months'))
-  +section('Real purchasing-power inputs',metricTiles([['Real hourly earnings',point(read,'realHourlyEarnings')],['Real weekly earnings',point(read,'realWeeklyEarnings')]])+'<p class="panel-note">Constant 1982–1984 dollars. These are averages across payroll jobs, not medians or the wages of a fixed set of people.</p>');
+  +section('Real purchasing-power inputs',metricTiles([['Real hourly earnings',point(read,'realHourlyEarnings')],['Real weekly earnings',point(read,'realWeeklyEarnings')]])+'<p class="panel-note">Constant 1982–1984 dollars. These are averages across payroll jobs, not medians or the wages of a fixed set of people.</p>')+wageBenchmark(read);
 }
 function eci(read){
  const date=latest(read('eciCivilianCompensationAnnual'))?.date??latest(read('eciCompensationQuarterly'))?.date;
@@ -64,7 +70,7 @@ function eci(read){
  return barRows(bars,{unit:'Percent year over year · NSA'})
   +section('Annual wage & benefit anatomy · NSA',table(['Employment scope',...parts.map(([label])=>({label,numeric:true}))],annualRows,'Annual ECI compensation, wages and benefits by civilian, private and state/local scope'))
   +section('Quarterly cost changes · SA, not annualized',table(['Employment scope',...parts.map(([label])=>({label,numeric:true}))],quarterlyRows,'Quarterly seasonally adjusted ECI changes, not annualized'))
-  +`<p class="panel-note">${esc(date??'No retained quarter')}. Compensation growth is not the sum of wage and benefit growth. Annual NSA and quarterly SA bases remain separate; civilian excludes federal government.</p>`;
+  +`<p class="panel-note">${esc(date??'No retained quarter')}. Compensation growth is not the sum of wage and benefit growth. Annual NSA and quarterly SA bases remain separate; civilian excludes federal government.</p>`+wageBenchmark(read);
 }
 const cpiComponents=['Shelter','Food','Energy','CoreGoods'].map(key=>{const category=cpiDetailCategories.find(item=>item[0]===key);return [key==='CoreGoods'?'Core goods':category[2],'cpi'+key,category[2]];});
 function cpiTableRow(source,kind,label){const rows=source?.tables?.[kind]?.rows?.filter(row=>row.label===label)??[];return rows.find(row=>/\.r\.1(?:\.|$)/.test(row.id))??rows[0]??null;}
@@ -88,6 +94,14 @@ function cpi(read,current,sources){
   +`<details class="family-subledger"><summary>Ten reviewed CPI categories · rates, relative importance & published effects</summary>${table(['Category',{label:'Monthly SA · %',numeric:true},{label:'Annual NSA · %',numeric:true},{label:'Relative importance · %',numeric:true},{label:'Monthly effect · pp',numeric:true},{label:'Annual effect · pp',numeric:true},'Index / release reference'],fullRows,'Ten reviewed CPI categories, including overlapping detailed scopes')}<p class="panel-note">Services less rent of shelter includes energy; it is not labeled supercore. Overlapping categories are not summed. Index-derived rates and published release effects retain their distinct sources and periods.</p></details>`
   +section('Inflation breadth cross-check',metricTiles(diagnostics.map(([label,id])=>[label,point(read,id)])));
 }
+function annualInflationComparison(read){
+ const date=latest(read('pce'))?.date,period=date?periodLabel({frequency:'Monthly'},date):'Not retained';
+ const rows=[['Headline','cpi','pce'],['Core','cpiCore','pceCore']].map(([label,cpiId,pceId])=>{
+  const cpi=point(read,cpiId,date??''),pce=point(read,pceId,date??''),gap=finite(cpi.value)&&finite(pce.value)?cpi.value-pce.value:null;
+  return `<tr><th scope="row">${label}</th>${nativeCell(cpi)}${nativeCell(pce)}<td class="num">${esc(formatValue({format:'percentagePoints',precision:2},gap))}</td><td>${esc(period)}</td><td>${esc(cpi.s?.adjustment??'Unavailable')} / ${esc(pce.s?.adjustment??'Unavailable')}</td></tr>`;
+ }).join('');
+ return section('Annual CPI / PCE comparison · same reference month',`<div data-annual-inflation-comparison>${table(['Scope',{label:'CPI annual',numeric:true},{label:'PCE annual',numeric:true},{label:'CPI minus PCE',numeric:true},'Reference month','CPI / PCE adjustment'],rows,'Annual CPI and PCE rates and percentage-point differences on the PCE headline reference month')}</div><p class="panel-note">Exact monthly joins only; an absent rate leaves its gap unavailable. CPI annual rates use NSA index endpoints; PCE retains its BEA adjustment. CPI uses a modified Laspeyres framework; PCE uses Fisher chain aggregation and includes spending on behalf of households, including employer and government medical spending. Different scopes and weights can contribute to the annual gap; the monthly reconciliation below does not decompose it.</p>`);
+}
 function pce(read){
  const categories=[['Goods','Goods'],['Services','Services'],['Food at home','Food'],['Energy goods & services','Energy'],['Market-based core','MarketCore'],['Services ex energy / housing','ServicesExEnergyHousing']];
  const rows=categories.map(([label,key])=>{const date=latest(read(`pce${key}PriceIndex`))?.date;return `<tr><th scope="row">${label}</th>${nativeCell(point(read,`pce${key}Monthly`,date))}${nativeCell(point(read,`pce${key}Annual`,date))}${nativeCell(point(read,`pce${key}Weight`,date))}<td>${esc(reference(point(read,`pce${key}PriceIndex`,date)))}</td></tr>`;}).join('');
@@ -95,7 +109,7 @@ function pce(read){
  const shareBar=`<div class="family-pce-share-legend"><span>Goods ${esc(shown(goods))}</span><span>Services ${esc(shown(services))}</span></div><svg class="family-pce-share-bar" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true">${finite(goods.value)?`<rect class="family-bar-primary" x="0" y="0" width="${2*goods.value}" height="20"/>`:''}${finite(services.value)&&finite(goods.value)?`<rect class="family-bar-secondary" x="${2*goods.value}" y="0" width="${2*services.value}" height="20"/>`:''}</svg><p class="panel-note">${esc(reference(goods))} · goods + services reported expenditure share ${finite(sum)?number(sum)+'%':'unavailable'}. Current-dollar shares describe spending composition, not fixed Fisher weights.</p>`;
  const equation=[['PCE monthly rate','cpiPcePublishedPce',''],['Formula effect','cpiPceFormulaEffect','−'],['Weight effect','cpiPceWeightEffect','−'],['PCE-only scope','cpiPceScopePceEffect','−'],['CPI-only scope','cpiPceScopeCpiEffect','+'],['Other effect','cpiPceOtherEffect','−'],['CPI monthly rate','cpiPcePublishedCpi','=']];
  const date=latest(read('cpiPcePublishedPce'))?.date;
- return section('PCE spending composition',shareBar)
+ return annualInflationComparison(read)+section('PCE spending composition',shareBar)
   +section('Category inflation & expenditure-share matrix',table(['Published category',{label:'Monthly SA',numeric:true},{label:'Annual growth',numeric:true},{label:'Spending share',numeric:true},'Reference'],rows,'BEA PCE category monthly/annual inflation and current-dollar expenditure shares')+'<p class="panel-note">Food is nested within goods; energy spans goods and services. These six rows are not an additive partition. No weight is inferred for market-based core.</p>')
   +section('PCE → CPI monthly reconciliation · BEA Table 9.1U','<div class="family-reconciliation-equation">'+equation.map(([label,id,operator])=>`${operator?`<span>${operator}</span>`:''}<article data-family-input="${id}"><h4>${label}</h4><strong>${esc(shown(point(read,id,date)))}</strong></article>`).join('')+`</div><p class="panel-note">${esc(date??'No retained reconciliation month')}. Published monthly SA rates/effects, subject to source rounding. This equation does not decompose annual inflation.</p>`);
 }

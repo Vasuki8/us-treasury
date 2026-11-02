@@ -37,10 +37,14 @@ export function requiredSourceIds(state,{purpose='render',catalog=series,library
   if(direct[key])return direct[key];
   if(key==='export')return [...new Set(agencies(state.page==='indicator'?[state.seriesId]:state.selected??[],catalog))];
   if(key==='exportMacroMeasure')return agencies([state.macroMeasure],catalog);
+  if(key==='exportIndicatorChart')return requiredSourceIds(state,{purpose:'export',catalog});
+  if(key==='exportAuctionView')return ['auctions'];
+  if(key==='exportTicView')return ['ticHolders'];
   if(key!=='exportCoverage')return [];
  }
  const result=[...(pageSources[state.page]??[]),...stitchPageSources(state)];
  if(state.page==='indicator'){
+  if(state.seriesId==='wages')result.push('laborEvidence');
   if(stitchEvidenceSourceIds.includes(catalog[state.seriesId]?.agency))result.push(catalog[state.seriesId].agency);
   const window=state.window??(Object.hasOwn(state,'range')?'observations':defaultWindowPreset([catalog[state.seriesId]]));
   const count=state.range??12;
@@ -52,6 +56,7 @@ export function requiredSourceIds(state,{purpose='render',catalog=series,library
  if(['macroCoverage','labor'].includes(state.page)){
   const family=state.page==='labor'?'labor':state.macroFamily;
   result.push(...agencies(coverageFamilies[family]?.ids??[],catalog));
+  if(state.page==='labor')result.push(...agencies([state.macroMeasure],catalog));
   if(family==='labor')result.push('laborEvidence');
   if(family==='prices')result.push('pcePriceContributions');
  }

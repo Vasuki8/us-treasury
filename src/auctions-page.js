@@ -2,7 +2,7 @@ import {humanDate} from './ui-time.js';
 import {readingGroup,supportingDetails} from './page-hierarchy.js';
 import {dataStatus} from './data.js';
 import {auctionAllocations,benchmarkAuction,auctionResultState,auctionResultCoverage} from './auctions.js';
-import {csvCell} from './model.js';
+import {csvCell,tabularCsv} from './model.js';
 import {formatDisplayValue} from './display-format.js';
 import {canonicalJson} from './research-workspaces.js';
 import {deskReadings,deskContext} from './stitch-desk.js';
@@ -25,11 +25,56 @@ export function auctionSelection(source,securityType='All',auctionId=''){
   return {type,rows,selected};
 }
 
-export function auctionDeskChartCatalog(source,state={}, {frozen=false}={}){
- const {selected}=auctionSelection(source,state.auctionType,state.auctionId),benchmark=selected?benchmarkAuction(source,selected.id):null;
+const AUCTION_VIEWS={
+ 'bid-to-cover':{label:'Bid-to-cover (×)',title:'Matched bid-to-cover history',ids:['auctionBidToCover']},
+ allocations:{label:'Allotment shares (%)',title:'Matched competitive award-share history',ids:['auctionDealerShare','auctionDirectShare','auctionIndirectShare']},
+ offering:{label:'Offering size ($B)',title:'Matched face-offering history',ids:['auctionOfferingSize']},
+};
+
+/** One matched-result model supplies both the chart and its explicit view export. */
+export function auctionViewModel(source,state={}){
+ const {type,selected}=auctionSelection(source,state.auctionType,state.auctionId);
+ const view=Object.hasOwn(AUCTION_VIEWS,state.auctionView)?state.auctionView:'bid-to-cover';
+ const range=[6,12,36,'6','12','36'].includes(state.auctionRange)?String(state.auctionRange):'12';
+ const benchmark=selected?benchmarkAuction(source,selected.id,{limit:Number(range)}):null;
  const rows=[...(benchmark?.peers??[]),...(selected?[selected]:[])].sort((a,b)=>a.auctionDate.localeCompare(b.auctionDate)||a.id.localeCompare(b.id));
- const series={id:'auctionBidToCover',code:'bid_to_cover_ratio',name:'Official bid-to-cover · selected auction and prior matching results',short:'Bid-to-cover',unit:'Ratio',format:'number',precision:2,frequency:'Daily',dateConvention:'auction-date',adjustment:'Not seasonally adjusted',comparisonClass:'ratio',observationType:'official',source:{name:'U.S. Treasury Fiscal Data',url:'https://fiscaldata.treasury.gov/datasets/treasury-securities-auctions-data/',seriesIds:['bid_to_cover_ratio']},fetchedAt:source?.fetchedAt??null,provenance:source?.provenance??[],dataStatus:source?.status==='ok'?'official':'cached',observations:rows.map(row=>({date:row.auctionDate,value:finite(row.bidToCover)?row.bidToCover:null,publishedAt:null,sourceValue:row.bidToCover,auctionId:row.id,footnotes:[`${row.securityType} · ${row.securityTerm} · ${auctionResultState(row).label}`]}))};
- return {'auction-demand':{catalog:{auctionBidToCover:series},evidenceLabel:`${frozen?'Frozen':'Captured'} official Treasury auction results; exact prior matching class`}};
+ const definitions=[
+  ['auctionBidToCover','bid_to_cover_ratio','Bid-to-cover','Ratio',2,'official',row=>row.bidToCover,'Official Treasury bid-to-cover; not recomputed from total accepted.',['bidToCover']],
+  ['auctionDealerShare','primary_dealer_share','Primary dealer share','Percent',1,'calculated',row=>auctionAllocations(row).primaryDealerShare,'100 × primary dealer accepted / competitive accepted; unreconciled shares withheld.',['primaryDealerAccepted','competitiveAccepted']],
+  ['auctionDirectShare','direct_share','Direct bidder share','Percent',1,'calculated',row=>auctionAllocations(row).directShare,'100 × direct accepted / competitive accepted; unreconciled shares withheld.',['directAccepted','competitiveAccepted']],
+  ['auctionIndirectShare','indirect_share','Indirect bidder share','Percent',1,'calculated',row=>auctionAllocations(row).indirectShare,'100 × indirect accepted / competitive accepted; unreconciled shares withheld.',['indirectAccepted','competitiveAccepted']],
+  ['auctionOfferingSize','offering_amount','Face offering','USD billions',2,'calculated',row=>finite(row.offeringAmount)?row.offeringAmount/1e9:null,'Official face offering in USD / 1,000,000,000; gross offering, not net borrowing.',['offeringAmount']],
+ ];
+ const catalog=Object.fromEntries(definitions.map(([id,code,short,unit,precision,observationType,read,calculation,inputFields])=>[id,{
+  id,code,name:`${short} · selected auction and prior matching results`,short,unit,format:unit==='USD billions'?'billions':unit==='Percent'?'percent':'number',precision,frequency:'Daily',dateConvention:'auction-date',adjustment:'Not seasonally adjusted',comparisonClass:unit==='Ratio'?'ratio':unit==='Percent'?'share':'amount',observationType,calculation,
+  source:{name:'U.S. Treasury Fiscal Data',url:'https://fiscaldata.treasury.gov/datasets/treasury-securities-auctions-data/',seriesIds:[code]},fetchedAt:source?.fetchedAt??null,provenance:source?.provenance??[],dataStatus:source?.status==='ok'?'official':'cached',
+  observations:rows.map(row=>({date:row.auctionDate,value:finite(read(row))?read(row):null,publishedAt:null,sourceValue:row[inputFields[0]],inputFields,inputValues:inputFields.map(field=>finite(row[field])?row[field]:null),inputDates:inputFields.map(()=>row.auctionDate),auctionId:row.id,footnotes:[`${row.securityType} · ${row.securityTerm} · ${auctionResultState(row).label}`]})),
+ }]));
+ return {type,selected,rows,view,range,catalog,seriesIds:AUCTION_VIEWS[view].ids,title:AUCTION_VIEWS[view].title,benchmark};
+}
+
+export function auctionDeskChartCatalog(source,state={}, {frozen=false}={}){
+ return {'auction-demand':{catalog:auctionViewModel(source,state).catalog,evidenceLabel:`${frozen?'Frozen':'Captured'} official Treasury auction results; exact prior matching class`}};
+}
+
+function auctionViewControls(model){
+ return `<div class="specialist-chart-controls"><div class="segmented" role="group" aria-label="Auction chart view">${Object.entries(AUCTION_VIEWS).map(([value,{label}])=>button(label,`data-auction-view="${value}" aria-pressed="${value===model.view}"`)).join('')}${button('WI tail · unavailable','disabled title="Timestamp-matched when-issued quotes are not retained."')}</div><div class="segmented specialist-ranges" role="group" aria-label="Prior matching auction count">${['6','12','36'].map(value=>button(`${value} prior`,`data-auction-range="${value}" aria-pressed="${value===model.range}"`)).join('')}</div></div>`;
+}
+
+/** Export only the selected chart's matched rows and displayed metrics; raw exports stay unchanged. */
+export function auctionViewCsv(source,state={}){
+ if(source?.inputProvenanceScope!=='auction-response-page-v1'&&source?.auctions?.some(row=>Object.hasOwn(row,'sourceReceiptIndex')))throw new Error('Auction response receipt indices require the explicit capture scope.');
+ const model=auctionViewModel(source,state),rows=[];
+ for(const id of model.seriesIds)for(const observation of model.catalog[id].observations){
+  const row=model.rows.find(item=>item.id===observation.auctionId),series=model.catalog[id];
+  let provenance=source?.provenance??[];
+  if(source?.inputProvenanceScope==='auction-response-page-v1'){
+   if(!Number.isInteger(row.sourceReceiptIndex)||row.sourceReceiptIndex<0||row.sourceReceiptIndex>=provenance.length)throw new Error('Auction response receipt index is unavailable.');
+   provenance=[provenance[row.sourceReceiptIndex]];
+  }
+  rows.push([row.id,row.auctionDate,row.issueDate,row.securityType,row.originalTerm,row.reopening,row.cashManagement,model.view,model.range,id,observation.value,series.unit,observation.sourceValue,row.competitiveAccepted,JSON.stringify(observation.inputFields),JSON.stringify(observation.inputValues),JSON.stringify(observation.inputDates),series.calculation,source?.fetchedAt,source?.status==='ok'?'captured':'cached',row.sourceUrl,row.resultUrl,JSON.stringify(provenance),limitation]);
+ }
+ return tabularCsv(['auction_id','auction_date','issue_date','security_type','original_term','reopening','cash_management','view','prior_matching_limit','series_id','value','unit','source_value','competitive_accepted_usd','input_fields','input_values','input_dates','calculation','retrieved_at','capture_status','source_url','result_url','provenance','limitations'],rows);
 }
 
 function externalLink(value,label){
@@ -56,6 +101,7 @@ function benchmarkTable(source,selected){
 
 export function auctionsPage(state={},source=dataStatus.sources.auctions){
   const {type,rows,selected}=auctionSelection(source,state.auctionType,state.auctionId);
+  const viewModel=auctionViewModel(source,state);
   const coverage=auctionResultCoverage(source),selectedState=selected?auctionResultState(selected):null;
   const pageSize=60,pageCount=Math.max(1,Math.ceil(rows.length/pageSize)),selectedPage=selected?Math.floor(rows.findIndex(row=>row.id===selected.id)/pageSize):0;
   const page=Number.isInteger(state.auctionHistoryPage)?Math.max(0,Math.min(pageCount-1,state.auctionHistoryPage)):selectedPage;
@@ -67,10 +113,10 @@ export function auctionsPage(state={},source=dataStatus.sources.auctions){
   }</span><div class="actions">${pageButton('NEWEST',0,page===0)}${pageButton('NEWER',Math.max(0,page-1),page===0)}${pageButton('OLDER',Math.min
   (pageCount-1,page+1),page===pageCount-1)}${pageButton('OLDEST',pageCount-1,page===pageCount-1)}</div></div>`):'';
   const controls=`<div class="toolbar"><label for="auction-type">Security type <select id="auction-type">${types.map(value=>`<option value="${value}"${value===type?' selected':''}>${value}</option>`).join('')}</select></label><span class="small muted">${rows.length} matching records · ${visibleRows.length} shown; CSV includes all matching records.</span></div>`;
-  const history=rows.length?table(['AUCTION / EASTERN DATE','SECURITY',{label:'FACE OFFERING',numeric:true},{label:'OFFICIAL RATE',numeric:true},{label:'BID-TO-COVER',numeric:true},{label:'INDIRECT AWARD',numeric:true},{label:'DIRECT AWARD',numeric:true},{label:'DEALER AWARD',numeric:true},'WI TAIL / CONCESSION',
+  const history=rows.length?table(['AUCTION / EASTERN DATE','ISSUE / SETTLEMENT DATE','SECURITY',{label:'FACE OFFERING',numeric:true},{label:'OFFICIAL RATE',numeric:true},{label:'BID-TO-COVER',numeric:true},{label:'INDIRECT AWARD',numeric:true},{label:'DIRECT AWARD',numeric:true},{label:'DEALER AWARD',numeric:true},'WI TAIL / CONCESSION',
   'STATE'],visibleRows.map(row=>`<tr${row.id===selected?.id?' class="selected-row"':''}><th scope="row">${button(humanDate(row.auctionDate),
   `data-auction-id="${esc(row.id)}" aria-pressed="${row.id===selected?.id}"`,
-  'link-button')}</th><td>${esc(row.securityType)} · ${esc(row.securityTerm)}<span class="table-code muted">Original ${esc(row.originalTerm
+  'link-button')}</th><td>${esc(humanDate(row.issueDate)||'Not retained')}</td><td>${esc(row.securityType)} · ${esc(row.securityTerm)}<span class="table-code muted">Original ${esc(row.originalTerm
   ??'unknown')} · ${row.reopening===true?'reopening':row.reopening===false?'new issue':'reopening unknown'}${row.cashManagement?
   ' · cash management':''}</span></td><td class="num">${esc(money(row.offeringAmount))}</td><td class="num">${esc(rate(resultRateFor(row)))}</td><td class="num">${esc(number(row.bidToCover))
   }</td><td class="num">${esc(percent(auctionAllocations(row).indirectShare))}</td><td class="num">${esc(percent(auctionAllocations(row).directShare))}</td><td class="num">${esc(percent(auctionAllocations(row).primaryDealerShare))}</td><td class="muted">Unavailable</td><td><span class="pill">${esc(auctionResultState(row).label)}</span></td></tr>`).join(''),
@@ -126,15 +172,16 @@ export function auctionsPage(state={},source=dataStatus.sources.auctions){
     {kicker:'Pillar II · dealer take-up',title:'Primary dealer capacity & concessions',value:percent(allocation.primaryDealerShare),note:'Dealer award share measures competitive take-up, not balance-sheet capacity. When-issued pricing: Not covered. Auction tails and pre-auction concessions require a reliable timestamp-matched WI quote.'},
     {kicker:'Pillar III · supply profile',title:'Issuance profile & matched supply',value:`${benchmark?.sampleSize??0} retained peers`,note:'Comparisons match the instrument, original term, reopening and cash-management status. Gross face offerings include rollovers and do not measure net borrowing or projected TBAC funding needs.'},
   ]);
-  const demandChart=chart(['auctionBidToCover'],{height:300,range:{preset:'all'},legend:true,endLabels:true}).replace('data-chart ','data-chart data-chart-catalog="auction-demand" ');
+  const demandChart=auctionViewControls(viewModel)+chart(viewModel.seriesIds,{height:300,range:{preset:'all'},legend:true,endLabels:true}).replace('data-chart ','data-chart data-chart-catalog="auction-demand" ');
+  const chartNote=`${viewModel.view==='bid-to-cover'?'Ratio':viewModel.view==='allocations'?'Percent of competitive accepted':'USD billions of gross face offerings'} · selected record and ${viewModel.rows.length-(selected?1:0)} prior matching results, up to ${viewModel.range}. Matching class: ${selected?`${selected.securityType}, original ${selected.originalTerm??'unknown'}, ${selected.reopening===true?'reopening':selected.reopening===false?'new issue':'reopening unknown'}${selected.cashManagement===true?', cash management':selected.cashManagement===false?'':', cash-management status unknown'}`:'no selection'}. Different instrument classes and bidder-rule regimes are not combined.`;
   return '<div class="stitch-desk stitch-auction-desk">'+(source?.error?`<p class="panel-note amber">${esc(source.error)}</p>`:'')+heading('AUCTION DEMAND',
   'Official auction facts · calculated bidder shares · matched historical comparisons',button('CSV AUCTIONS','data-export-auctions')
   +button('CSV MATCHED BENCHMARK','data-export-auction-benchmark'))
     +readingGroup('Selected auction comparison',controls+readings
-    +`<div class="auction-primary-visualizer workspace-analysis" id="auction-selected-result" tabindex="-1">${panel('00','U.S. Treasury auction tail & demand term structure',demandChart+'<div class="auction-wi-coverage"><strong>When-issued pricing · Not covered</strong><span>Auction tail / stop-through bars are unavailable without matched WI quotes. The observed line shows bid-to-cover for the selected instrument’s prior matching results.</span></div>','','Ratio · selected official result and up to twelve prior matching auctions. Different instrument classes are not combined into one demand score.')}${supportingDetails('auctions:selected-result','Selected auction · exact dates, official rates & result evidence',details,{open:Boolean(selected&&selectedState?.status!=='verified')})}</div>`
+    +`<div class="auction-primary-visualizer workspace-analysis" id="auction-selected-result" tabindex="-1">${panel('00',viewModel.title,demandChart+'<div class="auction-wi-coverage"><strong>When-issued pricing · Not covered</strong><span>Auction tail / stop-through bars are unavailable without timestamp-matched WI quotes. Bid-to-cover, competitive award shares and face offering sizes use retained matching-class results.</span></div>',button('CSV chart view',`data-export-auction-view${selected?'':' disabled'}`),chartNote)}${supportingDetails('auctions:selected-result','Selected auction · exact dates, official rates & result evidence',details,{open:Boolean(selected&&selectedState?.status!=='verified')})}</div>`
     +pillars+panel('02','PRIOR MATCHING RESULTS',selected?benchmarkTable(source,selected):emptyState('Matching benchmark unavailable.'))
     +panel('03','WHAT CONTRIBUTED — COMPETITIVE AWARD COMPOSITION',selected?allocationTable(selected):emptyState('Award composition unavailable.'),'','Bidder composition describes who submitted accepted competitive bids. It does not establish why auction demand changed.'),'Auction dates are Eastern dates, separate from announcement, issue and maturity dates. Result release timestamps are unknown; capture time is not publication time.')
-    +panel('04','AUCTION HISTORY',`<div id="auction-history" tabindex="-1">${selectionSummary}${pager}${history}</div>`)
+    +panel('04','AUCTION HISTORY',`<div id="auction-history" tabindex="-1">${selectionSummary}<p class="panel-note">Tendered amounts are not retained in this capture. Official bid-to-cover is not inferred from accepted amounts. Issue / settlement dates remain distinct from auction dates.</p>${pager}${history}</div>`)
     +'<div class="auction-bottom-grid">'+panel('05','Treasury supply profile & financing monitor',source?.series?.auctionOfferingMonthly?chart(['auctionOfferingMonthly'],{height:190}):emptyState('Monthly offering totals unavailable.'),'<a class="link-button" href="#/treasury/refunding">Quarterly refunding & TBAC →</a>','All security types, independent of the history filter. USD billions of gross face offerings, including rollovers. Current and awaiting-result months are partial; not net borrowing or cash proceeds.')
     +panel('','Local auction exports & source lineage','<div class="explain"><p>Export the exact filtered auction history or the selected result and its actual prior matching peers. Official rates, competitive-share denominators, incomplete results and capture receipts remain attached.</p><pre><code>auction_id,auction_date,security_type,security_term,\nface_offering_usd,bid_to_cover_ratio,…</code></pre><p>Source dates remain separate from result publication timestamps, which are unknown without independent evidence.</p></div>',button('CSV auctions','data-export-auctions')+button('CSV matched benchmark','data-export-auction-benchmark'))+'</div>'
     +'<div class="stitch-methods">'+supportingDetails('auctions:methods','About this data',collection+panel('06','WHY IT MATTERS & LIMITATIONS',

@@ -243,16 +243,16 @@ test('the actual funding attachment action downloads generated full frozen histo
  await assert.rejects(current.handleResearchAction({packageAttachment:'1'}),/unavailable/i);assert.equal(current.downloads.length,before);
 });
 
-test('the actual auction attachment action downloads both generated frozen exports',async()=>{
+test('the actual auction attachment action downloads raw and selected-chart frozen exports',async()=>{
  const current=await app('#/auctions?type=Bill');
  await current.handleResearchAction({pinResult:''});const pkg=current.researchLibrary.getPackage(current.state().packageId);
  assert.equal(pkg.context.auctionExports.version,1);assert.equal(pkg.context.attachments.length,0);
- for(const index of [0,1]){
+ for(const index of [0,1,2]){
   await current.handleResearchAction({packageAttachment:String(index)});const file=current.downloads.at(-1),expected=researchPackageAttachment(pkg,index);
   assert.equal(file.name,expected.name);assert.equal(file.content,expected.content);
  }
  const before=current.downloads.length;
- await assert.rejects(current.handleResearchAction({packageAttachment:'2'}),/unavailable/i);assert.equal(current.downloads.length,before);
+ await assert.rejects(current.handleResearchAction({packageAttachment:'3'}),/unavailable/i);assert.equal(current.downloads.length,before);
 });
 
 test('the actual resize callback keeps the selected frozen catalog across navigation and returns to live charts elsewhere',async()=>{

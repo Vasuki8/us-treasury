@@ -13,6 +13,8 @@ import {parseRoute,routeFor} from './router.js';
 import {rangeControls,coverageSummary} from './research-controls.js';
 import {heading,button,chart,emptyState,sourceLink,sentenceCase,escapeHtml as esc} from './ui.js';
 import {normalizeSourceNotes} from './source-notes.js';
+import {laborHistoryIds,laborHistoryViews} from './labor-history-views.js';
+import {changeLabel} from './research-controls.js';
 
 const groups={jobs:{label:'Jobs & demand',ids:['payroll','payrollAverage3m','payrollLevel','weeklyHours','openings','hiresRate','quitsRate','layoffsRate']},people:{label:'People',ids:['unrate','underemployment','participation','employmentPopulation','primeAgeParticipation','primeAgeEmploymentPopulation']},pay:{label:'Pay & costs',ids:['wages','eciCompensationQuarterly','eciCompensation','laborProductivity','unitLaborCosts']},claims:{label:'Claims',ids:['claimsAdvance','continuedClaimsAdvance','claims','continuedClaims']}};
 const allIds=Object.values(groups).flatMap(group=>group.ids),advanceIds=['claimsAdvance','continuedClaimsAdvance'];
@@ -78,25 +80,27 @@ function releaseRadar(state,now){
 function comparisonStarters(){
  return `<aside class="labor-aside labor-comparison-starters" data-labor-comparison-starters>${sectionHead('','Comparison starters')}`
   +'<p class="labor-note">Read related measures in separate native panels, with their own units and scales.</p>'
-  +`<div class="labor-presets actions" aria-label="Labor comparison starters">${button('Compare breadth',
-   'data-compare="unrate,underemployment,participation"')}${button('Jobs momentum',
-   'data-compare="payroll,payrollAverage3m,weeklyHours"')}${button('Labor turnover',
-   'data-compare="hiresRate,quitsRate,layoffsRate"')}</div></aside>`;
+  +`<div class="labor-presets actions" aria-label="Labor comparison starters">${button('Payroll momentum & wage growth',
+   'data-compare="payroll,wages"')}${button('Prime-age employment & participation',
+   'data-compare="primeAgeEmploymentPopulation,primeAgeParticipation"')}${button('Quits & wage growth',
+   'data-compare="quitsRate,wages"')}</div>${supportingDetails('labor:comparisons','More comparisons',`<div class="actions">${button('Broad underutilization','data-compare="unrate,underemployment,participation"')}${button('Labor turnover','data-compare="hiresRate,quitsRate,layoffsRate"')}</div>`,{className:'labor-details'})}</aside>`;
 }
 
 function history(state,current,shown,range){
  const last=shown.observations.at(-1),history={...current,observations:current.observations.filter(o=>!shown.window.endDate||o.date<=shown.window.endDate)},available=shown.observations.some(o=>Number.isFinite(o.value));
+ const views=laborHistoryViews(current.id).filter(id=>getSeries(id)),historyIds=[...new Set([...allIds,...laborHistoryIds])].filter(id=>getSeries(id));
+ const viewControl=views.length>1?`<label for="labor-history-view">Program view<select id="labor-history-view">${views.map(id=>{const s=getSeries(id);return `<option value="${id}"${id===current.id?' selected':''}>${esc(s.short+' · '+s.unit+' · '+s.adjustment)}</option>`;}).join('')}</select></label>`:'';
  return `<section class="labor-history">${sectionHead('03',
-  'Focused historical query & transformations')}<div class="labor-query-toolbar"><label class="labor-picker" for="macro-measure">History measure<select id="macro-measure">${allIds.map(id=>
-  `<option value="${id}"${id===current.id?' selected':''}>${esc(getSeries(id).name)}</option>`).join('')}</select></label>${rangeControls(state,
+  'Focused historical query & transformations')}<div class="labor-query-toolbar"><label class="labor-picker" for="macro-measure">History measure<select id="macro-measure">${historyIds.map(id=>
+  `<option value="${id}"${id===current.id?' selected':''}>${esc(getSeries(id).name)}</option>`).join('')}</select></label>${viewControl}<label for="transform-select">Transformation<select id="transform-select"><option value="level"${state.transform==='level'?' selected':''}>Native measurement</option><option value="change"${state.transform==='change'?' selected':''}>${esc(changeLabel(current))}</option></select></label>${rangeControls(state,
   [current.id],{observationDescription:('Observation count applies to the focused measure; core trends share its displayed start '+
-  'and end dates.')})}${button('Download selection CSV',`data-export-macro-measure${shown.error||!available?' disabled':''}`)}</div><p class="labor-axis-unit">${esc(current.frequency)} · ${esc(unit(current))} · ${esc(current.adjustment)} · ${esc(status
+  'and end dates.')})}${button('Download selection CSV',`data-export-macro-measure${shown.error||!available?' disabled':''}`)}</div><p class="labor-axis-unit">${esc(current.frequency)} · ${esc(shown.unit)} · ${esc(current.adjustment)} · ${esc(status
   (current))}</p>${sourceError(current)}${current.coverageNote
    &&(['dol','dolAdvance'].includes(current.agency)||/partial|suppressed|not (?:directly )?comparable/i.test(current.coverageNote))
    ?`<p class="labor-note labor-warning">${esc(current.coverageNote)}</p>`:''}${
   shown.error||!shown.observations.length?emptyState('History unavailable.',shown.error??current.error
-  ??'No retained observations fall in this date window.'):chart([current.id],{range,height:240,kind:current.id==='payroll'?'bar':'line'})
-  }<div class="labor-what-changed"><span class="labor-kicker">What changed</span><p>${last?`${esc(formatValue(current,last.value))} · ${esc
+  ??'No retained observations fall in this date window.'):chart([current.id],{range,height:240,kind:current.id==='payroll'?'bar':'line',transform:state.transform})
+  }${state.transform==='change'?'<p class="labor-note">Changes compare adjacent retained observations; missing periods are not interpolated. The CSV uses this same transformation and window.</p>':''}<div class="labor-what-changed"><span class="labor-kicker">What changed</span><p>${last?`${esc(state.transform==='change'?formatValue({format:'number',precision:current.precision},last.value)+' '+shown.unit:formatValue(current,last.value))} · ${esc
   (periodLabel(current,last.date))}`:'No observation in this window.'}</p><p class="labor-small">${last?esc(measurementChange(history).text):
   'No change is reported outside the selected window.'}</p></div>${coverageSummary(shown)}<div class="actions labor-history-actions">${detail(current.id,state,'Details & data table','action')
   }${follow(current.id,state)}</div>${supportingDetails(`labor:definition:${current.id}`,'Definition & source coverage',`<p>${esc
@@ -169,7 +173,7 @@ function readings(state){
 function notes(state){return `<section class="labor-bottom" id="labor-notes"><div class="labor-methodology-column">${sectionHead('05','Methodology, coverage & survey architecture')}<div class="labor-methodology-grid"><article class="labor-survey-card"><h3>Establishment survey · CES</h3><span class="labor-method-tag">Jobs metric</span><p>Payroll employment counts jobs, not unique people. A person with more than one payroll job can be counted more than once.</p><p>${esc(getSeries('payroll').definition)}</p><p>${esc(getSeries('payroll').calculation)}</p>${detail('payroll',state,'Payroll methodology','link-button','methodology')}</article><article class="labor-survey-card"><h3>Household survey · CPS</h3><span class="labor-method-tag">People and labor force ratios</span><p>${esc(getSeries('unrate').definition)}</p><p>${esc(getSeries('underemployment').definition)}</p><p>U-3 and U-6 use different denominators. Household employment and establishment payroll jobs are different measurements.</p>${detail('unrate',state,'Household methodology','link-button','methodology')}</article></div><p class="labor-note">ECI quarterly compensation growth is not annualized. Productivity and unit labor cost growth are annualized. Openings measure a stock; hires, quits and layoffs measure monthly flows.</p></div><div class="labor-source-column"><h2>Data provenance &amp; coverage</h2><p class="labor-note">The observation period, publication date and source retrieval are separate clocks. Retrieval does not confirm a new publication.</p><p>Snapshot assembled ${esc(dataStatus.generatedAt??'Unavailable')}.</p>${['bls','dol','dolAdvance'].map(id=>{const source=dataStatus.sources?.[id];return `<article class="labor-source-row"><h3>${esc(id==='bls'?'Bureau of Labor Statistics':id==='dol'?'DOL revised claims history':'DOL latest release context')}</h3><span class="labor-status">${esc(source?.status==='ok'?'Captured':source?.fetchedAt?'Cached':'Unavailable')}</span><p>Retrieved ${esc(source?.fetchedAt??'Unknown')}<br>Last attempt ${esc(source?.lastAttemptAt??'Unknown')}</p>${source?.error?`<p class="labor-warning">${esc(source.error)}</p>`:''}</article>`;}).join('')}<p class="labor-note">Claims revised history may lag the advance release. Latest release pairs retain their own reference weeks and are not spliced into historical feeds.</p>${calendarSourceNotice(dataStatus.calendar?.sources?.bls)}<div class="actions">${link('Official BLS schedule','https://www.bls.gov/schedule/') }${link('Retrieval history',`#/vintages?series=${state.macroMeasure}`)}${link('Official publications','#/research?view=publications&publicationSeries=claimsAdvance')}${link('Saved research','#/research')}</div><p class="labor-note">Full indicator details retain methodology, calculations, source footnotes and rights notices. CSV measure exports the focused history’s exact window in native units with retrieval provenance.</p></div></section>`;}
 
 export function laborPage(input={},options={}){
- const focus=allIds.includes(input.macroMeasure)?input.macroMeasure:coverageFamilies.labor.defaultMeasure,state={...input,macroFamily:'labor',macroMeasure:focus,saved:input.saved??[],selected:(input.selected??[]).filter(id=>series[id]).slice(0,4)},current=getSeries(focus),range=viewRange(state),shown=transformSeries(current,'level',range);
+ const focus=[...allIds,...laborHistoryIds].includes(input.macroMeasure)&&getSeries(input.macroMeasure)?input.macroMeasure:coverageFamilies.labor.defaultMeasure,state={...input,transform:input.transform==='change'?'change':'level',macroFamily:'labor',macroMeasure:focus,saved:input.saved??[],selected:(input.selected??[]).filter(id=>series[id]).slice(0,4)},current=getSeries(focus),range=viewRange(state),shown=transformSeries(current,state.transform,range);
  // Resolve once against the focused series; each core source retains its own gaps.
  const coreRange={preset:'custom',startDate:shown.window.mode==='calendar'?shown.window.startDate??'':shown.observations[0]?.date??'',endDate:shown.window.mode==='calendar'?shown.window.endDate??'':shown.observations.at(-1)?.date??''};
  const trends=`<section id="labor-trends">${sectionHead('01','Payrolls & unemployment',
