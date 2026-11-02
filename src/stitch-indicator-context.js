@@ -4,6 +4,7 @@ import {measurementChange,priorReadingLabel} from './measurement-change.js';
 import {indicatorHref} from './workspace-context.js';
 import {escapeHtml as esc} from './ui.js';
 import {familyStats,familyStatRows,familyAnalysis} from './stitch-family-view.js';
+import {normalizeSourceNotes} from './source-notes.js';
 
 const unavailable=(title,note)=>({title,value:'—',unit:'Not in retained coverage',note,unavailable:true});
 const reading=(id,title)=>({id,title,s:getSeries(id)});
@@ -32,7 +33,7 @@ function renderStats(items,current,state,options={}){
   const delta=hasHistory&&item.s.id!=='payroll'?`<span class="indicator-change" title="${esc(change)}">Δ ${esc(formatDisplayChange(item.s,options))}${converted?' jobs':''}</span>`:'';
   const reference=compact?`<p class="indicator-reference"><b>${esc(date)}</b>${delta}</p>`:`<p class="indicator-reference">Observation <b>${esc(date)}</b></p>`;
   const history=!hasHistory?'':compact?`<p class="indicator-prior">${item.s.id==='payroll'?esc(priorReadingLabel(item.s))+':':'Prior'} <b>${esc(display(prior?.value))}</b> · ${esc(periodLabel(item.s,prior?.date))}</p>`:`<p class="indicator-change">${esc(item.s.id==='payroll'?`${priorReadingLabel(item.s)}: ${display(prior?.value)} · ${periodLabel(item.s,prior?.date)}`:change)}</p>${item.s.id==='payroll'?'':`<p class="indicator-prior">Prior <b>${esc(display(prior?.value))}</b> · ${esc(periodLabel(item.s,prior?.date))}</p>`}`;
-  const notes=[...new Set(row?.footnotes??[])],note=item.note?(compact?`<details class="indicator-stat-method"><summary>Measurement note</summary><p>${esc(item.note)}</p></details>`:`<p class="indicator-stat-note">${esc(item.note)}</p>`):'';
+  const notes=normalizeSourceNotes(row?.footnotes),note=item.note?(compact?`<details class="indicator-stat-method"><summary>Measurement note</summary><p>${esc(item.note)}</p></details>`:`<p class="indicator-stat-note">${esc(item.note)}</p>`):'';
   const status=[item.s?.dataStatus==='cached'?'Cached reading':'',item.s?.dataStatus==='unavailable'||item.id&&!Number.isFinite(row?.value)?'Unavailable reading':''].filter(Boolean).join(' · ');
   return `<article class="indicator-stat${isSelected?' indicator-selected-stat':''}"${item.id?` data-stat-series="${esc(item.id)}"`:''}><div class="indicator-stat-heading"><h2 title="${esc(nativeTitle)}">${heading}</h2>${compact?'':`<span>${esc(code)}</span>`}</div><div class="indicator-native-reading"><strong class="big-value"${converted?` title="${esc(nativeTitle)}"`:''}>${esc(item.value??display(row?.value))}</strong><span class="indicator-stat-unit">${compact?esc(unit):`${options.currencyUnit?'Display unit':'Native unit'}<br><b>${esc(unit)}</b>`}</span></div>${reference}${history}${familyStatRows(item.rows,state,compact?{referenceDate:row?.date??latest(current)?.date,referenceUnit:unit,selectedId:current.id,seenNotes:new Set(notes)}:{})}${note}${status?`<p class="indicator-reading-status amber" role="status">${status}</p>`:''}${item.s?.error?`<p class="amber" role="status">${esc(item.s.error)}</p>`:''}${notes.map(note=>`<p class="indicator-stat-note amber" role="status">${esc(note)}</p>`).join('')}${!compact&&inspect?`<a class="indicator-stat-link" href="${esc(indicatorHref(item.id,state))}">Inspect series →</a>`:''}</article>`;
  }).join('');

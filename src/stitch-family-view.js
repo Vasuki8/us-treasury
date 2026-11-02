@@ -4,6 +4,7 @@ import {escapeHtml as esc,table,button} from './ui.js';
 import {indicatorHref} from './workspace-context.js';
 import {blsDeskDefinitions} from './bls-desk-definitions.js';
 import {renderFamilyAnalysis} from './stitch-family-analysis.js';
+import {normalizeSourceNotes} from './source-notes.js';
 
 /** Definition-only fallbacks never manufacture a source observation. */
 export function familySeries(id){
@@ -12,7 +13,7 @@ export function familySeries(id){
 const reading=(id,title,rows=[],note='')=>({id,title,s:familySeries(id),rows,note});
 const value=(s,row=latest(s))=>formatDisplayValue(s,row?.value);
 const period=s=>latest(s)?periodLabel(s,latest(s).date):'Not retained';
-const observationNotes=row=>[...(row?.footnotes??[]),row?.imputed?'Source-imputed monthly observation':'',row?.imputationAffected?'Annual window includes source-imputed months':'',row?.suppressed?'Suppressed by source':''].filter(Boolean);
+const observationNotes=row=>normalizeSourceNotes([...(row?.footnotes??[]),row?.imputed?'Source-imputed monthly observation':'',row?.imputationAffected?'Annual window includes source-imputed months':'',row?.suppressed?'Suppressed by source':'']);
 const exact=(id,date)=>familySeries(id)?.observations?.find(row=>row.date===date)??null;
 const percent=n=>Number.isFinite(n)?`${n<0?'−':'+'}${Math.abs(n).toFixed(2)}%`:'—';
 const sourceNumber=row=>typeof row?.sourceValue==='number'?row.sourceValue:typeof row?.sourceValue==='string'&&row.sourceValue.trim()!==''&&Number.isFinite(Number(row.sourceValue))?Number(row.sourceValue):null;
@@ -74,7 +75,7 @@ const ledgerColumns={
 };
 export function familyLedger(current,family){
  const columns=ledgerColumns[family];if(!columns)return '';
- const dates=current.observations.slice(-10).reverse().map(row=>row.date),rows=dates.map(date=>{const original=current.observations.find(row=>row.date===date),notes=[...(original?.footnotes??[]),original?.revisionIndicator==='Y'?'Source revision flag; reason unknown':'',original?.suppressed?'Suppressed by source':''].filter(Boolean).join('; ');return `<tr${date===latest(current)?.date?' class="is-latest"':''}><th scope="row"><time datetime="${date}">${esc(periodLabel(current,date))}</time></th>${columns.map(([,id])=>`<td class="num" data-family-input="${id}">${esc(formatValue(familySeries(id),exact(id,date)?.value))}</td>`).join('')}<td>${esc(notes||'—')}</td></tr>`;}).join('');
+ const dates=current.observations.slice(-10).reverse().map(row=>row.date),rows=dates.map(date=>{const original=current.observations.find(row=>row.date===date),notes=normalizeSourceNotes([...(original?.footnotes??[]),original?.revisionIndicator==='Y'?'Source revision flag; reason unknown':'',original?.suppressed?'Suppressed by source':'']).join('; ');return `<tr${date===latest(current)?.date?' class="is-latest"':''}><th scope="row"><time datetime="${date}">${esc(periodLabel(current,date))}</time></th>${columns.map(([,id])=>`<td class="num" data-family-input="${id}">${esc(formatValue(familySeries(id),exact(id,date)?.value))}</td>`).join('')}<td>${esc(notes||'—')}</td></tr>`;}).join('');
  return `<section class="panel indicator-family-ledger" data-family-ledger="${family}"><header class="panel-head"><h2>Historical ${['eci','productivity','costs'].includes(family)?'accounting':'observations'} ledger · trailing 10 ${current.frequency==='Quarterly'?'quarters':'months'}</h2><span class="stitch-status-label">Current revised history</span></header>${table(['Reference period',...columns.map(([label])=>({label,numeric:true})),'Source notes'],rows||'<tr><td colspan="6">No retained observations.</td></tr>','Family historical ledger; exact same reference periods only')}<p class="panel-note">Each column retains its native units and adjustment. Values join exact reference dates only; a missing input remains unavailable. The full selected history, source footnotes and retrieval revisions remain below.</p></section>`;
 }
 const relatedByFamily={payroll:['unrate','wages','primeAgeParticipation','openings','claimsAdvance'],unemployment:['payroll','primeAgeParticipation','wages','claimsAdvance','quitsRate'],earnings:['payroll','unrate','cpiCore','eciCompensationQuarterly','weeklyHours'],eci:['payroll','unrate','wages','laborProductivity','unitLaborCosts'],productivity:['payroll','unrate','unitLaborCosts','eciCompensationQuarterly','gdp'],costs:['payroll','unrate','wages','eciCompensationQuarterly','pceCore'],cpi:['pceCore','wages','eciCompensationQuarterly','unitLaborCosts','inflationComp10'],pce:['cpi','wages','eciCompensationQuarterly','unitLaborCosts','policyTargetUpper']};

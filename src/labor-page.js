@@ -12,6 +12,7 @@ import {viewRange,indicatorHref} from './workspace-context.js';
 import {parseRoute,routeFor} from './router.js';
 import {rangeControls,coverageSummary} from './research-controls.js';
 import {heading,button,chart,emptyState,sourceLink,sentenceCase,escapeHtml as esc} from './ui.js';
+import {normalizeSourceNotes} from './source-notes.js';
 
 const groups={jobs:{label:'Jobs & demand',ids:['payroll','payrollAverage3m','payrollLevel','weeklyHours','openings','hiresRate','quitsRate','layoffsRate']},people:{label:'People',ids:['unrate','underemployment','participation','employmentPopulation','primeAgeParticipation','primeAgeEmploymentPopulation']},pay:{label:'Pay & costs',ids:['wages','eciCompensationQuarterly','eciCompensation','laborProductivity','unitLaborCosts']},claims:{label:'Claims',ids:['claimsAdvance','continuedClaimsAdvance','claims','continuedClaims']}};
 const allIds=Object.values(groups).flatMap(group=>group.ids),advanceIds=['claimsAdvance','continuedClaimsAdvance'];
@@ -34,7 +35,7 @@ function headlines(state){
  const cards=['payroll','unrate','participation','wages'].map(id=>{
   const s=getSeries(id),o=latest(s),change=measurementChange(s);
   const contextId={payroll:'payrollAverage3m',unrate:'underemployment',participation:'primeAgeParticipation'}[id],context=contextId?getSeries(contextId):null;
-  const warnings=[...new Set([...(o?.footnotes??[]),s.coverageNote&&/partial|suppressed|not (?:directly )?comparable/i.test(s.coverageNote)?s.coverageNote:'',...(context?.error?[`${context.short}: ${context.error}`]:[]),...(context?.dataStatus==='cached'?[`${context.short}: cached reading.`]:[]),...(latest(context)?.footnotes??[])].filter(Boolean))];
+  const warnings=normalizeSourceNotes([...(o?.footnotes??[]),s.coverageNote&&/partial|suppressed|not (?:directly )?comparable/i.test(s.coverageNote)?s.coverageNote:'',...(context?.error?[`${context.short}: ${context.error}`]:[]),...(context?.dataStatus==='cached'?[`${context.short}: cached reading.`]:[]),...(latest(context)?.footnotes??[])]);
   return `<article class="labor-metric" data-labor-reading="${id}"><div class="labor-metric-code"><span>${esc(s.code)}</span><span>${esc(program(id))}</span></div>${detail(id,state,s.short,'labor-metric-name')}`
    +`<strong>${esc(formatDisplayValue(s,o?.value))}</strong>`
    +`<span class="labor-small">${esc(periodLabel(s,o?.date))} · ${esc(status(s))}</span>`
@@ -143,6 +144,7 @@ function readings(state){
   `scope="col">Measure name</th><th scope="col">Survey / code</th><th scope="col" class="num">Latest / change</th><th scope="col">Native unit</th><th `+
   `scope="col" class="labor-period-col">Ref period</th><th scope="col">Freq</th><th scope="col">Agency</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead><tbody>${ids.map(id=>{
  const s=getSeries(id),o=latest(s),selected=state.selected.includes(id),release=advanceIds.includes(id),groupId=Object.keys(groups).find(key=>groups[key].ids.includes(id));
+ const estimateNotes=normalizeSourceNotes(o?.footnotes).join('; ');
  const groupHeader=groupId===previousGroup?'':`<tr class="labor-group-heading"><th colspan="9">${esc(groups[groupId].label)}</th></tr>`;previousGroup=groupId;
  return `${groupHeader}<tr data-series-row="${id}" data-selected="${selected}"><th scope="row">${detail(id,state,s.name
   +'')}<span class="labor-row-meta">${esc(unit(s))} · ${esc(s.frequency)} · ${esc(status(s))}</span><span class="labor-period-mobile">${esc
@@ -151,7 +153,7 @@ function readings(state){
   '<span class="labor-row-meta labor-warning">Latest release pair · own reference weeks</span>':''}${sourceError(s)
   }</th><td class="labor-row-code">${esc(s.code)}</td><td class="num"><strong class="labor-row-value">${esc(formatValue(s,o?.value))}</strong><span class="labor-row-change" title="${esc
   (measurementChange(s).text)}">${esc(formatChange(s))}</span></td><td>${esc(unit(s))}</td><td class="labor-period-col">${esc(periodLabel(s,o?.date))
-  }</td><td>${esc(s.frequency)}<span class="labor-row-meta">${esc(s.adjustment)}</span></td><td>${esc(program(id))}</td><td><span class="labor-status">${esc(status(s))}</span></td><td><div class="labor-row-actions">${detail(id,state,'Detail','labor-detail-link')}${follow(id,state)
+  }</td><td>${esc(s.frequency)}<span class="labor-row-meta">${esc(s.adjustment)}</span></td><td>${esc(program(id))}</td><td><span class="labor-status">${esc(status(s))}</span>${estimateNotes?`<span class="labor-estimate-note labor-row-meta labor-warning">Source note: ${esc(estimateNotes)}</span>`:''}</td><td><div class="labor-row-actions">${detail(id,state,'Detail','labor-detail-link')}${follow(id,state)
   }<label class="labor-compare-control"><input type="checkbox" data-select="${id}" aria-label="Compare ${esc(s.name)}"${selected?' checked':''}${
   !selected&&state.selected.length>=4?' disabled':''}></label></div></td></tr>`;
  }).join('')
@@ -180,7 +182,7 @@ export function laborPage(input={},options={}){
   'data-compare="unrate,participation,primeAgeEmploymentPopulation"','link-button')}</div></section>`;
  const revisions='<div class="labor-revision-context"><strong>Payroll revisions</strong><span>First-published payroll estimates are not covered. Current revised history cannot establish release revisions.</span>'
   +link('Inspect retrieval history','#/vintages?series=payroll','link-button')+'</div>';
- const preliminary=latest(getSeries('payroll'))?.footnotes?.some(note=>/preliminary/i.test(note));
+ const preliminary=normalizeSourceNotes(latest(getSeries('payroll'))?.footnotes).some(note=>/preliminary/i.test(note));
  const uncertainty=`<aside class="labor-note" aria-label="Labor estimate uncertainty"><strong>${preliminary?'Preliminary payroll estimate. ':''}Survey uncertainty.</strong> Payroll estimates have sampling and nonsampling error and may be revised as reports arrive and seasonal factors are updated. A difference between two monthly job gains is a change in gains, not a separate estimate of monthly employment change. Sample response rates and confidence intervals are not supplied in the retained series metadata. No significance claim is made. <a href="https://www.bls.gov/news.release/empsit.tn.htm" target="_blank" rel="noopener noreferrer">Official BLS technical note ↗</a></aside>`;
  return `<div class="labor-radar stitch-labor"><p class="labor-source-line">Bureau of Labor Statistics / DOL · CES / CPS / JOLTS / ETA</p>${heading('Labor market','Track employment demand, participation and pay.',
   button(state.saved.includes('payroll')?'Following payrolls':'Follow payrolls',`data-save="payroll" aria-pressed="${state.saved.includes('payroll')}"`)+`<details class="labor-action-menu" data-page-disclosure="labor-actions"><summary>More actions</summary><div class="labor-secondary-actions" data-research-actions>${button('Compare measures','data-compare="unrate,claims"')}${button('Export focused CSV',`data-export-macro-measure${shown.error||!shown.observations.some(o=>Number.isFinite(o.value))?' disabled':''}`)}${button('Data provenance','data-labor-section="labor-notes"')}</div></details>`)}<div class="labor-briefing">${readingGuide(state)}${headlines(state)}</div>${revisions}`
